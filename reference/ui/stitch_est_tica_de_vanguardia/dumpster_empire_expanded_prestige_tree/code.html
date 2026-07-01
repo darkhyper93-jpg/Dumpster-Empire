@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dumpster Empire - City Keys Prestige</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#2e1500",
+                    "tertiary-fixed-dim": "#ffb870",
+                    "surface-container": "#261e13",
+                    "error": "#ffb4ab",
+                    "on-error-container": "#ffdad6",
+                    "tertiary-fixed": "#ffdcbe",
+                    "surface-container-highest": "#3c3427",
+                    "on-secondary": "#00390a",
+                    "secondary-fixed-dim": "#78dc77",
+                    "secondary": "#78dc77",
+                    "on-surface": "#efe0cd",
+                    "on-background": "#efe0cd",
+                    "primary-fixed": "#ffdcc2",
+                    "outline-variant": "#50453c",
+                    "inverse-on-surface": "#372f22",
+                    "surface": "#191208",
+                    "on-surface-variant": "#d4c3b8",
+                    "inverse-surface": "#efe0cd",
+                    "on-tertiary": "#4a2800",
+                    "surface-bright": "#41382b",
+                    "tertiary": "#ffb870",
+                    "on-tertiary-fixed": "#2c1600",
+                    "surface-tint": "#f0bc92",
+                    "error-container": "#93000a",
+                    "background": "#191208",
+                    "on-primary": "#48290a",
+                    "primary-container": "#5d3a1a",
+                    "on-secondary-fixed-variant": "#005313",
+                    "surface-container-high": "#31291c",
+                    "outline": "#9d8e84",
+                    "on-error": "#690005",
+                    "surface-container-low": "#221a0f",
+                    "primary": "#f0bc92",
+                    "on-primary-container": "#d6a47c",
+                    "inverse-primary": "#7d5633",
+                    "on-secondary-fixed": "#002204",
+                    "surface-variant": "#3c3427",
+                    "secondary-container": "#00761f",
+                    "on-secondary-container": "#95fb92",
+                    "surface-container-lowest": "#130d04",
+                    "on-tertiary-container": "#fc9600",
+                    "on-primary-fixed-variant": "#623f1e",
+                    "primary-fixed-dim": "#f0bc92",
+                    "surface-dim": "#191208",
+                    "secondary-fixed": "#94f990",
+                    "on-tertiary-fixed-variant": "#693c00",
+                    "tertiary-container": "#633800"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "20px",
+                    "margin-desktop": "40px",
+                    "gutter": "16px",
+                    "container-max": "1200px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "label-bold": ["Plus Jakarta Sans"],
+                    "body-md": ["Plus Jakarta Sans"],
+                    "body-lg": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "headline-md": ["28px", {"lineHeight": "34px", "fontWeight": "700"}],
+                    "label-bold": ["14px", {"lineHeight": "20px", "fontWeight": "700"}],
+                    "headline-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "500"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+        }
+        
+        .wooden-texture {
+            background-color: #191208;
+            background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 2px, transparent 2px, transparent 4px);
+        }
+
+        .squishy-button {
+            transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .squishy-button:active {
+            transform: translateY(4px);
+            box-shadow: none !important;
+        }
+
+        .string-connection {
+            filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5));
+            stroke-dasharray: 4 2;
+        }
+
+        .pin-node {
+            transition: transform 0.2s ease;
+        }
+        .pin-node:hover {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .torn-edge {
+            clip-path: polygon(0% 0%, 5% 2%, 10% 0%, 15% 3%, 20% 0%, 25% 2%, 30% 0%, 35% 3%, 40% 0%, 45% 2%, 50% 0%, 55% 3%, 60% 0%, 65% 2%, 70% 0%, 75% 3%, 80% 0%, 85% 2%, 90% 0%, 95% 3%, 100% 0%, 100% 100%, 95% 98%, 90% 100%, 85% 97%, 80% 100%, 75% 98%, 70% 100%, 65% 97%, 60% 100%, 55% 98%, 50% 100%, 45% 97%, 40% 100%, 35% 98%, 30% 100%, 25% 97%, 20% 100%, 15% 98%, 10% 100%, 5% 97%, 0% 100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col font-body-md overflow-hidden">
+<!-- Top AppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-desktop py-2 bg-surface-container-low border-b-4 border-surface-container-highest shadow-[0_4px_0_0_rgba(0,0,0,0.3)]">
+<div class="flex items-center gap-4">
+<span class="text-headline-md font-extrabold text-primary">Dumpster Empire</span>
+<div class="hidden md:flex gap-4">
+<button class="text-primary-fixed font-bold text-label-bold px-3 py-1 rounded-lg hover:bg-surface-variant transition-transform hover:scale-105">Dashboard</button>
+<button class="text-on-surface-variant font-bold text-label-bold px-3 py-1 rounded-lg hover:bg-surface-variant transition-transform hover:scale-105">Empire</button>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-surface-container-high px-4 py-1 rounded-full border-2 border-surface-container-highest flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="text-label-bold text-tertiary">96.7B</span>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg text-primary hover:bg-surface-variant transition-all"><span class="material-symbols-outlined">payments</span></button>
+<button class="p-2 rounded-lg text-primary hover:bg-surface-variant transition-all"><span class="material-symbols-outlined">settings</span></button>
+</div>
+</div>
+</header>
+<!-- Side NavBar -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 bg-surface-container border-r-4 border-surface-container-highest shadow-[4px_0_0_0_rgba(0,0,0,0.3)] flex flex-col pt-4 z-40 hidden md:flex">
+<div class="px-6 mb-6">
+<h2 class="text-headline-md font-headline-md text-secondary">Inventory</h2>
+<p class="text-label-bold text-on-surface-variant">Tools of the Trade</p>
+</div>
+<nav class="flex-1 px-2 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 mx-2 bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest hover:bg-primary-container hover:text-on-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined">confirmation_number</span>
+<span class="font-label-bold">Tickets</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 mx-2 bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest hover:bg-primary-container hover:text-on-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined">construction</span>
+<span class="font-label-bold">Gadgets</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 mx-2 bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest hover:bg-primary-container hover:text-on-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined">recycling</span>
+<span class="font-label-bold">Scrap</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 mx-2 bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest hover:bg-primary-container hover:text-on-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-label-bold">Upgrades</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 mx-2 bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest hover:bg-primary-container hover:text-on-primary-container transition-colors" href="#">
+<span class="material-symbols-outlined">memory</span>
+<span class="font-label-bold">Tech</span>
+</a>
+<div class="pt-4 px-2">
+<a class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg border-b-4 border-secondary shadow-none translate-y-1" href="#">
+<span class="material-symbols-outlined">key</span>
+<span class="font-label-bold">City Keys</span>
+</a>
+</div>
+</nav>
+</aside>
+<!-- Main Workspace -->
+<main class="ml-0 md:ml-64 mt-16 flex-1 relative wooden-texture p-margin-desktop overflow-hidden flex items-center justify-center">
+<!-- The Pinboard Canvas -->
+<div class="relative w-full h-[85vh] max-w-6xl bg-surface-container-high rounded-xl border-8 border-surface-container-highest shadow-2xl overflow-hidden flex flex-col">
+<!-- Atmospheric Layer -->
+<div class="absolute inset-0 pointer-events-none opacity-10 mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/cardboard-flat.png')]"></div>
+<!-- Prestige Tree Canvas -->
+<div class="flex-1 relative overflow-auto p-12">
+<!-- SVG String Connections -->
+<svg class="absolute inset-0 w-[1200px] h-[1000px] pointer-events-none z-10">
+<!-- Main to Tier 1 -->
+<path class="string-connection" d="M 600 800 Q 500 700 400 600" fill="none" stroke="#633800" stroke-width="4"></path>
+<path class="string-connection" d="M 600 800 Q 700 700 800 600" fill="none" stroke="#633800" stroke-width="4"></path>
+<!-- Eco District to Tier 2 -->
+<path class="string-connection" d="M 400 600 Q 300 500 250 400" fill="none" stroke="#633800" stroke-width="3"></path>
+<path class="string-connection" d="M 400 600 Q 400 500 450 400" fill="none" stroke="#633800" stroke-width="3"></path>
+<!-- Smog Yard to Tier 2 -->
+<path class="string-connection" d="M 800 600 Q 750 500 750 400" fill="none" stroke="#633800" stroke-width="3"></path>
+<path class="string-connection" d="M 800 600 Q 900 500 950 400" fill="none" stroke="#633800" stroke-width="3"></path>
+<!-- Tier 2 to Tier 3 (Complexity) -->
+<path class="string-connection" d="M 250 400 Q 150 300 150 200" fill="none" stroke="#633800" stroke-width="2"></path>
+<path class="string-connection" d="M 450 400 Q 450 300 350 200" fill="none" stroke="#633800" stroke-width="2"></path>
+<path class="string-connection" d="M 750 400 Q 750 300 650 200" fill="none" stroke="#633800" stroke-width="2"></path>
+<path class="string-connection" d="M 950 400 Q 1050 300 1050 200" fill="none" stroke="#633800" stroke-width="2"></path>
+</svg>
+<div class="relative w-[1100px] h-[900px] mx-auto">
+<!-- Root Node: Main Street -->
+<div class="absolute" style="left: 600px; top: 800px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-20 h-20 bg-secondary rounded-full border-4 border-on-secondary shadow-[0_6px_0_0_#00390a] flex items-center justify-center text-on-secondary ring-4 ring-secondary/30 ring-offset-2 ring-offset-surface-container-high">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">location_city</span>
+</div>
+<span class="text-label-bold bg-surface-container-highest px-3 py-1 rounded-full border border-outline-variant shadow-sm whitespace-nowrap">Main Street</span>
+</div>
+</div>
+<!-- Tier 1 -->
+<div class="absolute" style="left: 400px; top: 600px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-16 h-16 bg-secondary rounded-full border-4 border-on-secondary shadow-[0_6px_0_0_#00390a] flex items-center justify-center text-on-secondary">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">park</span>
+</div>
+<span class="text-label-bold bg-surface-container-highest px-3 py-1 rounded-full border border-outline-variant shadow-sm">Eco District</span>
+</div>
+</div>
+<div class="absolute" style="left: 800px; top: 600px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-16 h-16 bg-secondary rounded-full border-4 border-on-secondary shadow-[0_6px_0_0_#00390a] flex items-center justify-center text-on-secondary">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">factory</span>
+</div>
+<span class="text-label-bold bg-surface-container-highest px-3 py-1 rounded-full border border-outline-variant shadow-sm">Smog Yard</span>
+</div>
+</div>
+<!-- Tier 2 -->
+<div class="absolute" style="left: 250px; top: 400px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 bg-secondary rounded-full border-4 border-on-secondary shadow-[0_6px_0_0_#00390a] flex items-center justify-center text-on-secondary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">science</span>
+</div>
+<span class="text-label-bold bg-surface-container-highest px-3 py-1 rounded-full border border-outline-variant shadow-sm">Tech Hub</span>
+</div>
+</div>
+<div class="absolute" style="left: 450px; top: 400px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 bg-secondary rounded-full border-4 border-on-secondary shadow-[0_6px_0_0_#00390a] flex items-center justify-center text-on-secondary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<span class="text-label-bold bg-surface-container-highest px-3 py-1 rounded-full border border-outline-variant shadow-sm">Civic Center</span>
+</div>
+</div>
+<div class="absolute" style="left: 750px; top: 400px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 bg-secondary rounded-full border-4 border-on-secondary shadow-[0_6px_0_0_#00390a] flex items-center justify-center text-on-secondary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+</div>
+<span class="text-label-bold bg-surface-container-highest px-3 py-1 rounded-full border border-outline-variant shadow-sm">Industrial Sector</span>
+</div>
+</div>
+<div class="absolute" style="left: 950px; top: 400px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 cursor-pointer">
+<div class="w-14 h-14 bg-secondary rounded-full border-4 border-on-secondary shadow-[0_6px_0_0_#00390a] flex items-center justify-center text-on-secondary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">theater_comedy</span>
+</div>
+<span class="text-label-bold bg-surface-container-highest px-3 py-1 rounded-full border border-outline-variant shadow-sm">Art Quarter</span>
+</div>
+</div>
+<!-- Tier 3 (Locked/Advanced) -->
+<div class="absolute" style="left: 150px; top: 200px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 opacity-50 grayscale cursor-not-allowed">
+<div class="w-12 h-12 bg-surface-container-highest rounded-full border-4 border-outline shadow-[0_6px_0_0_rgba(0,0,0,0.5)] flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-xl">rocket_launch</span>
+</div>
+<span class="text-label-bold bg-surface-container-lowest px-2 py-1 rounded-md">Space Port</span>
+</div>
+</div>
+<div class="absolute" style="left: 350px; top: 200px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 opacity-50 grayscale cursor-not-allowed">
+<div class="w-12 h-12 bg-surface-container-highest rounded-full border-4 border-outline shadow-[0_6px_0_0_rgba(0,0,0,0.5)] flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-xl">hub</span>
+</div>
+<span class="text-label-bold bg-surface-container-lowest px-2 py-1 rounded-md">Cyber City</span>
+</div>
+</div>
+<div class="absolute" style="left: 650px; top: 200px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 opacity-50 grayscale cursor-not-allowed">
+<div class="w-12 h-12 bg-surface-container-highest rounded-full border-4 border-outline shadow-[0_6px_0_0_rgba(0,0,0,0.5)] flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-xl">public</span>
+</div>
+<span class="text-label-bold bg-surface-container-lowest px-2 py-1 rounded-md">Global Logistics</span>
+</div>
+</div>
+<div class="absolute" style="left: 1050px; top: 200px; transform: translate(-50%, -50%);">
+<div class="pin-node flex flex-col items-center gap-2 opacity-50 grayscale cursor-not-allowed">
+<div class="w-12 h-12 bg-surface-container-highest rounded-full border-4 border-outline shadow-[0_6px_0_0_rgba(0,0,0,0.5)] flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-xl">skateboarding</span>
+</div>
+<span class="text-label-bold bg-surface-container-lowest px-2 py-1 rounded-md">The Docks</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer / CTA Bar -->
+<div class="p-6 bg-surface-container-highest/50 backdrop-blur-sm border-t-4 border-surface-container-highest flex justify-between items-center z-20">
+<div class="flex flex-col">
+<span class="text-label-bold text-on-surface-variant uppercase tracking-wider">Prestige Readiness</span>
+<div class="flex items-center gap-3">
+<span class="text-headline-md text-secondary">42.5%</span>
+<div class="w-48 h-4 bg-background rounded-full border-2 border-surface-container-highest overflow-hidden">
+<div class="h-full bg-secondary w-[42.5%] shadow-[inset_0_2px_4px_rgba(255,255,255,0.3)]"></div>
+</div>
+</div>
+</div>
+<button class="squishy-button group relative bg-primary text-on-primary font-headline-md text-headline-md px-10 py-4 rounded-xl border-b-8 border-on-primary-container shadow-xl flex items-center gap-4 hover:scale-105 active:scale-95">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">vpn_key</span>
+<span>Prestige Now (+14 City Keys)</span>
+<div class="absolute -top-3 -right-3 bg-tertiary text-on-tertiary text-xs font-bold px-2 py-1 rounded-full rotate-12 shadow-md">READY!</div>
+</button>
+</div>
+</div>
+<!-- Floating Objects -->
+<div class="absolute top-10 left-10 w-24 h-24 rotate-[-15deg] pointer-events-none hidden lg:block z-30">
+<div class="w-full h-full torn-edge bg-primary-container p-2 flex flex-col justify-between shadow-lg">
+<div class="flex justify-between">
+<span class="material-symbols-outlined text-primary text-xl">star</span>
+<span class="text-[10px] text-primary/60">#4211</span>
+</div>
+<div class="text-center font-bold text-primary text-xs leading-tight">SCRATCH FOR LUCK</div>
+<div class="h-8 bg-surface-container-highest rounded-sm"></div>
+</div>
+</div>
+<div class="absolute bottom-10 right-10 w-32 h-40 rotate-[10deg] pointer-events-none hidden lg:block z-30">
+<div class="w-full h-full bg-[#f5e6d3] p-4 flex flex-col shadow-xl border-t-8 border-surface-container-highest">
+<div class="w-full h-1 bg-surface-container-highest/20 mb-2"></div>
+<div class="w-3/4 h-1 bg-surface-container-highest/20 mb-4"></div>
+<div class="flex-1 border-2 border-dashed border-surface-container-highest/30 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-surface-container-highest/30 text-4xl">inventory</span>
+</div>
+<div class="mt-4 text-[10px] font-bold text-surface-container-highest/50 text-right">PROPERTY OF EMPIRE</div>
+</div>
+</div>
+</main>
+<!-- Bottom Nav (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-surface-container-low border-t-4 border-surface-container-highest flex justify-around py-3 px-margin-mobile z-50">
+<button class="flex flex-col items-center text-on-surface-variant">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-bold">Home</span>
+</button>
+<button class="flex flex-col items-center text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">key</span>
+<span class="text-[10px] font-bold">Prestige</span>
+</button>
+<button class="flex flex-col items-center text-on-surface-variant">
+<span class="material-symbols-outlined">construction</span>
+<span class="text-[10px] font-bold">Gadgets</span>
+</button>
+<button class="flex flex-col items-center text-on-surface-variant">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold">Settings</span>
+</button>
+</nav>
+<script>
+        document.querySelectorAll('.pin-node').forEach(node => {
+            node.addEventListener('mousedown', () => {
+                node.style.transform = 'scale(0.9) translateY(4px)';
+            });
+            node.addEventListener('mouseup', () => {
+                node.style.transform = 'scale(1.1) rotate(5deg)';
+            });
+        });
+    </script>
+</body></html>

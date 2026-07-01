@@ -1,0 +1,352 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>DUMPSTER EMPIRE - The Workbench</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 48;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Tactile Shadow System */
+        .tactile-lift {
+            box-shadow: 0 4px 0 0 rgba(0,0,0,0.4);
+        }
+        .tactile-press:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 0 rgba(0,0,0,0);
+        }
+        
+        /* Scratch Texture Overlay */
+        .scratch-overlay {
+            background-image: radial-gradient(#4a4a4a 10%, transparent 11%), radial-gradient(#3a3a3a 10%, transparent 11%);
+            background-size: 10px 10px;
+            background-position: 0 0, 5px 5px;
+            mask-image: radial-gradient(circle at var(--x, 50%) var(--y, 50%), transparent 40px, black 80px);
+        }
+
+        /* Glass Tube Gloss */
+        .glass-tube {
+            background: linear-gradient(to bottom, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 100%);
+        }
+
+        /* Hand-Placed Rotation */
+        .sticker-rotate-1 { transform: rotate(1.5deg); }
+        .sticker-rotate-2 { transform: rotate(-2deg); }
+
+        body {
+            background-color: #210e0b;
+            overflow: hidden;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#2ecc71",
+                        "on-secondary-fixed": "#231b00",
+                        "surface-container": "#2f1a16",
+                        "on-surface": "#ffdad4",
+                        "tertiary-fixed": "#f8d8ff",
+                        "surface-container-highest": "#472f2b",
+                        "on-secondary": "#3c2f00",
+                        "on-error-container": "#ffdad6",
+                        "background": "#210e0b",
+                        "on-primary-container": "#005027",
+                        "on-secondary-container": "#624e00",
+                        "on-secondary-fixed-variant": "#574500",
+                        "primary-fixed-dim": "#4ae183",
+                        "tertiary": "#efbdff",
+                        "on-surface-variant": "#bbcbbb",
+                        "surface-container-lowest": "#1b0906",
+                        "on-background": "#ffdad4",
+                        "tertiary-container": "#df98fa",
+                        "on-error": "#690005",
+                        "primary": "#54e98a",
+                        "surface-container-low": "#2b1613",
+                        "secondary": "#ffdd74",
+                        "error": "#ffb4ab",
+                        "outline": "#869486",
+                        "on-tertiary-fixed": "#320047",
+                        "on-tertiary-fixed-variant": "#692984",
+                        "secondary-fixed": "#ffe084",
+                        "secondary-container": "#ebbf01",
+                        "surface-variant": "#472f2b",
+                        "on-primary": "#003919",
+                        "outline-variant": "#3d4a3e",
+                        "on-primary-fixed": "#00210c",
+                        "on-primary-fixed-variant": "#005228",
+                        "inverse-primary": "#006d37",
+                        "surface-bright": "#4c332f",
+                        "on-tertiary": "#500a6c",
+                        "surface": "#210e0b",
+                        "on-tertiary-container": "#672782",
+                        "tertiary-fixed-dim": "#ebb2ff",
+                        "inverse-on-surface": "#422a26",
+                        "secondary-fixed-dim": "#eec209",
+                        "surface-tint": "#4ae183",
+                        "primary-fixed": "#6bfe9c",
+                        "surface-dim": "#210e0b",
+                        "inverse-surface": "#ffdad4",
+                        "surface-container-high": "#3b2420",
+                        "error-container": "#93000a",
+                        "hazard-stripe": "#ebbf01",
+                        "charcoal-surface": "#1b0906"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "item-gap": "12px",
+                        "container-padding": "24px",
+                        "base": "8px",
+                        "stack-offset": "4px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "unit": "16px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "display-xl": ["Plus Jakarta Sans"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "label-bold": ["Be Vietnam Pro"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "data-mono": ["monospace"],
+                        "label-caps": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "display-xl": ["40px", {"lineHeight": "48px", "fontWeight": "900"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "500"}],
+                        "label-bold": ["14px", {"lineHeight": "20px", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "data-mono": ["12px", {"lineHeight": "16px", "fontWeight": "700"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "fontWeight": "800", "letterSpacing": "0.05em"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md h-screen flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface-dim border-b-4 border-surface-container-highest shadow-[0_4px_0_0_rgba(0,0,0,0.5)] flex justify-between items-center px-margin-mobile md:px-margin-desktop py-2 w-full z-50 fixed top-0 left-0">
+<div class="flex items-center gap-4">
+<h1 class="font-display-xl text-display-xl text-primary uppercase tracking-tighter">DUMPSTER EMPIRE</h1>
+</div>
+<div class="flex items-center gap-6">
+<!-- Currency Display -->
+<div class="bg-surface-container rounded-xl px-4 py-2 border-2 border-outline-variant flex items-center gap-3 tactile-lift">
+<span class="material-symbols-outlined text-secondary fill-icon" data-icon="payments">payments</span>
+<span class="font-headline-md text-secondary">$96.7B</span>
+</div>
+<div class="bg-surface-container rounded-xl px-4 py-2 border-2 border-outline-variant flex items-center gap-3 tactile-lift">
+<span class="material-symbols-outlined text-primary fill-icon" data-icon="vpn_key">vpn_key</span>
+<span class="font-headline-md text-primary">3</span>
+</div>
+<div class="hidden md:flex items-center gap-2">
+<button class="p-2 hover:bg-surface-bright transition-colors rounded-lg active:translate-y-1 active:shadow-none transition-all">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="settings">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Sidebar (Desktop Only) -->
+<aside class="h-full w-64 fixed left-0 top-0 hidden md:flex flex-col pt-24 bg-surface-container-low border-r-4 border-surface-container-highest bg-charcoal-surface shadow-2xl z-40">
+<div class="px-6 mb-8">
+<h2 class="font-label-caps text-label-caps text-hazard-stripe tracking-widest mb-1 uppercase">OPERATIONS</h2>
+<p class="font-data-mono text-data-mono text-on-surface-variant opacity-70">Sector 7-G</p>
+</div>
+<nav class="flex flex-col gap-2 px-4">
+<!-- Navigation Items -->
+<a class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container border-l-4 border-hazard-stripe rounded-r-lg font-label-caps text-label-caps uppercase transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="confirmation_number">confirmation_number</span>
+                Tickets
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant opacity-70 hover:bg-surface-variant hover:opacity-100 rounded-lg font-label-caps text-label-caps uppercase transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="precision_manufacturing">precision_manufacturing</span>
+                Gadgets
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant opacity-70 hover:bg-surface-variant hover:opacity-100 rounded-lg font-label-caps text-label-caps uppercase transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="recycling">recycling</span>
+                Scrap
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant opacity-70 hover:bg-surface-variant hover:opacity-100 rounded-lg font-label-caps text-label-caps uppercase transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+                Upgrades
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant opacity-70 hover:bg-surface-variant hover:opacity-100 rounded-lg font-label-caps text-label-caps uppercase transition-transform active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="memory">memory</span>
+                Tech
+            </a>
+</nav>
+<div class="mt-auto p-6">
+<button class="w-full bg-primary text-on-primary py-3 rounded-xl font-label-caps text-label-caps uppercase tactile-lift tactile-press">
+                MAX ALL
+            </button>
+</div>
+</aside>
+<!-- Main Content Area: The Workbench -->
+<main class="flex-1 md:ml-64 mt-20 mb-20 md:mb-0 relative overflow-hidden flex items-center justify-center p-6 bg-[url('placeholder')] bg-cover bg-center" data-alt="A top-down bird's eye view of a cluttered wooden workbench with rich grain textures. The scene is lit with warm, cinematic studio lighting that casts sharp, heavy shadows. Scattered across the wood are colorful physical scratch-off game tickets, vintage mechanical gears, and small metallic scrap pieces. The overall aesthetic is tactile and skeuomorphic, reminiscent of a high-end physical board game setup.">
+<!-- The Main Scrap Container (Trash Bin) -->
+<div class="relative w-full max-w-2xl aspect-square flex items-center justify-center group">
+<!-- Shadow for the Bin -->
+<div class="absolute inset-0 bg-black/40 blur-2xl rounded-full scale-95 translate-y-12"></div>
+<!-- Trash Bin Body -->
+<div class="relative w-full h-full bg-surface-container-highest border-8 border-outline-variant rounded-full flex items-center justify-center overflow-hidden shadow-2xl">
+<!-- Animated Background Content Inside the Bin -->
+
+<!-- Items "Inside" the Bin -->
+<div class="grid grid-cols-4 gap-4 p-12 z-10">
+<!-- Scrap Stickers/Tokens -->
+<div class="w-16 h-16 bg-primary rounded-xl sticker-rotate-1 tactile-lift flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary" data-icon="hardware">hardware</span>
+</div>
+<div class="w-16 h-16 bg-secondary rounded-xl sticker-rotate-2 tactile-lift flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary" data-icon="settings_input_component">settings_input_component</span>
+</div>
+<div class="w-16 h-16 bg-tertiary rounded-xl sticker-rotate-1 tactile-lift flex items-center justify-center">
+<span class="material-symbols-outlined text-on-tertiary" data-icon="bolt">bolt</span>
+</div>
+<div class="w-16 h-16 bg-error rounded-xl sticker-rotate-2 tactile-lift flex items-center justify-center">
+<span class="material-symbols-outlined text-on-error" data-icon="extension">extension</span>
+</div>
+</div>
+<!-- Scratch Layer -->
+<div class="absolute inset-0 z-20 scratch-overlay cursor-crosshair transition-opacity duration-500 hover:opacity-80 flex flex-col items-center justify-center" id="scratch-layer">
+<div class="bg-black/60 px-6 py-3 rounded-full border-2 border-white/20 backdrop-blur-sm">
+<span class="font-headline-md text-white uppercase tracking-widest">SCRATCH TO DIG</span>
+</div>
+</div>
+</div>
+<!-- Atmosphere Props (Phone, Fan) -->
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-error rounded-3xl tactile-lift sticker-rotate-1 flex items-center justify-center border-4 border-on-error">
+<span class="material-symbols-outlined text-on-error scale-[3]" data-icon="call">call</span>
+</div>
+<div class="absolute -bottom-8 -left-12 w-24 h-24 bg-surface-container rounded-full tactile-lift flex items-center justify-center border-4 border-outline-variant animate-pulse">
+<span class="material-symbols-outlined text-on-surface-variant scale-[2.5]" data-icon="air">air</span>
+</div>
+</div>
+<!-- Right Side Upgrades Panel (Floats on Workbench) -->
+<div class="absolute right-8 top-24 bottom-24 w-72 bg-surface-container-high rounded-3xl border-4 border-surface-container-highest shadow-[12px_12px_0_0_rgba(33,14,11,0.8)] p-6 hidden lg:flex flex-col gap-6 z-30">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-md text-on-surface">Upgrades</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="info">info</span>
+</div>
+<!-- Upgrade Cards -->
+<div class="space-y-4">
+<!-- Dig Strength -->
+<button class="w-full text-left bg-surface-container rounded-2xl p-4 border-2 border-outline-variant group hover:border-primary-container transition-all tactile-press">
+<div class="flex items-center gap-3 mb-3">
+<div class="p-2 bg-primary-container rounded-lg">
+<span class="material-symbols-outlined text-on-primary-container fill-icon" data-icon="fitness_center">fitness_center</span>
+</div>
+<div>
+<p class="font-label-bold text-on-surface">Dig Strength</p>
+<p class="text-xs text-on-surface-variant">Lv. 11 • $24.4 B</p>
+</div>
+</div>
+<div class="w-full h-4 bg-background rounded-full overflow-hidden relative">
+<div class="h-full w-[65%] bg-primary rounded-full glass-tube"></div>
+</div>
+</button>
+<!-- Dig Luck -->
+<button class="w-full text-left bg-surface-container rounded-2xl p-4 border-2 border-outline-variant group hover:border-secondary transition-all tactile-press">
+<div class="flex items-center gap-3 mb-3">
+<div class="p-2 bg-secondary-container rounded-lg">
+<span class="material-symbols-outlined text-on-secondary-container fill-icon" data-icon="eco">eco</span>
+</div>
+<div>
+<p class="font-label-bold text-on-surface">Dig Luck</p>
+<p class="text-xs text-on-surface-variant">Lv. 14 • $42.2 B</p>
+</div>
+</div>
+<div class="w-full h-4 bg-background rounded-full overflow-hidden relative">
+<div class="h-full w-[40%] bg-secondary rounded-full glass-tube"></div>
+</div>
+</button>
+</div>
+<div class="mt-auto">
+<div class="bg-primary-container/20 rounded-2xl p-4 border-2 border-dashed border-primary-container/40">
+<div class="flex justify-between items-center mb-2">
+<span class="font-label-caps text-label-caps text-primary">Prestige</span>
+<span class="text-on-surface-variant font-data-mono text-data-mono">(15)</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-tight">Reset progress for permanent 250% multiplier.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-2 py-3 bg-surface-container-highest border-t-4 border-surface-variant shadow-[0_-4px_0_0_rgba(0,0,0,0.3)] z-50 md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary transition-all active:translate-y-0.5" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-label-caps text-[10px] uppercase">Shop</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary transition-all active:translate-y-0.5" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="font-label-caps text-[10px] uppercase">Automation</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary transition-all active:translate-y-0.5" href="#">
+<span class="material-symbols-outlined" data-icon="emoji_events">emoji_events</span>
+<span class="font-label-caps text-[10px] uppercase">Medals</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-lg px-4 py-2 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] active:translate-y-0.5 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="restart_alt">restart_alt</span>
+<span class="font-label-caps text-[10px] uppercase">Prestige</span>
+</a>
+</nav>
+<!-- Micro-interactions Script -->
+<script>
+        const scratchLayer = document.getElementById('scratch-layer');
+        
+        // Simple scratch-away simulation
+        scratchLayer.addEventListener('mousemove', (e) => {
+            const rect = scratchLayer.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            
+            scratchLayer.style.setProperty('--x', `${x}%`);
+            scratchLayer.style.setProperty('--y', `${y}%`);
+            
+            // Randomly "shake" props on interactions
+            if(Math.random() > 0.95) {
+                const props = document.querySelectorAll('.tactile-lift');
+                const randomProp = props[Math.floor(Math.random() * props.length)];
+                randomProp.style.transform = `rotate(${(Math.random() - 0.5) * 5}deg)`;
+                setTimeout(() => {
+                    randomProp.style.transform = '';
+                }, 200);
+            }
+        });
+
+        // Click to "Scratch"
+        scratchLayer.addEventListener('click', () => {
+            scratchLayer.classList.add('opacity-0');
+            scratchLayer.style.pointerEvents = 'none';
+            
+            // Re-generate scratch layer after some time for "new dig"
+            setTimeout(() => {
+                scratchLayer.classList.remove('opacity-0');
+                scratchLayer.style.pointerEvents = 'auto';
+            }, 3000);
+        });
+    </script>
+</body></html>

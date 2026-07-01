@@ -1,0 +1,412 @@
+<!DOCTYPE html><html class="dark" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Dumpster Empire - The Workshop</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #191208;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Tactile Shadow Classes */
+        .tactile-card {
+            box-shadow: 0 8px 0 0 rgba(0, 0, 0, 0.4);
+            transition: all 0.1s ease;
+        }
+        .tactile-card:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.4);
+        }
+
+        .squishy-button {
+            box-shadow: 0 6px 0 0 rgba(0,0,0,0.4);
+            transition: all 0.075s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .squishy-button:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 0 rgba(0,0,0,0.4);
+        }
+
+        /* Wood Grain Texture Overlay */
+        .wood-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/wood-pattern.png");
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        /* Scratch Surface Animation */
+        .scratch-surface {
+            background: repeating-linear-gradient(
+                45deg,
+                #3c3427,
+                #3c3427 10px,
+                #261e13 10px,
+                #261e13 20px
+            );
+        }
+
+        .torn-edge {
+            clip-path: polygon(0% 2%, 5% 0%, 10% 3%, 15% 1%, 20% 4%, 25% 1%, 30% 3%, 35% 0%, 40% 2%, 45% 1%, 50% 4%, 55% 1%, 60% 3%, 65% 0%, 70% 2%, 75% 1%, 80% 4%, 85% 1%, 90% 3%, 95% 0%, 100% 2%, 100% 98%, 95% 100%, 90% 97%, 85% 99%, 80% 96%, 75% 99%, 70% 97%, 65% 100%, 60% 98%, 55% 99%, 50% 96%, 45% 99%, 40% 97%, 35% 100%, 30% 98%, 25% 99%, 20% 96%, 15% 99%, 10% 97%, 5% 100%, 0% 98%);
+        }
+
+        .recessed-slot {
+            box-shadow: inset 0 4px 8px 0 rgba(0,0,0,0.5);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#31291c",
+                        "primary-fixed-dim": "#f0bc92",
+                        "secondary-container": "#00761f",
+                        "secondary-fixed-dim": "#78dc77",
+                        "error-container": "#93000a",
+                        "on-primary-fixed-variant": "#623f1e",
+                        "surface-container-lowest": "#130d04",
+                        "outline": "#9d8e84",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "error": "#ffb4ab",
+                        "on-error": "#690005",
+                        "primary": "#f0bc92",
+                        "primary-container": "#5d3a1a",
+                        "tertiary-fixed-dim": "#ffb870",
+                        "secondary-fixed": "#94f990",
+                        "inverse-surface": "#efe0cd",
+                        "surface-container-low": "#221a0f",
+                        "surface-variant": "#3c3427",
+                        "surface-bright": "#41382b",
+                        "on-surface": "#efe0cd",
+                        "on-secondary-container": "#95fb92",
+                        "outline-variant": "#50453c",
+                        "on-background": "#efe0cd",
+                        "on-tertiary-fixed": "#2c1600",
+                        "primary-fixed": "#ffdcc2",
+                        "surface": "#191208",
+                        "tertiary": "#ffb870",
+                        "tertiary-fixed": "#ffdcbe",
+                        "on-tertiary": "#4a2800",
+                        "surface-dim": "#191208",
+                        "on-surface-variant": "#d4c3b8",
+                        "secondary": "#78dc77",
+                        "on-secondary-fixed-variant": "#005313",
+                        "on-primary-container": "#d6a47c",
+                        "on-primary": "#48290a",
+                        "surface-tint": "#f0bc92",
+                        "inverse-primary": "#7d5633",
+                        "surface-container-highest": "#3c3427",
+                        "on-primary-fixed": "#2e1500",
+                        "inverse-on-surface": "#372f22",
+                        "tertiary-container": "#633800",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary": "#00390a",
+                        "surface-container": "#261e13",
+                        "on-secondary-fixed": "#002204",
+                        "background": "#191208",
+                        "on-tertiary-container": "#fc9600"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "container-max": "1200px",
+                        "gutter": "16px",
+                        "unit": "8px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-bold": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["28px", {"lineHeight": "34px", "fontWeight": "700"}],
+                        "label-bold": ["14px", {"lineHeight": "20px", "fontWeight": "700"}],
+                        "headline-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface flex flex-col h-screen">
+<!-- Top Navigation Bar (Shared Component: TopAppBar) -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-low border-b-4 border-surface-container-highest shadow-[0_4px_0_0_rgba(0,0,0,0.3)] flex justify-between items-center w-full px-margin-desktop py-2 h-16">
+<div class="flex items-center gap-4">
+<h1 class="text-headline-md font-headline-md font-extrabold text-primary dark:text-primary-fixed-dim">Dumpster Empire</h1>
+<div class="flex items-center gap-2 bg-surface-container px-4 py-1 rounded-full border-b-2 border-surface-container-highest">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="text-headline-md font-headline-md text-tertiary">96.7B</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="squishy-button w-10 h-10 bg-surface-variant flex items-center justify-center rounded-lg border-b-4 border-surface-container-highest hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">vpn_key</span>
+</button>
+<button class="squishy-button w-10 h-10 bg-surface-variant flex items-center justify-center rounded-lg border-b-4 border-surface-container-highest hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+<button class="squishy-button px-4 py-2 bg-error-container text-on-error-container rounded-lg font-label-bold text-label-bold border-b-4 border-on-error hover:scale-105 active:translate-y-1 transition-all">
+                Report Bug
+            </button>
+</div>
+</header>
+<div class="flex flex-1 pt-16 h-full overflow-hidden">
+<!-- Side Navigation (Shared Component: SideNavBar) -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 bg-surface-container border-r-4 border-surface-container-highest shadow-[4px_0_0_0_rgba(0,0,0,0.3)] flex flex-col pt-4 z-40">
+<div class="px-4 mb-6">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-xl bg-primary-container flex items-center justify-center border-b-2 border-surface-container-highest">
+<span class="material-symbols-outlined text-primary text-3xl">delete_outline</span>
+</div>
+<div>
+<h2 class="text-label-bold font-label-bold text-secondary">Inventory</h2>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">Tools of the Trade</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-4">
+<div class="bg-secondary-container text-on-secondary-container rounded-lg border-b-4 border-secondary shadow-none translate-y-1 px-4 py-3 flex items-center gap-3 cursor-pointer">
+<span class="material-symbols-outlined">confirmation_number</span>
+<span class="font-label-bold text-label-bold">Tickets</span>
+</div>
+<div class="bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined">construction</span>
+<span class="font-label-bold text-label-bold">Gadgets</span>
+</div>
+<div class="bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined">delete_outline</span>
+<span class="font-label-bold text-label-bold">Scrap</span>
+</div>
+<div class="bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-label-bold text-label-bold">Upgrades</span>
+</div>
+<div class="bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined">memory</span>
+<span class="font-label-bold text-label-bold">Tech</span>
+</div>
+</nav>
+<div class="mt-auto p-4 bg-surface-container-high border-t-2 border-surface-container-highest">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-full bg-surface-container-lowest h-3 rounded-full recessed-slot overflow-hidden">
+<div class="w-3/4 h-full bg-secondary shadow-[0_0_8px_rgba(120,220,119,0.5)]"></div>
+</div>
+</div>
+<p class="text-[10px] font-label-bold text-on-surface-variant text-center">XP LEVEL 24</p>
+</div>
+</aside>
+<!-- Main Gameplay Canvas -->
+<main class="ml-64 flex-1 relative bg-surface p-8 flex items-center justify-center overflow-hidden">
+<!-- Wooden Table Surface -->
+<div class="absolute inset-0 bg-[#3d2b1f] wood-texture"></div>
+<div class="relative z-10 w-full max-w-5xl aspect-[16/9] bg-[#4a3526] rounded-[2rem] border-[12px] border-[#312219] shadow-2xl flex p-6 gap-8 overflow-hidden">
+<!-- Atmosphere Elements -->
+<!-- LEFT: Ticket List / Scratch Inventory -->
+<div class="w-1/4 h-full flex flex-col gap-3">
+<div class="bg-surface-container-high p-3 rounded-xl border-b-4 border-surface-container-highest flex items-center justify-between">
+<span class="font-label-bold text-primary">Daily Items</span>
+<span class="material-symbols-outlined text-primary">filter_list</span>
+</div>
+<div class="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+<!-- Scratch Card Mini -->
+<div class="bg-surface-variant p-3 rounded-xl border-b-4 border-surface-container-highest flex gap-3 items-center group cursor-pointer hover:scale-[1.02] transition-transform">
+<div class="w-12 h-12 rounded-lg bg-tertiary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary">lunch_dining</span>
+</div>
+<div class="flex-1">
+<p class="text-label-bold text-on-surface">Burger Pack</p>
+<div class="w-full bg-surface-container-lowest h-2 rounded-full mt-1">
+<div class="w-1/2 h-full bg-tertiary rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-variant p-3 rounded-xl border-b-4 border-surface-container-highest flex gap-3 items-center opacity-60">
+<div class="w-12 h-12 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">eco</span>
+</div>
+<div class="flex-1">
+<p class="text-label-bold text-on-surface">Garden Scrap</p>
+<div class="w-full bg-surface-container-lowest h-2 rounded-full mt-1">
+<div class="w-2/3 h-full bg-primary rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-variant p-3 rounded-xl border-b-4 border-surface-container-highest flex gap-3 items-center group cursor-pointer hover:scale-[1.02] transition-transform">
+<div class="w-12 h-12 rounded-lg bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary">casino</span>
+</div>
+<div class="flex-1">
+<p class="text-label-bold text-on-surface">Lucky Dip</p>
+<div class="w-full bg-surface-container-lowest h-2 rounded-full mt-1">
+<div class="w-1/4 h-full bg-secondary rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- CENTER: The Big Scratch Area -->
+<div class="flex-1 h-full flex flex-col items-center justify-center gap-6 relative">
+<div class="relative w-full max-w-md aspect-square bg-surface-container rounded-[2.5rem] tactile-card border-[8px] border-surface-container-highest p-4 flex items-center justify-center group overflow-hidden">
+<!-- The Revealable Items (Layered Underneath) -->
+
+<!-- The Scratch Layer (Simulated Overlay) -->
+<div class="absolute inset-0 bg-[#50453c] scratch-surface torn-edge m-4 transition-opacity duration-1000 flex items-center justify-center opacity-90 cursor-pointer hover:bg-[#623f1e]" id="scratch-overlay">
+<div class="text-center transform -rotate-12">
+<span class="material-symbols-outlined text-7xl text-on-surface opacity-30">pan_tool</span>
+<p class="text-headline-md text-on-surface font-extrabold uppercase drop-shadow-lg">SCRATCH ME!</p>
+</div>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="squishy-button px-8 py-4 bg-secondary text-on-secondary rounded-2xl font-headline-md text-headline-md border-b-8 border-secondary-container">
+                            COLLECT
+                        </button>
+</div>
+</div>
+<!-- RIGHT: Upgrades & Prestige -->
+<div class="w-1/4 h-full flex flex-col gap-6">
+<!-- Upgrades Panel -->
+<div class="bg-surface-container-high rounded-3xl p-5 border-b-8 border-surface-container-highest tactile-card flex flex-col gap-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary">bolt</span>
+<h3 class="text-headline-md font-headline-md text-on-surface">Upgrades</h3>
+</div>
+<!-- Upgrade 1 -->
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-lg bg-secondary-container flex items-center justify-center border-b-2 border-secondary shadow-sm">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+</div>
+<div>
+<p class="text-label-bold text-on-surface leading-none">Dig Strength</p>
+<p class="text-[10px] text-secondary">LVL 11</p>
+</div>
+</div>
+<span class="text-label-bold text-on-surface-variant">$24.4 B</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-4 rounded-full recessed-slot overflow-hidden p-[2px]">
+<div class="w-4/5 h-full bg-secondary rounded-full"></div>
+</div>
+</div>
+<!-- Upgrade 2 -->
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-lg bg-tertiary-container flex items-center justify-center border-b-2 border-tertiary shadow-sm">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">eco</span>
+</div>
+<div>
+<p class="text-label-bold text-on-surface leading-none">Dig Luck</p>
+<p class="text-[10px] text-tertiary">LVL 14</p>
+</div>
+</div>
+<span class="text-label-bold text-on-surface-variant">$112 B</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-4 rounded-full recessed-slot overflow-hidden p-[2px]">
+<div class="w-2/5 h-full bg-tertiary rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Prestige Card -->
+<div class="bg-primary-container rounded-3xl p-5 border-b-8 border-on-primary-fixed-variant tactile-card relative overflow-hidden group cursor-pointer">
+<div class="absolute top-0 right-0 p-2 opacity-10">
+<span class="material-symbols-outlined text-6xl">military_tech</span>
+</div>
+<h4 class="text-label-bold text-primary font-bold uppercase tracking-widest mb-1">Prestige</h4>
+<div class="flex items-center gap-3">
+<span class="text-headline-md font-headline-md text-on-primary-container">15.0x</span>
+<span class="material-symbols-outlined text-secondary animate-bounce">trending_up</span>
+</div>
+<p class="text-[10px] text-primary-fixed mt-2">Next Multiplier available soon...</p>
+</div>
+<!-- Trash Bin Visual -->
+<div class="mt-auto relative group">
+<div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-surface-container-highest px-3 py-1 rounded-lg text-[10px] font-bold text-on-surface border-2 border-surface-container opacity-0 group-hover:opacity-100 transition-opacity">
+                            0 / 27
+                        </div>
+<div class="w-full h-32 bg-outline-variant rounded-t-[3rem] border-x-4 border-t-4 border-surface-container-highest shadow-inner flex flex-col items-center">
+<div class="w-3/4 h-2 bg-surface-container shadow-inner rounded-full mt-4"></div>
+<div class="w-1/2 h-1 bg-surface-container opacity-20 rounded-full mt-2"></div>
+<span class="material-symbols-outlined text-5xl text-surface-container mt-4">delete</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Micro-interaction Scripts -->
+<script>
+        const scratchOverlay = document.getElementById('scratch-overlay');
+        
+        scratchOverlay.addEventListener('mousedown', () => {
+            scratchOverlay.style.opacity = '0.3';
+            setTimeout(() => {
+                scratchOverlay.style.display = 'none';
+                
+                // Trigger confetti or sparkle effect
+                createSparks();
+            }, 600);
+        });
+
+        function createSparks() {
+            for(let i = 0; i < 20; i++) {
+                const spark = document.createElement('div');
+                spark.className = 'fixed pointer-events-none z-[100] w-2 h-2 rounded-full bg-tertiary';
+                spark.style.left = '50%';
+                spark.style.top = '50%';
+                document.body.appendChild(spark);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 100 + Math.random() * 200;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+                
+                spark.animate([
+                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                    { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
+                ], {
+                    duration: 1000 + Math.random() * 500,
+                    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    fill: 'forwards'
+                });
+                
+                setTimeout(() => spark.remove(), 2000);
+            }
+        }
+
+        // Sidebar interactions
+        const navItems = document.querySelectorAll('nav > div');
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(ni => {
+                    ni.className = "bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-primary-container hover:text-on-primary-container transition-colors";
+                });
+                item.className = "bg-secondary-container text-on-secondary-container rounded-lg border-b-4 border-secondary shadow-none translate-y-1 px-4 py-3 flex items-center gap-3 cursor-pointer";
+            });
+        });
+    </script>
+
+
+</body></html>

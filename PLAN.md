@@ -1,0 +1,495 @@
+# PLAN.md — Documento maestro de diseño: "Dumpster Empire"
+### Fuente de verdad del diseño. Ejecutan agentes Sonnet 5.0 medium en un monorepo.
+
+> **Cómo se usa este documento:** `PLAN.md` es la **fuente de verdad del diseño** (el *qué*): visión,
+> game design, economía, contenido y reglas de experiencia. No se ejecuta directo pegándolo a un
+> modelo: el desarrollo lo llevan adelante agentes ejecutores guiados por dos documentos hermanos:
+> `CLAUDE.md` (el *cómo*: reglas de comportamiento de los agentes) y `DESARROLLO.md` (el *dónde* y el
+> *en qué orden*: arquitectura del monorepo, stack de lanzamiento en Steam, fases y tareas). Donde este
+> documento y `DESARROLLO.md` difieran en un detalle de arquitectura, manda `DESARROLLO.md`; donde
+> falte un detalle menor de diseño, el agente decide siguiendo el espíritu de este documento (sección 9).
+>
+> **Estado del proyecto:** existe un prototipo de un solo archivo (`reference/dumpster-empire.html`) que sirve
+> como **referencia suelta de comportamiento, no como código a portar**. Tiene funciones rotas o
+> inútiles (p. ej. la stat de Fuerza) que **no se copian**: se rediseñan desde el engine y este plan.
+
+---
+
+## INSTRUCCIONES DE ROL
+
+Actuá como un estudio de desarrollo de videojuegos completo y autónomo: game designer, economista de sistemas, programador senior, diseñador de UI/UX y QA, todo en una sola entidad. Tu tarea es construir **"Dumpster Empire"**, un juego idle/incremental de navegador (HTML5), completo y jugable, sin pedirme confirmaciones intermedias.
+
+Reglas de comportamiento durante todo el desarrollo:
+
+1. **No me preguntes nada.** Si falta un dato (un color exacto, un nombre de objeto, un valor de balance), decidilo vos mismo siguiendo el espíritu de este documento y seguí adelante.
+2. **Generá el proyecto completo**, archivo por archivo, hasta que sea jugable de principio a fin (incluyendo prestigio funcional).
+3. **Revisá cada archivo antes de darlo por terminado**: leelo de nuevo buscando errores de sintaxis, referencias rotas, lógica inconsistente con la economía definida en la sección 4, y corregilo vos mismo sin esperar que yo lo note.
+4. **Continuá automáticamente** de una parte a la siguiente hasta completar todo el checklist de la sección 10. No te detengas a mitad de camino a pedir permiso para seguir.
+5. Si en algún punto detectás que una decisión de diseño anterior (tuya o de este documento) generó una inconsistencia, **corregila y dejá una nota breve en el código** (comentario `// AJUSTE:`) explicando qué cambiaste y por qué.
+6. Priorizá siempre: **que funcione y sea jugable** > que tenga muchísimo contenido > que tenga arte sofisticado. Un juego pequeño y sin bugs es mejor resultado que uno grande y roto.
+
+---
+
+## 1. VISIÓN DEL JUEGO
+
+**Dumpster Empire** es un idle game de navegador donde el jugador empieza escarbando un contenedor de basura con las manos y termina dirigiendo un imperio global de recuperación de objetos, desde plantas de reciclaje automatizadas hasta casas de subastas de reliquias.
+
+La inspiración mecánica es **Scritchy Scratchy** (Lunch Money Games): ese juego usa el gesto físico de "arrastrar para raspar" tarjetas de rasca y gana, con tres estadísticas centrales (Suerte, Potencia de Rascado, Tamaño de Área), automatización vía un "Auto Scratcher", y un sistema de prestigio basado en puntos permanentes. Dumpster Empire traduce esa misma estructura a un tema distinto:
+
+| Scritchy Scratchy | Dumpster Empire |
+|---|---|
+| Rascar tarjetas de lotería | Escarbar contenedores de basura |
+| Lavar platos (acción inicial) | Revisar el primer contenedor a mano |
+| Suerte / Potencia de Rascado / Área | Suerte / Fuerza de Escarbado / Tamaño de Búsqueda |
+| Auto Scratcher | Robot Clasificador Automático |
+| Jack Points (prestigio) | Llaves de Ciudad (prestigio) |
+| Tarjetas con distintos riesgos/pagos | Contenedores con distinto riesgo/contenido |
+
+El objetivo de diseño: que el jugador sienta progreso casi constante desde el segundo 1, con decisiones estratégicas reales (qué contenedor comprar, cuándo automatizar, cuándo prestigiar) y una sensación de "una partida más" infinita.
+
+**Plataforma objetivo:** **Steam** (escritorio Windows/Mac/Linux y **Steam Deck**), empaquetado con
+Electron. El juego es HTML5 + JS vanilla y se ejecuta dentro del shell de Electron. **Sin cuentas y
+sin backend propio:** el guardado es local y sincroniza con **Steam Cloud**. Diseño **mobile-first
+y táctil**, lo cual encaja además con la pantalla táctil del Steam Deck; en desktop el mismo layout
+responsive se centra con ancho máximo. Título **premium** (compra única), sin anuncios ni compras
+in-app. Ver stack completo en `DESARROLLO.md` sección 3.
+
+---
+
+## 2. GAME DESIGN DOCUMENT
+
+### 2.1 Core Loop
+
+```
+Escarbar contenedor → obtener objetos/dinero → comprar mejoras o contenedores nuevos
+   → escarbar más rápido / más contenedores en paralelo → desbloquear automatización
+   → dejar que los robots trabajen solos → acumular dinero offline
+   → cuando el progreso se estanca → Prestigio (nueva ciudad) → bonos permanentes → loop más rápido
+```
+
+### 2.2 Mecánica táctil principal: "Escarbar"
+
+Igual que en Scritchy Scratchy el jugador arrastra el cursor/dedo sobre la tarjeta para revelarla, en Dumpster Empire el jugador **arrastra el cursor/dedo sobre el contenedor** para apartar capas de basura y revelar lo que hay debajo. Técnicamente: un `<canvas>` con una capa "sucia" dibujada encima de los objetos, y `globalCompositeOperation = "destination-out"` para ir "borrando" la suciedad donde el usuario arrastra (idéntico patrón técnico que usan los juegos de rasca y gana en HTML5 canvas).
+
+Reglas del gesto:
+- El jugador puede **espiar** antes de comprometerse del todo (revelar parcialmente) — igual que en el juego de referencia, donde escarbar a mano permite ver qué hay antes de terminar, mientras que la automatización no.
+- Al revelar un porcentaje del área (configurable, por defecto 60%) el contenedor se considera "completado" y se entregan automáticamente los objetos restantes.
+- Cada contenedor tiene una probabilidad de contener una **"trampa"** (vidrio roto, objeto podrido, animal que muerde) que penaliza con pérdida de dinero o de tiempo — esto agrega la capa de riesgo/recompensa que hace interesante al juego de referencia.
+
+### 2.3 Estadísticas principales del jugador
+
+| Stat | Efecto | Cómo se mejora |
+|---|---|---|
+| **Suerte** | Aumenta la probabilidad de objetos raros y reduce la probabilidad de trampas | Mejoras compradas con dinero / prestigio |
+| **Fuerza de Escarbado** | Baja el **umbral de revelado** necesario para completar un contenedor y añade un **bonus de valor por profundidad** (cavar con más fuerza desentierra objetos más valiosos): a mayor Fuerza, cada contenedor se completa con menos arrastre y rinde más $ por objeto | Mejoras + herramientas (guantes → pala → excavadora) |
+| **Tamaño de Búsqueda** | Aumenta el área de canvas revelada por cada gesto de arrastre (pincel más grande) | Mejoras + herramientas |
+| **Capacidad** | Cuántos contenedores se pueden tener "abiertos" en simultáneo (manual + auto) | Mejoras de infraestructura |
+
+> **Nota de diseño (revisión de stats).** En el prototipo la Fuerza estaba mal implementada y
+> resultaba inútil: solo afectaba una "velocidad de limpieza" que se solapaba con el Área y no
+> cambiaba ningún número que al jugador le importara. Rediseño: **cada stat debe modificar un valor
+> que el jugador perciba y que sea distinto del de las otras.** Área = *ancho* del trazo (revelás
+> más superficie por gesto); Fuerza = *profundidad* del trazo (completás el contenedor con menos
+> esfuerzo) **más** un multiplicador de valor por objeto (recompensa directa). Así Fuerza y Área
+> dejan de ser redundantes y las dos valen la pena. Regla general para el engine: si una mejora no
+> cambia un número visible y relevante para el jugador, no se implementa hasta rediseñarla. Los
+> valores exactos (peso del bonus de valor, curva del umbral) se calibran en el pase de balance
+> (sección 9 y `DESARROLLO.md` Fase 5) contra los hitos de la sección 3.
+
+### 2.4 Recursos y moneda
+
+- **Monedas ($):** moneda principal, se gana vendiendo objetos encontrados. Sirve para comprar mejoras y contenedores nuevos.
+- **Fragmentos de Categoría:** cada categoria de objeto rara (Antigüedades, Arte, Reliquias, Tecnología) genera además un recurso secundario coleccionable, usado para desbloquear mejoras especiales de esa rama (igual función que tener "estadísticas paralelas" para dar profundidad sin complicar la moneda principal).
+- **Llaves de Ciudad:** moneda de prestigio, ver 2.8.
+
+### 2.5 Rarezas y categorías de objetos (orden de progresión)
+
+| # | Categoría | Color de rareza | Multiplicador base de valor | Desbloqueo |
+|---|---|---|---|---|
+| 1 | Basura común | Gris | x1 | Inicio |
+| 2 | Objetos reutilizables | Verde | x3 | Nivel de cuenta 3 |
+| 3 | Electrónica | Azul | x10 | Nivel de cuenta 8 |
+| 4 | Antigüedades | Morado | x35 | Nivel de cuenta 15 |
+| 5 | Objetos históricos | Naranja | x120 | Nivel de cuenta 25 |
+| 6 | Arte | Rosa/Magenta | x400 | Nivel de cuenta 40 |
+| 7 | Reliquias | Dorado | x1.500 | Nivel de cuenta 60 |
+| 8 | Tecnología futurista | Cian brillante (con partícula animada) | x6.000 | Solo tras el primer Prestigio |
+
+Cada categoría tiene **6 a 8 objetos individuales** con nombre propio, ícono y un rango de valor propio dentro del multiplicador de su rareza (la IA debe generar listas completas de nombres al implementar — ej. en "Basura común": lata aplastada, cáscara de banana, periódico viejo, zapato sin par, botella plástica, caja de cartón).
+
+### 2.6 Contenedores (equivalente a los "tickets"/tarjetas)
+
+Cada contenedor es la unidad de compra-y-escarbado, con su propio costo, tiempo, distribución de probabilidad y riesgo. Como mínimo, implementar estos 8, en orden de desbloqueo:
+
+| Contenedor | Costo inicial | Categorías posibles | Prob. de trampa | Nota de diseño |
+|---|---|---|---|---|
+| Tacho de vereda | $0 (gratis, tutorial) | Solo Basura común | 5% | Punto de entrada, siempre disponible |
+| Contenedor de barrio | $15 | Basura común, Reutilizables | 8% | Primera compra real |
+| Container industrial | $150 | Reutilizables, Electrónica | 15% | Introduce riesgo medio |
+| Depósito abandonado | $1.200 | Electrónica, Antigüedades | 20% | Requiere Suerte mínima para abrir rentable |
+| Mudanza de mansión | $9.000 | Antigüedades, Histórico | 12% | Pagos altos, trampa cara si falla |
+| Galería en liquidación | $60.000 | Histórico, Arte | 18% | Introduce el recurso de Fragmentos de Arte |
+| Bóveda perdida | $400.000 | Arte, Reliquias | 25% | Alto riesgo/alta recompensa, ideal para pre-prestigio |
+| Contenedor extradimensional | Solo post-Prestigio | Reliquias, Tecnología futurista | 30% | Desbloqueado por Llaves de Ciudad |
+
+Fórmula de costo de cada compra adicional del mismo contenedor (ver fórmulas exactas en sección 4).
+
+### 2.7 Automatización
+
+Progresión de herramientas, calcada de la curva manual→automático del juego de referencia:
+
+1. **Guantes** (mejora pasiva de Fuerza de Escarbado, sin automatizar nada)
+2. **Carrito** (permite tener 2 contenedores abiertos a la vez)
+3. **Detector de metales** (mejora Suerte en Electrónica)
+4. **Robot Clasificador Básico** — equivalente al "Auto Scratcher": escarba contenedores solo, sin que el jugador interactúe, pero **no puede espiar antes de comprometerse**, por lo que sufre más trampas que el jugador manual (igual trade-off que el original).
+5. **Cinta Transportadora** — permite encolar contenedores para que el Robot los procese en cadena.
+6. **Planta de Reciclaje** — multiplica el valor de venta de Basura común y Reutilizables automáticamente.
+7. **Centro de Subastas** — vende automáticamente Arte y Reliquias al mejor precio del mercado simulado (con fluctuación aleatoria ±20%, ver 4.4).
+8. **Red de Drones** (estructura late-game) — procesa contenedores extradimensionales sin supervisión.
+
+Regla de balance: la automatización siempre debe ser **más lenta en ganancia por segundo que jugar manualmente de forma óptima**, pero permite progreso mientras el jugador está ausente (offline progress, ver 4.5). Esto es lo que hace que el juego siga siendo "incremental" y no solo un *idler* pasivo.
+
+### 2.8 Sistema de Prestigio: "Llaves de Ciudad"
+
+- Disponible desde que el jugador alcanza el Contenedor "Bóveda perdida" y ha acumulado un umbral de dinero total ganado (no dinero actual) de **$1.000.000.000** (mil millones) en la primera vuelta.
+- Al prestigiar: el jugador reinicia dinero, contenedores comprados y mejoras compradas con dinero normal, pero conserva:
+  - Llaves de Ciudad obtenidas (fórmula en sección 4.3).
+  - Mejoras permanentes compradas con Llaves (árbol de prestigio).
+  - Una nueva "ciudad" desbloqueada con multiplicador base de valor más alto y nuevo set visual (cambia la paleta de fondo del juego).
+- Árbol de mejoras permanentes (mínimo 12 nodos): bonus inicial de dinero al empezar, Suerte base +X%, desbloqueo de Contenedor extradimensional, reducción de probabilidad de trampa global, multiplicador de progreso offline, slot extra de contenedor automático simultáneo, etc.
+- Cada prestigio sucesivo debe sentirse notablemente más rápido que el anterior (es el "one more run" hook).
+
+---
+
+## 3. CONTRATO DE EXPERIENCIA — RITMO ESPERADO
+
+Para que el juego "enganche" como el de referencia, la IA debe verificar (jugando mentalmente la curva, no solo escribiendo código) que se cumplan estos hitos aproximados en una partida nueva, sin gastar dinero en nada fuera de lo obvio:
+
+- Primera compra de mejora: dentro de los primeros **20-30 segundos**.
+- Primer contenedor de pago comprado: antes de los **2 minutos**.
+- Primera automatización (Robot Clasificador): entre los **8 y 15 minutos**.
+- Primer acceso a Electrónica: antes de los **15 minutos**.
+- Sensación de "todo desbloqueado, falta plata": alrededor de los **45-60 minutos**, momento en que el juego empuja naturalmente hacia el Prestigio.
+- Primer Prestigio disponible: entre **1.5 y 3 horas** de juego activo+offline combinado.
+
+Si al implementar la economía (sección 4) estos hitos no se cumplen con los números elegidos, ajustar las constantes hasta que se cumplan — esto tiene prioridad sobre mantener números "redondos".
+
+---
+
+## 4. ECONOMÍA Y FÓRMULAS DE BALANCE
+
+Estas fórmulas son el contrato que el código debe implementar literalmente. No reemplazar por aproximaciones.
+
+### 4.1 Costo de mejoras repetibles
+
+Para cualquier mejora comprable múltiples veces (Suerte, Fuerza de Escarbado, Tamaño de Búsqueda, slots de capacidad):
+
+```
+costo(nivel) = costoBase * (factorCrecimiento ^ nivel)
+```
+
+- `factorCrecimiento` por defecto: **1.13** para mejoras de stats básicas (Suerte/Fuerza/Área).
+- `factorCrecimiento`: **1.22** para slots de capacidad (deben crecer más caro, son más poderosos).
+- `costoBase` se define por mejora; documentar cada valor en `src/data/upgrades.json`.
+
+### 4.2 Costo de contenedores adicionales del mismo tipo
+
+```
+costo(cantidadYaComprada) = costoInicial * (1.08 ^ cantidadYaComprada)
+```
+
+(Crecimiento más suave que las mejoras porque el jugador necesita comprar contenedores repetidamente como parte del loop principal, no como una decisión puntual.)
+
+### 4.3 Fórmula de Llaves de Ciudad al prestigiar
+
+```
+llaves = floor( raiz_cuadrada( dineroTotalGanado / 1.000.000.000 ) * 10 )
+```
+
+Con un mínimo de 1 llave si se cumplió el umbral de prestigio. Esto da crecimiento sub-lineal: hace falta jugar mucho más para duplicar las llaves que para obtener la primera tanda, lo cual es intencional (evita "prestigio infinito sin esfuerzo").
+
+### 4.4 Valor de venta de un objeto encontrado
+
+```
+valorFinal = valorBaseObjeto * multiplicadorRareza * (1 + suerte/100) * fluctuacionMercado
+```
+
+- `fluctuacionMercado`: número aleatorio entre 0.85 y 1.20, recalculado cada 60 segundos de juego (simula un mercado vivo, relevante sobre todo para el Centro de Subastas automatizado de 2.7).
+
+### 4.5 Progreso offline
+
+```
+gananciaOffline = gananciaAutomaticaPorSegundo * segundosAusente * factorOffline
+```
+
+- `factorOffline` por defecto: **0.5** (el jugador gana la mitad de lo que ganaría si estuviera mirando la pantalla activamente con automatización corriendo).
+- Tope duro: el offline nunca calcula más de **8 horas** de ausencia (a partir de ahí, no sigue acumulando) salvo que se compre la mejora de prestigio que extiende este tope.
+- Al volver, mostrar un resumen modal: "Mientras no estabas, tus robots encontraron: [resumen de objetos y dinero]".
+
+### 4.6 Probabilidad de trampa
+
+```
+probTrampaEfectiva = max(0.01, probTrampaBaseDelContenedor - (suerte * 0.002))
+```
+
+Nunca debe llegar a 0% (siempre debe quedar un mínimo de riesgo, 1%, para que el riesgo nunca desaparezca del todo — esto es deliberado, mantiene tensión incluso en late-game).
+
+---
+
+## 5. UI / UX
+
+Inspirado en la interfaz limpia y minimalista del juego de referencia, donde el foco siempre está en el área de interacción principal y las estadísticas relevantes son visibles sin abrir menús.
+
+### 5.1 Layout de pantalla principal (desktop y mobile, responsive)
+
+```
+┌─────────────────────────────────────────┐
+│  [Dinero: $1,234]   [Llaves: 3]   [⚙]    │  ← barra superior fija
+├─────────────────────────────────────────┤
+│                                           │
+│         ÁREA DE ESCARBADO ACTIVA         │  ← canvas principal, ocupa
+│        (contenedor actual + canvas)      │     el 55-65% de la pantalla
+│                                           │
+├─────────────────────────────────────────┤
+│  [Suerte ▲]  [Fuerza ▲]  [Área ▲]        │  ← mejoras rápidas, siempre visibles
+├─────────────────────────────────────────┤
+│  Tienda de contenedores | Automatización │  ← pestañas inferiores
+│  | Logros | Prestigio                    │
+└─────────────────────────────────────────┘
+```
+
+En mobile: la barra de pestañas inferior se vuelve barra de íconos fijos (estilo app nativa), y el área de escarbado pasa a ocupar casi toda la pantalla con las stats colapsadas en un panel deslizable desde abajo.
+
+### 5.2 Feedback visual obligatorio
+
+- Al revelar un objeto: pequeña animación de "pop" + partícula de color según rareza + sonido corto.
+- Al activar una trampa: vibración visual (shake) breve de la pantalla + flash rojo tenue + sonido grave (nunca usar sonidos agresivos o de "alarma" fuerte — el castigo debe sentirse como un chasco, no como un fallo grave).
+- Contador de dinero: nunca debe saltar de golpe; animar el conteo numérico (tween) en 300-500ms.
+- Botones de compra: deshabilitados (grises, opacidad 50%) cuando no alcanza el dinero, con tooltip mostrando cuánto falta.
+- Al desbloquear una categoría nueva de objeto: modal corto y celebratorio, no bloqueante (auto-cierra en 3s o con tap).
+
+### 5.3 Identidad visual: fusión ámbar + pulido Stitch
+
+Dirección de arte definida: **base cálida ámbar (del prototipo) + rigor de componentes Stitch.**
+
+- **Base (identidad de marca):** paleta cálida del prototipo — `--amber #ffb627`, oliva `#86a14a`,
+  fondos oscuros cálidos (`--bg-0 #121110` … `--bg-3 #322c20`). Es lo que da al juego su carácter de
+  "basura industrial" y se conserva como identidad.
+- **Colores de rareza (sección 2.5):** los ocho tonos ya definidos (`--r-common` … `--r-future`)
+  resaltan sobre el fondo cálido oscuro. Los objetos de rareza alta llevan **bloom** (glow de color).
+- **De los mockups Stitch se adopta el rigor:** botones táctiles "extruidos" (borde inferior de
+  2–4px, se hunden 2px al presionar), gauges/barras **recesados** con relleno de rayas hazard y glow
+  en el borde de avance, tarjetas con textura sutil de metal gastado.
+- **Tipografía:** **Fredoka** para números y titulares grandes (redondeada, amigable para "1.42B"),
+  **Nunito/Hanken Grotesk** para cuerpo, y una monoespaciada (**JetBrains Mono**) solo para readouts
+  técnicos y etiquetas tipo "código de máquina". Nunca una monoespaciada fría para todo.
+- **Sin emojis como íconos, en ningún lado** (ni en data ni en UI). Se usan **SVG propios o Material
+  Symbols** coherentes con Stitch. El prototipo usa ~60 emojis; se reemplazan por completo.
+- Todos los tokens (colores, tipografía, radios, sombras) viven centralizados en
+  `apps/game/styles/tokens.css`. Cero valores sueltos hardcodeados.
+
+### 5.4 Pantallas secundarias requeridas
+
+1. Tienda de contenedores (grid de tarjetas con imagen, costo, categorías posibles, botón comprar/escarbar).
+2. Panel de Automatización (lista de robots/maquinaria, estado on/off, throughput actual).
+3. Logros (grid con estado bloqueado/desbloqueado, mínimo 25 logros).
+4. Árbol de Prestigio (visualización tipo árbol o grid de nodos conectados, con botón grande de "Prestigiar" que muestra una preview de cuántas Llaves se obtendrían si se prestigiara ahora).
+5. Configuración (volumen, reset de partida con doble confirmación, exportar/importar guardado como texto).
+
+---
+
+## 6. ARQUITECTURA TÉCNICA
+
+### 6.1 Stack
+
+> El detalle completo y las versiones pineadas están en `DESARROLLO.md` sección 3. Resumen:
+
+- **HTML5 + CSS3 + JavaScript vanilla (ES modules), buildless.** Sin frameworks (React/Vue/etc.) ni
+  bundler para el juego. El navegador carga los módulos con `<script type="module">` e **import maps**;
+  el juego se sirve estáticamente. La lógica de juego se importa desde un paquete compartido
+  (`packages/engine`) vía import map, sin paso de build.
+- **Monorepo con npm workspaces** que separa **lógica pura** de **presentación** de **empaquetado**:
+  `packages/engine` (economía y sistemas, cero DOM, testeable con **Vitest** en Node), `apps/game`
+  (HTML/CSS/canvas/UI) y `apps/desktop` (**Electron + steamworks.js** para Steam).
+- Canvas 2D nativo para la mecánica de escarbado (sección 2.2).
+- `localStorage` para guardado + **Steam Cloud** vía el proceso principal de Electron. Estado completo
+  serializado en JSON, con `saveVersion` y validación al importar.
+- Sin backend propio, sin librerías de terceros pesadas. Si se necesita algo puntual (tweening de
+  números, partículas, SFX), se implementa en una función propia corta (WebAudio/Canvas) en vez de
+  sumar una librería.
+
+### 6.2 Estructura de carpetas
+
+> La estructura **obligatoria y actual** es la del monorepo, definida en `DESARROLLO.md` sección 4.
+> Separa `packages/engine` (lógica pura, cero DOM) de `apps/game` (presentación) y `apps/desktop`
+> (Electron/Steam). Resumen:
+
+```
+dumpster-empire/                 ← monorepo (npm workspaces)
+├── packages/engine/             ← lógica pura: state, economy (§4 literal), systems, save, format
+│   └── tests/                   ← Vitest (economía, save, prestigio, offline)
+├── apps/game/                   ← index.html (import map) + styles/ + src/{dig,ui,fx,icons,data}
+├── apps/desktop/                ← Electron + steamworks.js (logros + Steam Cloud) + electron-builder
+├── tools/steam/                 ← VDF de SteamPipe
+├── reference/                   ← SOLO consulta: dumpster-empire.html + ui/ (mockups). NO se buildea.
+├── agentes/                     ← prompts por agente + HANDOFF.md
+├── PLAN.md · CLAUDE.md · DESARROLLO.md · README.md
+```
+
+La frontera es dura: **el engine no toca el DOM** y la **UI no reimplementa fórmulas**. La UI lee
+estado y despacha acciones; toda la economía vive en `packages/engine`. (La estructura de un solo
+`src/` que aparecía en versiones anteriores de este plan queda reemplazada por la de `DESARROLLO.md`.)
+
+### 6.3 Sistema de guardado
+
+- Autoguardado cada 15 segundos y al cerrar/ocultar (`visibilitychange`) y en `before-quit` de Electron.
+- Guardar también un timestamp `lastSavedAt` para calcular el progreso offline al volver (sección 4.5).
+- Versión de esquema de guardado (`saveVersion`) incluida en el JSON, con función de migración simple si en el futuro cambia la estructura — aunque sea v1, dejar el campo listo.
+- **Steam Cloud:** en Electron, el archivo de guardado vive en `userData` y se mapea a Steam Cloud
+  para sincronizar entre máquinas (PC ↔ Steam Deck). Manejar el caso de **conflicto de guardado en
+  la nube** (elegir el más reciente por `lastSavedAt`, nunca pisar en silencio una partida más avanzada).
+- Botón de exportar/importar: codifica el JSON de guardado en base64 como texto que el usuario puede
+  copiar y pegar (backup manual, independiente de Steam Cloud).
+
+### 6.4 Rendimiento
+
+- El loop principal corre con `requestAnimationFrame` para todo lo visual, y un `setInterval` separado de 1 segundo (o cálculo por delta de tiempo real, preferible) para la lógica de producción automática — para que la economía no dependa de que la pestaña esté en foco.
+- El canvas de escarbado debe limpiar y redibujar solo el área afectada por el gesto, no todo el canvas en cada frame.
+
+---
+
+## 7. CONTENIDO MÍNIMO A GENERAR
+
+La IA debe crear, como mínimo, antes de considerar el proyecto terminado:
+
+- [ ] 8 categorías de objetos (sección 2.5), cada una con 6-8 objetos únicos (nombre, ícono SVG simple, rango de valor).
+- [ ] 8 contenedores (sección 2.6) completamente balanceados según las fórmulas de la sección 4.
+- [ ] Al menos 4 mejoras repetibles (Suerte, Fuerza, Área, Capacidad) + 8 mejoras de automatización de un solo uso (sección 2.7).
+- [ ] Árbol de prestigio con mínimo 12 nodos (sección 2.8).
+- [ ] Mínimo 25 logros, cubriendo: hitos de dinero total, hitos de objetos encontrados por categoría, hitos de prestigios, logros "raros" (ej. encontrar un objeto legendario específico).
+- [ ] Tutorial mínimo: las primeras 3 acciones del jugador (escarbar el tacho gratis, comprar la primera mejora, comprar el primer contenedor de pago) deben tener un tooltip guiado que se muestra una sola vez.
+
+---
+
+## 8. MONETIZACIÓN
+
+Modelo definido: **título premium en Steam (compra única).** No hay anuncios, no hay compras in-app,
+no hay mecánicas de retención forzada ni "pagar para no esperar" (el progreso offline de 4.5 ya
+cubre esa necesidad gratis para todos). El jugador paga una vez y tiene el juego completo.
+
+- Cualquier contenido pago futuro debe ser **DLC cosmético opcional** (skins de contenedor, temas de
+  color) sin ventaja de gameplay — y es **postre**, no parte del V1.
+- Nada de anuncios intersticiales ni recompensados: rompen el loop y no aplican a un título premium.
+- Esta sección es de **baja prioridad**: el foco del V1 es un juego completo y sin bugs (secciones 1-7 y 9).
+
+---
+
+## 9. INSTRUCCIONES DE EJECUCIÓN
+
+El orden de construcción real, por fases y con tareas asignables a agentes Sonnet, está en
+`DESARROLLO.md` sección 7 (Roadmap) y sección 8 (Desglose de tareas). Resumen del orden:
+
+1. Andamiaje del monorepo (npm workspaces, `packages/engine` + `apps/game` vacíos, Vitest, import map).
+2. `packages/engine`: fórmulas de la sección 4 (literales) + **tests de Vitest** que confirman los
+   costos de los primeros 10 niveles de cada mejora, llaves de prestigio, offline y prob. de trampa.
+3. Data completa en `apps/game/src/data/*.json` con los valores que arrojan las fórmulas ya aplicadas
+   (sin placeholders "TODO: definir valor").
+4. Mecánica de canvas de escarbado (`apps/game/src/dig/`) + vistas que consumen el engine.
+5. Sistemas de automatización, offline, prestigio (árbol de nodos conectados) y logros.
+6. Cerrar huecos de UI del PLAN (§5.2/§5.4): sonido, partículas, tween, íconos SVG (sin emojis).
+7. Pulido visual fusión ámbar+Stitch (§5.3), mobile-first / Steam Deck.
+8. Pase de balance contra los hitos de la sección 3 (ajustar **constantes de data**, no fórmulas).
+9. Empaquetado Steam (`apps/desktop`: Electron + steamworks.js + electron-builder).
+10. **Auditoría final** (sección 10) antes de entregar.
+
+**Decisiones que te corresponde tomar sin consultarme** (lista no exhaustiva, pero ejemplo del criterio a aplicar): nombres exactos de cada objeto individual, íconos SVG simples (formas geométricas básicas está bien, no hace falta arte complejo), textos de logros, copys de la UI, paleta exacta dentro del rango indicado en 5.3, nombres de las 2-3 "ciudades" de prestigio adicionales más allá de la primera.
+
+**Si encontrás un problema durante el desarrollo, arreglalo sin preguntarme y dejá registrado el cambio en un comentario `// AJUSTE:` en el código correspondiente.** No te detengas a esperar mi confirmación en ningún punto del proceso — segui trabajando hasta haber cubierto el checklist completo de la sección 10.
+
+---
+
+## 10. CHECKLIST DE AUTOAUDITORÍA FINAL
+
+Antes de considerar el proyecto entregado, recorré esta lista explícitamente y corregí cualquier ítem que falle. No declares el proyecto "terminado" si hay ítems sin marcar.
+
+**Jugabilidad**
+- [ ] El juego abre y es jugable tanto sirviendo `apps/game` estáticamente como dentro de Electron (`apps/desktop`), sin errores de consola.
+- [ ] Cada stat (Suerte, Fuerza, Área, Capacidad) cambia un número visible y relevante para el jugador (nada de mejoras inútiles como la Fuerza del prototipo).
+- [ ] Se puede completar el loop entero: escarbar → vender → mejorar → comprar contenedor nuevo → automatizar → prestigiar, al menos una vez, de punta a punta.
+- [ ] Los hitos de ritmo de la sección 3 se cumplen aproximadamente con los valores numéricos implementados.
+- [ ] Ningún botón de acción queda permanentemente deshabilitado por un bug (ej. costo mal calculado que da `NaN` o `Infinity` prematuro).
+
+**Economía**
+- [ ] Las fórmulas de la sección 4 están implementadas literalmente (no aproximadas).
+- [ ] Los números grandes se formatean legibles (K, M, B, T...) y nunca se muestran con notación científica cruda al jugador.
+- [ ] No existe ninguna combinación de compras que rompa la economía (ej. un loop infinito de dinero sin gastar tiempo real).
+
+**Guardado**
+- [ ] El guardado persiste correctamente al recargar y al cerrar/abrir la app de Electron.
+- [ ] El progreso offline se calcula correctamente al volver tras cerrar la app.
+- [ ] Exportar/importar guardado funciona ida y vuelta sin pérdida de datos.
+- [ ] Steam Cloud sincroniza el guardado y resuelve conflictos por `lastSavedAt` sin pisar la partida más avanzada.
+
+**UI/UX**
+- [ ] El layout responde correctamente en mobile, Steam Deck (1280×800) y desktop (probar en al menos 375px, 1280px y 1440px de ancho).
+- [ ] Todo elemento interactivo tiene feedback visual al hacer hover/tap.
+- [ ] No hay texto cortado o desbordado en ningún panel con números grandes.
+- [ ] No queda ningún emoji como ícono; todos los íconos son SVG/Material Symbols.
+
+**Contenido**
+- [ ] Las 8 categorías de objetos están completas, con ningún campo vacío o placeholder.
+- [ ] Los 8 contenedores están balanceados según fórmulas, sin valores copiados sin ajustar.
+- [ ] Los 25+ logros tienen condición de desbloqueo verificable en código (no solo texto decorativo).
+
+**Código**
+- [ ] No quedan `console.log` de debug olvidados.
+- [ ] No quedan comentarios `// TODO` sin resolver.
+- [ ] Los archivos siguen la estructura del monorepo (`DESARROLLO.md` sección 4) sin desvíos no justificados.
+- [ ] La frontera engine↔UI se respeta: `packages/engine` no toca el DOM y la UI no reimplementa fórmulas.
+- [ ] Los tests de Vitest del engine están verdes (economía, save, prestigio, offline).
+
+**Steam / empaquetado**
+- [ ] `electron-builder` produce instalables para Win/Mac/Linux (Linux cubre Steam Deck).
+- [ ] Los logros del engine disparan logros de Steam; Steam Cloud queda configurado contra el appId.
+
+**Cierre**
+- [ ] Un `README.md` explica cómo correr el juego localmente en 3 pasos o menos.
+- [ ] Se entregó una nota final breve (no extensa) resumiendo qué se construyó y qué quedaría como posible expansión futura.
+
+---
+
+## REGLA FINAL
+
+Trabajá de forma continua hasta entregar el proyecto completo y auditado contra la sección 10. No te detengas a mitad de camino. No me pidas que confirme decisiones de diseño menores — este documento ya contiene todo lo necesario para que tomes esas decisiones vos mismo. Priorizá siempre tener un juego pequeño y funcional por sobre uno grande y roto.
+
+
+## Posibles adiciones a futuro:
+Contenido nuevo (fácil de sumar con la estructura actual)
+
+Objetos especiales/legendarios raros: un ítem único por categoría con probabilidad bajísima (ej. 1 en 500) que dé un logro + un multiplicador cosmético o un "trofeo" visible en un salón de la casa.
+Eventos de contenedor: de vez en cuando aparece un contenedor "dorado" o "en llamas" (tiempo limitado, 60-90s) con mejor loot o más trampa, para generar urgencia.
+Clima/turnos: de noche (real, según hora del sistema) más suerte pero más trampa; de día al revés. Le da un motivo para volver en distintos horarios.
+Misiones diarias/semanales: "encontrá 5 antigüedades hoy", dan dinero o llaves de prestigio extra. Ya tenés itemsFoundByCategory, así que el tracking es casi gratis.
+
+🧠 Mecánicas de decisión (le falta algo de "riesgo/recompensa" activo)
+
+Espiar antes de cavar ya existe implícito con robotClasificador que "no puede espiar". Se podría extender a mano: gastar una pequeña cantidad de "energía" para revelar 1 de los 3 slots antes de decidir si seguís o abandonás.
+Trampas con grados: en vez de solo "trampa sí/no", que algunas trampas solo te hagan perder el ítem actual y otras te hagan perder tiempo/plata, con indicios visuales (grietas, olor, sonido) para que el jugador aprenda a leerlas.
+Negociación de venta: al vender, ofrecer "vender ahora" vs "guardar para el mercado" (ligado a marketFluctuation), agregando un mini-inventario temporal.
+ 
+🏆 Progresión / prestigio
+
+Segunda moneda de prestigio con su propio árbol temático (ej. "contactos" que desbloquean compradores especiales por categoría, no solo multiplicadores).
+Especializaciones: al prestigiar, elegir un "estilo" (Coleccionista, Chatarrero, Anticuario) que da bonus fuerte a 2-3 categorías pero penaliza el resto — le da rejugabilidad a las runs.
+Contenedores prestigio-exclusivos ya tenés 1 (containerExtradimensional); podrías escalar con 2-3 más atados a prestigeCount más alto, cada uno con una mecánica nueva (ej. cavar con tiempo límite estricto, o "modo oscuridad" donde no ves el minimapa de suciedad).
+
+🎨 Feedback / juice (mejoras rápidas de sensación)
+
+Partículas y sonido al encontrar rareza alta (ya tenés colores por rareza, aprovechalos con un destello/confeti en finishDig).
+Racha de excavación: contador visual de "combo" si encadenás varios cavados sin trampa, con un pequeño bonus de suerte temporal.
+Vibración táctil (Vibration API) en trampas y hallazgos épicos en mobile, ya que el juego está claramente pensado para touch (touch-action:none).
+
+💰 Retención / meta
+
+Progreso offline visible con resumen "mientras no estabas" al volver (ya calculás applyOfflineProgress; se puede mostrar como un modal tipo "encontraste 12 objetos, ganaste $X" con lista de highlights).
+Sistema de colección/album: una vitrina donde se van "fichando" todos los ítems únicos encontrados alguna vez (ya tenés los nombres/iconos en ITEMS), con % de completitud por categoría.

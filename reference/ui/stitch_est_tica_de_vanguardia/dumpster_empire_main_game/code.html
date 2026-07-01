@@ -1,0 +1,336 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Dumpster Empire - Scavenge</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700&amp;family=JetBrains+Mono:wght@500;700&amp;family=Rubik:wght@600;700&amp;family=Fredoka:wght@400;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-low": "#1a1c1e",
+                    "on-tertiary-fixed-variant": "#7e1b6a",
+                    "error": "#ffb4ab",
+                    "on-secondary-fixed": "#281900",
+                    "error-container": "#93000a",
+                    "on-tertiary": "#5f0050",
+                    "on-secondary-fixed-variant": "#604100",
+                    "electric-blue": "#00E5FF",
+                    "on-error": "#690005",
+                    "surface-tint": "#9ed75b",
+                    "secondary-fixed": "#ffdeac",
+                    "background": "#121416",
+                    "charcoal-surface": "#2A2D31",
+                    "surface": "#121416",
+                    "primary-fixed": "#b9f474",
+                    "secondary-fixed-dim": "#ffba38",
+                    "inverse-on-surface": "#2f3133",
+                    "surface-container": "#1e2022",
+                    "on-secondary": "#432c00",
+                    "on-primary-fixed": "#0f2000",
+                    "on-error-container": "#ffdad6",
+                    "primary": "#a5df63",
+                    "secondary-container": "#feb300",
+                    "inverse-primary": "#3e6a00",
+                    "inverse-surface": "#e2e2e5",
+                    "primary-container": "#8bc34a",
+                    "surface-container-high": "#282a2c",
+                    "on-background": "#e2e2e5",
+                    "rarity-purple": "#D066FF",
+                    "surface-variant": "#333537",
+                    "on-tertiary-fixed": "#3a0030",
+                    "tertiary-fixed": "#ffd7ee",
+                    "secondary": "#ffd799",
+                    "tertiary-fixed-dim": "#ffade4",
+                    "tertiary-container": "#ff8bde",
+                    "hazard-stripe": "#FFD600",
+                    "on-secondary-container": "#6a4800",
+                    "on-surface": "#e2e2e5",
+                    "surface-dim": "#121416",
+                    "primary-fixed-dim": "#9ed75b",
+                    "on-tertiary-container": "#7c1968",
+                    "surface-container-highest": "#333537",
+                    "scrap-gray": "#969696",
+                    "on-primary": "#1e3700",
+                    "tertiary": "#ffbae6",
+                    "outline": "#8c9380",
+                    "on-surface-variant": "#c2c9b4",
+                    "on-primary-fixed-variant": "#2e4f00",
+                    "surface-bright": "#37393b",
+                    "outline-variant": "#424939",
+                    "surface-container-lowest": "#0c0e10",
+                    "on-primary-container": "#2d4e00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "unit": "4px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "container-max": "1200px"
+            },
+            "fontFamily": {
+                    "body-md": ["Hanken Grotesk"],
+                    "data-mono": ["JetBrains Mono"],
+                    "label-caps": ["JetBrains Mono"],
+                    "display-xl": ["Rubik"],
+                    "headline-lg": ["Rubik"],
+                    "headline-lg-mobile": ["Rubik"],
+                    "fredoka": ["Fredoka"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "data-mono": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "fontWeight": "700"}],
+                    "display-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #121416;
+            color: #e2e2e5;
+            overflow: hidden; /* App-like feel */
+        }
+
+        .industrial-grid {
+            background-image: 
+                linear-gradient(rgba(165, 223, 99, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(165, 223, 99, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .scavenge-card {
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.8), 0 1px 1px rgba(255,255,255,0.05);
+            background: linear-gradient(145deg, #1e2022, #121416);
+            border: 2px solid #333537;
+        }
+
+        .scratch-surface {
+            background-image: url("https://www.transparenttextures.com/patterns/carbon-fibre.png");
+            background-color: #2A2D31;
+            mask-image: radial-gradient(circle, black 50%, transparent 100%);
+        }
+
+        .tactile-btn {
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 4px 0 #1e3700;
+        }
+
+        .tactile-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #1e3700;
+        }
+
+        .gauge-track {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .hazard-stripes {
+            background: repeating-linear-gradient(
+                45deg,
+                #FFD600,
+                #FFD600 10px,
+                #000 10px,
+                #000 20px
+            );
+        }
+
+        @keyframes counter-roll {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10%); }
+        }
+
+        .metal-texture {
+            opacity: 0.07;
+            pointer-events: none;
+            background-image: url("https://www.transparenttextures.com/patterns/brushed-alum.png");
+        }
+    </style>
+</head>
+<body class="font-body-md industrial-grid min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-surface-container-low border-b-2 border-surface-variant shadow-md">
+<div class="flex flex-col">
+<span class="font-display-xl text-headline-lg-mobile tracking-tighter text-primary">DUMPSTER EMPIRE</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-surface-container-highest px-3 py-1.5 rounded-lg flex items-center gap-2 border border-outline-variant">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-fredoka text-lg font-bold tracking-tight text-on-surface" id="balance-counter">$ 14,280</span>
+</div>
+<div class="bg-surface-container-highest px-3 py-1.5 rounded-lg flex items-center gap-2 border border-outline-variant">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">vpn_key</span>
+<span class="font-fredoka text-lg font-bold text-on-surface">3</span>
+</div>
+<button class="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</header>
+<!-- Main Content (Canvas) -->
+<main class="flex-1 flex flex-col items-center justify-center pt-20 pb-32 px-4 relative">
+<!-- Scavenging Area -->
+<div class="w-full max-w-md relative group">
+<!-- Street Bin Label -->
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-surface-container-high border-2 border-outline-variant px-4 py-1 rounded-t-xl z-10">
+<span class="font-label-caps text-xs text-on-surface-variant uppercase tracking-widest">Street Bin (Tacho de vereda)</span>
+</div>
+<!-- The Bin Card -->
+<div class="scavenge-card w-full aspect-square rounded-3xl p-6 relative overflow-hidden cursor-crosshair select-none touch-none" id="bin-area">
+<div class="metal-texture absolute inset-0"></div>
+<!-- Visual Feedback Container -->
+<div class="absolute inset-0 m-4 rounded-2xl border-2 border-dashed border-outline-variant flex items-center justify-center overflow-hidden" id="trash-visuals">
+<!-- Layered Scratched Look -->
+<div class="absolute inset-0 scratch-surface opacity-40"></div>
+<!-- SVG Overlay of generic trash objects -->
+<div class="relative w-full h-full opacity-60" id="scrap-container">
+<!-- Content injected via JS -->
+</div>
+<!-- Centered Interaction Prompt -->
+<div class="relative z-20 pointer-events-none flex flex-col items-center gap-3">
+<div class="w-16 h-16 rounded-full border-4 border-primary/40 animate-ping absolute"></div>
+<span class="material-symbols-outlined text-primary text-5xl">touch_app</span>
+<span class="font-label-caps text-primary text-sm tracking-[0.2em]">DRAG TO SCAVENGE</span>
+</div>
+</div>
+</div>
+<!-- Rarity Pulse -->
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4/5 h-1 bg-primary/20 blur-md"></div>
+</div>
+<!-- Upgrade Tray -->
+<div class="mt-12 grid grid-cols-3 gap-3 w-full max-w-md">
+<!-- LUCK -->
+<button class="tactile-btn flex flex-col items-center gap-2 bg-charcoal-surface border-2 border-surface-variant p-3 rounded-2xl">
+<div class="w-12 h-12 bg-surface-container-highest rounded-full flex items-center justify-center mb-1">
+<span class="material-symbols-outlined text-secondary text-3xl" style="font-variation-settings: 'FILL' 1;">faucet</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-caps text-[10px] text-on-surface-variant">LUCK LV. 4</span>
+<span class="font-fredoka text-primary font-bold">$450</span>
+</div>
+</button>
+<!-- STRENGTH -->
+<button class="tactile-btn flex flex-col items-center gap-2 bg-charcoal-surface border-2 border-surface-variant p-3 rounded-2xl">
+<div class="w-12 h-12 bg-surface-container-highest rounded-full flex items-center justify-center mb-1">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-caps text-[10px] text-on-surface-variant">STRENGTH LV. 8</span>
+<span class="font-fredoka text-primary font-bold">$1.2k</span>
+</div>
+</button>
+<!-- AREA -->
+<button class="tactile-btn flex flex-col items-center gap-2 bg-charcoal-surface border-2 border-surface-variant p-3 rounded-2xl">
+<div class="w-12 h-12 bg-surface-container-highest rounded-full flex items-center justify-center mb-1">
+<span class="material-symbols-outlined text-electric-blue text-3xl" style="font-variation-settings: 'FILL' 1;">radar</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-caps text-[10px] text-on-surface-variant">AREA LV. 2</span>
+<span class="font-fredoka text-primary font-bold">$3.5k</span>
+</div>
+</button>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 bg-surface-container rounded-t-xl shadow-[0_-4px_10px_rgba(0,0,0,0.5)] border-t-2 border-surface-variant">
+<!-- Dashboard (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-lg px-3 py-1 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] scale-95 duration-75" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+<span class="font-label-caps text-xs">Container Shop</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">precision_manufacturing</span>
+<span class="font-label-caps text-xs">Automation</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">emoji_events</span>
+<span class="font-label-caps text-xs">Achievements</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant opacity-70 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">keyboard_double_arrow_up</span>
+<span class="font-label-caps text-xs">Prestige</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for the bin
+        const binArea = document.getElementById('bin-area');
+        const scrapContainer = document.getElementById('scrap-container');
+        const balanceEl = document.getElementById('balance-counter');
+        let balance = 14280;
+
+        // Interaction logic
+        const handleScavenge = (e) => {
+            // Prevent scrolling
+            if(e.type === 'touchmove') e.preventDefault();
+
+            // Spawn floating scrap indicator
+            const rect = binArea.getBoundingClientRect();
+            let x, y;
+            if(e.type.includes('mouse')) {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            } else {
+                x = e.touches[0].clientX - rect.left;
+                y = e.touches[0].clientY - rect.top;
+            }
+
+            if(Math.random() > 0.85) { // Throttle visual spawn
+                spawnScrap(x, y);
+                updateBalance(Math.floor(Math.random() * 5) + 1);
+            }
+        };
+
+        const spawnScrap = (x, y) => {
+            const icons = ['can_outdoor', 'nest_eco_leaf', 'deployed_code', 'broken_image'];
+            const icon = icons[Math.floor(Math.random() * icons.length)];
+            
+            const scrap = document.createElement('div');
+            scrap.className = 'absolute material-symbols-outlined pointer-events-none transition-all duration-700 ease-out text-scrap-gray';
+            scrap.style.left = `${x}px`;
+            scrap.style.top = `${y}px`;
+            scrap.style.fontSize = '24px';
+            scrap.innerText = icon;
+
+            scrapContainer.appendChild(scrap);
+
+            // Animate out
+            requestAnimationFrame(() => {
+                scrap.style.transform = `translate(${(Math.random() - 0.5) * 100}px, -100px) scale(0.5)`;
+                scrap.style.opacity = '0';
+            });
+
+            setTimeout(() => scrap.remove(), 700);
+        };
+
+        const updateBalance = (amount) => {
+            balance += amount;
+            balanceEl.innerText = `$ ${balance.toLocaleString()}`;
+            balanceEl.classList.add('text-primary');
+            setTimeout(() => balanceEl.classList.remove('text-primary'), 100);
+        };
+
+        binArea.addEventListener('mousemove', (e) => {
+            if(e.buttons === 1) handleScavenge(e);
+        });
+        binArea.addEventListener('touchmove', handleScavenge);
+        binArea.addEventListener('mousedown', handleScavenge);
+
+        // Haptic feel - scale the whole card on click
+        binArea.addEventListener('mousedown', () => binArea.style.transform = 'scale(0.98)');
+        window.addEventListener('mouseup', () => binArea.style.transform = 'scale(1)');
+    </script>
+</body></html>

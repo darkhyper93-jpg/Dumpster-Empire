@@ -1,0 +1,412 @@
+<!DOCTYPE html><html class="dark" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Dumpster Empire - Container Shop</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#31291c",
+                        "primary-fixed-dim": "#f0bc92",
+                        "secondary-container": "#00761f",
+                        "secondary-fixed-dim": "#78dc77",
+                        "error-container": "#93000a",
+                        "on-primary-fixed-variant": "#623f1e",
+                        "surface-container-lowest": "#130d04",
+                        "outline": "#9d8e84",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "error": "#ffb4ab",
+                        "on-error": "#690005",
+                        "primary": "#f0bc92",
+                        "primary-container": "#5d3a1a",
+                        "tertiary-fixed-dim": "#ffb870",
+                        "secondary-fixed": "#94f990",
+                        "inverse-surface": "#efe0cd",
+                        "surface-container-low": "#221a0f",
+                        "surface-variant": "#3c3427",
+                        "surface-bright": "#41382b",
+                        "on-surface": "#efe0cd",
+                        "on-secondary-container": "#95fb92",
+                        "outline-variant": "#50453c",
+                        "on-background": "#efe0cd",
+                        "on-tertiary-fixed": "#2c1600",
+                        "primary-fixed": "#ffdcc2",
+                        "surface": "#191208",
+                        "tertiary": "#ffb870",
+                        "tertiary-fixed": "#ffdcbe",
+                        "on-tertiary": "#4a2800",
+                        "surface-dim": "#191208",
+                        "on-surface-variant": "#d4c3b8",
+                        "secondary": "#78dc77",
+                        "on-secondary-fixed-variant": "#005313",
+                        "on-primary-container": "#d6a47c",
+                        "on-primary": "#48290a",
+                        "surface-tint": "#f0bc92",
+                        "inverse-primary": "#7d5633",
+                        "surface-container-highest": "#3c3427",
+                        "on-primary-fixed": "#2e1500",
+                        "inverse-on-surface": "#372f22",
+                        "tertiary-container": "#633800",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary": "#00390a",
+                        "surface-container": "#261e13",
+                        "on-secondary-fixed": "#002204",
+                        "background": "#191208",
+                        "on-tertiary-container": "#fc9600"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "container-max": "1200px",
+                        "gutter": "16px",
+                        "unit": "8px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "label-bold": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["28px", {"lineHeight": "34px", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["32px", {"lineHeight": "38px", "fontWeight": "800"}],
+                        "label-bold": ["14px", {"lineHeight": "20px", "fontWeight": "700"}],
+                        "headline-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .wooden-texture {
+            background-color: #191208;
+            background-image: 
+                linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(255,255,255,.03) 1px, transparent 1px),
+                radial-gradient(circle at 50% 50%, rgba(65, 56, 43, 0.2) 0%, transparent 100%);
+            background-size: 64px 64px, 64px 64px, 100% 100%;
+        }
+
+        .paper-grain {
+            position: relative;
+        }
+        .paper-grain::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url("https://www.transparenttextures.com/patterns/cardboard-flat.png");
+            opacity: 0.1;
+            pointer-events: none;
+            border-radius: inherit;
+        }
+
+        .squishy-button {
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .squishy-button:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 0 rgba(0,0,0,0.3) !important;
+        }
+
+        .hand-drawn-border {
+            border: 3px solid #3c3427;
+            border-radius: 4px 12px 6px 10px;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-5px) rotate(1deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .float-item {
+            animation: float 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md selection:bg-primary selection:text-on-primary">
+<!-- Top AppBar (from JSON) -->
+<header class="fixed top-0 left-0 w-full z-50 bg-surface-container-low border-b-4 border-surface-container-highest shadow-[0_4px_0_0_rgba(0,0,0,0.3)] px-margin-desktop py-2 flex justify-between items-center h-16">
+<div class="flex items-center gap-4">
+<span class="text-headline-md font-headline-md font-extrabold text-primary dark:text-primary-fixed-dim">Dumpster Empire</span>
+<div class="hidden md:flex gap-4 ml-8">
+<span class="text-primary-fixed font-bold text-label-bold cursor-pointer">Shop</span>
+<span class="text-on-surface-variant text-label-bold cursor-pointer hover:bg-surface-variant px-2 py-1 rounded transition-colors">Map</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex bg-surface-container px-4 py-1 rounded-full border-2 border-surface-container-highest items-center gap-2">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-headline-md text-tertiary">96.7B</span>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg text-primary hover:bg-surface-variant transition-transform hover:scale-105 active:translate-y-1">
+<span class="material-symbols-outlined">vpn_key</span>
+</button>
+<button class="p-2 rounded-lg text-primary hover:bg-surface-variant transition-transform hover:scale-105 active:translate-y-1">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Side Navigation (from JSON) -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 bg-surface-container border-r-4 border-surface-container-highest shadow-[4px_0_0_0_rgba(0,0,0,0.3)] flex flex-col pt-4 z-40 hidden md:flex">
+<div class="px-6 mb-6">
+<h2 class="text-headline-md font-headline-md text-secondary">Inventory</h2>
+<p class="text-label-bold text-on-surface-variant">Tools of the Trade</p>
+</div>
+<nav class="flex-1 px-2">
+<!-- Active Tab: Scrap (Simulating our current shop context) -->
+<div class="flex items-center gap-3 px-4 py-3 bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest mb-4 mx-2 cursor-pointer hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined">confirmation_number</span>
+<span class="font-label-bold">Tickets</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest mb-4 mx-2 cursor-pointer hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined">construction</span>
+<span class="font-label-bold">Gadgets</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container rounded-lg border-b-4 border-secondary shadow-none translate-y-1 mx-2 cursor-pointer transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">delete_outline</span>
+<span class="font-label-bold">Scrap</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest mb-4 mt-4 mx-2 cursor-pointer hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-label-bold">Upgrades</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 bg-surface-variant text-on-surface-variant rounded-lg border-b-4 border-surface-container-highest mb-4 mx-2 cursor-pointer hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined">memory</span>
+<span class="font-label-bold">Tech</span>
+</div>
+</nav>
+
+</aside>
+<!-- Main Content Canvas (The Tabletop) -->
+<main class="md:ml-64 pt-16 min-h-screen wooden-texture p-gutter">
+<div class="max-w-container-max mx-auto py-8">
+<!-- Header Section -->
+<div class="mb-12 flex justify-between items-end">
+<div>
+<h1 class="text-headline-lg font-headline-lg text-primary-fixed-dim drop-shadow-lg">Container Shop</h1>
+<p class="text-body-lg text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined">storefront</span>
+                        Expand your empire with high-capacity waste solutions
+                    </p>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container-highest p-4 rounded-xl shadow-xl border-b-4 border-black/40 flex items-center gap-4">
+<div class="w-12 h-12 bg-secondary-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white">inventory_2</span>
+</div>
+<div>
+<p class="text-label-bold opacity-70">Total Capacity</p>
+<p class="text-headline-md text-secondary">450 / 1200 t</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Bento Grid of Container Tickets -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+<!-- Ticket 1: Tacho de Vereda -->
+<div class="float-item paper-grain bg-[#fef3c7] text-surface p-6 hand-drawn-border shadow-[8px_8px_0_0_#221a0f] flex flex-col gap-4 transform rotate-1">
+<div class="flex justify-between items-start">
+<span class="bg-primary-container text-on-primary px-3 py-1 rounded-full text-label-bold">COMMON</span>
+<span class="material-symbols-outlined text-surface/30">push_pin</span>
+</div>
+<div class="h-48 w-full bg-white/50 rounded-lg overflow-hidden border-2 border-black/10">
+<img class="w-full h-full object-contain p-4" data-alt="A playful, toy-like 3D illustration of a classic green sidewalk trash bin with a rounded lid, styled with soft plastic textures and vibrant colors. The lighting is bright and cheerful, mimicking a physical tabletop game piece on a warm wooden background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIHcuQoj1NDwdmSVO9NXndskA9ZV304ugpmFxPBhS1BLYMA3ItSLs9LS1uBCtIUmVxH3jEUKVuyfhU4WdbbYfo5XOwHMDufTwRV6rE-LTH_A5Z027CSm6iHxRsg9WYMILtww-xReL5LprYC_d8PWU7MpKY_2Ov3qNbtJwG5XVLPY2J2cb2gr1Qfq2W2u9uviabszndZ6lDUjfqwMrwwOd1z538OKz23AtZ4HVlg6oHgkpJRYiJBZT51quesqyNVjF7UpHRY9c5-Q">
+</div>
+<h3 class="text-headline-md font-headline-md text-[#48290a]">Tacho de Vereda</h3>
+<p class="text-body-md text-[#623f1e] leading-tight">A humble beginning. Perfect for neighborhood scrap and gum wrappers.</p>
+<div class="mt-auto pt-4 flex items-center justify-between">
+<div>
+<p class="text-label-bold opacity-60">Price</p>
+<p class="text-headline-md font-bold text-secondary-container">$120k</p>
+</div>
+<button class="squishy-button bg-secondary-container text-on-secondary-container px-6 py-3 rounded-xl font-headline-md border-b-4 border-[#004d14] shadow-lg">
+                            BUY
+                        </button>
+</div>
+</div>
+<!-- Ticket 2: Industrial Skip -->
+<div class="float-item paper-grain bg-[#ffedd5] text-surface p-6 hand-drawn-border shadow-[8px_8px_0_0_#221a0f] flex flex-col gap-4 transform -rotate-1" style="animation-delay: 0.5s;">
+<div class="flex justify-between items-start">
+<span class="bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full text-label-bold">UNCOMMON</span>
+<span class="material-symbols-outlined text-surface/30">push_pin</span>
+</div>
+<div class="h-48 w-full bg-white/50 rounded-lg overflow-hidden border-2 border-black/10">
+<img class="w-full h-full object-contain p-4" data-alt="A chunky, vibrant yellow industrial skip dumpster with stylized rusted edges and heavy metal texture, rendered in a playful toy-like 3D style. The container looks thick and tactile, with rounded corners and high-contrast shadows on a warm desk surface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5TI35SlxU73CVOpFD8FQJMY-PPgHttD0gxXEst9b-qNuw1_kwiYgli8_THjHnoNEClZ7YBraazXC3f-IyjmaNhfhoBYjeif7V8OnvDCtGkpBeNwvkzWiEDfwYqrjWJYdQ_YHeg3R-R26o1zxwFC4KKPG5WYxeUfTWnVGHc3qEFemWJDdYY50Iom-1upUOCRZ0C9rjxhbdZtwJktIgGKawjGqgfNqfctM_bJO1Ue2MkEWDAVNWHYiES5Co7MHhhSg5Cs6q2UD96g">
+</div>
+<h3 class="text-headline-md font-headline-md text-[#4a2800]">Industrial Skip</h3>
+<p class="text-body-md text-[#693c00] leading-tight">Built for construction debris and heavy machinery parts. Sturdy.</p>
+<div class="mt-auto pt-4 flex items-center justify-between">
+<div>
+<p class="text-label-bold opacity-60">Price</p>
+<p class="text-headline-md font-bold text-secondary-container">$2.5M</p>
+</div>
+<button class="squishy-button bg-on-tertiary-container text-white px-6 py-3 rounded-xl font-headline-md border-b-4 border-[#b36b00] shadow-lg">
+                            BUY
+                        </button>
+</div>
+</div>
+<!-- Ticket 3: Compactor Unit -->
+<div class="float-item paper-grain bg-[#dcfce7] text-surface p-6 hand-drawn-border shadow-[8px_8px_0_0_#221a0f] flex flex-col gap-4 transform rotate-2" style="animation-delay: 1.2s;">
+<div class="flex justify-between items-start">
+<span class="bg-secondary-container text-white px-3 py-1 rounded-full text-label-bold">RARE</span>
+<span class="material-symbols-outlined text-surface/30">push_pin</span>
+</div>
+<div class="h-48 w-full bg-white/50 rounded-lg overflow-hidden border-2 border-black/10">
+<img class="w-full h-full object-contain p-4" data-alt="A high-tech, futuristic waste compactor unit styled as a physical board game component. It is bright blue with glowing green lights, featuring thick plastic panels and a satisfying mechanical look. Playful brutalism aesthetic with soft ambient lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwoQnxBiRF9on5UFsH1CSRDG7oRSUzVwPksccE2X6qNFPa-dmaJ9xT5MFTFlHdz4AvAO6BaJStYfniJt8Hld1AgSJCCxiaMuzIMOXb8BsHCmgHx8fPIKzWO_muYP_okE3-IuCn6v1eV5zgrGLYhC3A-Mm2oQEaUEw3k-wp1TY1o2LULZjmAQDU1XSTZ6ovAe1kpRfhgiIPNIojkI18-tkgJxXu7BhaX6ggdpk5SBnCCCanAGVJi55ub5rPhKaUw7lfP3HnwcUhpQ">
+</div>
+<h3 class="text-headline-md font-headline-md text-[#00390a]">Compactor X-1</h3>
+<p class="text-body-md text-[#005313] leading-tight">Squishes the scrap to save space. A true engineer's dream.</p>
+<div class="mt-auto pt-4 flex items-center justify-between">
+<div>
+<p class="text-label-bold opacity-60">Price</p>
+<p class="text-headline-md font-bold text-secondary-container">$15.0M</p>
+</div>
+<button class="squishy-button bg-secondary text-on-secondary px-6 py-3 rounded-xl font-headline-md border-b-4 border-[#3f733e] shadow-lg">
+                            BUY
+                        </button>
+</div>
+</div>
+<!-- Ticket 4: Hazardous Barrel -->
+<div class="float-item paper-grain bg-[#fee2e2] text-surface p-6 hand-drawn-border shadow-[8px_8px_0_0_#221a0f] flex flex-col gap-4 transform -rotate-2" style="animation-delay: 0.2s;">
+<div class="flex justify-between items-start">
+<span class="bg-error-container text-white px-3 py-1 rounded-full text-label-bold">DANGEROUS</span>
+<span class="material-symbols-outlined text-surface/30">push_pin</span>
+</div>
+<div class="h-48 w-full bg-white/50 rounded-lg overflow-hidden border-2 border-black/10">
+<img class="w-full h-full object-contain p-4" data-alt="A bright orange hazardous waste barrel with a skull and crossbones symbol, rendered in a safe, bouncy, toy-like 3D aesthetic. Thick plastic walls, vibrant paint, and high-quality subsurface scattering on a warm wooden background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAz3nXZnxzs8aCOnhhEKo9t7N_PuLll7q1Givw60LxSEQGSClKGIQB2XyfuNJ7tqOEBd4NCjVtYz1USqTXP-xeNcSfyg1hVW-GrMR0OLEbRlG9P6aqYr0A3qOi905X0LcEkH9Fi3CwcnwKHgi7KgZaX8tIbybnpz-p8OerlH70fgVV_TuOdqILcRNsr3XrNSGexWdoLIGD-YWhKSu0NJ3BahansSVLVQAXMjnqGaYt_5xYhX42v2aETcuzo7jyh7vnBlCOimkTQvw">
+</div>
+<h3 class="text-headline-md font-headline-md text-[#690005]">Bio-Barrel</h3>
+<p class="text-body-md text-[#93000a] leading-tight">Handle with care. High value, but needs a specialized license.</p>
+<div class="mt-auto pt-4 flex items-center justify-between">
+<div>
+<p class="text-label-bold opacity-60">Price</p>
+<p class="text-headline-md font-bold text-secondary-container">$45.0M</p>
+</div>
+<button class="squishy-button bg-error text-on-error px-6 py-3 rounded-xl font-headline-md border-b-4 border-[#b14036] shadow-lg">
+                            BUY
+                        </button>
+</div>
+</div>
+<!-- Ticket 5: The Mothership -->
+<div class="float-item paper-grain bg-[#f3e8ff] text-surface p-6 hand-drawn-border shadow-[8px_8px_0_0_#221a0f] flex flex-col gap-4 transform rotate-1" style="animation-delay: 1.8s;">
+<div class="flex justify-between items-start">
+<span class="bg-primary-container text-white px-3 py-1 rounded-full text-label-bold">LEGENDARY</span>
+<span class="material-symbols-outlined text-surface/30">push_pin</span>
+</div>
+<div class="h-48 w-full bg-white/50 rounded-lg overflow-hidden border-2 border-black/10">
+<img class="w-full h-full object-contain p-4" data-alt="An massive, ornate dumpster king throne made of gold-plated scrap metal and velvet, rendered as a playful miniature toy piece. Glowing purple accents, intricate details, and a soft, magical lighting effect. Set on a rustic dark wood surface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBF9ZkPXP2w7zaMlT02beNlOScGYlct7HyJEJ7QLQW0JIg_VdIKLpmK1_gs_HfDMn-JIbrBpQEl52QabKaGUgDiH9CPnsEPUXkq4eCad3IV2gx6WOCvmfXPGS5AG_wGfDorud9-kYuWtzH9pLL0y5e_tjFuRkCaszv1zVCPpBDBJ2zvyUzmBgK1MOPSY4O4sNIto8b2mDjR8Zyp0THNibvKZTbr4PVZU9cBRX3x4WyK_6pp3Jwg03w0XMQE3WFHezi7Y_HDNCtFw">
+</div>
+<h3 class="text-headline-md font-headline-md text-[#48290a]">The Royal Bin</h3>
+<p class="text-body-md text-[#623f1e] leading-tight">A bin fit for a Dumpster Emperor. Unlimited bragging rights.</p>
+<div class="mt-auto pt-4 flex items-center justify-between">
+<div>
+<p class="text-label-bold opacity-60">Price</p>
+<p class="text-headline-md font-bold text-secondary-container">$1.2B</p>
+</div>
+<button class="squishy-button bg-[#a855f7] text-white px-6 py-3 rounded-xl font-headline-md border-b-4 border-[#6b21a8] shadow-lg">
+                            BUY
+                        </button>
+</div>
+</div>
+<!-- Empty Slot Placeholder -->
+<div class="flex items-center justify-center border-4 border-dashed border-outline-variant rounded-xl p-8 opacity-40 hover:opacity-100 transition-opacity cursor-pointer group">
+<div class="text-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[64px]">add_circle</span>
+<p class="font-headline-md">Expand Shop</p>
+<p class="text-label-bold">Unlock more slots</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Atmospheric Elements -->
+
+<!-- Desk Fan (from image inspiration) -->
+
+</main>
+<!-- Bottom Navigation for Mobile -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-surface-container-low border-t-4 border-surface-container-highest px-4 py-2 flex justify-around items-center z-50">
+<div class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">storefront</span>
+<span class="text-label-bold text-[10px]">Shop</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">map</span>
+<span class="text-label-bold text-[10px]">Map</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">inventory</span>
+<span class="text-label-bold text-[10px]">Vault</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-bold text-[10px]">Profile</span>
+</div>
+</nav>
+<script>
+        // Micro-interaction for the currency display
+        const currency = document.querySelector('.text-tertiary');
+        if (currency) {
+            setInterval(() => {
+                if (Math.random() > 0.8) {
+                    currency.parentElement.classList.add('scale-110', 'rotate-2');
+                    setTimeout(() => {
+                        currency.parentElement.classList.remove('scale-110', 'rotate-2');
+                    }, 100);
+                }
+            }, 3000);
+        }
+
+        // Buy button click effect
+        document.querySelectorAll('.squishy-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rect = btn.getBoundingClientRect();
+                createParticleEffect(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            });
+        });
+
+        function createParticleEffect(x, y) {
+            for (let i = 0; i < 8; i++) {
+                const p = document.createElement('div');
+                p.className = 'fixed w-3 h-3 bg-secondary rounded-full pointer-events-none z-[100]';
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+                document.body.appendChild(p);
+
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 40 + Math.random() * 60;
+                const tx = Math.cos(angle) * dist;
+                const ty = Math.sin(angle) * dist;
+
+                p.animate([
+                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                    { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
+                ], {
+                    duration: 600,
+                    easing: 'cubic-bezier(0, .9, .57, 1)'
+                }).onfinish = () => p.remove();
+            }
+        }
+    </script>
+</body></html>

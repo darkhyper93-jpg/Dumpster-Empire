@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Dumpster Empire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#121110;
+  --bg-1:#1c1a16;
+  --bg-2:#262219;
+  --bg-3:#322c20;
+  --line:#3a3327;
+  --amber:#ffb627;
+  --amber-dim:#cf9420;
+  --olive:#86a14a;
+  --text-main:#f1ece0;
+  --text-dim:#a89c87;
+  --text-faint:#7a7062;
+  --danger:#e1543d;
+  --r-common:#a3a3a3;
+  --r-reusable:#5fb85f;
+  --r-electronics:#4ba3f5;
+  --r-antiques:#b072e0;
+  --r-historic:#f3984f;
+  --r-art:#ee4f9b;
+  --r-relics:#f5cb3c;
+  --r-future:#33e6e6;
+  --radius:14px;
+  --radius-lg:20px;
+  --shadow:0 6px 18px rgba(0,0,0,.45);
+  --font-display:'Fredoka',sans-serif;
+  --font-body:'Nunito',sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;}
+body{
+  font-family:var(--font-body);
+  background:
+    repeating-linear-gradient(135deg, rgba(255,182,39,.025) 0 18px, transparent 18px 36px),
+    radial-gradient(ellipse at top, var(--bg-2), var(--bg-0) 70%);
+  color:var(--text-main);
+  min-height:100vh;
+  overflow-x:hidden;
+  user-select:none;
+}
+button{font-family:var(--font-body);cursor:pointer;border:none;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
+
+#app{
+  max-width:640px;
+  margin:0 auto;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  padding-bottom:74px;
+}
+
+/* ---- TOP BAR ---- */
+#topbar{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  background:linear-gradient(180deg,var(--bg-2),var(--bg-1));
+  border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:30;
+}
+.stat-pill{
+  display:flex;align-items:center;gap:6px;
+  background:var(--bg-3);
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:6px 12px;
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:14px;
+  white-space:nowrap;
+}
+.stat-pill .ic{font-size:15px;}
+#moneyPill{color:var(--amber);}
+#keysPill{color:var(--r-relics);}
+#levelPill{color:var(--olive);font-size:12px;}
+#topbar .spacer{flex:1;}
+#settingsBtn{
+  background:var(--bg-3);border:1px solid var(--line);
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;color:var(--text-dim);
+}
+
+/* ---- TUTORIAL BANNER ---- */
+#tutorialBanner{
+  margin:10px 12px 0;
+  background:linear-gradient(135deg,var(--bg-3),var(--bg-2));
+  border:1px dashed var(--amber-dim);
+  border-radius:var(--radius);
+  padding:10px 14px;
+  font-size:13.5px;
+  color:var(--text-dim);
+  display:none;
+  align-items:center;
+  gap:10px;
+}
+#tutorialBanner.show{display:flex;}
+#tutorialBanner b{color:var(--amber);}
+#tutorialBanner .closeT{margin-left:auto;background:none;color:var(--text-faint);font-size:18px;padding:0 4px;}
+
+/* ---- MAIN DIG AREA ---- */
+#main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:14px 12px 6px;
+  gap:10px;
+}
+#containerCard{
+  width:100%;
+  max-width:520px;
+  text-align:center;
+}
+#containerTitle{
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:19px;
+  margin-bottom:2px;
+}
+#containerSub{
+  font-size:12.5px;
+  color:var(--text-dim);
+  margin-bottom:10px;
+}
+#digStage{
+  position:relative;
+  width:100%;
+  aspect-ratio:600/330;
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+  background:var(--bg-2);
+  box-shadow:var(--shadow);
+  border:2px solid var(--line);
+  clip-path:polygon(2% 4%,18% 0%,40% 2%,63% 0%,85% 3%,100% 0%,99% 22%,100% 48%,98% 70%,100% 96%,80% 100%,58% 98%,33% 100%,12% 97%,0% 100%,1% 76%,0% 50%,2% 26%);
+}
+#digStage.shake{animation:shakeAnim .35s;}
+@keyframes shakeAnim{
+  0%,100%{transform:translate(0,0);}
+  20%{transform:translate(-6px,2px);}
+  40%{transform:translate(6px,-2px);}
+  60%{transform:translate(-4px,3px);}
+  80%{transform:translate(4px,-1px);}
+}
+#layerBottom,#layerTop{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  touch-action:none;
+}
+#stageEmpty{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;color:var(--text-dim);font-size:14px;text-align:center;padding:20px;
+}
+#stageEmpty .emptyIcon{font-size:42px;opacity:.7;}
+#flashOverlay{
+  position:absolute;inset:0;background:var(--danger);opacity:0;pointer-events:none;
+  transition:opacity .15s;
+}
+#flashOverlay.on{opacity:.35;}
+
+#progressWrap{
+  width:100%;max-width:520px;
+  display:flex;align-items:center;gap:10px;
+  font-size:12px;color:var(--text-dim);
+}
+#progressBar{flex:1;height:9px;border-radius:6px;background:var(--bg-3);overflow:hidden;border:1px solid var(--line);}
+#progressFill{height:100%;width:0%;background:linear-gradient(90deg,var(--olive),var(--amber));transition:width .12s;}
+#abandonBtn{
+  background:var(--bg-3);color:var(--danger);border:1px solid var(--danger);
+  border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:700;
+  display:none;
+}
+#abandonBtn.show{display:inline-block;}
+#trapHint{font-size:12px;color:var(--text-faint);margin-top:2px;}
+
+#buyHint{
+  width:100%;max-width:520px;
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+}
+.smallBuyBtn{
+  background:var(--olive);color:#16210a;font-family:var(--font-display);font-weight:600;
+  border-radius:999px;padding:9px 16px;font-size:13.5px;
+  box-shadow:0 3px 0 #5c7330;
+}
+.smallBuyBtn:active{transform:translateY(2px);box-shadow:none;}
+.smallBuyBtn.alt{background:var(--amber);box-shadow:0 3px 0 #a87010;color:#2a1900;}
+
+/* ---- QUICK UPGRADES ---- */
+#quickUpgrades{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  width:100%;max-width:520px;margin-top:4px;
+}
+.qu-btn{
+  background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  color:var(--text-main);
+}
+.qu-btn .qu-ic{font-size:18px;}
+.qu-btn .qu-label{font-size:10.5px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+.qu-btn .qu-lvl{font-family:var(--font-display);font-size:13px;}
+.qu-btn .qu-cost{font-size:10.5px;color:var(--amber);}
+.qu-btn:disabled{opacity:.4;}
+.qu-btn:not(:disabled):active{transform:scale(.96);}
+
+/* ---- BOTTOM TABS ---- */
+#tabbar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:640px;
+  display:flex;
+  background:linear-gradient(0deg,var(--bg-1) 70%,transparent);
+  border-top:1px solid var(--line);
+  z-index:40;
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+.tabBtn{
+  flex:1;background:none;color:var(--text-faint);
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 2px;border-radius:10px;font-size:10.5px;font-weight:700;
+}
+.tabBtn .t-ic{font-size:19px;}
+.tabBtn.active{color:var(--amber);background:rgba(255,182,39,.08);}
+
+/* ---- PANELS (slide up) ---- */
+.panelOverlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:none;align-items:flex-end;justify-content:center;
+  z-index:50;
+}
+.panelOverlay.show{display:flex;}
+.panel{
+  width:100%;max-width:640px;max-height:84vh;
+  background:var(--bg-1);border-top:2px solid var(--line);
+  border-radius:22px 22px 0 0;
+  display:flex;flex-direction:column;
+  animation:slideUp .22s ease-out;
+}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.panelHead{
+  display:flex;align-items:center;padding:14px 16px 8px;
+  border-bottom:1px solid var(--line);
+}
+.panelHead h2{font-family:var(--font-display);font-size:18px;margin:0;flex:1;}
+.panelClose{background:var(--bg-3);width:30px;height:30px;border-radius:50%;color:var(--text-dim);font-size:16px;}
+.panelBody{overflow-y:auto;padding:12px 14px 24px;}
+
+/* shop cards */
+.containerCardRow{
+  display:flex;gap:10px;align-items:center;
+  background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:10px;margin-bottom:9px;
+}
+.containerCardRow.locked{opacity:.45;}
+.ccIcon{font-size:30px;width:42px;text-align:center;}
+.ccInfo{flex:1;min-width:0;}
+.ccName{font-family:var(--font-display);font-size:14.5px;}
+.ccMeta{font-size:11px;color:var(--text-dim);display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;}
+.ccChip{padding:1px 7px;border-radius:999px;font-weight:800;font-size:9.5px;}
+.ccBtns{display:flex;flex-direction:column;gap:4px;}
+.ccBuy{background:var(--olive);color:#16210a;border-radius:10px;padding:7px 10px;font-size:11.5px;font-weight:800;font-family:var(--font-display);white-space:nowrap;}
+.ccBuy:disabled{background:var(--bg-3);color:var(--text-faint);}
+.ccBuy.auto{background:var(--amber);color:#2a1900;}
+
+/* automation list */
+.autoRow{
+  display:flex;align-items:center;gap:10px;
+  background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:10px;margin-bottom:9px;
+}
+.autoRow .arIcon{font-size:26px;width:36px;text-align:center;}
+.autoRow .arInfo{flex:1;}
+.autoRow .arName{font-family:var(--font-display);font-size:14px;}
+.autoRow .arDesc{font-size:11px;color:var(--text-dim);}
+.autoRow .arBtn{background:var(--olive);color:#16210a;border-radius:10px;padding:7px 12px;font-size:11.5px;font-weight:800;}
+.autoRow .arBtn.owned{background:var(--bg-3);color:var(--olive);}
+.autoRow .arBtn:disabled{background:var(--bg-3);color:var(--text-faint);}
+
+#queueBox{
+  background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:10px;margin-bottom:12px;font-size:12.5px;color:var(--text-dim);
+}
+#queueBox b{color:var(--text-main);}
+#queueList{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.queueChip{background:var(--bg-3);border-radius:8px;padding:4px 8px;font-size:18px;}
+
+/* achievements */
+.achGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;}
+.achCard{
+  background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:9px 6px;text-align:center;
+}
+.achCard.locked{opacity:.35;}
+.achCard .achIc{font-size:24px;}
+.achCard .achName{font-size:10px;font-weight:700;margin-top:4px;line-height:1.2;}
+
+/* prestige */
+#prestigeTop{
+  background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px;margin-bottom:12px;text-align:center;
+}
+#prestigeProgressBar{height:10px;border-radius:6px;background:var(--bg-3);overflow:hidden;margin:8px 0;border:1px solid var(--line);}
+#prestigeProgressFill{height:100%;width:0%;background:linear-gradient(90deg,var(--r-relics),var(--amber));}
+#prestigeBtn{
+  background:linear-gradient(135deg,var(--r-relics),var(--amber));
+  color:#2a1900;font-family:var(--font-display);font-weight:700;font-size:15px;
+  padding:11px 22px;border-radius:999px;margin-top:6px;box-shadow:0 4px 0 #a87010;
+}
+#prestigeBtn:disabled{background:var(--bg-3);color:var(--text-faint);box-shadow:none;}
+.treeNode{
+  background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:10px;margin-bottom:8px;
+}
+.treeNode .tnTop{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.treeNode .tnName{font-family:var(--font-display);font-size:14px;}
+.treeNode .tnLvl{font-size:11px;color:var(--text-dim);}
+.treeNode .tnDesc{font-size:11.5px;color:var(--text-dim);margin:4px 0 7px;}
+.treeNode .tnBuy{background:var(--r-relics);color:#2a1900;border-radius:10px;padding:6px 12px;font-size:11.5px;font-weight:800;width:100%;}
+.treeNode .tnBuy:disabled{background:var(--bg-3);color:var(--text-faint);}
+
+/* settings */
+.setRow{display:flex;align-items:center;justify-content:space-between;padding:11px 2px;border-bottom:1px solid var(--line);}
+.setRow:last-child{border-bottom:none;}
+.toggle{width:42px;height:24px;border-radius:999px;background:var(--bg-3);position:relative;border:1px solid var(--line);}
+.toggle.on{background:var(--olive);}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--text-main);transition:.15s;}
+.toggle.on::after{left:20px;}
+.dangerBtn{background:var(--danger);color:#fff;border-radius:10px;padding:9px 14px;font-size:12.5px;font-weight:700;}
+textarea.saveBox{width:100%;background:var(--bg-2);color:var(--text-dim);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:10.5px;resize:vertical;min-height:64px;}
+.miniBtn{background:var(--bg-3);color:var(--text-main);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;margin-top:6px;}
+
+/* toasts / modals */
+#toastWrap{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;width:90%;max-width:420px;pointer-events:none;}
+.toast{
+  background:var(--bg-2);border:1px solid var(--amber-dim);border-radius:var(--radius);
+  padding:10px 14px;font-size:13px;box-shadow:var(--shadow);
+  animation:toastIn .25s ease-out, toastOut .3s ease-in 2.7s forwards;
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-10px);}}
+.toast b{color:var(--amber);}
+
+#modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:90;padding:20px;}
+#modalOverlay.show{display:flex;}
+#modalBox{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px;max-width:380px;text-align:center;box-shadow:var(--shadow);}
+#modalBox h3{font-family:var(--font-display);margin:0 0 8px;color:var(--amber);}
+#modalBox p{font-size:13.5px;color:var(--text-dim);line-height:1.5;}
+#modalBox button{margin-top:14px;background:var(--olive);color:#16210a;font-family:var(--font-display);font-weight:700;padding:9px 20px;border-radius:999px;}
+
+@media(max-width:380px){
+  #quickUpgrades{gap:6px;}
+  .qu-btn{padding:6px 2px;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="topbar">
+    <div class="stat-pill" id="moneyPill"><span class="ic">💰</span><span id="moneyVal">$0</span></div>
+    <div class="stat-pill" id="keysPill"><span class="ic">🔑</span><span id="keysVal">0</span></div>
+    <div class="stat-pill" id="levelPill"><span class="ic">⭐</span><span id="levelVal">Nv. 1</span></div>
+    <div class="spacer"></div>
+    <button id="settingsBtn">⚙️</button>
+  </div>
+
+  <div id="tutorialBanner"><span id="tutorialText"></span><button class="closeT" id="tutorialClose">✕</button></div>
+
+  <div id="main">
+    <div id="containerCard">
+      <div id="containerTitle">Elegí un contenedor</div>
+      <div id="containerSub">Tu imperio de basura empieza acá.</div>
+    </div>
+
+    <div id="digStage">
+      <canvas id="layerBottom"></canvas>
+      <canvas id="layerTop"></canvas>
+      <div id="flashOverlay"></div>
+      <div id="stageEmpty">
+        <div class="emptyIcon">🗑️</div>
+        <div>Escarbá el tacho gratis o comprá un contenedor en la Tienda</div>
+      </div>
+    </div>
+
+    <div id="progressWrap">
+      <span id="progressLabel">0%</span>
+      <div id="progressBar"><div id="progressFill"></div></div>
+      <button id="abandonBtn">Abandonar</button>
+    </div>
+    <div id="trapHint"></div>
+
+    <div id="buyHint">
+      <button class="smallBuyBtn" id="digFreeBtn">Escarbar Tacho de Vereda (gratis)</button>
+    </div>
+
+    <div id="quickUpgrades">
+      <button class="qu-btn" id="quLuck" data-stat="luck">
+        <div class="qu-ic">🍀</div><div class="qu-label">Suerte</div>
+        <div class="qu-lvl">Nv 0</div><div class="qu-cost">$0</div>
+      </button>
+      <button class="qu-btn" id="quPower" data-stat="digPower">
+        <div class="qu-ic">💪</div><div class="qu-label">Fuerza</div>
+        <div class="qu-lvl">Nv 0</div><div class="qu-cost">$0</div>
+      </button>
+      <button class="qu-btn" id="quArea" data-stat="area">
+        <div class="qu-ic">🖐️</div><div class="qu-label">Área</div>
+        <div class="qu-lvl">Nv 0</div><div class="qu-cost">$0</div>
+      </button>
+      <button class="qu-btn" id="quCap" data-stat="capacity">
+        <div class="qu-ic">📦</div><div class="qu-label">Capacidad</div>
+        <div class="qu-lvl">Nv 0</div><div class="qu-cost">$0</div>
+      </button>
+    </div>
+  </div>
+
+  <div id="tabbar">
+    <button class="tabBtn active" data-panel="none" id="tabClose"><span class="t-ic">🏠</span>Jugar</button>
+    <button class="tabBtn" data-panel="shop"><span class="t-ic">🛒</span>Tienda</button>
+    <button class="tabBtn" data-panel="auto"><span class="t-ic">🤖</span>Auto</button>
+    <button class="tabBtn" data-panel="ach"><span class="t-ic">🏆</span>Logros</button>
+    <button class="tabBtn" data-panel="prestige"><span class="t-ic">👑</span>Prestigio</button>
+  </div>
+
+  <!-- SHOP PANEL -->
+  <div class="panelOverlay" id="panel-shop">
+    <div class="panel">
+      <div class="panelHead"><h2>🛒 Tienda de Contenedores</h2><button class="panelClose" data-close>✕</button></div>
+      <div class="panelBody" id="shopList"></div>
+    </div>
+  </div>
+
+  <!-- AUTOMATION PANEL -->
+  <div class="panelOverlay" id="panel-auto">
+    <div class="panel">
+      <div class="panelHead"><h2>🤖 Automatización</h2><button class="panelClose" data-close>✕</button></div>
+      <div class="panelBody">
+        <div id="queueBox">
+          <div><b>Robot procesando:</b> <span id="processingNow">—</span></div>
+          <div style="margin-top:4px"><b>Cola</b> (<span id="queueCount">0</span>/<span id="queueMax">0</span>): </div>
+          <div id="queueList"></div>
+        </div>
+        <div id="autoList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENTS PANEL -->
+  <div class="panelOverlay" id="panel-ach">
+    <div class="panel">
+      <div class="panelHead"><h2>🏆 Logros</h2><button class="panelClose" data-close>✕</button></div>
+      <div class="panelBody"><div class="achGrid" id="achGrid"></div></div>
+    </div>
+  </div>
+
+  <!-- PRESTIGE PANEL -->
+  <div class="panelOverlay" id="panel-prestige">
+    <div class="panel">
+      <div class="panelHead"><h2>👑 Prestigio</h2><button class="panelClose" data-close>✕</button></div>
+      <div class="panelBody">
+        <div id="prestigeTop">
+          <div style="font-size:12.5px;color:var(--text-dim)">Dinero total ganado en esta vuelta</div>
+          <div id="prestigeProgressBar"><div id="prestigeProgressFill"></div></div>
+          <div style="font-size:11.5px;color:var(--text-faint)" id="prestigeProgressLabel">$0 / $1.000.000.000</div>
+          <div style="margin-top:8px;font-size:13px">Llaves de Ciudad si prestigiás ahora: <b id="prestigePreview" style="color:var(--r-relics)">0</b></div>
+          <button id="prestigeBtn" disabled>Prestigiar y empezar nueva ciudad</button>
+        </div>
+        <div id="treeList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div class="panelOverlay" id="panel-settings">
+    <div class="panel">
+      <div class="panelHead"><h2>⚙️ Configuración</h2><button class="panelClose" data-close>✕</button></div>
+      <div class="panelBody">
+        <div class="setRow"><span>Sonido</span><button class="toggle on" id="soundToggle"></button></div>
+        <div class="setRow" style="flex-direction:column;align-items:stretch;gap:6px">
+          <span>Exportar partida (copiá este texto como respaldo)</span>
+          <textarea class="saveBox" id="exportBox" readonly></textarea>
+          <button class="miniBtn" id="exportBtn">Generar y copiar</button>
+        </div>
+        <div class="setRow" style="flex-direction:column;align-items:stretch;gap:6px">
+          <span>Importar partida (pegá tu respaldo)</span>
+          <textarea class="saveBox" id="importBox"></textarea>
+          <button class="miniBtn" id="importBtn">Cargar partida</button>
+        </div>
+        <div class="setRow" style="flex-direction:column;align-items:stretch;gap:6px">
+          <span>Reiniciar partida completa (irreversible)</span>
+          <button class="dangerBtn" id="resetBtn">Reiniciar todo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastWrap"></div>
+
+  <div id="modalOverlay">
+    <div id="modalBox">
+      <h3 id="modalTitle">Título</h3>
+      <p id="modalText">Texto</p>
+      <button id="modalOkBtn">Entendido</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   1. DATA — categorías, ítems, contenedores, mejoras, etc.
+   ========================================================= */
+
+const RARITIES = [
+  {id:'common',     name:'Basura Común',          color:'var(--r-common)',     mult:1},
+  {id:'reusable',    name:'Objetos Reutilizables',  color:'var(--r-reusable)',   mult:3},
+  {id:'electronics', name:'Electrónica',            color:'var(--r-electronics)',mult:10},
+  {id:'antiques',    name:'Antigüedades',           color:'var(--r-antiques)',   mult:35},
+  {id:'historic',    name:'Objetos Históricos',     color:'var(--r-historic)',   mult:120},
+  {id:'art',         name:'Arte',                   color:'var(--r-art)',        mult:400},
+  {id:'relics',      name:'Reliquias',              color:'var(--r-relics)',     mult:1500},
+  {id:'future',      name:'Tecnología Futurista',   color:'var(--r-future)',     mult:6000},
+];
+const RARITY_BY_ID = Object.fromEntries(RARITIES.map(r=>[r.id,r]));
+
+const ITEMS = {
+  common: [['🥫','Lata aplastada',1],['🍌','Cáscara de banana',1],['📰','Periódico viejo',1],['👟','Zapato sin par',2],['🧴','Botella plástica',1],['📦','Caja de cartón',2]],
+  reusable: [['🪑','Silla rota',5],['💡','Lámpara vieja',4],['🚲','Bicicleta oxidada',8],['📻','Radio antigua',6],['🧳','Maleta gastada',5],['🪞','Espejo trizado',4]],
+  electronics: [['📱','Teléfono viejo',10],['🎮','Consola rota',12],['🔌','Cable de cobre',6],['💾','Placa madre',9],['📷','Cámara analógica',11],['📺','Televisor CRT',14]],
+  antiques: [['⏱️','Reloj de bolsillo',18],['🏺','Jarrón de porcelana',20],['📖','Libro antiguo',15],['🕯️','Candelabro',17],['⌨️','Máquina de escribir',22],['🪙','Moneda vieja',12]],
+  historic: [['🪖','Casco de guerra',30],['🗺️','Mapa antiguo',25],['🎖️','Medalla militar',28],['🗡️','Daga ceremonial',35],['🎽','Uniforme histórico',22],['🖼️','Fotografía histórica',18]],
+  art: [['🖼️','Cuadro al óleo',55],['🗿','Escultura de bronce',65],['🎨','Grabado original',40],['🧵','Tapiz antiguo',35],['🏺','Vasija decorativa',45],['✏️','Boceto de maestro',30]],
+  relics: [['👑','Corona perdida',130],['🔮','Amuleto sagrado',100],['📜','Pergamino arcano',80],['💎','Cetro real',140],['🟢','Ídolo de jade',95],['⚱️','Reliquia sellada',110]],
+  future: [['⚛️','Núcleo de fusión',300],['🧬','Chip cuántico',250],['🦾','Implante neural',280],['🛸','Dron rescatado',350],['🔷','Cristal de energía',220],['✨','Fragmento estelar',400]],
+};
+
+const CONTAINERS = [
+  {id:'tachoVereda',      name:'Tacho de Vereda',          icon:'🗑️', baseCost:0,      cats:['common'],               trap:0.05, digTime:3,  slots:3},
+  {id:'contenedorBarrio', name:'Contenedor de Barrio',      icon:'🚮', baseCost:15,     cats:['common','reusable'],    trap:0.08, digTime:4,  slots:3},
+  {id:'containerIndustrial',name:'Container Industrial',    icon:'🏭', baseCost:150,    cats:['reusable','electronics'],trap:0.15,digTime:6,  slots:4},
+  {id:'depositoAbandonado',name:'Depósito Abandonado',      icon:'🏚️', baseCost:1200,   cats:['electronics','antiques'],trap:0.20,digTime:8,  slots:4},
+  {id:'mudanzaMansion',   name:'Mudanza de Mansión',        icon:'🏰', baseCost:9000,   cats:['antiques','historic'],  trap:0.12, digTime:10, slots:4},
+  {id:'galeriaLiquidacion',name:'Galería en Liquidación',   icon:'🖼️', baseCost:60000,  cats:['historic','art'],       trap:0.18, digTime:14, slots:5},
+  {id:'bovedaPerdida',    name:'Bóveda Perdida',            icon:'🔐', baseCost:400000, cats:['art','relics'],         trap:0.25, digTime:18, slots:5},
+  {id:'containerExtradimensional',name:'Contenedor Extradimensional',icon:'🌀',baseCost:2500000,cats:['relics','future'],trap:0.30,digTime:22,slots:6, requiresPrestige:1},
+];
+const CONTAINER_BY_ID = Object.fromEntries(CONTAINERS.map(c=>[c.id,c]));
+
+const UPGRADES = [
+  {id:'luck',     label:'Suerte',    icon:'🍀', baseCost:10, growth:1.13, key:'luckLevel'},
+  {id:'digPower', label:'Fuerza',    icon:'💪', baseCost:12, growth:1.13, key:'digPowerLevel'},
+  {id:'area',     label:'Área',      icon:'🖐️', baseCost:12, growth:1.13, key:'areaLevel'},
+  {id:'capacity', label:'Capacidad', icon:'📦', baseCost:500,growth:1.22, key:'capacityLevel'},
+];
+
+const AUTOMATIONS = [
+  {id:'guantes',          name:'Guantes',                  icon:'🧤', cost:50,      desc:'+20% Fuerza de Escarbado permanente.'},
+  {id:'carrito',          name:'Carrito',                  icon:'🛒', cost:300,     desc:'+1 contenedor en la cola de automatización.'},
+  {id:'detectorMetales',  name:'Detector de Metales',      icon:'📡', cost:800,     desc:'+10 Suerte global.'},
+  {id:'robotClasificador',name:'Robot Clasificador Básico',icon:'🤖', cost:5000,    desc:'Escarba contenedores solo, sin poder espiar antes (más riesgo de trampa).'},
+  {id:'cintaTransportadora',name:'Cinta Transportadora',   icon:'➡️', cost:25000,   desc:'+3 slots de cola de automatización.'},
+  {id:'plantaReciclaje',  name:'Planta de Reciclaje',      icon:'♻️', cost:100000,  desc:'+20% valor de venta de Basura Común y Reutilizables.'},
+  {id:'centroSubastas',   name:'Centro de Subastas',       icon:'🏛️', cost:750000,  desc:'+15% valor de venta de Arte y Reliquias.'},
+  {id:'redDrones',        name:'Red de Drones',            icon:'🛰️', cost:5000000, desc:'Segundo robot procesando en paralelo. Habilita el Contenedor Extradimensional.'},
+];
+const AUTOMATION_BY_ID = Object.fromEntries(AUTOMATIONS.map(a=>[a.id,a]));
+
+const PRESTIGE_TREE = [
+  {id:'capitalInicial',  name:'Capital Inicial',      icon:'💵', baseCost:1, growth:1.5, maxLvl:10, desc:'+$100 de dinero inicial por nivel.'},
+  {id:'suerteAncestral', name:'Suerte Ancestral',     icon:'🍀', baseCost:1, growth:1.6, maxLvl:10, desc:'+3% Suerte global permanente por nivel.'},
+  {id:'instintoCarronero',name:'Instinto de Carroñero',icon:'🦅', baseCost:2, growth:1.6, maxLvl:8,  desc:'-1.5% prob. de trampa global por nivel.'},
+  {id:'vigilanciaNocturna',name:'Vigilancia Nocturna', icon:'🌙', baseCost:2, growth:1.7, maxLvl:6,  desc:'+8% eficiencia de progreso offline por nivel.'},
+  {id:'flotaAmpliada',   name:'Flota Ampliada',        icon:'🚛', baseCost:3, growth:1.8, maxLvl:5,  desc:'+1 slot de cola de automatización por nivel.'},
+  {id:'tasadorExperto',  name:'Tasador Experto',       icon:'💰', baseCost:2, growth:1.65,maxLvl:10, desc:'+4% valor de venta global por nivel.'},
+  {id:'brazosDeAcero',   name:'Brazos de Acero',       icon:'💪', baseCost:2, growth:1.6, maxLvl:8,  desc:'+8% Fuerza de Escarbado permanente por nivel.'},
+  {id:'visionPeriferica',name:'Visión Periférica',     icon:'👁️', baseCost:2, growth:1.6, maxLvl:8,  desc:'+8% Área de Búsqueda permanente por nivel.'},
+  {id:'negociador',      name:'Negociador',            icon:'🤝', baseCost:3, growth:1.9, maxLvl:5,  desc:'-2% costo de contenedores por nivel.'},
+  {id:'coleccionista',   name:'Coleccionista',         icon:'🗂️', baseCost:2, growth:1.7, maxLvl:5,  desc:'+25% fragmentos de categoría por nivel.'},
+  {id:'guardiaPermanente',name:'Guardia Permanente',   icon:'🛡️', baseCost:5, growth:2.2, maxLvl:3,  desc:'+4 horas de tope de progreso offline por nivel.'},
+  {id:'portalEstable',   name:'Portal Estable',        icon:'🌀', baseCost:4, growth:2.0, maxLvl:3,  desc:'-10% costo y -5% trampa del Contenedor Extradimensional por nivel.'},
+];
+
+const ACHIEVEMENTS = [
+  {id:'a1', name:'Primeros Pasos',  icon:'🥇', cond:s=>s.totalMoneyEarned>=1},
+  {id:'a2', name:'Cien Monedas',    icon:'💵', cond:s=>s.totalMoneyEarned>=100},
+  {id:'a3', name:'Mil Monedas',     icon:'💵', cond:s=>s.totalMoneyEarned>=1000},
+  {id:'a4', name:'Diez Mil',        icon:'💰', cond:s=>s.totalMoneyEarned>=10000},
+  {id:'a5', name:'Cien Mil',        icon:'💰', cond:s=>s.totalMoneyEarned>=100000},
+  {id:'a6', name:'Millonario',      icon:'🏦', cond:s=>s.totalMoneyEarned>=1000000},
+  {id:'a7', name:'Diez Millones',   icon:'🏦', cond:s=>s.totalMoneyEarned>=10000000},
+  {id:'a8', name:'Cien Millones',   icon:'🏦', cond:s=>s.totalMoneyEarned>=100000000},
+  {id:'a9', name:'Mil Millones',    icon:'👑', cond:s=>s.totalMoneyEarned>=1000000000},
+  {id:'a10',name:'Primer Objeto',   icon:'🔎', cond:s=>s.itemsFoundCount>=1},
+  {id:'a11',name:'Cincuenta Objetos',icon:'🔎', cond:s=>s.itemsFoundCount>=50},
+  {id:'a12',name:'Quinientos Objetos',icon:'🔎',cond:s=>s.itemsFoundCount>=500},
+  {id:'a13',name:'Cinco Mil Objetos',icon:'🔎', cond:s=>s.itemsFoundCount>=5000},
+  {id:'a14',name:'Toque Eléctrico', icon:'📱', cond:s=>(s.itemsFoundByCategory.electronics||0)>=1},
+  {id:'a15',name:'Coleccionista de Antaño',icon:'🏺',cond:s=>(s.itemsFoundByCategory.antiques||0)>=1},
+  {id:'a16',name:'Historiador',     icon:'🪖', cond:s=>(s.itemsFoundByCategory.historic||0)>=1},
+  {id:'a17',name:'Alma de Artista', icon:'🎨', cond:s=>(s.itemsFoundByCategory.art||0)>=1},
+  {id:'a18',name:'Cazador de Reliquias',icon:'🔮',cond:s=>(s.itemsFoundByCategory.relics||0)>=1},
+  {id:'a19',name:'Del Futuro',      icon:'🛸', cond:s=>(s.itemsFoundByCategory.future||0)>=1},
+  {id:'a20',name:'Coleccionista Total',icon:'📋',cond:s=>CONTAINERS.every(c=>(s.ownedContainers[c.id]||0)>=1)},
+  {id:'a21',name:'Automatizador',   icon:'⚙️', cond:s=>AUTOMATIONS.every(a=>s.automationOwned[a.id])},
+  {id:'a22',name:'Primer Prestigio',icon:'👑', cond:s=>s.prestigeCount>=1},
+  {id:'a23',name:'Veterano de Ciudades',icon:'🏙️',cond:s=>s.prestigeCount>=3},
+  {id:'a24',name:'Leyenda Urbana',  icon:'🌆', cond:s=>s.prestigeCount>=10},
+  {id:'a25',name:'Curtido en la Basura',icon:'🦴',cond:s=>s.trapsHit>=20},
+  {id:'a26',name:'Equipo de Robots',icon:'🤖', cond:s=>s.autoProcessedCount>=100},
+  {id:'a27',name:'Maximalista',     icon:'📈', cond:s=>s.luckLevel>=20&&s.digPowerLevel>=20&&s.areaLevel>=20&&s.capacityLevel>=20},
+];
+const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
+
+/* =========================================================
+   2. ESTADO / GUARDADO
+   ========================================================= */
+
+const SAVE_KEY = 'dumpsterEmpireSave_v1';
+
+function freshState(){
+  return {
+    saveVersion:1,
+    money:0,
+    totalMoneyEarned:0,
+    luckLevel:0, digPowerLevel:0, areaLevel:0, capacityLevel:0,
+    ownedContainers:{},
+    automationOwned:{},
+    prestigeKeys:0,
+    prestigeCount:0,
+    prestigeTreeLevels:{},
+    achievementsUnlocked:[],
+    itemsFoundCount:0,
+    itemsFoundByCategory:{},
+    categoryFragments:0,
+    trapsHit:0,
+    autoProcessedCount:0,
+    autoQueue:[],
+    autoProcessing:[], // array de {containerId, totalTime, remaining} — uno por slot paralelo
+    marketFluctuation:1.0,
+    marketFluctuationAt:0,
+    tutorialStep:0,
+    soundOn:true,
+    lastSavedAt:Date.now(),
+  };
+}
+
+let state = loadState();
+let currentDig = null; // {containerId, items:[{icon,name,value}], isTrap, clearedFraction, started}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return freshState();
+    const parsed = JSON.parse(raw);
+    return Object.assign(freshState(), parsed);
+  }catch(e){
+    return freshState();
+  }
+}
+
+function saveState(){
+  state.lastSavedAt = Date.now();
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* =========================================================
+   3. ECONOMÍA — fórmulas
+   ========================================================= */
+
+function upgradeCost(baseCost, growth, level){
+  return Math.ceil(baseCost * Math.pow(growth, level));
+}
+
+function containerCost(container){
+  const owned = state.ownedContainers[container.id]||0;
+  let cost = container.baseCost * Math.pow(1.08, owned);
+  const portal = state.prestigeTreeLevels.portalEstable||0;
+  if(container.id==='containerExtradimensional' && portal>0){
+    cost *= Math.pow(0.90, portal);
+  }
+  const negociador = state.prestigeTreeLevels.negociador||0;
+  cost *= Math.pow(0.98, negociador);
+  return Math.ceil(cost);
+}
+
+function prestigeTreeCost(node){
+  const lvl = state.prestigeTreeLevels[node.id]||0;
+  return Math.ceil(node.baseCost * Math.pow(node.growth, lvl));
+}
+
+function getLuck(){
+  let l = state.luckLevel*2; // +2 luck per level
+  l += (state.automationOwned.detectorMetales? 10:0);
+  l += (state.prestigeTreeLevels.suerteAncestral||0)*3;
+  return l;
+}
+function getDigPowerMult(){
+  let p = 1 + state.digPowerLevel*0.04;
+  if(state.automationOwned.guantes) p *= 1.20;
+  p *= (1 + (state.prestigeTreeLevels.brazosDeAcero||0)*0.08);
+  return p;
+}
+function getAreaMult(){
+  let a = 1 + state.areaLevel*0.05;
+  a *= (1 + (state.prestigeTreeLevels.visionPeriferica||0)*0.08);
+  return a;
+}
+function getQueueMax(){
+  let q = 3 + state.capacityLevel;
+  if(state.automationOwned.carrito) q += 1;
+  if(state.automationOwned.cintaTransportadora) q += 3;
+  q += (state.prestigeTreeLevels.flotaAmpliada||0);
+  return q;
+}
+function getSellMult(category){
+  let m = 1;
+  if(state.automationOwned.plantaReciclaje && (category==='common'||category==='reusable')) m *= 1.20;
+  if(state.automationOwned.centroSubastas && (category==='art'||category==='relics')) m *= 1.15;
+  m *= (1 + (state.prestigeTreeLevels.tasadorExperto||0)*0.04);
+  return m;
+}
+function getOfflineFactor(){
+  return 0.5 * (1 + (state.prestigeTreeLevels.vigilanciaNocturna||0)*0.08);
+}
+function getOfflineCapSeconds(){
+  return (8 + (state.prestigeTreeLevels.guardiaPermanente||0)*4) * 3600;
+}
+function getTrapProb(container, isAuto){
+  let p = container.trap - getLuck()*0.002 - (state.prestigeTreeLevels.instintoCarronero||0)*0.015;
+  if(container.id==='containerExtradimensional'){
+    p -= (state.prestigeTreeLevels.portalEstable||0)*0.05;
+  }
+  if(isAuto) p *= 1.3;
+  return Math.max(0.01, p);
+}
+function refreshMarketFluctuation(){
+  const now = Date.now();
+  if(now - (state.marketFluctuationAt||0) > 60000){
+    state.marketFluctuation = 0.85 + Math.random()*0.35;
+    state.marketFluctuationAt = now;
+  }
+}
+
+function prestigeKeysIfPrestigedNow(){
+  if(state.totalMoneyEarned < 1e9) return 0;
+  return Math.max(1, Math.floor(Math.sqrt(state.totalMoneyEarned/1e9)*10));
+}
+
+function fmt(n){
+  n = Math.floor(n);
+  if(n < 1000) return '$'+n.toLocaleString('es-AR');
+  const units=[['Qa',1e15],['T',1e12],['B',1e9],['M',1e6],['K',1e3]];
+  for(const [suf,val] of units){
+    if(n>=val) return '$'+(n/val).toFixed(2)+suf;
+  }
+  return '$'+n;
+}
+function fmtN(n){
+  n=Math.floor(n);
+  if(n<1000) return ''+n;
+  const units=[['Qa',1e15],['T',1e12],['B',1e9],['M',1e6],['K',1e3]];
+  for(const [suf,val] of units){ if(n>=val) return (n/val).toFixed(2)+suf; }
+  return ''+n;
+}
+
+/* =========================================================
+   4. ROLL DE OBJETOS / TRAMPAS
+   ========================================================= */
+
+function unlockedCategoriesFor(container){
+  return container.cats;
+}
+
+function rollContainerResult(container, isAuto){
+  refreshMarketFluctuation();
+  const isTrap = Math.random() < getTrapProb(container, isAuto);
+  if(isTrap){
+    return {isTrap:true, items:[], moneyDelta:0};
+  }
+  const cats = container.cats;
+  const luck = getLuck();
+  const nSlots = container.slots;
+  const items = [];
+  for(let i=0;i<nSlots;i++){
+    let catId;
+    if(cats.length===1){ catId = cats[0]; }
+    else{
+      // peso base 70/30, suerte desplaza hasta +20% hacia la categoría rara
+      const shift = Math.min(20, luck*0.15);
+      const pHigh = 30 + shift;
+      catId = (Math.random()*100 < pHigh) ? cats[1] : cats[0];
+    }
+    const pool = ITEMS[catId];
+    const pick = pool[Math.floor(Math.random()*pool.length)];
+    const rarity = RARITY_BY_ID[catId];
+    const variance = 0.85 + Math.random()*0.3;
+    const value = pick[2]*rarity.mult*variance*(1+luck/100)*state.marketFluctuation*getSellMult(catId);
+    items.push({icon:pick[0], name:pick[1], category:catId, value:value});
+  }
+  const moneyDelta = items.reduce((a,b)=>a+b.value,0);
+  return {isTrap:false, items, moneyDelta};
+}
+
+function applyContainerResult(container, result, isAuto){
+  if(result.isTrap){
+    const penalty = Math.min(state.money, Math.max(1, container.baseCost*0.5));
+    state.money -= penalty;
+    state.trapsHit++;
+    showFlash();
+    pushToast('💥 ¡Trampa!', `El ${container.name} tenía algo peligroso. Perdiste ${fmt(penalty)}.`);
+  } else {
+    let total = 0;
+    for(const it of result.items){
+      total += it.value;
+      state.itemsFoundCount++;
+      state.itemsFoundByCategory[it.category] = (state.itemsFoundByCategory[it.category]||0)+1;
+      if(['antiques','art','relics','future'].includes(it.category)){
+        state.categoryFragments += 1 * (1+(state.prestigeTreeLevels.coleccionista||0)*0.25);
+      }
+    }
+    state.money += total;
+    state.totalMoneyEarned += total;
+    if(isAuto) state.autoProcessedCount++;
+    if(total>0) pushToast('✅ Contenedor completado', `+${fmt(total)} — ${result.items.length} objetos encontrados.`);
+  }
+  checkCategoryUnlockToast();
+  checkAchievements();
+  saveState();
+}
+
+let lastUnlockedTier = -1;
+function checkCategoryUnlockToast(){
+  const tier = highestContainerOwnedIndex();
+  if(tier>lastUnlockedTier){
+    lastUnlockedTier = tier;
+  }
+}
+
+/* =========================================================
+   5. MECÁNICA DE ESCARBADO (canvas)
+   ========================================================= */
+
+const stageEmpty = document.getElementById('stageEmpty');
+const layerBottom = document.getElementById('layerBottom');
+const layerTop = document.getElementById('layerTop');
+const ctxBottom = layerBottom.getContext('2d');
+const ctxTop = layerTop.getContext('2d');
+const CW=600, CH=330;
+layerBottom.width=CW; layerBottom.height=CH;
+layerTop.width=CW; layerTop.height=CH;
+
+let dragging=false;
+let clearedCells = null; // Set
+const GRID_X=16, GRID_Y=9;
+let lastSampleAt=0;
+
+function startDig(containerId, isManualStart){
+  const container = CONTAINER_BY_ID[containerId];
+  if(!container) return;
+  if(state.money < containerCost(container)) { pushToast('⚠️','No te alcanza el dinero para este contenedor.'); return; }
+  state.money -= containerCost(container);
+  state.ownedContainers[containerId] = (state.ownedContainers[containerId]||0)+1;
+  const result = rollContainerResult(container, false);
+  currentDig = {
+    containerId, container, result,
+    clearedFraction:0,
+    started:true,
+  };
+  clearedCells = new Set();
+  document.getElementById('containerTitle').textContent = container.icon+' '+container.name;
+  document.getElementById('containerSub').textContent = 'Arrastrá para escarbar y revelar lo que hay adentro.';
+  stageEmpty.style.display='none';
+  drawBottomLayer(currentDig);
+  drawTopLayerFull();
+  updateProgressUI(0);
+  document.getElementById('abandonBtn').classList.remove('show');
+  document.getElementById('trapHint').textContent = 'Riesgo de trampa: '+Math.round(getTrapProb(container,false)*100)+'%';
+  advanceTutorial(1);
+  refreshAll();
+}
+
+function drawBottomLayer(dig){
+  ctxBottom.clearRect(0,0,CW,CH);
+  // fondo
+  const grad = ctxBottom.createRadialGradient(CW/2,CH/2,20,CW/2,CH/2,CW*0.7);
+  grad.addColorStop(0,'#3a3322'); grad.addColorStop(1,'#211c14');
+  ctxBottom.fillStyle=grad; ctxBottom.fillRect(0,0,CW,CH);
+  ctxBottom.font='90px sans-serif';
+  ctxBottom.globalAlpha=0.10;
+  ctxBottom.textAlign='center'; ctxBottom.textBaseline='middle';
+  ctxBottom.fillText(dig.container.icon, CW/2, CH/2);
+  ctxBottom.globalAlpha=1;
+  // items posicionados
+  const positions = generatePositions(dig.result.isTrap? 1 : dig.result.items.length);
+  dig._positions = positions;
+  ctxBottom.font='46px sans-serif';
+  ctxBottom.textAlign='center'; ctxBottom.textBaseline='middle';
+  if(dig.result.isTrap){
+    ctxBottom.fillText('⚠️', positions[0].x, positions[0].y);
+  } else {
+    dig.result.items.forEach((it,i)=>{
+      ctxBottom.fillText(it.icon, positions[i].x, positions[i].y);
+    });
+  }
+}
+function generatePositions(n){
+  const pts=[];
+  const cols=Math.ceil(Math.sqrt(n));
+  const rows=Math.ceil(n/cols);
+  const padX=CW*0.15, padY=CH*0.18;
+  for(let i=0;i<n;i++){
+    const cx=i%cols, cy=Math.floor(i/cols);
+    const x = padX + (CW-2*padX) * ((cx+0.5)/cols) + (Math.random()*30-15);
+    const y = padY + (CH-2*padY) * ((cy+0.5)/Math.max(1,rows)) + (Math.random()*20-10);
+    pts.push({x,y});
+  }
+  return pts;
+}
+
+function drawTopLayerFull(){
+  ctxTop.globalCompositeOperation='source-over';
+  ctxTop.clearRect(0,0,CW,CH);
+  const grad = ctxTop.createLinearGradient(0,0,CW,CH);
+  grad.addColorStop(0,'#5c5036'); grad.addColorStop(0.5,'#473d29'); grad.addColorStop(1,'#564a30');
+  ctxTop.fillStyle=grad; ctxTop.fillRect(0,0,CW,CH);
+  // textura de manchas
+  ctxTop.globalAlpha=0.25;
+  for(let i=0;i<70;i++){
+    ctxTop.fillStyle = Math.random()<0.5 ? '#2e2718' : '#6b5e3e';
+    const r = 6+Math.random()*18;
+    ctxTop.beginPath();
+    ctxTop.arc(Math.random()*CW, Math.random()*CH, r, 0, Math.PI*2);
+    ctxTop.fill();
+  }
+  ctxTop.globalAlpha=1;
+}
+
+function pointerPos(evt){
+  const rect = layerTop.getBoundingClientRect();
+  const cx = (evt.touches? evt.touches[0].clientX : evt.clientX);
+  const cy = (evt.touches? evt.touches[0].clientY : evt.clientY);
+  const scaleX = CW/rect.width, scaleY = CH/rect.height;
+  return {x:(cx-rect.left)*scaleX, y:(cy-rect.top)*scaleY};
+}
+
+function eraseAt(x,y){
+  const radius = 30*getAreaMult();
+  ctxTop.globalCompositeOperation='destination-out';
+  ctxTop.beginPath();
+  // forma irregular tipo "mordisco" en vez de círculo perfecto
+  const spikes=8;
+  ctxTop.moveTo(x+radius, y);
+  for(let i=1;i<=spikes;i++){
+    const ang = (Math.PI*2/spikes)*i;
+    const rr = radius*(0.78+Math.random()*0.3);
+    ctxTop.lineTo(x+Math.cos(ang)*rr, y+Math.sin(ang)*rr);
+  }
+  ctxTop.closePath();
+  ctxTop.fill();
+}
+
+function sampleClearedFraction(){
+  const data = ctxTop.getImageData(0,0,CW,CH).data;
+  let cleared=0, total=GRID_X*GRID_Y;
+  for(let gy=0;gy<GRID_Y;gy++){
+    for(let gx=0;gx<GRID_X;gx++){
+      const px = Math.floor((gx+0.5)*CW/GRID_X);
+      const py = Math.floor((gy+0.5)*CH/GRID_Y);
+      const idx = (py*CW+px)*4;
+      const alpha = data[idx+3];
+      if(alpha < 40) cleared++;
+    }
+  }
+  return cleared/total;
+}
+
+function onPointerDown(evt){
+  if(!currentDig) return;
+  dragging=true;
+  onPointerMove(evt);
+  evt.preventDefault();
+}
+function onPointerMove(evt){
+  if(!dragging || !currentDig) return;
+  const p = pointerPos(evt);
+  eraseAt(p.x,p.y);
+  const now = performance.now();
+  if(now-lastSampleAt>120){
+    lastSampleAt=now;
+    const frac = sampleClearedFraction();
+    updateProgressUI(frac);
+    document.getElementById('abandonBtn').classList.toggle('show', frac>0.04 && frac<0.95);
+    if(frac>=0.55){
+      finishDig();
+    }
+  }
+  evt.preventDefault();
+}
+function onPointerUp(evt){
+  dragging=false;
+}
+layerTop.addEventListener('mousedown', onPointerDown);
+layerTop.addEventListener('mousemove', onPointerMove);
+window.addEventListener('mouseup', onPointerUp);
+layerTop.addEventListener('touchstart', onPointerDown, {passive:false});
+layerTop.addEventListener('touchmove', onPointerMove, {passive:false});
+window.addEventListener('touchend', onPointerUp);
+
+function updateProgressUI(frac){
+  document.getElementById('progressFill').style.width=(frac*100).toFixed(0)+'%';
+  document.getElementById('progressLabel').textContent=(frac*100).toFixed(0)+'%';
+}
+
+function finishDig(){
+  if(!currentDig) return;
+  const dig = currentDig;
+  ctxTop.clearRect(0,0,CW,CH);
+  applyContainerResult(dig.container, dig.result, false);
+  currentDig=null;
+  updateProgressUI(0);
+  document.getElementById('abandonBtn').classList.remove('show');
+  document.getElementById('containerTitle').textContent='Elegí un contenedor';
+  document.getElementById('containerSub').textContent='Comprá otro en la Tienda para seguir.';
+  document.getElementById('trapHint').textContent='';
+  stageEmpty.style.display='flex';
+  refreshAll();
+}
+
+function abandonDig(){
+  if(!currentDig) return;
+  currentDig=null;
+  ctxTop.clearRect(0,0,CW,CH);
+  updateProgressUI(0);
+  document.getElementById('abandonBtn').classList.remove('show');
+  document.getElementById('containerTitle').textContent='Elegí un contenedor';
+  document.getElementById('containerSub').textContent='Abandonaste ese contenedor sin pérdidas extra.';
+  document.getElementById('trapHint').textContent='';
+  stageEmpty.style.display='flex';
+  refreshAll();
+}
+document.getElementById('abandonBtn').addEventListener('click', abandonDig);
+
+function showFlash(){
+  const f = document.getElementById('flashOverlay');
+  const stage = document.getElementById('digStage');
+  f.classList.add('on'); stage.classList.add('shake');
+  setTimeout(()=>{f.classList.remove('on'); stage.classList.remove('shake');},350);
+}
+
+/* =========================================================
+   6. AUTOMATIZACIÓN
+   ========================================================= */
+
+function highestContainerOwnedIndex(){
+  let idx=0;
+  for(let i=0;i<CONTAINERS.length;i++){
+    if((state.ownedContainers[CONTAINERS[i].id]||0)>=1) idx=i;
+  }
+  return idx;
+}
+function isContainerUnlocked(container, index){
+  if(container.requiresPrestige && state.prestigeCount < container.requiresPrestige) return false;
+  if(container.id==='containerExtradimensional' && !state.automationOwned.redDrones) return false;
+  if(index===0) return true;
+  const prev = CONTAINERS[index-1];
+  return (state.ownedContainers[prev.id]||0) >= 1;
+}
+
+function cheapestAffordableUnlockedContainer(){
+  let best=null;
+  CONTAINERS.forEach((c,i)=>{
+    if(!isContainerUnlocked(c,i)) return;
+    const cost = containerCost(c);
+    if(cost<=state.money){
+      if(!best || cost>containerCost(best)) best=c; // preferir el más caro que pueda pagar (mejor valor)
+    }
+  });
+  return best;
+}
+
+function automationTick(dt){
+  if(!state.automationOwned.robotClasificador) return;
+  const parallelSlots = state.automationOwned.redDrones ? 2 : 1;
+  // avanzar cada slot que ya está procesando
+  for(let i=state.autoProcessing.length-1;i>=0;i--){
+    const slot = state.autoProcessing[i];
+    slot.remaining -= dt;
+    if(slot.remaining<=0){
+      const c = CONTAINER_BY_ID[slot.containerId];
+      const result = rollContainerResult(c, true);
+      applyContainerResult(c, result, true);
+      state.autoProcessing.splice(i,1);
+    }
+  }
+  // llenar slots libres desde la cola
+  while(state.autoProcessing.length < parallelSlots && state.autoQueue.length>0){
+    const nextId = state.autoQueue.shift();
+    const c = CONTAINER_BY_ID[nextId];
+    state.autoProcessing.push({containerId:nextId, totalTime:c.digTime, remaining:c.digTime});
+  }
+  // autocompra para llenar la cola
+  const qMax = getQueueMax();
+  while(state.autoQueue.length < qMax){
+    const pick = cheapestAffordableUnlockedContainer();
+    if(!pick) break;
+    const cost = containerCost(pick);
+    if(state.money < cost) break;
+    state.money -= cost;
+    state.ownedContainers[pick.id] = (state.ownedContainers[pick.id]||0)+1;
+    state.autoQueue.push(pick.id);
+  }
+}
+
+/* =========================================================
+   7. PRESTIGIO
+   ========================================================= */
+
+function doPrestige(){
+  const keys = prestigeKeysIfPrestigedNow();
+  if(keys<=0) return;
+  state.prestigeKeys += keys;
+  state.prestigeCount += 1;
+  const startMoney = (state.prestigeTreeLevels.capitalInicial||0)*100;
+  state.money = startMoney;
+  state.totalMoneyEarned = startMoney;
+  state.luckLevel=0; state.digPowerLevel=0; state.areaLevel=0; state.capacityLevel=0;
+  state.ownedContainers={};
+  state.automationOwned={};
+  state.autoQueue=[]; state.autoProcessing=[];
+  currentDig=null;
+  closeAllPanels();
+  showModal('🏙️ ¡Nueva Ciudad Desbloqueada!', `Conseguiste ${keys} Llaves de Ciudad. Tu árbol de prestigio y logros se mantienen para siempre, pero tendrás que reconstruir tu equipo de automatización en esta nueva ciudad — ¡con tus bonos permanentes, será mucho más rápido que la vez anterior!`);
+  saveState();
+  refreshAll();
+}
+
+/* =========================================================
+   8. LOGROS / TOASTS / MODAL
+   ========================================================= */
+
+function checkAchievements(){
+  ACHIEVEMENTS.forEach(a=>{
+    if(!state.achievementsUnlocked.includes(a.id) && a.cond(state)){
+      state.achievementsUnlocked.push(a.id);
+      pushToast('🏆 Logro desbloqueado', a.name);
+    }
+  });
+}
+
+function pushToast(title, text){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className='toast';
+  el.innerHTML = '<b>'+title+'</b><br>'+text;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 3100);
+}
+
+function showModal(title, text){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalText').textContent=text;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+document.getElementById('modalOkBtn').addEventListener('click', ()=>{
+  document.getElementById('modalOverlay').classList.remove('show');
+});
+
+/* =========================================================
+   9. TUTORIAL
+   ========================================================= */
+
+const TUTORIAL_MSGS = [
+  '👉 Escarbá el <b>Tacho de Vereda</b> gratis para conseguir tu primera moneda.',
+  '👉 Ahora comprá una mejora de <b>Suerte</b> o <b>Fuerza</b> con tus primeras monedas.',
+  '👉 Andá a la <b>Tienda</b> y comprá tu primer contenedor de pago.',
+];
+function advanceTutorial(toStep){
+  if(state.tutorialStep < toStep){
+    state.tutorialStep = toStep;
+    saveState();
+  }
+  renderTutorial();
+}
+function renderTutorial(){
+  const banner = document.getElementById('tutorialBanner');
+  if(state.tutorialStep>=3){ banner.classList.remove('show'); return; }
+  document.getElementById('tutorialText').innerHTML = TUTORIAL_MSGS[state.tutorialStep];
+  banner.classList.add('show');
+}
+document.getElementById('tutorialClose').addEventListener('click', ()=>{
+  state.tutorialStep=3; saveState(); renderTutorial();
+});
+
+/* =========================================================
+   10. UI — render general
+   ========================================================= */
+
+function buyUpgrade(key){
+  const def = UPGRADES.find(u=>u.id===key);
+  const level = state[def.key];
+  const cost = upgradeCost(def.baseCost, def.growth, level);
+  if(state.money<cost) return;
+  state.money -= cost;
+  state[def.key] += 1;
+  advanceTutorial(2);
+  checkAchievements();
+  saveState();
+  refreshAll();
+}
+document.getElementById('quLuck').addEventListener('click', ()=>buyUpgrade('luck'));
+document.getElementById('quPower').addEventListener('click', ()=>buyUpgrade('digPower'));
+document.getElementById('quArea').addEventListener('click', ()=>buyUpgrade('area'));
+document.getElementById('quCap').addEventListener('click', ()=>buyUpgrade('capacity'));
+
+document.getElementById('digFreeBtn').addEventListener('click', ()=>{
+  if(currentDig) return;
+  startDig('tachoVereda', true);
+});
+
+function renderTopbar(){
+  document.getElementById('moneyVal').textContent = fmt(state.money);
+  document.getElementById('keysVal').textContent = fmtN(state.prestigeKeys);
+  const lvl = 1+Math.floor(Math.sqrt(state.totalMoneyEarned/50));
+  document.getElementById('levelVal').textContent = 'Nv. '+lvl;
+}
+
+function renderQuickUpgrades(){
+  UPGRADES.forEach(def=>{
+    const level = state[def.key];
+    const cost = upgradeCost(def.baseCost, def.growth, level);
+    const el = (def.id==='luck')?document.getElementById('quLuck'):
+               (def.id==='digPower')?document.getElementById('quPower'):
+               (def.id==='area')?document.getElementById('quArea'):document.getElementById('quCap');
+    el.querySelector('.qu-lvl').textContent='Nv '+level;
+    el.querySelector('.qu-cost').textContent=fmt(cost);
+    el.disabled = state.money<cost;
+  });
+}
+
+function renderShop(){
+  const list = document.getElementById('shopList');
+  list.innerHTML='';
+  CONTAINERS.forEach((c,i)=>{
+    const unlocked = isContainerUnlocked(c,i);
+    const owned = state.ownedContainers[c.id]||0;
+    const cost = containerCost(c);
+    const row = document.createElement('div');
+    row.className='containerCardRow'+(unlocked?'':' locked');
+    const chips = c.cats.map(catId=>{
+      const r=RARITY_BY_ID[catId];
+      return `<span class="ccChip" style="background:${r.color};color:#1a1a1a">${r.name}</span>`;
+    }).join('');
+    row.innerHTML = `
+      <div class="ccIcon">${c.icon}</div>
+      <div class="ccInfo">
+        <div class="ccName">${c.name} ${owned?`<span style="color:var(--text-faint);font-size:11px">(x${owned})</span>`:''}</div>
+        <div class="ccMeta">${chips}<span class="ccChip" style="background:var(--bg-3);color:var(--text-dim)">⚠️ ${Math.round(c.trap*100)}%</span></div>
+      </div>
+      <div class="ccBtns">
+        <button class="ccBuy" ${(!unlocked||state.money<cost||currentDig)?'disabled':''} data-act="dig" data-id="${c.id}">${unlocked?fmt(cost):'🔒'}</button>
+        ${state.automationOwned.robotClasificador?`<button class="ccBuy auto" ${(!unlocked||state.money<cost)?'disabled':''} data-act="auto" data-id="${c.id}">A la cola</button>`:''}
+      </div>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('[data-act="dig"]').forEach(b=>b.addEventListener('click', e=>{
+    startDig(e.currentTarget.dataset.id, true);
+  }));
+  list.querySelectorAll('[data-act="auto"]').forEach(b=>b.addEventListener('click', e=>{
+    const id=e.currentTarget.dataset.id;
+    const c = CONTAINER_BY_ID[id];
+    const cost = containerCost(c);
+    if(state.money<cost) return;
+    if(state.autoQueue.length>=getQueueMax()) { pushToast('⚠️','La cola de automatización está llena.'); return; }
+    state.money -= cost;
+    state.ownedContainers[id]=(state.ownedContainers[id]||0)+1;
+    state.autoQueue.push(id);
+    advanceTutorial(3);
+    saveState(); refreshAll();
+  }));
+}
+
+function renderAuto(){
+  document.getElementById('queueMax').textContent = getQueueMax();
+  document.getElementById('queueCount').textContent = state.autoQueue.length;
+  document.getElementById('processingNow').textContent = state.autoProcessing.length
+    ? state.autoProcessing.map(slot=>{
+        const c = CONTAINER_BY_ID[slot.containerId];
+        return c.icon+' '+c.name+' ('+Math.ceil(slot.remaining)+'s)';
+      }).join('  +  ')
+    : (state.automationOwned.robotClasificador? 'Esperando contenedores…' : 'Comprá el Robot Clasificador para activar esto.');
+  const ql = document.getElementById('queueList');
+  ql.innerHTML='';
+  state.autoQueue.forEach(id=>{
+    const c=CONTAINER_BY_ID[id];
+    const chip=document.createElement('div'); chip.className='queueChip'; chip.textContent=c.icon;
+    ql.appendChild(chip);
+  });
+  const list = document.getElementById('autoList');
+  list.innerHTML='';
+  AUTOMATIONS.forEach(a=>{
+    const owned = !!state.automationOwned[a.id];
+    const row = document.createElement('div');
+    row.className='autoRow';
+    row.innerHTML = `
+      <div class="arIcon">${a.icon}</div>
+      <div class="arInfo"><div class="arName">${a.name}</div><div class="arDesc">${a.desc}</div></div>
+      <button class="arBtn ${owned?'owned':''}" ${(owned||state.money<a.cost)?'disabled':''} data-id="${a.id}">${owned?'Comprado':fmt(a.cost)}</button>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.arBtn:not(.owned)').forEach(b=>b.addEventListener('click', e=>{
+    const id=e.currentTarget.dataset.id;
+    const a = AUTOMATION_BY_ID[id];
+    if(state.money<a.cost||state.automationOwned[id]) return;
+    state.money -= a.cost;
+    state.automationOwned[id]=true;
+    checkAchievements();
+    pushToast('⚙️ Automatización adquirida', a.name);
+    saveState(); refreshAll();
+  }));
+}
+
+function renderAchievements(){
+  const grid = document.getElementById('achGrid');
+  grid.innerHTML='';
+  ACHIEVEMENTS.forEach(a=>{
+    const unlocked = state.achievementsUnlocked.includes(a.id);
+    const card=document.createElement('div');
+    card.className='achCard'+(unlocked?'':' locked');
+    card.innerHTML=`<div class="achIc">${unlocked?a.icon:'🔒'}</div><div class="achName">${a.name}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function renderPrestige(){
+  const frac = Math.min(1, state.totalMoneyEarned/1e9);
+  document.getElementById('prestigeProgressFill').style.width=(frac*100).toFixed(1)+'%';
+  document.getElementById('prestigeProgressLabel').textContent = fmt(state.totalMoneyEarned)+' / $1.000.000.000';
+  const keys = prestigeKeysIfPrestigedNow();
+  document.getElementById('prestigePreview').textContent = keys;
+  const btn = document.getElementById('prestigeBtn');
+  btn.disabled = keys<=0;
+
+  const tree = document.getElementById('treeList');
+  tree.innerHTML='';
+  PRESTIGE_TREE.forEach(node=>{
+    const lvl = state.prestigeTreeLevels[node.id]||0;
+    const maxed = lvl>=node.maxLvl;
+    const cost = prestigeTreeCost(node);
+    const div=document.createElement('div');
+    div.className='treeNode';
+    div.innerHTML=`
+      <div class="tnTop"><span class="tnName">${node.icon} ${node.name}</span><span class="tnLvl">Nv ${lvl}/${node.maxLvl}</span></div>
+      <div class="tnDesc">${node.desc}</div>
+      <button class="tnBuy" ${(maxed||state.prestigeKeys<cost)?'disabled':''} data-id="${node.id}">${maxed?'Al máximo':'🔑 '+cost}</button>`;
+    tree.appendChild(div);
+  });
+  tree.querySelectorAll('.tnBuy:not(:disabled)').forEach(b=>b.addEventListener('click', e=>{
+    const id=e.currentTarget.dataset.id;
+    const node = PRESTIGE_TREE.find(n=>n.id===id);
+    const lvl = state.prestigeTreeLevels[id]||0;
+    if(lvl>=node.maxLvl) return;
+    const cost = prestigeTreeCost(node);
+    if(state.prestigeKeys<cost) return;
+    state.prestigeKeys -= cost;
+    state.prestigeTreeLevels[id]=lvl+1;
+    saveState(); refreshAll();
+  }));
+}
+document.getElementById('prestigeBtn').addEventListener('click', doPrestige);
+
+function refreshAll(){
+  renderTopbar();
+  renderQuickUpgrades();
+  if(document.getElementById('panel-shop').classList.contains('show')) renderShop();
+  if(document.getElementById('panel-auto').classList.contains('show')) renderAuto();
+  if(document.getElementById('panel-ach').classList.contains('show')) renderAchievements();
+  if(document.getElementById('panel-prestige').classList.contains('show')) renderPrestige();
+}
+
+/* =========================================================
+   11. NAVEGACIÓN / PANELES
+   ========================================================= */
+
+function closeAllPanels(){
+  document.querySelectorAll('.panelOverlay').forEach(p=>p.classList.remove('show'));
+  document.querySelectorAll('.tabBtn').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tabClose').classList.add('active');
+}
+document.querySelectorAll('.tabBtn[data-panel]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const target = btn.dataset.panel;
+    closeAllPanels();
+    if(target==='none') return;
+    document.getElementById('panel-'+target).classList.add('show');
+    btn.classList.add('active');
+    refreshAll();
+  });
+});
+document.getElementById('tabClose').addEventListener('click', closeAllPanels);
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click', closeAllPanels));
+document.querySelectorAll('.panelOverlay').forEach(p=>{
+  p.addEventListener('click', e=>{ if(e.target===p) closeAllPanels(); });
+});
+document.getElementById('settingsBtn').addEventListener('click', ()=>{
+  closeAllPanels();
+  document.getElementById('panel-settings').classList.add('show');
+});
+
+/* =========================================================
+   12. SETTINGS — sonido / export / import / reset
+   ========================================================= */
+
+const soundToggle = document.getElementById('soundToggle');
+function renderSettingsToggle(){ soundToggle.classList.toggle('on', state.soundOn); }
+soundToggle.addEventListener('click', ()=>{
+  state.soundOn=!state.soundOn; saveState(); renderSettingsToggle();
+});
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  saveState();
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+  const box = document.getElementById('exportBox');
+  box.value = encoded;
+  box.select();
+  try{ document.execCommand('copy'); pushToast('📋','Copiado al portapapeles.'); }catch(e){}
+});
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  const raw = document.getElementById('importBox').value.trim();
+  if(!raw) return;
+  try{
+    const decoded = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    state = Object.assign(freshState(), decoded);
+    saveState();
+    closeAllPanels();
+    pushToast('✅','Partida importada correctamente.');
+    refreshAll();
+  }catch(e){
+    pushToast('⚠️','El texto pegado no es una partida válida.');
+  }
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(!confirm('¿Seguro que querés borrar todo tu progreso? Esto no se puede deshacer.')) return;
+  if(!confirm('Última confirmación: se borrará TODO, incluyendo prestigios y logros. ¿Continuar?')) return;
+  state = freshState();
+  currentDig = null;
+  saveState();
+  closeAllPanels();
+  refreshAll();
+});
+
+/* =========================================================
+   13. LOOP PRINCIPAL Y PROGRESO OFFLINE
+   ========================================================= */
+
+let lastTick = Date.now();
+function tick(){
+  const now = Date.now();
+  const dt = (now-lastTick)/1000;
+  lastTick = now;
+  automationTick(dt);
+  if(document.getElementById('panel-auto').classList.contains('show')) renderAuto();
+  renderTopbar();
+  if(document.getElementById('panel-prestige').classList.contains('show')) renderPrestige();
+}
+setInterval(tick, 1000);
+setInterval(saveState, 15000);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) saveState(); });
+window.addEventListener('beforeunload', saveState);
+
+function applyOfflineProgress(){
+  const elapsed = (Date.now() - (state.lastSavedAt||Date.now()))/1000;
+  if(elapsed < 30) return;
+  const cap = getOfflineCapSeconds();
+  const capped = Math.min(elapsed, cap);
+  if(!state.automationOwned.robotClasificador){ return; }
+  // estimar ingreso promedio por segundo en base al contenedor más caro que puede sostener
+  const pick = cheapestAffordableUnlockedContainer() || CONTAINER_BY_ID['contenedorBarrio'];
+  const avgItemValue = ITEMS[pick.cats[0]].reduce((a,b)=>a+b[2],0)/ITEMS[pick.cats[0]].length * RARITY_BY_ID[pick.cats[0]].mult;
+  const perRun = avgItemValue*pick.slots*0.5*(1+getLuck()/100);
+  const perSecond = perRun / pick.digTime;
+  const factor = getOfflineFactor();
+  const earnings = perSecond*capped*factor;
+  if(earnings>1){
+    state.money += earnings;
+    state.totalMoneyEarned += earnings;
+    showModal('🌙 Mientras no estabas…', `Tus robots trabajaron ${Math.round(capped/60)} minutos y generaron ${fmt(earnings)}.`);
+  }
+}
+
+/* =========================================================
+   14. INIT
+   ========================================================= */
+
+function init(){
+  applyOfflineProgress();
+  renderTutorial();
+  renderSettingsToggle();
+  refreshAll();
+  checkAchievements();
+  saveState();
+}
+init();
+
+})();
+</script>
+</body>
+</html>

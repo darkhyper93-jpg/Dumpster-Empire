@@ -1,0 +1,464 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>DUMPSTER EMPIRE - Container Shop</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&amp;family=Hanken+Grotesk:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#a9cfff",
+                        "surface": "#121416",
+                        "on-tertiary": "#003258",
+                        "tertiary-fixed": "#d1e4ff",
+                        "surface-dim": "#121416",
+                        "on-surface-variant": "#dbc2ad",
+                        "on-primary-container": "#653900",
+                        "on-primary": "#4a2800",
+                        "secondary": "#9ed75b",
+                        "on-secondary-fixed-variant": "#2e4f00",
+                        "surface-tint": "#ffb870",
+                        "tertiary-container": "#70b5ff",
+                        "inverse-on-surface": "#2f3133",
+                        "on-primary-fixed": "#2c1600",
+                        "surface-container-highest": "#333537",
+                        "inverse-primary": "#8b5000",
+                        "surface-container": "#1e2022",
+                        "on-secondary": "#1e3700",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-container": "#004677",
+                        "on-secondary-fixed": "#0f2000",
+                        "background": "#121416",
+                        "surface-container-high": "#282a2c",
+                        "secondary-fixed-dim": "#9ed75b",
+                        "secondary-container": "#4b7d00",
+                        "primary-fixed-dim": "#ffb870",
+                        "on-primary-fixed-variant": "#693c00",
+                        "error-container": "#93000a",
+                        "on-error": "#690005",
+                        "error": "#ffb4ab",
+                        "outline": "#a38d7a",
+                        "on-tertiary-fixed-variant": "#00497d",
+                        "surface-container-lowest": "#0c0e10",
+                        "tertiary-fixed-dim": "#9ecaff",
+                        "secondary-fixed": "#b9f474",
+                        "primary-container": "#ff9800",
+                        "primary": "#ffc081",
+                        "surface-container-low": "#1a1c1e",
+                        "inverse-surface": "#e2e2e5",
+                        "surface-variant": "#333537",
+                        "primary-fixed": "#ffdcbe",
+                        "outline-variant": "#554434",
+                        "on-tertiary-fixed": "#001d36",
+                        "on-background": "#e2e2e5",
+                        "on-surface": "#e2e2e5",
+                        "on-secondary-container": "#dfffb6",
+                        "surface-bright": "#37393b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "stack-gap": "12px",
+                        "panel-padding": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "label-bold": ["Hanken Grotesk"],
+                        "headline-lg": ["Fredoka"],
+                        "body-main": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Fredoka"],
+                        "display-count": ["Fredoka"],
+                        "code-status": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "label-bold": ["14px", {"lineHeight": "1.4", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "body-main": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "display-count": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "code-status": ["12px", {"lineHeight": "1.2", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .workbench-bg {
+            background-color: #121416;
+            background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+            background-size: 32px 32px;
+        }
+
+        .beveled-edge {
+            border: 2px solid;
+            border-image: linear-gradient(to bottom right, #555, #222) 1;
+        }
+
+        .recessed-bay {
+            box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8), inset -1px -1px 2px rgba(255,255,255,0.05);
+        }
+
+        .extruded-button {
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.5), inset 1px 1px 0px 0px rgba(255,255,255,0.1);
+            transition: all 0.1s ease;
+        }
+
+        .extruded-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px 0px rgba(0,0,0,0.5);
+        }
+
+        .status-led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #1a1c1e;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .status-led.active-green {
+            background: #9ed75b;
+            box-shadow: 0 0 8px #9ed75b, inset 1px 1px 2px rgba(255,255,255,0.5);
+        }
+
+        .status-led.active-orange {
+            background: #ffb870;
+            box-shadow: 0 0 8px #ffb870, inset 1px 1px 2px rgba(255,255,255,0.5);
+        }
+
+        .glass-tube {
+            background: rgba(0,0,0,0.3);
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .glass-tube::after {
+            content: '';
+            position: absolute;
+            top: 25%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Custom Scrollbar for the Industrial Look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #121416; }
+        ::-webkit-scrollbar-thumb { background: #333537; border: 1px solid #554434; }
+    </style>
+</head>
+<body class="workbench-bg text-on-surface selection:bg-primary-container selection:text-on-primary-container font-body-main text-body-main">
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar (Predicted & Required) -->
+<aside class="hidden md:flex flex-col h-screen py-panel-padding gap-stack-gap bg-surface-container border-r-4 border-outline-variant shadow-[4px_0px_0px_0px_rgba(0,0,0,0.3)] w-64 shrink-0">
+<div class="px-gutter mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center border-2 border-outline shadow-md">
+<span class="material-symbols-outlined text-on-primary-container">engineering</span>
+</div>
+<div>
+<h2 class="font-headline-lg text-primary text-[18px] leading-tight uppercase tracking-wider">OPS CONSOLE</h2>
+<p class="font-code-status text-code-status opacity-60">WORKBENCH V1.0</p>
+</div>
+</div>
+</div>
+<nav class="flex-grow flex flex-col gap-2">
+<!-- Tab: Scrap (Inactive) -->
+<a class="flex items-center gap-3 text-on-surface-variant opacity-80 hover:opacity-100 px-gutter py-3 hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined">recycling</span>
+<span class="font-label-bold text-label-bold">Scrap</span>
+</a>
+<!-- Tab: Automation (Active - Shop implies management/automation context here or Shop tab) -->
+<a class="flex items-center gap-3 bg-primary-container text-on-primary-container border-2 border-primary shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5)] rounded-lg mx-2 px-4 py-3 scale-95 duration-75" href="#">
+<span class="material-symbols-outlined">shopping_cart</span>
+<span class="font-label-bold text-label-bold">Shop</span>
+</a>
+<!-- Tab: Upgrades -->
+<a class="flex items-center gap-3 text-on-surface-variant opacity-80 hover:opacity-100 px-gutter py-3 hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined">upgrade</span>
+<span class="font-label-bold text-label-bold">Upgrades</span>
+</a>
+<!-- Tab: Tech -->
+<a class="flex items-center gap-3 text-on-surface-variant opacity-80 hover:opacity-100 px-gutter py-3 hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined">memory</span>
+<span class="font-label-bold text-label-bold">Tech</span>
+</a>
+<!-- Tab: Prestige -->
+<a class="flex items-center gap-3 text-on-surface-variant opacity-80 hover:opacity-100 px-gutter py-3 hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined">military_tech</span>
+<span class="font-label-bold text-label-bold">Prestige</span>
+</a>
+</nav>
+<div class="px-gutter mt-auto flex flex-col gap-2 pt-4 border-t border-outline-variant/30">
+<div class="flex items-center gap-3 p-2 rounded hover:bg-surface-variant cursor-pointer group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">build</span>
+<span class="font-label-bold text-label-bold opacity-70">Diagnostics</span>
+</div>
+<div class="flex items-center gap-3 p-2 rounded hover:bg-surface-variant cursor-pointer group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">terminal</span>
+<span class="font-label-bold text-label-bold opacity-70">Logs</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-grow flex flex-col overflow-hidden">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-gutter h-20 bg-surface-container-high border-b-4 border-outline-variant shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5),-1px_-1px_0px_0px_rgba(255,255,255,0.1)] z-10">
+<div class="flex items-center gap-4">
+<span class="font-display-count text-primary uppercase tracking-tighter border-2 border-outline-variant px-3 py-1 bg-surface-container-lowest text-[24px]">DUMPSTER EMPIRE</span>
+</div>
+<div class="flex items-center gap-6">
+<!-- Balance Display (Recessed) -->
+<div class="recessed-bay bg-surface-container-lowest px-4 py-2 rounded-lg border border-outline-variant/30 flex items-center gap-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-code-status text-secondary text-[16px] font-bold">$2,450.00</span>
+</div>
+<div class="w-px h-4 bg-outline-variant/30"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">vpn_key</span>
+<span class="font-code-status text-primary text-[16px] font-bold">12</span>
+</div>
+</div>
+<button class="w-10 h-10 rounded-lg bg-surface-container-highest border-2 border-outline-variant flex items-center justify-center extruded-button hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined text-on-surface">settings</span>
+</button>
+</div>
+</header>
+<!-- Scrollable Canvas -->
+<div class="flex-grow overflow-y-auto p-panel-padding">
+<div class="max-w-6xl mx-auto flex flex-col gap-8">
+<!-- Hero / Featured Section (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<div class="md:col-span-8 recessed-bay bg-surface-container-low rounded-xl border-2 border-outline-variant p-6 relative overflow-hidden group">
+<!-- Background Texture Overlay -->
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+<div class="relative z-10">
+<div class="flex items-center gap-3 mb-2">
+<div class="status-led active-orange"></div>
+<span class="font-code-status text-primary uppercase tracking-widest">Global Marketplace</span>
+</div>
+<h1 class="font-headline-lg text-on-surface mb-4">Container Yard</h1>
+<p class="font-body-main text-on-surface-variant max-w-lg mb-6">
+                                    Browse the local district for untapped potential. Each site requires different tools and carries varied risks of interference.
+                                </p>
+<div class="flex flex-wrap gap-4">
+<div class="bg-surface-container-high px-4 py-2 border border-outline-variant rounded flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">inventory_2</span>
+<div class="flex flex-col">
+<span class="text-[10px] uppercase font-bold opacity-50">Storage Capacity</span>
+<span class="font-code-status">84% FULL</span>
+</div>
+</div>
+<div class="bg-surface-container-high px-4 py-2 border border-outline-variant rounded flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">speed</span>
+<div class="flex flex-col">
+<span class="text-[10px] uppercase font-bold opacity-50">Luck Rating</span>
+<span class="font-code-status">LVL 15</span>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute -right-12 -bottom-12 opacity-10 group-hover:opacity-20 transition-all duration-700">
+<span class="material-symbols-outlined text-[200px]" style="font-variation-settings: 'wght' 100;">forklift</span>
+</div>
+</div>
+<div class="md:col-span-4 bg-primary-container/10 border-2 border-primary/30 rounded-xl p-6 flex flex-col justify-between relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<span class="material-symbols-outlined text-primary text-4xl opacity-40">stars</span>
+</div>
+<div>
+<span class="font-code-status text-primary-container bg-primary-container/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold mb-2 inline-block">Daily Special</span>
+<h3 class="font-headline-lg text-on-primary-container leading-tight mb-2">Secret Bunker Access</h3>
+<p class="text-on-surface-variant text-sm mb-4">Guaranteed high-tier tech scrap, but 80% trap risk.</p>
+</div>
+<button class="w-full bg-primary-container text-on-primary-container py-3 font-label-bold uppercase tracking-widest border-2 border-on-primary-container extruded-button">
+                                Open for $850.00
+                             </button>
+</div>
+</div>
+<!-- Containers Grid -->
+<div class="flex items-center justify-between border-b-2 border-outline-variant/30 pb-2">
+<h2 class="font-headline-lg text-[20px] uppercase tracking-widest text-on-surface-variant">Available Districts</h2>
+<div class="flex gap-2">
+<button class="px-3 py-1 bg-surface-container-highest border border-outline-variant text-[12px] font-bold uppercase opacity-50">Common</button>
+<button class="px-3 py-1 bg-surface-container-highest border border-primary text-[12px] font-bold uppercase text-primary">All Sites</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Card 1: Tacho de Vereda -->
+<div class="bg-surface-container border-2 border-outline-variant p-1 rounded-lg flex flex-col shadow-lg hover:border-primary transition-colors group">
+<div class="bg-surface-container-low p-6 flex flex-col items-center justify-center relative overflow-hidden rounded-t-md">
+<div class="recessed-bay w-32 h-32 rounded-full flex items-center justify-center bg-surface-container-lowest mb-4">
+<span class="material-symbols-outlined text-on-surface-variant text-6xl group-hover:text-primary transition-colors">delete</span>
+</div>
+<h3 class="font-headline-lg text-[24px] text-on-surface">Tacho de vereda</h3>
+<p class="font-code-status text-secondary text-[12px] uppercase mb-4 tracking-tighter">FREE SCAVENGE</p>
+<div class="grid grid-cols-2 gap-2 w-full mt-2">
+<div class="recessed-bay bg-surface-container-lowest p-2 rounded text-center">
+<span class="text-[9px] uppercase font-bold opacity-50 block">Risk</span>
+<span class="font-code-status text-secondary text-[11px]">1%</span>
+</div>
+<div class="recessed-bay bg-surface-container-lowest p-2 rounded text-center">
+<span class="text-[9px] uppercase font-bold opacity-50 block">Potential</span>
+<span class="font-code-status text-primary text-[11px]">LOW</span>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-high rounded-b-md">
+<div class="flex justify-between items-center mb-4">
+<div class="flex gap-1">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">inventory</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">category</span>
+</div>
+<span class="font-code-status text-on-surface-variant text-[12px]">$0.00</span>
+</div>
+<button class="w-full bg-secondary-container text-on-secondary-container py-3 font-label-bold uppercase border-2 border-secondary extruded-button">
+                                    Escarbar (Gratis)
+                                </button>
+</div>
+</div>
+<!-- Card 2: Contenedor de barrio -->
+<div class="bg-surface-container border-2 border-outline-variant p-1 rounded-lg flex flex-col shadow-lg hover:border-primary transition-colors group">
+<div class="bg-surface-container-low p-6 flex flex-col items-center justify-center relative overflow-hidden rounded-t-md">
+<div class="recessed-bay w-32 h-32 rounded-full flex items-center justify-center bg-surface-container-lowest mb-4">
+<span class="material-symbols-outlined text-on-surface-variant text-6xl group-hover:text-primary transition-colors">delete_sweep</span>
+</div>
+<h3 class="font-headline-lg text-[24px] text-on-surface">Contenedor de barrio</h3>
+<p class="font-code-status text-primary text-[12px] uppercase mb-4 tracking-tighter">SUBURBAN DISTRICT</p>
+<div class="grid grid-cols-2 gap-2 w-full mt-2">
+<div class="recessed-bay bg-surface-container-lowest p-2 rounded text-center">
+<span class="text-[9px] uppercase font-bold opacity-50 block">Risk</span>
+<span class="font-code-status text-primary text-[11px]">5%</span>
+</div>
+<div class="recessed-bay bg-surface-container-lowest p-2 rounded text-center">
+<span class="text-[9px] uppercase font-bold opacity-50 block">Potential</span>
+<span class="font-code-status text-primary text-[11px]">MID</span>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-high rounded-b-md">
+<div class="flex justify-between items-center mb-4">
+<div class="flex gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">inventory</span>
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">category</span>
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">extension</span>
+</div>
+<span class="font-code-status text-secondary text-[12px] font-bold">$15.00</span>
+</div>
+<button class="w-full bg-primary-container text-on-primary-container py-3 font-label-bold uppercase border-2 border-on-primary-container extruded-button">
+                                    BUY CONTAINER
+                                </button>
+</div>
+</div>
+<!-- Card 3: Container Industrial -->
+<div class="bg-surface-container border-2 border-outline-variant p-1 rounded-lg flex flex-col shadow-lg hover:border-primary transition-colors group">
+<div class="bg-surface-container-low p-6 flex flex-col items-center justify-center relative overflow-hidden rounded-t-md">
+<div class="recessed-bay w-32 h-32 rounded-full flex items-center justify-center bg-surface-container-lowest mb-4">
+<span class="material-symbols-outlined text-on-surface-variant text-6xl group-hover:text-primary transition-colors">factory</span>
+</div>
+<h3 class="font-headline-lg text-[24px] text-on-surface">Industrial Skip</h3>
+<p class="font-code-status text-error text-[12px] uppercase mb-4 tracking-tighter">HEAVY INDUSTRY</p>
+<div class="grid grid-cols-2 gap-2 w-full mt-2">
+<div class="recessed-bay bg-surface-container-lowest p-2 rounded text-center">
+<span class="text-[9px] uppercase font-bold opacity-50 block">Risk</span>
+<span class="font-code-status text-error text-[11px]">18%</span>
+</div>
+<div class="recessed-bay bg-surface-container-lowest p-2 rounded text-center">
+<span class="text-[9px] uppercase font-bold opacity-50 block">Potential</span>
+<span class="font-code-status text-primary text-[11px]">HIGH</span>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-high rounded-b-md">
+<div class="flex justify-between items-center mb-4">
+<div class="flex gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">memory</span>
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">build_circle</span>
+</div>
+<span class="font-code-status text-secondary text-[12px] font-bold">$150.00</span>
+</div>
+<button class="w-full bg-primary-container text-on-primary-container py-3 font-label-bold uppercase border-2 border-on-primary-container extruded-button">
+                                    BUY CONTAINER
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden flex justify-around items-center bg-surface-container border-t-4 border-outline-variant h-20 w-full px-gutter shadow-lg">
+<button class="flex flex-col items-center gap-1 text-on-surface-variant opacity-60">
+<span class="material-symbols-outlined">recycling</span>
+<span class="text-[10px] font-label-bold uppercase">Scrap</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary font-bold">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+<span class="text-[10px] font-label-bold uppercase">Shop</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant opacity-60">
+<span class="material-symbols-outlined">upgrade</span>
+<span class="text-[10px] font-label-bold uppercase">Upgrades</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant opacity-60">
+<span class="material-symbols-outlined">military_tech</span>
+<span class="text-[10px] font-label-bold uppercase">Prestige</span>
+</button>
+</nav>
+</main>
+</div>
+<!-- Floating Atmosphere Elements -->
+<div class="fixed bottom-4 right-4 z-50">
+<div class="recessed-bay bg-surface-container-lowest/80 backdrop-blur-md p-4 rounded-xl border border-outline-variant flex items-center gap-4">
+<div class="flex flex-col items-end">
+<span class="text-[10px] uppercase font-bold opacity-60">Current Yield</span>
+<span class="font-code-status text-secondary">+$12.5/sec</span>
+</div>
+<div class="glass-tube w-32 h-3 border border-outline-variant/30">
+<div class="bg-secondary h-full w-[65%] shadow-[0_0_10px_#9ed75b]"></div>
+</div>
+<div class="status-led active-green animate-pulse"></div>
+</div>
+</div>
+<script>
+        // Micro-interactions for buttons
+        document.querySelectorAll('.extruded-button').forEach(btn => {
+            btn.addEventListener('mousedown', () => {
+                btn.classList.add('translate-y-0.5', 'shadow-none');
+            });
+            btn.addEventListener('mouseup', () => {
+                btn.classList.remove('translate-y-0.5', 'shadow-none');
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.classList.remove('translate-y-0.5', 'shadow-none');
+            });
+        });
+
+        // Atmospheric flickering effect on status lights
+        setInterval(() => {
+            document.querySelectorAll('.status-led').forEach(led => {
+                if(Math.random() > 0.95) {
+                    led.style.opacity = '0.4';
+                    setTimeout(() => led.style.opacity = '1', 50);
+                }
+            });
+        }, 500);
+    </script>
+</body></html>

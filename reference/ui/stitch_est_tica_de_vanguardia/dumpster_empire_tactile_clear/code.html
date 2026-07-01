@@ -1,0 +1,395 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>DUMPSTER EMPIRE - Scavenge HQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#54e98a",
+                        "primary-fixed": "#6bfe9c",
+                        "tertiary-container": "#d2a2e2",
+                        "on-background": "#ffdad4",
+                        "inverse-surface": "#ffdad4",
+                        "on-tertiary": "#462056",
+                        "on-surface-variant": "#bbcbbb",
+                        "secondary-fixed": "#ffe084",
+                        "hazard-stripe": "#ebbf01",
+                        "tertiary": "#efbdff",
+                        "background": "#210e0b",
+                        "surface-dim": "#210e0b",
+                        "on-secondary": "#3c2f00",
+                        "on-primary": "#003919",
+                        "on-secondary-container": "#ffebb5",
+                        "error": "#ffb4ab",
+                        "surface-container-highest": "#472f2b",
+                        "surface-container": "#2f1a17",
+                        "outline": "#869486",
+                        "on-surface-muted": "#bbcbbb",
+                        "on-primary-fixed": "#00210c",
+                        "surface-container-lowest": "#1b0907",
+                        "inverse-primary": "#006d36",
+                        "on-secondary-fixed": "#231b00",
+                        "on-secondary-fixed-variant": "#574500",
+                        "outline-variant": "#3d4a3e",
+                        "secondary": "#e4c45e",
+                        "surface-tint": "#4ae183",
+                        "secondary-fixed-dim": "#e4c45e",
+                        "error-container": "#93000a",
+                        "tertiary-fixed": "#f8d8ff",
+                        "surface-container-high": "#3b2421",
+                        "tertiary-fixed-dim": "#e7b5f7",
+                        "surface-container-low": "#2b1613",
+                        "surface-border": "#472f2b",
+                        "on-error-container": "#ffdad6",
+                        "on-tertiary-fixed": "#2f0740",
+                        "surface-variant": "#472f2b",
+                        "primary-fixed-dim": "#4ae183",
+                        "inverse-on-surface": "#422a27",
+                        "on-tertiary-fixed-variant": "#5e376e",
+                        "on-primary-container": "#005026",
+                        "primary-container": "#2ecc71",
+                        "on-error": "#690005",
+                        "secondary-container": "#816801",
+                        "surface": "#210e0b",
+                        "on-tertiary-container": "#5d356d",
+                        "surface-bright": "#4c332f",
+                        "on-surface": "#ffdad4",
+                        "charcoal-surface": "#1b0906",
+                        "on-primary-fixed-variant": "#005228"
+                    },
+                    "spacing": {
+                        "container-padding": "24px",
+                        "stack-offset": "4px",
+                        "item-gap": "12px",
+                        "base": "8px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "display-xl": ["Plus Jakarta Sans"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "data-mono": ["monospace"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "label-caps": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "label-bold": ["Be Vietnam Pro"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #210e0b;
+            background-image: repeating-linear-gradient(45deg, #1b0907 0, #1b0907 20px, #210e0b 20px, #210e0b 40px);
+            overflow-x: hidden;
+        }
+
+        .tactile-press:active {
+            transform: translateY(4px);
+            box-shadow: none !important;
+        }
+
+        .glass-tube {
+            background: linear-gradient(to bottom, rgba(255,255,255,0.2) 0%, transparent 50%, rgba(0,0,0,0.3) 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .hazard-pattern {
+            background: repeating-linear-gradient(
+                -45deg,
+                #ebbf01,
+                #ebbf01 10px,
+                #1b0906 10px,
+                #1b0906 20px
+            );
+        }
+
+        .dig-canvas {
+            mask-image: radial-gradient(circle at var(--x, 50%) var(--y, 50%), transparent 80px, black 120px);
+            -webkit-mask-image: radial-gradient(circle at var(--x, 50%) var(--y, 50%), transparent 80px, black 120px);
+        }
+
+        .sticker-rotate { transform: rotate(-2deg); }
+        .sticker-rotate-alt { transform: rotate(3deg); }
+
+        .custom-cursor {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="%23ebbf01" d="M12 2l-10 10 1.41 1.41L12 4.83l8.59 8.58L22 12z"/></svg>'), auto;
+        }
+    </style>
+</head>
+<body class="custom-cursor font-body-md text-on-surface">
+<!-- Top AppBar -->
+<header class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center w-full px-container-padding py-2 bg-surface-container-highest shadow-[0_4px_0_0_rgba(0,0,0,0.4)] border-b-4 border-surface-border">
+<div class="flex items-center gap-4">
+<h1 class="text-headline-md font-headline-md font-black tracking-tighter text-primary italic">DUMPSTER EMPIRE</h1>
+<div class="hidden md:flex gap-4">
+<div class="flex items-center gap-2 bg-surface-container px-3 py-1 rounded-lg border-2 border-surface-border shadow-[2px_2px_0_0_rgba(0,0,0,0.3)]">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-data-mono text-secondary-fixed">$14,205</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container px-3 py-1 rounded-lg border-2 border-surface-border shadow-[2px_2px_0_0_rgba(0,0,0,0.3)]">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">vpn_key</span>
+<span class="font-data-mono text-primary-fixed">12</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-base">
+<button class="tactile-press p-2 rounded bg-surface-container text-on-surface-variant shadow-[0_4px_0_0_rgba(0,0,0,0.4)] hover:text-primary-fixed transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col gap-item-gap p-base fixed left-0 top-16 h-[calc(100vh-64px)] w-64 bg-charcoal-surface border-r-4 border-surface-border z-40">
+<div class="px-4 py-6 border-b-2 border-surface-border mb-4">
+<p class="text-label-caps font-label-caps text-hazard-stripe">OPERATIONS</p>
+<p class="text-label-bold font-label-bold text-on-surface-muted">SCAVENGER HQ</p>
+</div>
+<a class="flex items-center gap-3 px-4 py-3 bg-secondary-container text-on-secondary-container border-l-4 border-secondary translate-x-1 shadow-[4px_0_0_0_rgba(0,0,0,0.3)] transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">confirmation_number</span>
+<span class="text-label-bold font-label-bold">Tickets</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-muted hover:bg-surface-variant hover:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">build</span>
+<span class="text-label-bold font-label-bold">Gadgets</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-muted hover:bg-surface-variant hover:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">recycling</span>
+<span class="text-label-bold font-label-bold">Scrap</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-muted hover:bg-surface-variant hover:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="text-label-bold font-label-bold">Upgrades</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-muted hover:bg-surface-variant hover:translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">memory</span>
+<span class="text-label-bold font-label-bold">Tech</span>
+</a>
+<div class="mt-auto p-4 hazard-pattern h-8 rounded-t-lg opacity-50"></div>
+</nav>
+<!-- Main Content Stage -->
+<main class="pt-24 pb-24 md:pb-8 md:pl-72 md:pr-80 min-h-screen flex flex-col items-center justify-center gap-8">
+<!-- Header Info -->
+<div class="text-center z-10">
+<div class="flex items-center justify-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary-fixed">delete</span>
+<h2 class="text-headline-lg font-headline-lg uppercase tracking-widest text-on-surface">Industrial Tacho</h2>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant">Click or drag to uncover hidden salvage from the depth.</p>
+</div>
+<!-- The Workbench (Central Dig Area) -->
+<div class="relative w-full max-w-2xl aspect-video bg-surface-container-lowest rounded-2xl border-8 border-surface-border shadow-[0_12px_0_0_rgba(0,0,0,0.5)] overflow-hidden group">
+<!-- Grit Background (Revealed Layer) -->
+<div class="absolute inset-0 bg-cover bg-center opacity-60" data-alt="A macro photography texture of gritty industrial metal and dark damp earth, featuring rusted iron flakes, oily residues, and small metallic scraps scattered across a dark textured surface in a cinematic low-key lighting. The style is gritty and hyper-realistic, conveying a sense of scavenger mystery." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCbfU7unqu-ySFnjOQ4TKLbVpZQlB8MojbCyqbqex4Yg6wtazmkkyYDy7ipTdBUX8_fyataK9EX5vLQ0NWOB4Twxiaw_eSzUaH_Rfre0G2ubRsbfj5tYDy2zWlwH_McPYZJN_S6HL1A5JRhli9bULMQlIAwP1vb4cFPyb5YZ2uvtFwumBG8nYnpPE1UuZrsPRms5bzAPwp6Md23O2OhLvFmsNBTAs7maIlyCadHM-os0BevWXtvOY3NCyRVUUYsM0gfASTb9zseow')"></div>
+<!-- Animated Salvage Items (Underneath) -->
+<div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+<div class="sticker-rotate absolute top-1/4 left-1/4 w-16 h-16 bg-surface-container rounded border-2 border-primary p-2 flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-primary text-3xl">bolt</span>
+</div>
+<div class="sticker-rotate-alt absolute bottom-1/3 right-1/4 w-20 h-20 bg-surface-container rounded border-2 border-secondary p-2 flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-secondary text-4xl">inventory_2</span>
+</div>
+</div>
+<!-- Dirt Overlay Canvas -->
+<canvas class="absolute inset-0 z-20 w-full h-full cursor-crosshair opacity-90" id="dig-canvas"></canvas>
+<!-- Risk Indicator Overlay -->
+<div class="absolute top-4 right-4 z-30">
+<div class="bg-charcoal-surface border-2 border-error px-3 py-1 rounded text-label-caps font-label-caps text-error shadow-lg">
+                    Trap Risk: 1%
+                </div>
+</div>
+</div>
+<!-- Primary Action -->
+<button class="tactile-press z-30 group relative px-12 py-6 bg-primary text-on-primary rounded-xl font-headline-md text-headline-md shadow-[0_8px_0_0_rgba(0,57,25,0.6)] flex items-center gap-4 border-2 border-primary-fixed" id="dig-button">
+<span class="material-symbols-outlined group-hover:rotate-12 transition-transform">construction</span>
+<span>FORAGE BIN (FREE)</span>
+<div class="absolute -top-3 -right-3 bg-hazard-stripe text-on-secondary px-2 py-1 rounded text-label-caps font-bold rotate-12 animate-pulse">
+                BONUS!
+            </div>
+</button>
+<!-- Progress Tracking -->
+<div class="w-full max-w-md z-10">
+<div class="flex justify-between mb-2 px-2">
+<span class="text-label-caps font-label-caps text-on-surface-variant">CONTAINER PURGE</span>
+<span class="text-label-bold font-label-bold text-primary">64% Complete</span>
+</div>
+<div class="h-6 bg-surface-container-high rounded-full border-4 border-surface-border p-1 overflow-hidden">
+<div class="h-full w-[64%] bg-primary rounded-full glass-tube relative shadow-[0_0_10px_rgba(84,233,138,0.4)]">
+<div class="absolute inset-0 hazard-pattern opacity-20"></div>
+</div>
+</div>
+</div>
+</main>
+<!-- Upgrades Sidebar (Right) -->
+<aside class="hidden xl:flex flex-col gap-gutter p-gutter fixed right-0 top-16 h-[calc(100vh-64px)] w-80 bg-surface-container border-l-4 border-surface-border z-40 overflow-y-auto">
+<h3 class="text-label-caps font-label-caps text-secondary mb-2">POWER-UPS &amp; TOOLS</h3>
+<!-- Upgrade Card: Dig Strength -->
+<div class="tactile-press bg-surface-container-low p-4 rounded-xl border-2 border-outline-variant shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] flex flex-col gap-3 group hover:border-primary transition-colors">
+<div class="flex justify-between items-start">
+<div class="bg-primary-container p-2 rounded-lg text-on-primary-container shadow-inner">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+</div>
+<div class="text-right">
+<p class="text-label-caps text-on-surface-muted">STRENGTH</p>
+<p class="text-headline-md font-headline-md text-primary leading-tight">LV. 15</p>
+</div>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full w-3/4 bg-primary glass-tube"></div>
+</div>
+<button class="mt-2 w-full py-2 bg-surface-container-high rounded border border-outline text-label-bold text-on-surface hover:bg-surface-variant transition-colors flex justify-center gap-2 items-center">
+<span>UPGRADE</span>
+<span class="text-secondary">$20</span>
+</button>
+</div>
+<!-- Upgrade Card: Luck -->
+<div class="tactile-press bg-surface-container-low p-4 rounded-xl border-2 border-outline-variant shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] flex flex-col gap-3 group hover:border-secondary transition-colors">
+<div class="flex justify-between items-start">
+<div class="bg-secondary-container p-2 rounded-lg text-on-secondary-container shadow-inner">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">casino</span>
+</div>
+<div class="text-right">
+<p class="text-label-caps text-on-surface-muted">LUCK</p>
+<p class="text-headline-md font-headline-md text-secondary leading-tight">LV. 8</p>
+</div>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full w-2/5 bg-secondary glass-tube"></div>
+</div>
+<button class="mt-2 w-full py-2 bg-surface-container-high rounded border border-outline text-label-bold text-on-surface hover:bg-surface-variant transition-colors flex justify-center gap-2 items-center">
+<span>UPGRADE</span>
+<span class="text-secondary">$45</span>
+</button>
+</div>
+<!-- Upgrade Card: Area -->
+<div class="tactile-press bg-surface-container-low p-4 rounded-xl border-2 border-outline-variant shadow-[4px_4px_0_0_rgba(0,0,0,0.4)] flex flex-col gap-3 group hover:border-tertiary transition-colors">
+<div class="flex justify-between items-start">
+<div class="bg-tertiary-container p-2 rounded-lg text-on-tertiary-container shadow-inner">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">zoom_out_map</span>
+</div>
+<div class="text-right">
+<p class="text-label-caps text-on-surface-muted">SCRATCH AREA</p>
+<p class="text-headline-md font-headline-md text-tertiary leading-tight">LV. 5</p>
+</div>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full w-1/4 bg-tertiary glass-tube"></div>
+</div>
+<button class="mt-2 w-full py-2 bg-surface-container-high rounded border border-outline text-label-bold text-on-surface hover:bg-surface-variant transition-colors flex justify-center gap-2 items-center">
+<span>UPGRADE</span>
+<span class="text-secondary">$120</span>
+</button>
+</div>
+<!-- Inventory Mini View -->
+<div class="mt-auto bg-charcoal-surface rounded-xl p-4 border-2 border-hazard-stripe/30">
+<h4 class="text-label-caps text-hazard-stripe mb-4">RECENT FINDS</h4>
+<div class="grid grid-cols-4 gap-2">
+<div class="aspect-square bg-surface-container-highest border border-outline-variant rounded flex items-center justify-center sticker-rotate">
+<span class="material-symbols-outlined text-primary-fixed text-sm">settings_input_component</span>
+</div>
+<div class="aspect-square bg-surface-container-highest border border-outline-variant rounded flex items-center justify-center sticker-rotate-alt">
+<span class="material-symbols-outlined text-secondary text-sm">precision_manufacturing</span>
+</div>
+<div class="aspect-square bg-surface-container-highest border border-outline-variant rounded flex items-center justify-center sticker-rotate">
+<span class="material-symbols-outlined text-tertiary text-sm">memory</span>
+</div>
+<div class="aspect-square bg-surface-container-highest border border-outline-variant rounded flex items-center justify-center opacity-30">
+<span class="material-symbols-outlined text-sm">add</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-8 bg-surface-container-high border-t-4 border-surface-border shadow-[0_-4px_0_0_rgba(0,0,0,0.4)]">
+<a class="flex flex-col items-center justify-center bg-primary text-on-primary rounded-lg -translate-y-1 shadow-[0_4px_0_0_rgba(0,57,25,0.5)] px-6 py-2 transition-transform" href="#">
+<span class="material-symbols-outlined">shopping_cart</span>
+<span class="text-label-bold font-label-bold">Shop</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="text-label-bold font-label-bold">Auto</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">emoji_events</span>
+<span class="text-label-bold font-label-bold">Goals</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">location_city</span>
+<span class="text-label-bold font-label-bold">Empire</span>
+</a>
+</nav>
+<script>
+        const canvas = document.getElementById('dig-canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        function resize() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            fillDirt();
+        }
+
+        function fillDirt() {
+            // Fill with a textured dirt color
+            ctx.fillStyle = '#2f1a17';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add some "noise" or texture to the dirt
+            for (let i = 0; i < 5000; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const opacity = Math.random() * 0.2;
+                ctx.fillStyle = `rgba(0,0,0,${opacity})`;
+                ctx.fillRect(x, y, 2, 2);
+            }
+        }
+
+        function scratch(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath();
+            ctx.arc(x, y, 30, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Interaction feedback for CSS mask (optional but cool)
+            document.documentElement.style.setProperty('--x', `${(x / canvas.width) * 100}%`);
+            document.documentElement.style.setProperty('--y', `${(y / canvas.height) * 100}%`);
+        }
+
+        canvas.addEventListener('mousedown', () => isDrawing = true);
+        canvas.addEventListener('mouseup', () => isDrawing = false);
+        canvas.addEventListener('mousemove', scratch);
+        canvas.addEventListener('touchstart', (e) => { isDrawing = true; e.preventDefault(); });
+        canvas.addEventListener('touchend', () => isDrawing = false);
+        canvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); });
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Button interaction
+        const digBtn = document.getElementById('dig-button');
+        digBtn.addEventListener('click', () => {
+            // Simple visual "refresh" of dirt
+            ctx.globalCompositeOperation = 'source-over';
+            fillDirt();
+            // Optional: Animation or Sound effect logic here
+        });
+    </script>
+</body></html>
