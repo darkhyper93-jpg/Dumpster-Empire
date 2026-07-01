@@ -1,0 +1,11 @@
+{
+  "name": "@dumpster/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Lógica pura de Dumpster Empire: estado, economía y sistemas. Cero DOM.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  }
+}
