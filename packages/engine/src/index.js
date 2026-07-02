@@ -27,9 +27,17 @@ export {
   getEffectiveTrapProbability,
   getFragmentMult,
   getPrestigeStartMoney,
+  CONTAINER_LEVEL_MAX,
+  getContainerLevel,
+  digsNeededForNextLevel,
+  getLevelRarityShift,
+  getDigRate,
+  getEffectiveDigTime,
+  getTrapPenalty,
+  getRecommendedLuck,
 } from './economy.js';
 
-export { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluctuation } from './rng.js';
+export { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluctuation, categoryWeights } from './rng.js';
 
 export { validateSave, serializeState, deserializeState, exportSave, importSave } from './save.js';
 
@@ -48,6 +56,7 @@ export {
   canPrestige,
   prestigeKeysPreview,
   nextPrestigeNodeCost,
+  isPrestigeNodeUnlocked,
   buyPrestigeNode,
   doPrestige,
 } from './systems/prestige.js';

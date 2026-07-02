@@ -11,24 +11,18 @@ import {
   getParallelAutoSlots,
   getOfflineFactor,
   getOfflineCapSeconds,
+  getLevelRarityShift,
+  getEffectiveDigTime,
   itemSaleValue,
   offlineEarnings,
 } from '../economy.js';
+import { categoryWeights } from '../rng.js';
 import { bestAffordableUnlockedContainer, hasAutoDig } from './automation.js';
 
-function categoryWeights(categorias, luck) {
-  if (categorias.length === 1) return { [categorias[0]]: 1 };
-  const shift = Math.min(20, luck * 0.15);
-  const pHigh = 30 + shift;
-  return {
-    [categorias[0]]: (100 - pHigh) / 100,
-    [categorias[categorias.length - 1]]: pHigh / 100,
-  };
-}
-
-function averageItemValue(state, categoria, itemsData, data, luck) {
+function averageItemValue(state, container, categoria, itemsData, data, luck) {
   const rarity = itemsData.rarities.find((r) => r.id === categoria);
-  const pool = itemsData.categories[categoria];
+  // PLAN.md §11.4: el pool de ítems es propio del contenedor, no una categoría global compartida.
+  const pool = itemsData.containers[container.id].filter((item) => item.categoria === categoria);
   const avgBase = pool.reduce((sum, item) => sum + item.valorBase, 0) / pool.length;
   return itemSaleValue({
     valorBaseObjeto: avgBase,
@@ -44,16 +38,17 @@ function averageItemValue(state, categoria, itemsData, data, luck) {
  * Valor esperado (determinístico) de un ciclo completo de escarbado automático de un contenedor.
  * @param {import('../state.js').GameState} state
  * @param {Object} container
- * @param {{ items: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
+ * @param {{ containers: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
  * @param {import('../economy.js').EngineData} data
  * @returns {number}
  */
 export function expectedContainerValue(state, container, itemsData, data) {
   const luck = getLuck(state, data);
   const trapProb = getEffectiveTrapProbability(state, container, true, data);
-  const weights = categoryWeights(container.categorias, luck);
+  const levelShift = getLevelRarityShift(state, container);
+  const weights = categoryWeights(container.categorias, luck, levelShift);
   const expectedValuePerSlot = Object.entries(weights).reduce(
-    (sum, [categoria, weight]) => sum + weight * averageItemValue(state, categoria, itemsData, data, luck),
+    (sum, [categoria, weight]) => sum + weight * averageItemValue(state, container, categoria, itemsData, data, luck),
     0
   );
   return container.slots * expectedValuePerSlot * (1 - trapProb);
@@ -72,7 +67,9 @@ export function estimateAutomationRatePerSecond(state, allContainers, itemsData,
   const container = bestAffordableUnlockedContainer(state, allContainers, data);
   if (!container) return 0;
   const parallelSlots = getParallelAutoSlots(state, data);
-  return (expectedContainerValue(state, container, itemsData, data) / container.digTime) * parallelSlots;
+  // PLAN.md §11.2: el ritmo real de automatización respeta Resistencia/Fuerza (getEffectiveDigTime),
+  // no el digTime crudo del contenedor.
+  return (expectedContainerValue(state, container, itemsData, data) / getEffectiveDigTime(state, container, data)) * parallelSlots;
 }
 
 /**

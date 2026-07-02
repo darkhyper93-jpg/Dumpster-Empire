@@ -7,7 +7,12 @@
     "categorias": ["common"],
     "probTrampaBase": 0.05,
     "digTime": 3,
-    "slots": 3
+    "slots": 3,
+    "resistencia": 1.0,
+    "trapPenaltyMult": 0.3,
+    "levelUpDigsBase": 5,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5
   },
   {
     "id": "contenedorBarrio",
@@ -17,7 +22,12 @@
     "categorias": ["common", "reusable"],
     "probTrampaBase": 0.08,
     "digTime": 4,
-    "slots": 3
+    "slots": 3,
+    "resistencia": 1.15,
+    "trapPenaltyMult": 0.4,
+    "levelUpDigsBase": 5,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5
   },
   {
     "id": "containerIndustrial",
@@ -27,7 +37,12 @@
     "categorias": ["reusable", "electronics"],
     "probTrampaBase": 0.15,
     "digTime": 6,
-    "slots": 4
+    "slots": 4,
+    "resistencia": 1.4,
+    "trapPenaltyMult": 0.55,
+    "levelUpDigsBase": 6,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5
   },
   {
     "id": "depositoAbandonado",
@@ -37,7 +52,12 @@
     "categorias": ["electronics", "antiques"],
     "probTrampaBase": 0.20,
     "digTime": 8,
-    "slots": 4
+    "slots": 4,
+    "resistencia": 1.8,
+    "trapPenaltyMult": 0.65,
+    "levelUpDigsBase": 6,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5
   },
   {
     "id": "mudanzaMansion",
@@ -47,7 +67,12 @@
     "categorias": ["antiques", "historic"],
     "probTrampaBase": 0.12,
     "digTime": 10,
-    "slots": 4
+    "slots": 4,
+    "resistencia": 2.2,
+    "trapPenaltyMult": 0.8,
+    "levelUpDigsBase": 7,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5
   },
   {
     "id": "galeriaLiquidacion",
@@ -57,7 +82,12 @@
     "categorias": ["historic", "art"],
     "probTrampaBase": 0.18,
     "digTime": 14,
-    "slots": 5
+    "slots": 5,
+    "resistencia": 2.7,
+    "trapPenaltyMult": 0.9,
+    "levelUpDigsBase": 7,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5
   },
   {
     "id": "bovedaPerdida",
@@ -67,7 +97,12 @@
     "categorias": ["art", "relics"],
     "probTrampaBase": 0.25,
     "digTime": 18,
-    "slots": 5
+    "slots": 5,
+    "resistencia": 3.3,
+    "trapPenaltyMult": 1.0,
+    "levelUpDigsBase": 8,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5
   },
   {
     "id": "containerExtradimensional",
@@ -78,6 +113,11 @@
     "probTrampaBase": 0.30,
     "digTime": 22,
     "slots": 6,
+    "resistencia": 4.0,
+    "trapPenaltyMult": 1.2,
+    "levelUpDigsBase": 8,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5,
     "requiresPrestigeCount": 1,
     "requiresAutomationId": "redDrones"
   }

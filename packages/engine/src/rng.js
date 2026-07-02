@@ -4,17 +4,38 @@
  */
 
 /**
+ * Pesos de probabilidad entre la categoría común y la rara de un contenedor (2 categorías).
+ * Factorizado de rollCategory para que economy.js (Suerte recomendada) y offline.js (estimación
+ * de ganancia automática) puedan calcular el mismo reparto sin duplicar la fórmula (PLAN.md §11.2/§11.3).
  * @param {Array<string>} categorias - categorías posibles del contenedor, en orden de rareza creciente.
  * @param {number} luck
+ * @param {number} [levelShift] - puntos porcentuales extra hacia la categoría rara por nivel de contenedor (§11.3).
+ * @returns {Object<string, number>} peso (0-1) por id de categoría
+ */
+export function categoryWeights(categorias, luck, levelShift = 0) {
+  if (categorias.length === 1) return { [categorias[0]]: 1 };
+  // Peso base 70/30 entre la categoría común y la rara del contenedor; la Suerte desplaza
+  // hasta +20 puntos porcentuales, y el nivel del contenedor (§11.3) suma encima, con un
+  // tope conjunto de 70% para que la categoría común nunca desaparezca del todo.
+  const luckShift = Math.min(20, luck * 0.15);
+  const pHigh = Math.min(70, 30 + luckShift + levelShift);
+  return {
+    [categorias[0]]: (100 - pHigh) / 100,
+    [categorias[categorias.length - 1]]: pHigh / 100,
+  };
+}
+
+/**
+ * @param {Array<string>} categorias - categorías posibles del contenedor, en orden de rareza creciente.
+ * @param {number} luck
+ * @param {number} [levelShift] - ver categoryWeights.
  * @param {() => number} [random]
  * @returns {string} id de la categoría elegida
  */
-export function rollCategory(categorias, luck, random = Math.random) {
+export function rollCategory(categorias, luck, levelShift = 0, random = Math.random) {
   if (categorias.length === 1) return categorias[0];
-  // Peso base 70/30 entre la categoría común y la rara del contenedor; la Suerte desplaza
-  // hasta +20 puntos porcentuales hacia la categoría rara.
-  const shift = Math.min(20, luck * 0.15);
-  const pHigh = 30 + shift;
+  const weights = categoryWeights(categorias, luck, levelShift);
+  const pHigh = weights[categorias[categorias.length - 1]] * 100;
   return random() * 100 < pHigh ? categorias[categorias.length - 1] : categorias[0];
 }
 

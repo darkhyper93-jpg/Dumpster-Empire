@@ -4,7 +4,9 @@
  */
 
 /** Versión actual del esquema de guardado. Bump al cambiar la forma del estado. */
-export const SAVE_VERSION = 1;
+// AJUSTE (Fase 6, PLAN.md §11.3): bump a 2 por los dos campos nuevos de nivel de contenedor
+// (containerLevels/containerLevelProgress). save.js migra saves v1 rellenando ambos en {}.
+export const SAVE_VERSION = 2;
 
 /**
  * @typedef {Object} AutoProcessingSlot
@@ -20,6 +22,8 @@ export const SAVE_VERSION = 1;
  * @property {number} totalMoneyEarned
  * @property {Object<string, number>} upgradeLevels - nivel por id de mejora repetible (luck, digPower, area, capacity)
  * @property {Object<string, number>} ownedContainers - cantidad comprada por id de contenedor
+ * @property {Object<string, number>} containerLevels - nivel (1-10) por id de contenedor (PLAN.md §11.3)
+ * @property {Object<string, number>} containerLevelProgress - escarbados acumulados hacia el próximo nivel, por id de contenedor
  * @property {Object<string, boolean>} automationOwned - si se compró cada mejora de automatización de un solo uso
  * @property {number} prestigeKeys
  * @property {number} prestigeCount
@@ -50,6 +54,8 @@ export function freshState() {
     totalMoneyEarned: 0,
     upgradeLevels: { luck: 0, digPower: 0, area: 0, capacity: 0 },
     ownedContainers: {},
+    containerLevels: {},
+    containerLevelProgress: {},
     automationOwned: {},
     prestigeKeys: 0,
     prestigeCount: 0,

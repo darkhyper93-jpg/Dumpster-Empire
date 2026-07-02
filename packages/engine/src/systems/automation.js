@@ -2,7 +2,7 @@
  * Sistema de automatización: mejoras de un solo uso, cola y procesamiento en paralelo (§2.7).
  */
 
-import { getContainerCost, getParallelAutoSlots, getQueueMax } from '../economy.js';
+import { getContainerCost, getParallelAutoSlots, getQueueMax, getEffectiveDigTime } from '../economy.js';
 import { isContainerUnlocked, rollContainerResult, applyContainerResult } from './containers.js';
 
 /**
@@ -74,7 +74,9 @@ export function automationTick(state, dtSeconds, allContainers, itemsData, data,
   while (state.autoProcessing.length < parallelSlots && state.autoQueue.length > 0) {
     const nextId = state.autoQueue.shift();
     const container = allContainers.find((c) => c.id === nextId);
-    state.autoProcessing.push({ containerId: nextId, totalTime: container.digTime, remaining: container.digTime });
+    // PLAN.md §11.2: el ritmo real de escarbado depende de Resistencia/Fuerza, no del digTime crudo.
+    const effectiveTime = getEffectiveDigTime(state, container, data);
+    state.autoProcessing.push({ containerId: nextId, totalTime: effectiveTime, remaining: effectiveTime });
   }
 
   const queueMax = getQueueMax(state, data);

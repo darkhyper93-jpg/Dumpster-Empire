@@ -12,6 +12,8 @@ const REQUIRED_FIELDS = {
   totalMoneyEarned: 'number',
   upgradeLevels: 'object',
   ownedContainers: 'object',
+  containerLevels: 'object',
+  containerLevelProgress: 'object',
   automationOwned: 'object',
   prestigeKeys: 'number',
   prestigeCount: 'number',
@@ -41,6 +43,16 @@ function migrate(raw) {
   let migrated = raw;
   if (migrated.saveVersion < 1) {
     migrated = { ...freshState(), ...migrated, saveVersion: 1 };
+  }
+  // v1 -> v2 (Fase 6, PLAN.md §11.3): agrega containerLevels/containerLevelProgress. Saves viejos
+  // arrancan todos los contenedores en nivel 1 (comportamiento correcto: nunca escarbaron a ese nivel).
+  if (migrated.saveVersion < 2) {
+    migrated = {
+      ...migrated,
+      containerLevels: migrated.containerLevels || {},
+      containerLevelProgress: migrated.containerLevelProgress || {},
+      saveVersion: 2,
+    };
   }
   return migrated;
 }

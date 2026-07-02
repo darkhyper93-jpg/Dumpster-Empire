@@ -10,6 +10,9 @@ import {
   getSellMult,
   getDepthValueMult,
   getFragmentMult,
+  getLevelRarityShift,
+  getTrapPenalty,
+  registerContainerDig,
   itemSaleValue,
 } from '../economy.js';
 import { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluctuation } from '../rng.js';
@@ -57,7 +60,7 @@ export function buyContainer(state, container, data) {
  * @param {import('../state.js').GameState} state
  * @param {Object} container
  * @param {boolean} isAuto
- * @param {{ items: Object<string, Array<Object>> }} itemsData
+ * @param {{ containers: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
  * @param {import('../economy.js').EngineData} data
  * @param {() => number} [random]
  * @returns {DigResult}
@@ -79,11 +82,15 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
 
   const luck = getLuck(state, data);
   const depthValueMult = getDepthValueMult(state, data);
+  // PLAN.md §11.3: a mayor nivel del contenedor, más probabilidad de la categoría rara propia.
+  const levelShift = getLevelRarityShift(state, container);
+  const containerPool = itemsData.containers[container.id];
   const items = [];
   for (let i = 0; i < container.slots; i++) {
-    const categoria = rollCategory(container.categorias, luck, random);
+    const categoria = rollCategory(container.categorias, luck, levelShift, random);
     const rarity = itemsData.rarities.find((r) => r.id === categoria);
-    const pool = itemsData.categories[categoria];
+    // PLAN.md §11.4: el pool de ítems es propio del contenedor, nunca compartido con otro.
+    const pool = containerPool.filter((item) => item.categoria === categoria);
     const pick = rollItem(pool, random);
     const variance = rollItemVariance(random);
     const value = itemSaleValue({
@@ -110,8 +117,12 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
  * @returns {{ moneyDelta: number, trapPenalty: number }}
  */
 export function applyContainerResult(state, container, result, isAuto, data) {
+  // PLAN.md §11.3: cada escarbado (trampa o no) cuenta para el nivel propio del contenedor.
+  registerContainerDig(state, container);
+
   if (result.isTrap) {
-    const penalty = Math.min(state.money, Math.max(1, container.costoInicial * 0.5));
+    // PLAN.md §11.2/§4.6: el castigo escala con el tier del contenedor, suavizado por Suerte.
+    const penalty = Math.min(state.money, getTrapPenalty(state, container, data));
     state.money -= penalty;
     state.trapsHit++;
     return { moneyDelta: 0, trapPenalty: penalty };

@@ -3,6 +3,8 @@
  * Cero DOM. Toda función es pura: recibe estado + data, devuelve un número.
  */
 
+import { categoryWeights } from './rng.js';
+
 /**
  * @typedef {import('./state.js').GameState} GameState
  */
@@ -384,4 +386,181 @@ export function getPrestigeStartMoney(state, data) {
     money += prestigeLevel(state, nodeId) * effect.flatPerNivel;
   }
   return money;
+}
+
+// ---------------------------------------------------------------------------
+// Niveles de contenedor (PLAN.md §11.3). Suben con la cantidad de escarbados de ESE contenedor
+// y mejoran las probabilidades de rareza dentro de su propio pool de ítems (§11.4). Persistente
+// (state.containerLevels/containerLevelProgress), nivel máximo 10. Curva y constantes viven en
+// `data/containers.json` (levelUpDigsBase/levelUpDigsGrowth/levelRarityShiftPerLevel) para que el
+// pase de balance (Fase 9) las ajuste sin tocar este archivo.
+// ---------------------------------------------------------------------------
+
+export const CONTAINER_LEVEL_MAX = 10;
+
+/**
+ * Nivel actual (1-10) de un contenedor. 1 si todavía no se registró ningún escarbado.
+ * @param {GameState} state
+ * @param {string} containerId
+ * @returns {number}
+ */
+export function getContainerLevel(state, containerId) {
+  return state.containerLevels[containerId] || 1;
+}
+
+/**
+ * Escarbados necesarios para subir del nivel dado al siguiente.
+ * digsNecesarios(nivel) = ceil(levelUpDigsBase * levelUpDigsGrowth ^ (nivel - 1))
+ * @param {Object} container
+ * @param {number} level
+ * @returns {number}
+ */
+export function digsNeededForNextLevel(container, level) {
+  return Math.ceil(container.levelUpDigsBase * Math.pow(container.levelUpDigsGrowth, level - 1));
+}
+
+/**
+ * Corrimiento de probabilidad (puntos porcentuales) hacia la categoría rara del contenedor,
+ * a favor del jugador, según el nivel actual del contenedor. Alimenta a `categoryWeights`.
+ * @param {GameState} state
+ * @param {Object} container
+ * @returns {number}
+ */
+export function getLevelRarityShift(state, container) {
+  const level = getContainerLevel(state, container.id);
+  return (level - 1) * container.levelRarityShiftPerLevel;
+}
+
+/**
+ * Registra un escarbado (trampa o no) contra el progreso de nivel de un contenedor, y sube de
+ * nivel si corresponde. Se llama una vez por resolución de contenedor (ver systems/containers.js).
+ * @param {GameState} state
+ * @param {Object} container
+ * @returns {void}
+ */
+export function registerContainerDig(state, container) {
+  const level = getContainerLevel(state, container.id);
+  if (level >= CONTAINER_LEVEL_MAX) return;
+  const progress = (state.containerLevelProgress[container.id] || 0) + 1;
+  const needed = digsNeededForNextLevel(container, level);
+  if (progress >= needed) {
+    state.containerLevels[container.id] = level + 1;
+    state.containerLevelProgress[container.id] = 0;
+  } else {
+    state.containerLevelProgress[container.id] = progress;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Resistencia / Fuerza mínima por contenedor (PLAN.md §11.2, extiende §2.3). Escarbar de noche...
+// no: escarbar más rápido requiere Fuerza acorde al tier del contenedor; con menos Fuerza igual
+// se puede, pero mucho más lento. La UI lee `getEffectiveDigTime`, nunca recalcula el ritmo.
+// ---------------------------------------------------------------------------
+
+/**
+ * Ritmo de escarbado relativo (1 = normal). Baja proporcional si la Fuerza del jugador
+ * (getDigPowerMult) queda por debajo de la resistencia requerida por el contenedor.
+ * @param {GameState} state
+ * @param {Object} container
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getDigRate(state, container, data) {
+  const digPowerMult = getDigPowerMult(state, data);
+  const required = container.resistencia;
+  if (digPowerMult >= required) return 1;
+  // AJUSTE: piso de 15% de ritmo normal — nunca queda completamente trabado, pero con poca
+  // Fuerza contra un contenedor de alta resistencia el escarbado es notoriamente más lento.
+  return Math.max(0.15, digPowerMult / required);
+}
+
+/**
+ * Tiempo efectivo de escarbado de un contenedor, ya afectado por resistencia/Fuerza.
+ * @param {GameState} state
+ * @param {Object} container
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getEffectiveDigTime(state, container, data) {
+  return container.digTime / getDigRate(state, container, data);
+}
+
+// ---------------------------------------------------------------------------
+// Trampas más caras por tier (PLAN.md §11.2, extiende §4.6). El castigo escala con el costo
+// inicial del contenedor (proxy de su tier) y se suaviza con la Suerte, con un piso del 40% de
+// la pérdida base para que el riesgo nunca desaparezca del todo.
+// ---------------------------------------------------------------------------
+
+function trapPenaltyAtLuck(container, luck) {
+  const basePenalty = Math.max(1, container.costoInicial * container.trapPenaltyMult);
+  const luckDampening = Math.max(0.4, 1 - luck * 0.004);
+  return Math.max(1, basePenalty * luckDampening);
+}
+
+/**
+ * Penalización de dinero al caer en trampa en un contenedor, con la Suerte actual del jugador.
+ * @param {GameState} state
+ * @param {Object} container
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getTrapPenalty(state, container, data) {
+  return trapPenaltyAtLuck(container, getLuck(state, data));
+}
+
+// ---------------------------------------------------------------------------
+// Suerte recomendada por contenedor (PLAN.md §11.2). Busca la Suerte mínima (entera) a partir de
+// la cual el valor esperado de comprar+escarbar el contenedor es >= 0 (rentable en promedio).
+// Es un dato puramente derivado; la UI solo lo lee (ShopView, Fase 7).
+// ---------------------------------------------------------------------------
+
+function averageItemValueForContainer(state, container, categoria, itemsData, data, luck, depthValueMult) {
+  const rarity = itemsData.rarities.find((r) => r.id === categoria);
+  const pool = itemsData.containers[container.id].filter((item) => item.categoria === categoria);
+  const avgBase = pool.reduce((sum, item) => sum + item.valorBase, 0) / pool.length;
+  return itemSaleValue({
+    valorBaseObjeto: avgBase,
+    multiplicadorRareza: rarity.mult,
+    suerte: luck,
+    fluctuacionMercado: 1,
+    sellMult: getSellMult(state, categoria, data),
+    depthValueMult,
+  });
+}
+
+function expectedNetValueAtLuck(state, container, itemsData, data, luck) {
+  const levelShift = getLevelRarityShift(state, container);
+  const weights = categoryWeights(container.categorias, luck, levelShift);
+  const depthValueMult = getDepthValueMult(state, data);
+  const expectedPerSlot = Object.entries(weights).reduce(
+    (sum, [categoria, weight]) =>
+      sum + weight * averageItemValueForContainer(state, container, categoria, itemsData, data, luck, depthValueMult),
+    0
+  );
+  let trapProb = container.probTrampaBase - luck * 0.002;
+  for (const { nodeId, effect } of prestigeEffectsOfType(data, 'trapPercentReductionPerNivel')) {
+    trapProb -= prestigeLevel(state, nodeId) * effect.percentPerNivel;
+  }
+  trapProb = Math.max(0.01, trapProb);
+  const grossExpected = container.slots * expectedPerSlot * (1 - trapProb);
+  const expectedTrapLoss = trapProb * trapPenaltyAtLuck(container, luck);
+  const cost = getContainerCost(state, container, data);
+  return grossExpected - expectedTrapLoss - cost;
+}
+
+/**
+ * Nivel de Suerte recomendado: el mínimo entero a partir del cual comprar y escarbar este
+ * contenedor tiene valor esperado positivo (ganancia esperada >= costo + pérdida esperada de trampa).
+ * @param {GameState} state
+ * @param {Object} container
+ * @param {{ containers: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getRecommendedLuck(state, container, itemsData, data) {
+  const MAX_LUCK_SEARCH = 500;
+  for (let luck = 0; luck <= MAX_LUCK_SEARCH; luck++) {
+    if (expectedNetValueAtLuck(state, container, itemsData, data, luck) >= 0) return luck;
+  }
+  return MAX_LUCK_SEARCH;
 }

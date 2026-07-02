@@ -7,7 +7,8 @@
     "factorCrecimiento": 1.5,
     "nivelMaximo": 10,
     "desc": "+$100 de dinero inicial por nivel.",
-    "effects": [{ "type": "startMoneyFlatPerNivel", "flatPerNivel": 100 }]
+    "effects": [{ "type": "startMoneyFlatPerNivel", "flatPerNivel": 100 }],
+    "requires": []
   },
   {
     "id": "suerteAncestral",
@@ -17,7 +18,8 @@
     "factorCrecimiento": 1.6,
     "nivelMaximo": 10,
     "desc": "+3% Suerte global permanente por nivel.",
-    "effects": [{ "type": "statPercentFinal", "stat": "luck", "percentPerNivel": 0.03 }]
+    "effects": [{ "type": "statPercentFinal", "stat": "luck", "percentPerNivel": 0.03 }],
+    "requires": ["capitalInicial"]
   },
   {
     "id": "instintoCarronero",
@@ -27,7 +29,8 @@
     "factorCrecimiento": 1.6,
     "nivelMaximo": 8,
     "desc": "-1.5% prob. de trampa global por nivel.",
-    "effects": [{ "type": "trapPercentReductionPerNivel", "percentPerNivel": 0.015 }]
+    "effects": [{ "type": "trapPercentReductionPerNivel", "percentPerNivel": 0.015 }],
+    "requires": ["suerteAncestral"]
   },
   {
     "id": "vigilanciaNocturna",
@@ -37,7 +40,8 @@
     "factorCrecimiento": 1.7,
     "nivelMaximo": 6,
     "desc": "+8% eficiencia de progreso offline por nivel.",
-    "effects": [{ "type": "offlineEfficiencyPercentPerNivel", "percentPerNivel": 0.08 }]
+    "effects": [{ "type": "offlineEfficiencyPercentPerNivel", "percentPerNivel": 0.08 }],
+    "requires": ["capitalInicial"]
   },
   {
     "id": "flotaAmpliada",
@@ -47,7 +51,8 @@
     "factorCrecimiento": 1.8,
     "nivelMaximo": 5,
     "desc": "+1 slot de cola de automatización por nivel.",
-    "effects": [{ "type": "queueSlotsFlatPerNivel", "flatPerNivel": 1 }]
+    "effects": [{ "type": "queueSlotsFlatPerNivel", "flatPerNivel": 1 }],
+    "requires": ["capitalInicial"]
   },
   {
     "id": "tasadorExperto",
@@ -57,7 +62,8 @@
     "factorCrecimiento": 1.65,
     "nivelMaximo": 10,
     "desc": "+4% valor de venta global por nivel.",
-    "effects": [{ "type": "sellPercentGlobalPerNivel", "percentPerNivel": 0.04 }]
+    "effects": [{ "type": "sellPercentGlobalPerNivel", "percentPerNivel": 0.04 }],
+    "requires": ["capitalInicial"]
   },
   {
     "id": "brazosDeAcero",
@@ -67,7 +73,8 @@
     "factorCrecimiento": 1.6,
     "nivelMaximo": 8,
     "desc": "+8% Fuerza de Escarbado permanente por nivel.",
-    "effects": [{ "type": "statPercentFinal", "stat": "digPower", "percentPerNivel": 0.08 }]
+    "effects": [{ "type": "statPercentFinal", "stat": "digPower", "percentPerNivel": 0.08 }],
+    "requires": ["capitalInicial"]
   },
   {
     "id": "visionPeriferica",
@@ -77,7 +84,8 @@
     "factorCrecimiento": 1.6,
     "nivelMaximo": 8,
     "desc": "+8% Área de Búsqueda permanente por nivel.",
-    "effects": [{ "type": "statPercentFinal", "stat": "area", "percentPerNivel": 0.08 }]
+    "effects": [{ "type": "statPercentFinal", "stat": "area", "percentPerNivel": 0.08 }],
+    "requires": ["brazosDeAcero"]
   },
   {
     "id": "negociador",
@@ -87,7 +95,8 @@
     "factorCrecimiento": 1.9,
     "nivelMaximo": 5,
     "desc": "-2% costo de contenedores por nivel.",
-    "effects": [{ "type": "containerCostPercentReductionPerNivel", "percentPerNivel": 0.02 }]
+    "effects": [{ "type": "containerCostPercentReductionPerNivel", "percentPerNivel": 0.02 }],
+    "requires": ["tasadorExperto"]
   },
   {
     "id": "coleccionista",
@@ -97,7 +106,8 @@
     "factorCrecimiento": 1.7,
     "nivelMaximo": 5,
     "desc": "+25% fragmentos de categoría por nivel.",
-    "effects": [{ "type": "fragmentPercentPerNivel", "percentPerNivel": 0.25 }]
+    "effects": [{ "type": "fragmentPercentPerNivel", "percentPerNivel": 0.25 }],
+    "requires": ["flotaAmpliada"]
   },
   {
     "id": "guardiaPermanente",
@@ -107,7 +117,8 @@
     "factorCrecimiento": 2.2,
     "nivelMaximo": 3,
     "desc": "+4 horas de tope de progreso offline por nivel.",
-    "effects": [{ "type": "offlineCapHorasFlatPerNivel", "horasPerNivel": 4 }]
+    "effects": [{ "type": "offlineCapHorasFlatPerNivel", "horasPerNivel": 4 }],
+    "requires": ["vigilanciaNocturna"]
   },
   {
     "id": "portalEstable",
@@ -124,6 +135,7 @@
         "costPercentPerNivel": 0.10,
         "trapPercentPerNivel": 0.05
       }
-    ]
+    ],
+    "requires": ["guardiaPermanente"]
   }
 ]

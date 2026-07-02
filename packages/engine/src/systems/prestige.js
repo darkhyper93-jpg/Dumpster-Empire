@@ -35,12 +35,26 @@ export function nextPrestigeNodeCost(state, node) {
 }
 
 /**
- * Compra un nivel de un nodo del árbol de prestigio (se paga con Llaves de Ciudad).
+ * Si un nodo del árbol de prestigio está desbloqueado para comprar (PLAN.md §11.7): todos sus
+ * `requires` deben tener al menos 1 nivel comprado. Árbol real, no una lista plana.
+ * @param {import('../state.js').GameState} state
+ * @param {Object} node - definición de apps/game/src/data/prestigeTree.json
+ * @returns {boolean}
+ */
+export function isPrestigeNodeUnlocked(state, node) {
+  const requires = node.requires || [];
+  return requires.every((requiredId) => (state.prestigeTreeLevels[requiredId] || 0) >= 1);
+}
+
+/**
+ * Compra un nivel de un nodo del árbol de prestigio (se paga con Llaves de Ciudad). Gatea por
+ * los prerrequisitos declarados en `requires` (PLAN.md §11.7).
  * @param {import('../state.js').GameState} state
  * @param {Object} node
  * @returns {{ ok: true } | { ok: false, error: string }}
  */
 export function buyPrestigeNode(state, node) {
+  if (!isPrestigeNodeUnlocked(state, node)) return { ok: false, error: 'Faltan prerrequisitos para este nodo.' };
   const level = state.prestigeTreeLevels[node.id] || 0;
   if (level >= node.nivelMaximo) return { ok: false, error: 'Nodo ya al nivel máximo.' };
   const cost = nextPrestigeNodeCost(state, node);

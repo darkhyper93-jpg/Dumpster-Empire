@@ -20,7 +20,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | 3 Huecos de UI | 3 | ✅ hecho |
 | 4 Pulido visual (1er pase) | 4 | ✅ hecho |
 | 5 Fixes de UX | 5 | ✅ hecho |
-| 6 Mecánicas de contenido | 6 | ⬜ pendiente |
+| 6 Mecánicas de contenido | 6 | ✅ hecho |
 | 7 UI de mecánicas nuevas | 7 | ⬜ pendiente |
 | 8 Re-anclaje visual | 8 | ⬜ pendiente |
 | 9 Balance | 9 | ⬜ pendiente |
@@ -766,4 +766,155 @@ como pedía el prompt del agente.
 [x] Settings sin export/import, sin código muerto.
 [x] Automatización explicada y comprensible.
 [x] npm test 48/48 y npm run test:e2e verdes; sin console.log/// TODO.
+```
+
+---
+
+## Agente 6 (Mecánicas de contenido — engine + data)
+
+**Qué hice — las 7 tareas de PLAN.md §11.2-11.4/11.6/11.7, todo en `packages/engine` + `apps/game/src/data`:**
+
+- **Ítems únicos por contenedor (§11.4):** `items.json` cambió de forma: la clave `categories`
+  (compartida entre contenedores) se reemplazó por `containers` (`Object<containerId,
+  Array<Item>>`), con 6-7 ítems propios por contenedor (nombres/íconos nunca repetidos entre
+  contenedores, testeado). Cada ítem conserva un campo `categoria` (mismo id de rareza de siempre:
+  `common`…`future`) para que `itemsFoundByCategory`/logros de categoría sigan funcionando sin
+  tocarlos. `rarities` (el array de 8 rarezas con `mult`/`colorToken`) **no cambió**.
+- **Niveles de contenedor 1-10 (§11.3):** `state.containerLevels`/`state.containerLevelProgress`
+  (nuevos, `SAVE_VERSION` 1→2 con migración). `economy.js`: `getContainerLevel`,
+  `digsNeededForNextLevel` (`ceil(levelUpDigsBase * levelUpDigsGrowth^(nivel-1))`),
+  `getLevelRarityShift` (puntos porcentuales extra hacia la categoría rara), `registerContainerDig`
+  (sube nivel, se llama una vez por resolución de contenedor desde `applyContainerResult`, tanto
+  manual como automático). Constantes por contenedor en `containers.json`:
+  `levelUpDigsBase`/`levelUpDigsGrowth`/`levelRarityShiftPerLevel` (mismos valores en los 8 por
+  ahora, la Fase 9 los afina por tier).
+- **Resistencia / Fuerza mínima (§11.2):** campo `resistencia` nuevo por contenedor en
+  `containers.json` (crece con el tier, 1.0 → 4.0). `economy.js`: `getDigRate(state, container,
+  data)` (1 = ritmo normal, baja proporcional si `getDigPowerMult` < `resistencia`, piso de 0.15) y
+  `getEffectiveDigTime(state, container, data)` (= `digTime / getDigRate`). `automation.js` y
+  `offline.js` ya usan `getEffectiveDigTime` en vez del `digTime` crudo — la UI (canvas manual) debe
+  hacer lo mismo para que el ritmo de escarbado a mano también respete la Fuerza.
+- **Trampas más caras (§11.2/§4.6):** campo `trapPenaltyMult` nuevo por contenedor (0.3 → 1.2 según
+  tier). `economy.js`: `getTrapPenalty(state, container, data)` = `max(1, costoInicial *
+  trapPenaltyMult) * max(0.4, 1 - luck*0.004)` (piso del 40% de la pérdida, nunca desaparece del
+  todo). `applyContainerResult` ya usa este getter en vez del `costoInicial * 0.5` hardcodeado
+  anterior.
+- **Suerte recomendada por contenedor (§11.2):** `economy.js`: `getRecommendedLuck(state,
+  container, itemsData, data)` — busca la Suerte entera mínima (0-500) a partir de la cual el valor
+  esperado neto (ganancia esperada de ítems − pérdida esperada de trampa − costo del contenedor) es
+  ≥ 0. Reutiliza `categoryWeights` (factorizado desde `rollCategory`, ver abajo) y el pool propio
+  del contenedor. Es de solo lectura, no muta nada — la UI la llama directo para el hint en la Tienda.
+- **Recompensas de logros (§11.6):** cada entrada de `achievements.json` ahora declara `reward:
+  { type: 'money'|'keys', amount }`. `checkAchievements` (en `systems/achievements.js`) aplica la
+  recompensa **una sola vez**, en el momento exacto del desbloqueo (nunca se reaplica en
+  revisiones posteriores, testeado). Los montos son de esta fase (documentados como calibrables,
+  no rotos pero tampoco el balance final — eso es Fase 9).
+- **Árbol de prestigio real (§11.7):** cada nodo de `prestigeTree.json` declara `requires: [ids]`.
+  `prestige.js`: `isPrestigeNodeUnlocked(state, node)` (todos los `requires` con nivel ≥ 1) y
+  `buyPrestigeNode` ahora gatea por eso antes de cobrar. Árbol armado: `capitalInicial` es la raíz
+  (`requires: []`) con 5 ramas (`suerteAncestral→instintoCarronero`, `vigilanciaNocturna→
+  guardiaPermanente→portalEstable`, `flotaAmpliada→coleccionista`, `tasadorExperto→negociador`,
+  `brazosDeAcero→visionPeriferica`) — simétrico, 12 nodos totales, sin cambiar los efectos/costos
+  que ya existían.
+
+**Decisiones (`// DECISIÓN:` / `// AJUSTE:` en el código, resumidas acá):**
+```
+// DECISIÓN: categoryWeights se factorizó de rollCategory (rng.js) a una función pura exportada,
+// porque economy.js (getRecommendedLuck) y offline.js (expectedContainerValue) necesitaban el
+// mismo reparto de probabilidad entre categoría común/rara sin duplicar la fórmula. rollCategory
+// ahora es un wrapper de categoryWeights + random(). Firma nueva: rollCategory(categorias, luck,
+// levelShift, random) — el parámetro levelShift se insertó ANTES de random (rompe cualquier
+// llamada posicional vieja con 3 args; no había ningún test que llamara rollCategory directo, así
+// que no hubo que migrar tests, pero si el Agente 7 llega a llamarlo desde la UI, ojo con el orden).
+//
+// AJUSTE: registerContainerDig cuenta CUALQUIER resolución de contenedor (trampa o no, manual o
+// automática) como progreso de nivel — PLAN.md §11.3 dice "por cantidad de escarbados", no
+// distingue. El progreso offline (offline.js) NO llama a registerContainerDig porque es una
+// estimación de valor esperado agregada, no una secuencia real de escarbados discretos — el nivel
+// de contenedor solo sube con digs reales (manuales o del robot en tiempo real).
+//
+// AJUSTE: getTrapPenalty/getRecommendedLuck calculan la penalización de trampa con la Suerte
+// HIPOTÉTICA que se está evaluando (para getRecommendedLuck) o la Suerte REAL del estado (para
+// getTrapPenalty tal cual se usa en applyContainerResult) — son dos rutas de cálculo separadas
+// (trapPenaltyAtLuck interno vs. getTrapPenalty público) para no mezclar "Suerte actual" con
+// "Suerte que estoy simulando" dentro de la misma búsqueda.
+//
+// DECISIÓN: los ítems nuevos de items.json introducen ~10 claves de ícono que NO existían en el
+// registro `apps/game/src/icons/icons.js` del Agente 3 (ej. cigarette-butt, chip-bag, cork-bottle,
+// napkin-used, fan-old, floppy-disk, ivory-figurine, regiment-flag, ritual-mask, legendary-sword).
+// El registro ya tiene un fallback ('artifact') así que no rompe nada, pero se ven genéricos hasta
+// que alguien les agregue una forma propia — no lo hice yo porque icons.js es UI (fuera de mi
+// scope, cero DOM). Ver "qué necesita saber el Agente 7" abajo.
+```
+
+**API nueva exportada desde `packages/engine/src/index.js` (para que el Agente 7 la consuma sin reimplementar nada):**
+- `CONTAINER_LEVEL_MAX`, `getContainerLevel(state, containerId)`,
+  `digsNeededForNextLevel(container, level)` — para pintar "Nivel N/10" + barra de progreso hacia
+  el siguiente nivel (`state.containerLevelProgress[id]` es el numerador, `digsNeededForNextLevel`
+  el denominador).
+- `getLevelRarityShift(state, container)` — si se quiere mostrar "odds mejoradas por nivel" en el
+  INDEX (Fase 7, §11.5).
+- `getDigRate(state, container, data)` / `getEffectiveDigTime(state, container, data)` — ritmo de
+  escarbado real; usarlo para la duración de la animación/gauge del canvas manual y para lo que
+  ya muestra `AutomationView` de tiempo de cola.
+- `getTrapPenalty(state, container, data)` — cuánto se pierde si sale trampa en este contenedor
+  ahora mismo, para el tooltip de "riesgo" en la Tienda.
+- `getRecommendedLuck(state, container, itemsData, data)` — el número de Suerte recomendado por
+  contenedor que pide PLAN.md §11.2, para mostrar al lado de cada tarjeta de la Tienda.
+- `isPrestigeNodeUnlocked(state, node)` — para pintar los nodos bloqueados/desbloqueados del árbol
+  real de prestigio (§11.7) y deshabilitar el botón de compra si no está desbloqueado (además de la
+  falta de Llaves, que ya estaba).
+- `categoryWeights(categorias, luck, levelShift)` (desde rng.js) — expuesto por si la UI quiere
+  mostrar el desglose de probabilidad común/rara de un contenedor.
+- `rollCategory` cambió de firma: ahora es `rollCategory(categorias, luck, levelShift, random)`
+  (antes era `(categorias, luck, random)`). Es un detalle interno de `rollContainerResult`, no algo
+  que la UI debería llamar directo, pero documentado por si acaso.
+
+**Qué necesita saber el Agente 7:**
+- **`itemsData.categories` ya no existe** — ahora es `itemsData.containers[containerId]` (array de
+  ítems propios de ese contenedor). Un solo archivo de UI quedó roto por este cambio de forma:
+  `apps/game/src/ui/OfflineModal.js:29` (`itemsData.categories[categoriaId]`) — hay que decidir de
+  qué contenedor sacar el ícono representativo (por ejemplo, el mejor contenedor desbloqueado vía
+  `bestAffordableUnlockedContainer`, que ya existe en el engine) y filtrar su pool por `categoria`.
+  El resto de la UI (`UIManager.js`, `DigCanvas.js`) usa `itemsData.rarities`, que no cambió.
+- **INDEX por contenedor (§11.5, la tarea grande de tu fase):** ahora es directo de armar —
+  `itemsData.containers[container.id]` ya es exactamente "todas las recompensas posibles" de ese
+  contenedor, con `categoria` (para el color/rareza) y `valorBase` (para el precio mostrado). Lo que
+  falta trackear es la probabilidad (%) mostrada por ítem: `categoryWeights(container.categorias,
+  luck, getLevelRarityShift(state, container))` te da el peso por *categoría*; dentro de una
+  categoría, todos los ítems del pool filtrado tienen la misma probabilidad (`rollItem` es
+  uniforme), así que `%item = %categoria / cantidadItemsDeEsaCategoriaEnElPool`.
+- **Iconos nuevos sin registrar** (ver DECISIÓN arriba): si querés que el INDEX se vea bien, sumá
+  las ~10 claves nuevas a `icons/icons.js` (`SHAPES`/`ICON_MAP`); si no, van a mostrar el ícono
+  genérico `artifact` (no rompe nada, es el fallback ya diseñado por el Agente 3).
+- **Árbol de prestigio real:** `PrestigeView.js` del Agente 3 dibujaba una agrupación visual propia
+  (`TREE_LAYOUT`) que no leía `requires` porque no existía en la data. Ahora `prestigeTree.json`
+  tiene `requires` real — tu tarea de §11.7 es redibujar el árbol como grafo de nodos conectados
+  usando ese campo (y `isPrestigeNodeUnlocked` para el estado bloqueado/desbloqueado), reemplazando
+  el layout estático del Agente 3.
+- **Suerte recomendada:** `ShopView.js` no la muestra todavía — es un solo `getRecommendedLuck`
+  por tarjeta de contenedor, de solo lectura.
+- No toqué `apps/game/src/store.js`, `main.js`, `loop.js` ni ninguna vista — todo tu trabajo de Fase
+  7 parte de UI existente + esta API nueva del engine.
+
+**Verificado:**
+- `npm test`: **72/72 verde** (48 preexistentes + 24 nuevos de `fase6-mecanicas.test.js`, que cubren
+  unicidad de ítems, niveles y su curva de odds, resistencia/ritmo, trampa por tier suavizada por
+  Suerte, Suerte recomendada, recompensa de logro una sola vez, gating de `requires` del árbol de
+  prestigio, y migración de save v1→v2).
+- `grep -rn "document\|window" packages/engine/src` → 0 resultados (cero DOM).
+- `grep -rn "console\.log\|// TODO" packages/engine/src apps/game/src/data` → 0 resultados.
+- `node --check` sobre los 10 archivos de engine tocados + el test nuevo: todos sin errores.
+- Los 4 JSON de data tocados parsean válidos; los 8 contenedores tienen su pool de 6-8 ítems sin
+  ítems repetidos entre sí (grep/test); los 27 logros tienen `reward`; los 12 nodos de prestigio
+  tienen `requires` (array, aunque sea vacío en la raíz).
+
+**Estado del DoD:**
+```
+[x] Ítems únicos por contenedor (test: cero ítems compartidos entre los 8 contenedores).
+[x] Niveles 1-10 funcionando y persistentes; odds mejoran con el nivel (testeado).
+[x] Resistencia/Fuerza mínima, trampas por tier y Suerte recomendada expuestas por el engine y testeadas.
+[x] Recompensas de logros y `requires` de prestigio funcionando y testeados.
+[x] `saveVersion` bumpeado (1→2) con migración; saves viejos cargan sin romperse (testeado).
+[x] `npm test` verde (72/72); cero DOM en el engine.
 ```

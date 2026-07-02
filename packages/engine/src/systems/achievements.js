@@ -29,7 +29,28 @@ function evaluateCondition(state, achievement, ctx) {
 }
 
 /**
- * Revisa todos los logros no desbloqueados y desbloquea los que ya cumplen su condición.
+ * Otorga la recompensa declarada de un logro (PLAN.md §11.6). Se llama una sola vez, en el
+ * momento exacto del desbloqueo — nunca se reaplica en revisiones posteriores.
+ * @param {import('../state.js').GameState} state
+ * @param {Object} achievement
+ * @returns {void}
+ */
+function applyAchievementReward(state, achievement) {
+  const reward = achievement.reward;
+  if (!reward) return;
+  if (reward.type === 'money') {
+    state.money += reward.amount;
+    state.totalMoneyEarned += reward.amount;
+  } else if (reward.type === 'keys') {
+    state.prestigeKeys += reward.amount;
+  } else {
+    throw new Error(`Tipo de recompensa de logro desconocido: ${reward.type}`);
+  }
+}
+
+/**
+ * Revisa todos los logros no desbloqueados, desbloquea los que ya cumplen su condición y
+ * les otorga su recompensa (§11.6) una sola vez.
  * @param {import('../state.js').GameState} state
  * @param {Array<Object>} achievementsData
  * @param {{ allContainers: Array<Object>, allAutomations: Array<Object> }} ctx
@@ -41,6 +62,7 @@ export function checkAchievements(state, achievementsData, ctx) {
     if (state.achievementsUnlocked.includes(achievement.id)) continue;
     if (evaluateCondition(state, achievement, ctx)) {
       state.achievementsUnlocked.push(achievement.id);
+      applyAchievementReward(state, achievement);
       newlyUnlocked.push(achievement.id);
     }
   }
