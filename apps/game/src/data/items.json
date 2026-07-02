@@ -1,85 +1,400 @@
 {
   "rarities": [
-    { "id": "common", "name": "Basura Común", "colorToken": "--r-common", "mult": 1 },
-    { "id": "reusable", "name": "Objetos Reutilizables", "colorToken": "--r-reusable", "mult": 3 },
-    { "id": "electronics", "name": "Electrónica", "colorToken": "--r-electronics", "mult": 10 },
-    { "id": "antiques", "name": "Antigüedades", "colorToken": "--r-antiques", "mult": 35 },
-    { "id": "historic", "name": "Objetos Históricos", "colorToken": "--r-historic", "mult": 120 },
-    { "id": "art", "name": "Arte", "colorToken": "--r-art", "mult": 400 },
-    { "id": "relics", "name": "Reliquias", "colorToken": "--r-relics", "mult": 1500 },
-    { "id": "future", "name": "Tecnología Futurista", "colorToken": "--r-future", "mult": 6000 }
+    {
+      "id": "common",
+      "name": "Basura Común",
+      "colorToken": "--r-common",
+      "mult": 1
+    },
+    {
+      "id": "reusable",
+      "name": "Objetos Reutilizables",
+      "colorToken": "--r-reusable",
+      "mult": 3
+    },
+    {
+      "id": "electronics",
+      "name": "Electrónica",
+      "colorToken": "--r-electronics",
+      "mult": 10
+    },
+    {
+      "id": "antiques",
+      "name": "Antigüedades",
+      "colorToken": "--r-antiques",
+      "mult": 35
+    },
+    {
+      "id": "historic",
+      "name": "Objetos Históricos",
+      "colorToken": "--r-historic",
+      "mult": 120
+    },
+    {
+      "id": "art",
+      "name": "Arte",
+      "colorToken": "--r-art",
+      "mult": 400
+    },
+    {
+      "id": "relics",
+      "name": "Reliquias",
+      "colorToken": "--r-relics",
+      "mult": 1500
+    },
+    {
+      "id": "future",
+      "name": "Tecnología Futurista",
+      "colorToken": "--r-future",
+      "mult": 6000
+    }
   ],
   "containers": {
     "tachoVereda": [
-      { "icon": "can-crushed", "name": "Lata aplastada", "valorBase": 1, "categoria": "common" },
-      { "icon": "banana-peel", "name": "Cáscara de banana", "valorBase": 1, "categoria": "common" },
-      { "icon": "cigarette-butt", "name": "Colilla de cigarrillo", "valorBase": 1, "categoria": "common" },
-      { "icon": "chip-bag", "name": "Bolsa de papas vacía", "valorBase": 1, "categoria": "common" },
-      { "icon": "cork-bottle", "name": "Corcho de botella", "valorBase": 1, "categoria": "common" },
-      { "icon": "napkin-used", "name": "Servilleta usada", "valorBase": 1, "categoria": "common" }
+      {
+        "icon": "can-crushed",
+        "name": "Lata aplastada",
+        "valorBase": 2.2,
+        "categoria": "common"
+      },
+      {
+        "icon": "banana-peel",
+        "name": "Cáscara de banana",
+        "valorBase": 2.2,
+        "categoria": "common"
+      },
+      {
+        "icon": "cigarette-butt",
+        "name": "Colilla de cigarrillo",
+        "valorBase": 2.2,
+        "categoria": "common"
+      },
+      {
+        "icon": "chip-bag",
+        "name": "Bolsa de papas vacía",
+        "valorBase": 2.2,
+        "categoria": "common"
+      },
+      {
+        "icon": "cork-bottle",
+        "name": "Corcho de botella",
+        "valorBase": 2.2,
+        "categoria": "common"
+      },
+      {
+        "icon": "napkin-used",
+        "name": "Servilleta usada",
+        "valorBase": 2.2,
+        "categoria": "common"
+      }
     ],
     "contenedorBarrio": [
-      { "icon": "newspaper-old", "name": "Periódico viejo", "valorBase": 1, "categoria": "common" },
-      { "icon": "shoe-odd", "name": "Zapato sin par", "valorBase": 2, "categoria": "common" },
-      { "icon": "bottle-plastic", "name": "Botella plástica", "valorBase": 1, "categoria": "common" },
-      { "icon": "chair-broken", "name": "Silla rota", "valorBase": 5, "categoria": "reusable" },
-      { "icon": "lamp-old", "name": "Lámpara vieja", "valorBase": 4, "categoria": "reusable" },
-      { "icon": "suitcase-worn", "name": "Maleta gastada", "valorBase": 5, "categoria": "reusable" },
-      { "icon": "mirror-cracked", "name": "Espejo trizado", "valorBase": 4, "categoria": "reusable" }
+      {
+        "icon": "newspaper-old",
+        "name": "Periódico viejo",
+        "valorBase": 2.2,
+        "categoria": "common"
+      },
+      {
+        "icon": "shoe-odd",
+        "name": "Zapato sin par",
+        "valorBase": 4.4,
+        "categoria": "common"
+      },
+      {
+        "icon": "bottle-plastic",
+        "name": "Botella plástica",
+        "valorBase": 2.2,
+        "categoria": "common"
+      },
+      {
+        "icon": "chair-broken",
+        "name": "Silla rota",
+        "valorBase": 11,
+        "categoria": "reusable"
+      },
+      {
+        "icon": "lamp-old",
+        "name": "Lámpara vieja",
+        "valorBase": 8.8,
+        "categoria": "reusable"
+      },
+      {
+        "icon": "suitcase-worn",
+        "name": "Maleta gastada",
+        "valorBase": 11,
+        "categoria": "reusable"
+      },
+      {
+        "icon": "mirror-cracked",
+        "name": "Espejo trizado",
+        "valorBase": 8.8,
+        "categoria": "reusable"
+      }
     ],
     "containerIndustrial": [
-      { "icon": "bike-rusty", "name": "Bicicleta oxidada", "valorBase": 8, "categoria": "reusable" },
-      { "icon": "radio-antique", "name": "Radio antigua", "valorBase": 6, "categoria": "reusable" },
-      { "icon": "fan-old", "name": "Ventilador viejo", "valorBase": 6, "categoria": "reusable" },
-      { "icon": "copper-cable", "name": "Cable de cobre", "valorBase": 6, "categoria": "electronics" },
-      { "icon": "motherboard", "name": "Placa madre", "valorBase": 9, "categoria": "electronics" },
-      { "icon": "phone-old", "name": "Teléfono viejo", "valorBase": 10, "categoria": "electronics" },
-      { "icon": "console-broken", "name": "Consola rota", "valorBase": 12, "categoria": "electronics" }
+      {
+        "icon": "bike-rusty",
+        "name": "Bicicleta oxidada",
+        "valorBase": 17.6,
+        "categoria": "reusable"
+      },
+      {
+        "icon": "radio-antique",
+        "name": "Radio antigua",
+        "valorBase": 13.2,
+        "categoria": "reusable"
+      },
+      {
+        "icon": "fan-old",
+        "name": "Ventilador viejo",
+        "valorBase": 13.2,
+        "categoria": "reusable"
+      },
+      {
+        "icon": "copper-cable",
+        "name": "Cable de cobre",
+        "valorBase": 13.2,
+        "categoria": "electronics"
+      },
+      {
+        "icon": "motherboard",
+        "name": "Placa madre",
+        "valorBase": 19.8,
+        "categoria": "electronics"
+      },
+      {
+        "icon": "phone-old",
+        "name": "Teléfono viejo",
+        "valorBase": 22,
+        "categoria": "electronics"
+      },
+      {
+        "icon": "console-broken",
+        "name": "Consola rota",
+        "valorBase": 26.4,
+        "categoria": "electronics"
+      }
     ],
     "depositoAbandonado": [
-      { "icon": "camera-analog", "name": "Cámara analógica", "valorBase": 11, "categoria": "electronics" },
-      { "icon": "tv-crt", "name": "Televisor CRT", "valorBase": 14, "categoria": "electronics" },
-      { "icon": "floppy-disk", "name": "Disquete raro", "valorBase": 10, "categoria": "electronics" },
-      { "icon": "pocket-watch", "name": "Reloj de bolsillo", "valorBase": 18, "categoria": "antiques" },
-      { "icon": "porcelain-vase", "name": "Jarrón de porcelana", "valorBase": 20, "categoria": "antiques" },
-      { "icon": "coin-old", "name": "Moneda vieja", "valorBase": 12, "categoria": "antiques" },
-      { "icon": "candelabrum", "name": "Candelabro", "valorBase": 17, "categoria": "antiques" }
+      {
+        "icon": "camera-analog",
+        "name": "Cámara analógica",
+        "valorBase": 11.8,
+        "categoria": "electronics"
+      },
+      {
+        "icon": "tv-crt",
+        "name": "Televisor CRT",
+        "valorBase": 14.9,
+        "categoria": "electronics"
+      },
+      {
+        "icon": "floppy-disk",
+        "name": "Disquete raro",
+        "valorBase": 10.8,
+        "categoria": "electronics"
+      },
+      {
+        "icon": "pocket-watch",
+        "name": "Reloj de bolsillo",
+        "valorBase": 19.2,
+        "categoria": "antiques"
+      },
+      {
+        "icon": "porcelain-vase",
+        "name": "Jarrón de porcelana",
+        "valorBase": 21.3,
+        "categoria": "antiques"
+      },
+      {
+        "icon": "coin-old",
+        "name": "Moneda vieja",
+        "valorBase": 12.8,
+        "categoria": "antiques"
+      },
+      {
+        "icon": "candelabrum",
+        "name": "Candelabro",
+        "valorBase": 18.1,
+        "categoria": "antiques"
+      }
     ],
     "mudanzaMansion": [
-      { "icon": "antique-book", "name": "Libro antiguo", "valorBase": 15, "categoria": "antiques" },
-      { "icon": "typewriter", "name": "Máquina de escribir", "valorBase": 22, "categoria": "antiques" },
-      { "icon": "ivory-figurine", "name": "Estatuilla de marfil", "valorBase": 19, "categoria": "antiques" },
-      { "icon": "war-helmet", "name": "Casco de guerra", "valorBase": 30, "categoria": "historic" },
-      { "icon": "map-antique", "name": "Mapa antiguo", "valorBase": 25, "categoria": "historic" },
-      { "icon": "military-medal", "name": "Medalla militar", "valorBase": 28, "categoria": "historic" },
-      { "icon": "uniform-historic", "name": "Uniforme histórico", "valorBase": 22, "categoria": "historic" }
+      {
+        "icon": "antique-book",
+        "name": "Libro antiguo",
+        "valorBase": 16,
+        "categoria": "antiques"
+      },
+      {
+        "icon": "typewriter",
+        "name": "Máquina de escribir",
+        "valorBase": 23.7,
+        "categoria": "antiques"
+      },
+      {
+        "icon": "ivory-figurine",
+        "name": "Estatuilla de marfil",
+        "valorBase": 20.3,
+        "categoria": "antiques"
+      },
+      {
+        "icon": "war-helmet",
+        "name": "Casco de guerra",
+        "valorBase": 32.2,
+        "categoria": "historic"
+      },
+      {
+        "icon": "map-antique",
+        "name": "Mapa antiguo",
+        "valorBase": 26.8,
+        "categoria": "historic"
+      },
+      {
+        "icon": "military-medal",
+        "name": "Medalla militar",
+        "valorBase": 30,
+        "categoria": "historic"
+      },
+      {
+        "icon": "uniform-historic",
+        "name": "Uniforme histórico",
+        "valorBase": 23.7,
+        "categoria": "historic"
+      }
     ],
     "galeriaLiquidacion": [
-      { "icon": "dagger-ceremonial", "name": "Daga ceremonial", "valorBase": 35, "categoria": "historic" },
-      { "icon": "photo-historic", "name": "Fotografía histórica", "valorBase": 18, "categoria": "historic" },
-      { "icon": "regiment-flag", "name": "Bandera de regimiento", "valorBase": 26, "categoria": "historic" },
-      { "icon": "oil-painting", "name": "Cuadro al óleo", "valorBase": 55, "categoria": "art" },
-      { "icon": "bronze-sculpture", "name": "Escultura de bronce", "valorBase": 65, "categoria": "art" },
-      { "icon": "engraving-original", "name": "Grabado original", "valorBase": 40, "categoria": "art" },
-      { "icon": "tapestry-antique", "name": "Tapiz antiguo", "valorBase": 35, "categoria": "art" }
+      {
+        "icon": "dagger-ceremonial",
+        "name": "Daga ceremonial",
+        "valorBase": 37.3,
+        "categoria": "historic"
+      },
+      {
+        "icon": "photo-historic",
+        "name": "Fotografía histórica",
+        "valorBase": 19.2,
+        "categoria": "historic"
+      },
+      {
+        "icon": "regiment-flag",
+        "name": "Bandera de regimiento",
+        "valorBase": 27.7,
+        "categoria": "historic"
+      },
+      {
+        "icon": "oil-painting",
+        "name": "Cuadro al óleo",
+        "valorBase": 58.9,
+        "categoria": "art"
+      },
+      {
+        "icon": "bronze-sculpture",
+        "name": "Escultura de bronce",
+        "valorBase": 69.6,
+        "categoria": "art"
+      },
+      {
+        "icon": "engraving-original",
+        "name": "Grabado original",
+        "valorBase": 42.9,
+        "categoria": "art"
+      },
+      {
+        "icon": "tapestry-antique",
+        "name": "Tapiz antiguo",
+        "valorBase": 37.3,
+        "categoria": "art"
+      }
     ],
     "bovedaPerdida": [
-      { "icon": "vase-decorative", "name": "Vasija decorativa", "valorBase": 45, "categoria": "art" },
-      { "icon": "sketch-master", "name": "Boceto de maestro", "valorBase": 30, "categoria": "art" },
-      { "icon": "ritual-mask", "name": "Máscara ritual", "valorBase": 50, "categoria": "art" },
-      { "icon": "crown-lost", "name": "Corona perdida", "valorBase": 130, "categoria": "relics" },
-      { "icon": "amulet-sacred", "name": "Amuleto sagrado", "valorBase": 100, "categoria": "relics" },
-      { "icon": "scroll-arcane", "name": "Pergamino arcano", "valorBase": 80, "categoria": "relics" },
-      { "icon": "scepter-royal", "name": "Cetro real", "valorBase": 140, "categoria": "relics" }
+      {
+        "icon": "vase-decorative",
+        "name": "Vasija decorativa",
+        "valorBase": 48.1,
+        "categoria": "art"
+      },
+      {
+        "icon": "sketch-master",
+        "name": "Boceto de maestro",
+        "valorBase": 32.2,
+        "categoria": "art"
+      },
+      {
+        "icon": "ritual-mask",
+        "name": "Máscara ritual",
+        "valorBase": 53.6,
+        "categoria": "art"
+      },
+      {
+        "icon": "crown-lost",
+        "name": "Corona perdida",
+        "valorBase": 139,
+        "categoria": "relics"
+      },
+      {
+        "icon": "amulet-sacred",
+        "name": "Amuleto sagrado",
+        "valorBase": 107,
+        "categoria": "relics"
+      },
+      {
+        "icon": "scroll-arcane",
+        "name": "Pergamino arcano",
+        "valorBase": 85.7,
+        "categoria": "relics"
+      },
+      {
+        "icon": "scepter-royal",
+        "name": "Cetro real",
+        "valorBase": 149.8,
+        "categoria": "relics"
+      }
     ],
     "containerExtradimensional": [
-      { "icon": "idol-jade", "name": "Ídolo de jade", "valorBase": 95, "categoria": "relics" },
-      { "icon": "relic-sealed", "name": "Reliquia sellada", "valorBase": 110, "categoria": "relics" },
-      { "icon": "legendary-sword", "name": "Espada legendaria", "valorBase": 150, "categoria": "relics" },
-      { "icon": "fusion-core", "name": "Núcleo de fusión", "valorBase": 300, "categoria": "future" },
-      { "icon": "quantum-chip", "name": "Chip cuántico", "valorBase": 250, "categoria": "future" },
-      { "icon": "neural-implant", "name": "Implante neural", "valorBase": 280, "categoria": "future" },
-      { "icon": "stellar-fragment", "name": "Fragmento estelar", "valorBase": 400, "categoria": "future" }
+      {
+        "icon": "idol-jade",
+        "name": "Ídolo de jade",
+        "valorBase": 101.6,
+        "categoria": "relics"
+      },
+      {
+        "icon": "relic-sealed",
+        "name": "Reliquia sellada",
+        "valorBase": 117.7,
+        "categoria": "relics"
+      },
+      {
+        "icon": "legendary-sword",
+        "name": "Espada legendaria",
+        "valorBase": 160.4,
+        "categoria": "relics"
+      },
+      {
+        "icon": "fusion-core",
+        "name": "Núcleo de fusión",
+        "valorBase": 320.9,
+        "categoria": "future"
+      },
+      {
+        "icon": "quantum-chip",
+        "name": "Chip cuántico",
+        "valorBase": 267.4,
+        "categoria": "future"
+      },
+      {
+        "icon": "neural-implant",
+        "name": "Implante neural",
+        "valorBase": 299.4,
+        "categoria": "future"
+      },
+      {
+        "icon": "stellar-fragment",
+        "name": "Fragmento estelar",
+        "valorBase": 427.9,
+        "categoria": "future"
+      }
     ]
   }
 }

@@ -29,8 +29,13 @@ describe('§4.1 costo de mejoras repetibles', () => {
     });
   }
 
-  it('usa 1.13 para mejoras de stats básicas y 1.22 para capacidad', () => {
-    expect(upgrades.find((u) => u.id === 'luck').factorCrecimiento).toBe(1.13);
+  // AJUSTE (Fase 9, PLAN.md §3/§4.1): §4.1 fija 1.13 como el valor "por defecto" de
+  // factorCrecimiento para Suerte/Fuerza/Área. El pase de balance headless (agentes/scripts/
+  // sim-pace.mjs) mostró que a 1.13 la Suerte se vuelve prohibitiva pasado el nivel ~30 y el
+  // primer Prestigio (PLAN.md §3, hito de 1.5-3h) nunca se alcanza en simulación. Se bajó SOLO
+  // el de Suerte a 1.12 — digPower/área quedan en el default 1.13 (no gatean ningún hito de ritmo).
+  it('usa 1.12 para Suerte (ajuste de balance), 1.13 para Fuerza/Área y 1.22 para capacidad', () => {
+    expect(upgrades.find((u) => u.id === 'luck').factorCrecimiento).toBe(1.12);
     expect(upgrades.find((u) => u.id === 'digPower').factorCrecimiento).toBe(1.13);
     expect(upgrades.find((u) => u.id === 'area').factorCrecimiento).toBe(1.13);
     expect(upgrades.find((u) => u.id === 'capacity').factorCrecimiento).toBe(1.22);

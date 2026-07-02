@@ -5,7 +5,13 @@
     "icon": "gloves-work",
     "cost": 50,
     "desc": "+20% Fuerza de Escarbado permanente.",
-    "effects": [{ "type": "statPercent", "stat": "digPower", "percent": 0.20 }]
+    "effects": [
+      {
+        "type": "statPercent",
+        "stat": "digPower",
+        "percent": 0.2
+      }
+    ]
   },
   {
     "id": "carrito",
@@ -13,7 +19,12 @@
     "icon": "cart-push",
     "cost": 300,
     "desc": "+1 contenedor en la cola de automatización.",
-    "effects": [{ "type": "queueSlots", "flat": 1 }]
+    "effects": [
+      {
+        "type": "queueSlots",
+        "flat": 1
+      }
+    ]
   },
   {
     "id": "detectorMetales",
@@ -21,53 +32,96 @@
     "icon": "metal-detector",
     "cost": 800,
     "desc": "+10 Suerte global.",
-    "effects": [{ "type": "statFlat", "stat": "luck", "flat": 10 }]
+    "effects": [
+      {
+        "type": "statFlat",
+        "stat": "luck",
+        "flat": 10
+      }
+    ]
   },
   {
     "id": "robotClasificador",
     "name": "Robot Clasificador Básico",
     "icon": "robot-sorter",
-    "cost": 5000,
+    "cost": 2000,
     "desc": "Escarba contenedores solo, sin poder espiar antes (más riesgo de trampa).",
     "effects": [
-      { "type": "enablesAutoDig" },
-      { "type": "autoTrapMultiplier", "mult": 1.3 },
-      { "type": "parallelSlots", "flat": 1 }
+      {
+        "type": "enablesAutoDig"
+      },
+      {
+        "type": "autoTrapMultiplier",
+        "mult": 1.3
+      },
+      {
+        "type": "parallelSlots",
+        "flat": 1
+      }
     ]
   },
   {
     "id": "cintaTransportadora",
     "name": "Cinta Transportadora",
     "icon": "conveyor-belt",
-    "cost": 25000,
+    "cost": 45000,
     "desc": "+3 slots de cola de automatización.",
-    "effects": [{ "type": "queueSlots", "flat": 3 }]
+    "effects": [
+      {
+        "type": "queueSlots",
+        "flat": 3
+      }
+    ]
   },
   {
     "id": "plantaReciclaje",
     "name": "Planta de Reciclaje",
     "icon": "recycling-plant",
-    "cost": 100000,
+    "cost": 220000,
     "desc": "+20% valor de venta de Basura Común y Reutilizables.",
-    "effects": [{ "type": "sellPercentCategories", "categorias": ["common", "reusable"], "percent": 0.20 }]
+    "effects": [
+      {
+        "type": "sellPercentCategories",
+        "categorias": [
+          "common",
+          "reusable"
+        ],
+        "percent": 0.2
+      }
+    ]
   },
   {
     "id": "centroSubastas",
     "name": "Centro de Subastas",
     "icon": "auction-house",
-    "cost": 750000,
+    "cost": 1600000,
     "desc": "+15% valor de venta de Arte y Reliquias.",
-    "effects": [{ "type": "sellPercentCategories", "categorias": ["art", "relics"], "percent": 0.15 }]
+    "effects": [
+      {
+        "type": "sellPercentCategories",
+        "categorias": [
+          "art",
+          "relics"
+        ],
+        "percent": 0.15
+      }
+    ]
   },
   {
     "id": "redDrones",
     "name": "Red de Drones",
     "icon": "drone-network",
-    "cost": 5000000,
+    "cost": 9000000,
     "desc": "Segundo robot procesando en paralelo. Habilita el Contenedor Extradimensional.",
     "effects": [
-      { "type": "parallelSlots", "flat": 1 },
-      { "type": "unlocksContainer", "containerId": "containerExtradimensional" }
+      {
+        "type": "parallelSlots",
+        "flat": 1
+      },
+      {
+        "type": "unlocksContainer",
+        "containerId": "containerExtradimensional"
+      }
     ]
   }
 ]

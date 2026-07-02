@@ -4,7 +4,7 @@
     "label": "Suerte",
     "icon": "clover",
     "costoBase": 10,
-    "factorCrecimiento": 1.13,
+    "factorCrecimiento": 1.12,
     "statKey": "luck",
     "mode": "flat",
     "baseValue": 0,
