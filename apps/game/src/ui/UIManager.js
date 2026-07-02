@@ -1,10 +1,11 @@
 /**
  * Orquesta todas las vistas: se suscribe al store y re-renderiza en cada cambio.
- * Cablea el DigCanvas (compra + revelado manual) y el tabbar. Ninguna vista mutila
- * el estado directo; todas despachan acciones al store (que despacha al engine).
+ * Cablea el DigCanvas (compra + revelado manual), el tabbar y el feedback de "juice"
+ * (PLAN.md §5.2): sonido/partícula/glow al hallar, shake+flash al caer en trampa,
+ * modal de offline con highlights y modal celebratorio al desbloquear categoría.
+ * Ninguna vista muta el estado directo; todas despachan acciones al store.
  */
 
-import { formatMoney } from '@dumpster/engine';
 import { DigCanvas } from '../dig/DigCanvas.js';
 import { Topbar } from './Topbar.js';
 import { QuickUpgrades } from './QuickUpgrades.js';
@@ -15,6 +16,11 @@ import { PrestigeView } from './PrestigeView.js';
 import { SettingsView } from './SettingsView.js';
 import { Toast } from './Toast.js';
 import { Tutorial } from './Tutorial.js';
+import { OfflineModal } from './OfflineModal.js';
+import { CategoryUnlockModal } from './CategoryUnlockModal.js';
+import { iconMarkup } from '../icons/icons.js';
+import { setEnabled as setSoundEnabled, playFindPop, playTrapThud } from '../fx/audio.js';
+import { spawnFindPop, triggerRarityGlow, triggerTrapShake } from '../fx/particles.js';
 
 const TAB_VIEWS = {
   tienda: ShopView,
@@ -23,6 +29,11 @@ const TAB_VIEWS = {
   prestigio: PrestigeView,
   ajustes: SettingsView,
 };
+
+// Logros "primer objeto de la categoría" (achievements.json a14-a19): encontrar el primer
+// objeto de una categoría nueva es, en los hechos, desbloquearla (el engine no emite un
+// evento dedicado de "categoría desbloqueada" — ver CategoryUnlockModal.js).
+const CATEGORY_UNLOCK_ACHIEVEMENT_IDS = new Set(['a14', 'a15', 'a16', 'a17', 'a18', 'a19']);
 
 export class UIManager {
   /**
@@ -40,23 +51,38 @@ export class UIManager {
     this.digEmptyEl = root.querySelector('#dig-empty');
     this.digActiveEl = root.querySelector('#dig-active');
     this.digCanvasHost = root.querySelector('#dig-canvas-host');
+    this.digRarityGlowEl = root.querySelector('#dig-rarity-glow');
     this.digProgressFill = root.querySelector('#dig-progress-fill');
     this.digTrapHint = root.querySelector('#dig-trap-hint');
     this.digAbandonBtn = root.querySelector('#dig-abandon-btn');
     this.digContainerTitle = root.querySelector('#dig-container-title');
     this.tabbarEl = root.querySelector('#tabbar');
     this.tabContentEl = root.querySelector('#tab-content');
+    this.offlineModalEl = root.querySelector('#offline-modal');
+    this.categoryModalEl = root.querySelector('#category-modal');
 
     this.toast = new Toast(root.querySelector('#toast-container'));
     this.tutorial = new Tutorial(root.querySelector('#tutorial-overlay'), store);
-    this.digCanvas = new DigCanvas(this.digCanvasHost, {
-      onProgress: (frac) => this.updateDigProgress(frac),
-      onThresholdReached: () => this.store.actions.finishManualDig(),
-    });
+    this.digCanvas = new DigCanvas(
+      this.digCanvasHost,
+      {
+        onProgress: (frac) => this.updateDigProgress(frac),
+        onThresholdReached: () => this.handleDigComplete(),
+      },
+      store.ctx.itemsData.rarities
+    );
 
+    this.injectTabIcons();
     this.bindStaticEvents();
     store.subscribe((state) => this.render(state));
     this.render(store.getState());
+  }
+
+  injectTabIcons() {
+    for (const btn of this.tabbarEl.querySelectorAll('[data-tab]')) {
+      const label = btn.textContent;
+      btn.innerHTML = `${iconMarkup(`tab-${btn.dataset.tab}`, { size: 20 })}<span>${label}</span>`;
+    }
   }
 
   bindStaticEvents() {
@@ -83,6 +109,36 @@ export class UIManager {
     });
   }
 
+  /** Captura el resultado antes de que `finishManualDig` lo descarte, para disparar el juice. */
+  handleDigComplete() {
+    const pending = this.store.getPendingDig();
+    const result = pending ? pending.result : null;
+    this.store.actions.finishManualDig();
+    if (result) this.playDigFeedback(result);
+  }
+
+  /** @param {import('@dumpster/engine').DigResult} result */
+  playDigFeedback(result) {
+    const { itemsData } = this.store.ctx;
+    if (result.isTrap) {
+      playTrapThud();
+      triggerTrapShake(this.root);
+      return;
+    }
+    let bestRarityIndex = 0;
+    let bestColorToken = '--amber';
+    for (const item of result.items) {
+      const rarityIndex = itemsData.rarities.findIndex((r) => r.id === item.categoria);
+      if (rarityIndex > bestRarityIndex) {
+        bestRarityIndex = rarityIndex;
+        bestColorToken = itemsData.rarities[rarityIndex].colorToken;
+      }
+    }
+    playFindPop(bestRarityIndex);
+    spawnFindPop(this.digActiveEl, bestColorToken, bestRarityIndex);
+    triggerRarityGlow(this.digRarityGlowEl, bestColorToken, 0.3 + bestRarityIndex * 0.1);
+  }
+
   updateDigProgress(fraction) {
     this.digProgressFill.style.width = `${Math.round(fraction * 100)}%`;
     this.digAbandonBtn.hidden = !(fraction > 0.03 && fraction < 0.97);
@@ -94,6 +150,7 @@ export class UIManager {
   }
 
   render(state) {
+    setSoundEnabled(state.soundOn);
     this.renderTopbar(state);
     QuickUpgrades.render(this.quickUpgradesEl, state, this.store);
     this.renderDigArea(state);
@@ -102,12 +159,15 @@ export class UIManager {
 
     const offline = this.store.consumeOfflineSummary();
     if (offline && offline.ganancia > 0) {
-      const minutes = Math.max(1, Math.round(offline.segundosEfectivos / 60));
-      this.toast.push(`Mientras no estabas ganaste ${formatMoney(offline.ganancia)} en ${minutes} min de robots trabajando.`);
+      OfflineModal.show(this.offlineModalEl, offline, this.store);
     }
 
     for (const achievement of this.store.consumeNewAchievements()) {
-      this.toast.push(`Logro desbloqueado: ${achievement.name}`);
+      if (CATEGORY_UNLOCK_ACHIEVEMENT_IDS.has(achievement.id)) {
+        CategoryUnlockModal.show(this.categoryModalEl, achievement);
+      } else {
+        this.toast.push(`Logro desbloqueado: ${achievement.name}`);
+      }
     }
   }
 

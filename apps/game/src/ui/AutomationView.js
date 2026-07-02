@@ -4,6 +4,7 @@
  */
 
 import { formatMoney, formatNumber, getQueueMax, getParallelAutoSlots, nextUpgradeCost } from '@dumpster/engine';
+import { iconMarkup } from '../icons/icons.js';
 
 export const AutomationView = {
   /**
@@ -58,6 +59,7 @@ export const AutomationView = {
             }">Comprar por ${formatMoney(a.cost)}</button>`;
         return (
           `<article class="automation-card ${owned ? 'automation-card--owned' : ''}">` +
+          `<span class="automation-card-icon">${iconMarkup(a.icon, { size: 28 })}</span>` +
           `<h3>${a.name}</h3>` +
           `<p>${a.desc}</p>` +
           button +

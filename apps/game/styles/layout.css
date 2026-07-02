@@ -66,6 +66,10 @@ body {
   display: none;
 }
 
+#dig-active {
+  position: relative;
+}
+
 #dig-canvas-host {
   position: relative;
   width: 100%;
@@ -107,6 +111,45 @@ body {
 #tabbar button.is-active {
   background: var(--bg-3);
   color: var(--amber);
+}
+
+#tabbar button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+#app {
+  position: relative;
+}
+
+#app.is-shaking {
+  animation: trap-shake 0.4s ease;
+}
+
+#app.is-shaking::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--danger);
+  opacity: 0;
+  animation: trap-flash 0.4s ease;
+  pointer-events: none;
+  z-index: 30;
+}
+
+@keyframes trap-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+
+@keyframes trap-flash {
+  0% { opacity: 0; }
+  20% { opacity: 0.18; }
+  100% { opacity: 0; }
 }
 
 #tab-content {

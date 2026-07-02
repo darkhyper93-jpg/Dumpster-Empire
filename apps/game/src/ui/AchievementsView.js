@@ -3,6 +3,8 @@
  * ya fue evaluada por el engine (`checkAchievements`); acá solo se lee `achievementsUnlocked`.
  */
 
+import { iconMarkup } from '../icons/icons.js';
+
 export const AchievementsView = {
   /**
    * @param {HTMLElement} container
@@ -21,6 +23,7 @@ export const AchievementsView = {
         const unlocked = state.achievementsUnlocked.includes(a.id);
         return (
           `<article class="achievement-card ${unlocked ? 'achievement-card--unlocked' : 'achievement-card--locked'}">` +
+          `<span class="achievement-card-icon">${iconMarkup(a.icon, { size: 26 })}</span>` +
           `<h3>${a.name}</h3>` +
           `<span class="badge">${unlocked ? 'Desbloqueado' : 'Bloqueado'}</span>` +
           `</article>`

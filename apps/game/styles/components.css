@@ -121,3 +121,236 @@ textarea {
   text-align: center;
   color: var(--danger);
 }
+
+/* --- Íconos (Agente 3, registro SVG en icons/icons.js) --- */
+
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+#money,
+#keys {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* --- Contador de dinero: tween + "rodillo" (PLAN.md §5.2, mockup main_game §DESARROLLO.md §6) --- */
+
+#money-value.is-rolling,
+#keys-value.is-rolling {
+  animation: counter-roll 0.3s ease;
+}
+
+@keyframes counter-roll {
+  0% { transform: translateY(-10%); opacity: 0.4; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* --- Estado "antes de tocar" del canvas de escarbado (mockup main_game) --- */
+
+.dig-idle-prompt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--fg-0);
+  pointer-events: none;
+  text-align: center;
+}
+
+/* AJUSTE: mismo bug que `.dig-state[hidden]` (ver layout.css, hallado por Agente 2 con el
+   smoke e2e): `display:flex` de la clase de arriba pisa el `display:none` del atributo
+   `[hidden]` porque los estilos de autor ganan sobre la hoja de estilos del user-agent. */
+.dig-idle-prompt[hidden] {
+  display: none;
+}
+
+.dig-idle-ring {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--amber);
+  animation: idle-ring-pulse 1.6s ease-out infinite;
+}
+
+@keyframes idle-ring-pulse {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* --- Glow de rareza debajo de la tarjeta de escarbado (no confeti, ver particles.js) --- */
+
+#dig-rarity-glow {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: -8px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--glow-color, transparent);
+  filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#dig-rarity-glow.is-glowing {
+  animation: rarity-glow-pulse 0.9s ease-out;
+}
+
+@keyframes rarity-glow-pulse {
+  0% { opacity: 0; }
+  30% { opacity: var(--glow-intensity, 0.5); }
+  100% { opacity: 0; }
+}
+
+/* --- Pop de hallazgo (PLAN.md §5.2) --- */
+
+.find-pop {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 50%;
+  background: var(--pop-color, var(--amber));
+  pointer-events: none;
+  animation: find-pop-anim 0.5s ease-out forwards;
+}
+
+@keyframes find-pop-anim {
+  0% { transform: scale(0.3); opacity: 0.9; }
+  100% { transform: scale(calc(var(--pop-scale, 1) * 2.4)); opacity: 0; }
+}
+
+/* --- Mejoras rápidas con ícono (QuickUpgrades.js) --- */
+
+.quick-upgrade-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+/* --- Íconos en tarjetas (Shop/Automation/Achievements/Prestige) --- */
+
+.shop-card-icon,
+.automation-card-icon,
+.achievement-card-icon,
+.prestige-node-icon,
+.category-modal-icon {
+  color: var(--amber);
+}
+
+.offline-highlight-icon {
+  display: inline-flex;
+}
+
+/* --- Modales no bloqueantes (offline + celebración de categoría) --- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 40;
+  padding: var(--space-3);
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal-card {
+  background: var(--bg-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.offline-money {
+  font-size: 1.5rem;
+  color: var(--amber);
+  margin: 0;
+}
+
+.offline-highlights {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+/* --- Árbol de prestigio: nodos conectados por rama temática (PrestigeView.js) --- */
+
+.prestige-summary {
+  position: relative;
+}
+
+/* Mobile-first (CLAUDE.md): la grilla de 5 ramas solo tiene sentido con ancho de sobra.
+   Debajo de ese punto, los nodos caen a lista simple (sin conectores) para no desbordar
+   la pantalla — el layout de escritorio con sidebar es del Agente 4 (DESARROLLO.md §6). */
+.prestige-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+@media (min-width: 700px) {
+  .prestige-tree {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-auto-rows: min-content;
+    gap: var(--space-3) var(--space-2);
+  }
+}
+
+.prestige-node {
+  position: relative;
+  align-items: center;
+  text-align: center;
+}
+
+@media (min-width: 700px) {
+  .prestige-node {
+    grid-column: calc(var(--branch) + 1);
+    grid-row: calc(var(--depth) + 1);
+  }
+
+  .prestige-node[data-parent]:not([data-parent=""])::before {
+    content: '';
+    position: absolute;
+    top: calc(-1 * var(--space-3));
+    left: 50%;
+    width: 2px;
+    height: var(--space-3);
+    background: var(--bg-3);
+  }
+}
+
+.prestige-node--active {
+  border: 1px solid var(--amber);
+}

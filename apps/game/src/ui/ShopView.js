@@ -6,6 +6,7 @@
  */
 
 import { formatMoney, getContainerCost, isContainerUnlocked, getEffectiveTrapProbability } from '@dumpster/engine';
+import { iconMarkup } from '../icons/icons.js';
 
 export const ShopView = {
   /**
@@ -35,6 +36,7 @@ export const ShopView = {
       if (!unlocked) {
         return (
           `<article class="shop-card shop-card--locked">` +
+          `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
           `<h3>${c.name}</h3>` +
           `<p>Bloqueado. Comprá el contenedor anterior primero.</p>` +
           `</article>`
@@ -52,6 +54,7 @@ export const ShopView = {
       const label = cost === 0 ? 'Escarbar (gratis)' : `Escarbar por ${formatMoney(cost)}`;
       return (
         `<article class="shop-card">` +
+        `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
         `<h3>${c.name}</h3>` +
         `<p>Categorías: ${c.categorias.join(', ')}</p>` +
         `<p>Riesgo de trampa: ${Math.round(trapProb * 100)}%</p>` +

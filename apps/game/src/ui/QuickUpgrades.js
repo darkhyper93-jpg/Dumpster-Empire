@@ -6,6 +6,7 @@
  */
 
 import { formatMoney, nextUpgradeCost } from '@dumpster/engine';
+import { iconMarkup } from '../icons/icons.js';
 
 const QUICK_UPGRADE_IDS = ['luck', 'digPower', 'area'];
 
@@ -39,8 +40,11 @@ export const QuickUpgrades = {
       const canAfford = state.money >= cost;
       const missing = canAfford ? '' : `Te faltan ${formatMoney(cost - state.money)}`;
       return (
-        `<button type="button" data-upgrade="${upgrade.id}" ${canAfford ? '' : 'disabled'} title="${missing}">` +
-        `${upgrade.label} (${level}) — ${formatMoney(cost)}` +
+        `<button type="button" class="quick-upgrade-btn" data-upgrade="${upgrade.id}" ${canAfford ? '' : 'disabled'} title="${missing}">` +
+        `<span class="quick-upgrade-icon">${iconMarkup(upgrade.icon, { size: 22 })}</span>` +
+        `<span class="quick-upgrade-label">${upgrade.label}</span>` +
+        `<span class="quick-upgrade-level">(${level})</span>` +
+        `<span class="quick-upgrade-cost">${formatMoney(cost)}</span>` +
         `</button>`
       );
     }).join('');

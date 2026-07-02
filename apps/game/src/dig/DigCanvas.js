@@ -6,11 +6,17 @@
  * (@dumpster/engine vía store.js) y solo redibuja el área afectada por cada gesto,
  * nunca el canvas completo por frame (PLAN.md §6.4).
  *
- * Sin emojis (CLAUDE.md): el contenido de la capa de abajo se dibuja con formas
- * simples + texto, a la espera del registro de íconos SVG del Agente 3.
+ * Sin emojis (CLAUDE.md): el contenido de la capa de abajo usa el registro de íconos
+ * SVG (`icons/icons.js`) rasterizado a `Image` para poder dibujarse en canvas.
+ *
+ * Estado "antes de tocar": el mockup Stitch `dumpster_empire_main_game` (DESARROLLO.md §6)
+ * muestra un ícono + anillo pulsante + "arrastrá para escarbar" hasta el primer gesto.
+ * Ese overlay vive como un <div> HTML superpuesto (no en el propio canvas) para poder
+ * animarlo con CSS (`.dig-idle-ring` queda preparada para el pulido del Agente 4).
  */
 
 import { attachDigInput } from './digInput.js';
+import { getIconImage, iconMarkup } from '../icons/icons.js';
 
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 330;
@@ -23,10 +29,12 @@ export class DigCanvas {
   /**
    * @param {HTMLElement} host
    * @param {{ onProgress: (frac:number)=>void, onThresholdReached: ()=>void }} callbacks
+   * @param {Array<{id:string, colorToken:string}>} [rarities] - para colorear ítems/íconos por rareza (§2.5).
    */
-  constructor(host, callbacks) {
+  constructor(host, callbacks, rarities = []) {
     this.host = host;
     this.callbacks = callbacks;
+    this.rarities = rarities;
 
     this.bottomCanvas = document.createElement('canvas');
     this.topCanvas = document.createElement('canvas');
@@ -39,6 +47,14 @@ export class DigCanvas {
     host.appendChild(this.bottomCanvas);
     host.appendChild(this.topCanvas);
 
+    this.idlePrompt = document.createElement('div');
+    this.idlePrompt.className = 'dig-idle-prompt';
+    this.idlePrompt.innerHTML =
+      `<span class="dig-idle-ring"></span>${iconMarkup('touch-app', { size: 32 })}` +
+      `<p>Arrastrá para escarbar</p>`;
+    this.idlePrompt.hidden = true;
+    host.appendChild(this.idlePrompt);
+
     this.ctxBottom = this.bottomCanvas.getContext('2d');
     this.ctxTop = this.topCanvas.getContext('2d');
 
@@ -46,13 +62,23 @@ export class DigCanvas {
     this.revealThreshold = 0.6;
     this.areaMult = 1;
     this.thresholdFired = false;
+    this.touched = false;
     this.lastSampleAt = 0;
 
     this.detachInput = attachDigInput(this.topCanvas, {
-      onStart: (pos) => this.erase(pos),
+      onStart: (pos) => {
+        this.markTouched();
+        this.erase(pos);
+      },
       onMove: (pos) => this.erase(pos),
       onEnd: () => {},
     });
+  }
+
+  markTouched() {
+    if (this.touched) return;
+    this.touched = true;
+    this.idlePrompt.hidden = true;
   }
 
   /**
@@ -65,16 +91,24 @@ export class DigCanvas {
   start(digResult, revealThreshold, areaMult) {
     this.active = true;
     this.thresholdFired = false;
+    this.touched = false;
     this.revealThreshold = revealThreshold;
     this.areaMult = areaMult;
+    this.idlePrompt.hidden = false;
     this.drawBottomLayer(digResult);
     this.drawTopLayer();
   }
 
   stop() {
     this.active = false;
+    this.idlePrompt.hidden = true;
     this.ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     this.ctxBottom.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  }
+
+  rarityColorToken(categoria) {
+    const rarity = this.rarities.find((r) => r.id === categoria);
+    return rarity ? rarity.colorToken : '--amber';
   }
 
   drawBottomLayer(digResult) {
@@ -83,20 +117,38 @@ export class DigCanvas {
     ctx.fillStyle = '#2c261a';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    const labels = digResult.isTrap ? ['¡Trampa!'] : digResult.items.map((item) => item.name);
-    const positions = this.layoutPositions(labels.length);
+    const entries = digResult.isTrap
+      ? [{ icon: 'artifact', name: '¡Trampa!', colorHex: '#c0392b' }]
+      : digResult.items.map((item) => ({
+          icon: item.icon,
+          name: item.name,
+          colorHex: this.resolveCssColor(this.rarityColorToken(item.categoria)),
+        }));
+    const positions = this.layoutPositions(entries.length);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '14px sans-serif';
-    labels.forEach((label, i) => {
+    ctx.font = '13px sans-serif';
+    entries.forEach((entry, i) => {
       const pos = positions[i];
       ctx.beginPath();
-      ctx.fillStyle = digResult.isTrap ? '#c0392b' : '#e8c07d';
+      ctx.fillStyle = entry.colorHex;
       ctx.arc(pos.x, pos.y, 28, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#161310';
-      ctx.fillText(label, pos.x, pos.y + 44, CANVAS_WIDTH / positions.length - 8);
+
+      const iconImg = getIconImage(entry.icon, { size: 64, color: '#161310' });
+      const drawIcon = () => ctx.drawImage(iconImg, pos.x - 16, pos.y - 16, 32, 32);
+      if (iconImg.complete) drawIcon();
+      else iconImg.addEventListener('load', () => this.active && this.ctxBottom === ctx && drawIcon(), { once: true });
+
+      ctx.fillStyle = '#f4ede1';
+      ctx.fillText(entry.name, pos.x, pos.y + 44, CANVAS_WIDTH / positions.length - 8);
     });
+  }
+
+  /** Resuelve una variable CSS de rareza (ej. `--r-relics`) a un color concreto para el canvas. */
+  resolveCssColor(cssVar) {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+    return value || '#e8c07d';
   }
 
   layoutPositions(count) {

@@ -13,7 +13,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | 0 Andamiaje | 0 | ✅ hecho |
 | 1 Engine + tests | 1 | ✅ hecho |
 | 2 Juego jugable | 2 | ✅ hecho |
-| 3 Huecos de UI | 3 | ⬜ pendiente |
+| 3 Huecos de UI | 3 | ✅ hecho |
 | 4 Pulido visual | 4 | ⬜ pendiente |
 | 5 Balance | 5 | ⬜ pendiente |
 | 6 Steam | 6 | ⬜ pendiente |
@@ -425,4 +425,152 @@ las 6 fórmulas de §4 literales y testeadas, data completa sin placeholders ni 
     e2e ejerce la rama de mouse con un pointer drag real). Touch queda cubierto por código pero no
     se probó con un emulador táctil real dentro de este smoke — Agente 3/4 puede sumar un proyecto
     `devices['iPhone ...']` a playwright.config.js si se quiere ese caso automatizado también.
+```
+
+---
+
+## Agente 3 (Cerrar los huecos de UI del PLAN)
+
+**Qué hice:**
+- `apps/game/src/icons/icons.js`: registro de íconos SVG inline (sin fuentes/paquetes externos,
+  originales de este repo — **sin licencia que declarar** en créditos de Steam). Un vocabulario de
+  ~65 formas (`SHAPES`) reutilizadas por un `ICON_MAP` que cubre las 103 claves `icon` de la data
+  (48 ítems + 8 contenedores + 4 mejoras + 8 automatizaciones + 12 nodos de prestigio + logros) más
+  claves genéricas de UI (`settings`, `money`, `keys`, `touch-app`, `tab-*`), con fallback `artifact`
+  para cualquier clave no mapeada (nunca una tarjeta sin ícono). `iconMarkup()` da el `<svg>` para
+  `innerHTML`; `getIconImage()` da la misma forma como `HTMLImageElement` (data URL) para poder
+  dibujarla dentro de un `<canvas>` (`DigCanvas` no puede usar `innerHTML`).
+- `apps/game/src/fx/audio.js`: WebAudio puro (osciladores + envolvente, sin archivos de audio que
+  licenciar). `playFindPop(rarityIndex)` (más brillante en rarezas altas), `playTrapThud()` (grave y
+  suave, nunca alarma — PLAN.md §5.2), `playCelebration()`. `setEnabled(state.soundOn)` se sincroniza
+  en cada `render()` de `UIManager`, así el toggle de Settings silencia todo de verdad.
+- `apps/game/src/fx/tween.js`: `tweenNumberText(el, toValue, formatFn)` interpola el número mostrado
+  en 300-500ms (easing cúbico) y además retriggerea la clase `is-rolling` (`@keyframes counter-roll`,
+  el efecto de "rodillo" del mockup `main_game`). Cablé el contador de dinero y llaves del Topbar acá
+  (antes hacían `textContent =` directo).
+- `apps/game/src/fx/particles.js`: `triggerRarityGlow` (franja de blur de color debajo de la tarjeta,
+  como pide el mockup `main_game` — no confeti), `spawnFindPop` (pop chico con partícula de color de
+  rareza) y `triggerTrapShake` (shake+flash rojo tenue, aplicado a `#app` completo porque PLAN.md
+  §5.2 dice "shake breve **de la pantalla**", no solo del canvas).
+- `apps/game/src/dig/DigCanvas.js`: agregué el estado "antes de tocar" (`.dig-idle-prompt`: ícono
+  `touch-app` + anillo pulsante `.dig-idle-ring` + "Arrastrá para escarbar"), que se oculta en el
+  primer gesto (`markTouched()`, enganchado en `onStart` de `digInput.js`) y se re-muestra en cada
+  `start()` nuevo. `drawBottomLayer` ahora dibuja el ícono real de cada ítem (`getIconImage`) sobre
+  un círculo del color de rareza (`resolveCssColor` lee la variable CSS `--r-*` real, no un hex fijo),
+  en vez de solo texto. Recibe `rarities` como tercer parámetro del constructor (antes solo tenía
+  `host`/`callbacks`).
+- `apps/game/src/ui/PrestigeView.js`: reescrita para árbol de nodos conectados. **DECISIÓN:**
+  `prestigeTree.json` no define dependencias reales (cualquier nodo se compra en cualquier orden si
+  hay Llaves), así que el "árbol" es una agrupación **visual** en 5 ramas temáticas desde una raíz
+  común (`capitalInicial`) — mapa estático `TREE_LAYOUT` en el archivo, puramente de presentación, no
+  toca la economía ni gatea compras. Grid con `--branch`/`--depth` (CSS vars) + conectores `::before`,
+  con fallback a lista simple en mobile (`< 700px`, ver AJUSTE de CSS abajo).
+- `apps/game/src/ui/OfflineModal.js`: modal no bloqueante con highlights. El engine no trackea qué
+  ítems específicos generó el offline (solo el monto agregado — ver handoff del Agente 2), así que
+  el highlight usa la función pública `bestAffordableUnlockedContainer` del engine (sin reimplementar
+  economía) para mostrar íconos de las categorías de las que "probablemente" vinieron los objetos,
+  con el monto total tweened.
+- `apps/game/src/ui/CategoryUnlockModal.js`: modal celebratorio corto (auto-cierra a los 3s o con
+  tap). El engine no emite un evento de "categoría desbloqueada"; se infiere de los logros
+  `categoryFoundAtLeast` (`a14`-`a19` en `achievements.json` — encontrar el primer objeto de una
+  categoría nueva es, en los hechos, desbloquearla). `UIManager` separa esos IDs del resto de logros
+  (que siguen yendo por `Toast`).
+- `apps/game/src/ui/UIManager.js`: cablea todo lo de arriba. `handleDigComplete()` lee
+  `store.getPendingDig()` **antes** de llamar `finishManualDig()` (que lo descarta) para poder
+  disparar sonido/partícula/glow con el resultado real (trampa vs. rareza más alta de los ítems).
+  Inyecta íconos en el tabbar una sola vez (`injectTabIcons`).
+- `Topbar.js`/`QuickUpgrades.js`/`ShopView.js`/`AutomationView.js`/`AchievementsView.js`: íconos
+  agregados (dinero/llaves/ajustes en el topbar, ícono por mejora rápida usando el campo `icon` que
+  ya traía `upgrades.json`, ícono por tarjeta de contenedor/automatización/logro).
+- `styles/tokens.css`: agregué los 8 tokens de rareza `--r-common`…`--r-future` (PLAN.md §2.5/§5.3)
+  que el Agente 1 dejó como `colorToken` en `items.json` pero nadie había definido en CSS todavía —
+  hacían falta para que el glow/color de ítems en canvas funcionen. Tono exacto es ajuste del Agente 4.
+- `styles/components.css`/`layout.css`: clases nuevas para todo lo de arriba (`.icon`, `.sr-only`,
+  `#dig-rarity-glow`+`.is-glowing`, `.find-pop`, `.dig-idle-prompt`+`.dig-idle-ring`,
+  `.is-rolling`/`@keyframes counter-roll`, `#app.is-shaking`+`@keyframes trap-shake/trap-flash`,
+  `.modal-overlay`/`.modal-card`, `.prestige-tree` grid+breakpoint). Es CSS **funcional**, no el
+  pulido final (bordes extruidos, gauges recesados, texturas, bloom) — eso es Fase 4.
+
+**Decisiones (`// DECISIÓN:` / `// AJUSTE:` en el código, resumidas acá):**
+```
+// DECISIÓN: los íconos son SVG inline generados por icons.js a partir de un vocabulario chico de
+// formas reutilizadas (no una ilustración bespoke por cada una de las 103 claves) — cubre el
+// requisito funcional de "cero emojis, cada clave con símbolo reconocible" en el tiempo de esta
+// fase; el afinado de trazo/proporción final es del Agente 4 (así lo dice el prompt del Agente 3,
+// tarea 10: "el pulido fino de forma/color... es del Agente 4").
+//
+// DECISIÓN: el árbol de prestigio es una agrupación visual en 5 ramas (TREE_LAYOUT en
+// PrestigeView.js), no dependencias reales del engine — prestigeTree.json no las tiene y no se
+// tocó el engine en esta fase (fuera de alcance del Agente 3).
+//
+// AJUSTE: encontré el mismo bug de especificidad `[hidden]` vs. clase con `display` que el Agente 2
+// ya había resuelto para `.dig-state` (ver su handoff) — mi `.dig-idle-prompt { display:flex }`
+// pisaba el `display:none` de `[hidden]` de la hoja de estilos del user-agent. Mismo arreglo:
+// agregar `.dig-idle-prompt[hidden] { display:none }` explícito. Lo until encontré con Playwright
+// (screenshot manual), no con el smoke test existente (no cubre ese estado) — quedó documentado en
+// el código para que no se repita en el próximo componente que use `hidden`.
+//
+// AJUSTE: `.prestige-tree` es una lista simple (flex column) por debajo de 700px y recién ahí pasa
+// a la grilla de 5 ramas con conectores — la grilla de escritorio pisaba el layout mobile-first en
+// una pantalla de 420px (probado con Playwright a 420×900). CLAUDE.md exige mobile-first sin
+// excepción, así que no podía dejar la grilla de 5 columnas fija.
+//
+// AJUSTE: el shake+flash de trampa se aplica a `#app` completo (toda la pantalla), no solo al área
+// de escarbado, porque PLAN.md §5.2 dice literalmente "vibración visual (shake) breve de la
+// pantalla" — no del canvas.
+```
+
+**Assets de sonido/íconos y licencia (para créditos de Steam):**
+- **Íconos:** 100% SVG inline generados por código en `icons/icons.js`, sin ninguna librería ni
+  fuente de íconos de terceros (no Material Symbols, no Font Awesome). Son originales de este repo:
+  **no requieren atribución ni licencia en los créditos de Steam.**
+- **Sonido:** 100% sintetizado con la Web Audio API (osciladores + envolventes), sin ningún archivo
+  de audio (`.mp3`/`.wav`/etc.) ni librería. **No requieren atribución ni licencia.**
+
+**Verificado:**
+- `npm test`: engine sigue en **48/48 verde** (no se tocó `packages/engine`).
+- `npm run test:e2e`: **2/2 verde** (cero errores de consola, los 3 anchos de referencia, y el
+  pointer drag real completa el escarbado y suma dinero — sigue pasando con todos los cambios de
+  íconos/fx encima).
+- `node --check` sobre los 14 archivos nuevos/tocados de `apps/game/src/**`: todos sin errores.
+- Verificación visual manual con Playwright (script descartable, no quedó en el repo): screenshots a
+  420×900 de las 5 pestañas + Ajustes + estado idle del canvas + escarbado en progreso, revisadas una
+  por una. Encontró y permitió arreglar el bug de `.dig-idle-prompt[hidden]` de arriba.
+- `grep` de emojis (rango Unicode `\x{1F300}-\x{1FAFF}` y `\x{2600}-\x{27BF}`) sobre todo
+  `apps/game/`: **0 resultados**. `grep` de `console.log` y `// TODO` sobre `apps/game/src`: **0
+  resultados**.
+
+**Qué necesita saber el Agente 4:**
+- Todo lo de esta fase es **funcional, no pulido**: los componentes están listos para recibir los
+  tokens/estilos de PLAN.md §5.3 sin volver a tocar JS, en general.
+- Clases ya preparadas y esperando el pulido visual (mencionadas en el prompt del Agente 3, tarea 10):
+  `.dig-idle-ring` (el anillo pulsante hoy es un círculo con borde simple + `@keyframes
+  idle-ring-pulse`; el mockup lo pide con blur/glow más marcado), `.is-rolling`/`counter-roll` (hoy
+  es un fade+translateY genérico, el mockup pide algo más marcado), `#dig-rarity-glow` (hoy es un
+  blur chico fijo, falta el "bloom" real de PLAN.md §5.3).
+- **Íconos:** si en Fase 4 se decide reemplazar el vocabulario geométrico de `icons/icons.js` por
+  ilustraciones más elaboradas (o por Material Symbols reales), el único archivo a tocar es
+  `icons/icons.js` (`SHAPES`/`ICON_MAP`) — ninguna vista importa formas SVG directo, todas pasan por
+  `iconMarkup()`/`getIconImage()`.
+- **Layout de escritorio con sidebar (DESARROLLO.md §6):** no lo toqué — sigue siendo tabbar inferior
+  en todos los anchos salvo el breakpoint puntual que agregué en `.prestige-tree` (700px, solo para
+  que la grilla de 5 ramas no rompiera en mobile). La reconstrucción real de `layout.css` con
+  sidebar(s) en `>= md` es 100% de la Fase 4, como ya aclaraba el handoff del Agente 2.
+- **Texturas/fondo/tarjetas extruidas** del catálogo de `main_game` (grilla industrial, textura
+  metálica, `scavenge-card` con sombra interior + etiqueta flotante, tabbar con pastilla hundida,
+  botones "extruidos" de mejoras rápidas): nada de esto se tocó, sigue 100% pendiente para Fase 4.
+- Los 8 tokens `--r-*` que agregué a `tokens.css` son colores provisorios (elegí una progresión
+  perceptualmente creciente común→futurista); el tono final/bloom es criterio del Agente 4.
+- No toqué `packages/engine` ni `apps/game/src/store.js`/`loop.js`/`main.js` — fuera de alcance de
+  esta fase.
+
+**Estado del DoD:**
+```
+[x] Suena el pop al hallar y el grave suave en trampa; el toggle de Settings silencia todo.
+[x] Partícula/glow por rareza en finishDig; el dinero (y las llaves) se animan con tween, nunca saltan.
+[x] Cero emojis como íconos en data ni en UI (grep verificado, 0 resultados).
+[x] Árbol de prestigio con nodos conectados (agrupación visual en 5 ramas) y preview de llaves.
+[x] Modal de offline con highlights (íconos de categoría + monto tweened), no bloqueante.
+[x] Estados vacío/error explícitos en las vistas (ya existían en su mayoría desde la Fase 2; no
+    encontré vistas con estados implícitos que necesitaran agregarse en esta pasada).
 ```

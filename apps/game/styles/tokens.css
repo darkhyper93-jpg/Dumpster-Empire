@@ -21,4 +21,17 @@
   --space-4: 24px;
 
   --touch-target: 44px;
+
+  /* Colores de rareza (PLAN.md §2.5/§5.3): progresión de opaco/común a vívido/futurista.
+     AJUSTE (Agente 3): faltaban en tokens.css (Agente 1 los definió solo como colorToken en
+     items.json); son necesarios para el glow de rareza y el color de ítems en DigCanvas. El
+     tono exacto es del Agente 4 (PLAN.md §5.3, "bloom en íconos de rareza alta"). */
+  --r-common: #9c9484;
+  --r-reusable: #8fae53;
+  --r-electronics: #4fb8d1;
+  --r-antiques: #c98a4b;
+  --r-historic: #b5763a;
+  --r-art: #c65fae;
+  --r-relics: #7d5fd9;
+  --r-future: #58e6c9;
 }
