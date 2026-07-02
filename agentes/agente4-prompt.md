@@ -9,6 +9,9 @@ rigor de componentes de los mockups Stitch. Trabajás sobre todo en CSS/tokens y
 2. `CLAUDE.md` — tokens centralizados, cero colores hardcodeados, mobile-first.
 3. `DESARROLLO.md` — **sección 6** (mapeo visual fusión), estructura de `apps/game/styles/`.
 4. `reference/ui/` — mockups Stitch y `DESIGN.md` (Industrial Scavenger, etc.) como referencia de componentes.
+   **Especialmente `dumpster_empire_main_game/code.html`**: el usuario pidió explícitamente conservar
+   toda esa estética (no solo el layout de columnas). `DESARROLLO.md` §6 tiene el catálogo elemento
+   por elemento; los que te tocan a vos están repetidos en la tarea 6 de abajo.
 5. `agentes/HANDOFF.md`.
 
 ## Precondiciones
@@ -29,10 +32,34 @@ Identidad visual coherente y pulida, **mobile-first / Steam Deck**, sin ningún 
    - Tarjetas con textura sutil de metal gastado (5–10% opacidad).
    - **Bloom** en íconos de rareza alta (doble sombra de color).
 3. **`styles/layout.css`**: grilla responsive **mobile-first**. Verificá 375px (móvil), 1280×800
-   (Steam Deck) y 1440px (desktop). Áreas de toque grandes; en desktop el layout se centra con ancho máximo.
+   (Steam Deck) y 1440px (desktop). Áreas de toque grandes.
+   - **Mobile (`< md`):** el tabbar inferior que dejó la Fase 2 ya cumple PLAN.md §5.1 — no hace
+     falta rehacerlo, solo aplicarle el estilo de botón extruido.
+   - **Desktop (`>= md`): NO es "el mismo layout centrado con ancho máximo".** Reconstruí la grilla
+     a las **tres columnas** que usa la mayoría de los mockups Stitch (`the_workbench`,
+     `refined_scavenge_station`, `tactile_clear`, `clean_scavenge_area`, `scritchy_shop`,
+     `container_shop`, `automation_gadgets`, `expanded_prestige_tree`, todos con `reference/ui/`):
+     un `<aside>` fijo a la izquierda con la navegación (Tienda/Automatización/Logros/Prestigio/
+     Ajustes) que **reemplaza** al tabbar inferior en ese breakpoint, el área de escarbado
+     centrada, y un panel de mejoras rápidas a un costado (`tactile_clear` lo pone a ambos lados).
+     Pedido explícito del usuario — ver `DESARROLLO.md` §6 ("Layout de escritorio con sidebar") y
+     §7 (Fase 4) para el detalle completo antes de tocar `layout.css`.
 4. Aplicá los estilos a cada vista (topbar, escarbado, mejoras rápidas, tienda, automatización, logros,
    prestigio, settings, modales, toasts) para que todo se vea del mismo sistema.
 5. Eliminá cualquier color/tipografía hardcodeado suelto: todo referencia a `tokens.css`.
+6. **Elementos puntuales del mockup `main_game` que te tocan a vos** (ver DESARROLLO.md §6 para el
+   detalle completo con clases/valores exactos del mockup):
+   - Fondo con grilla industrial sutil en toda la pantalla (líneas del color primario al 5%, celda
+     20×20px).
+   - Header: dinero/llaves como pastillas redondeadas con ícono + valor (no texto plano), botón de
+     ajustes circular.
+   - Tarjeta de escarbado con esquinas muy redondeadas, sombra interior + gradiente sutil, y una
+     etiqueta flotante tipo pestaña con el nombre del contenedor pegada al borde superior.
+   - Texturas superpuestas sobre la zona de escarbado: metal cepillado sutil (7% opacidad) y una
+     textura tipo fibra de carbono en la capa de suciedad, en vez de colores planos.
+   - Mejoras rápidas como botones extruidos con ícono en círculo de color arriba (no texto plano).
+   - Pestaña activa del tabbar con fondo de pastilla + sombra interior "hundida" (efecto presionado);
+     las inactivas atenuadas con hover.
 
 ## Lo que NO debés hacer
 - No cambiar lógica de juego ni engine.
@@ -45,6 +72,8 @@ Identidad visual coherente y pulida, **mobile-first / Steam Deck**, sin ningún 
 - [ ] Botones extruidos, gauges recesados y bloom de rareza aplicados según §5.3.
 - [ ] Tipografía Fredoka/Nunito(Hanken)/JetBrains Mono en su rol correcto.
 - [ ] Layout correcto en 375px, 1280×800 (Steam Deck) y 1440px, sin texto desbordado con números grandes.
+- [ ] Desktop (`>= md`) usa el layout de sidebar de tres columnas de los mockups Stitch, no el tabbar
+      móvil escalado a un ancho mayor.
 - [ ] Identidad coherente en todas las vistas.
 
 ## Handoff

@@ -271,17 +271,79 @@ Comparado con lo que exigen PLAN.md §5.2 y §5.4, esto es lo que el prototipo *
 - **Pulido visual fusión ámbar+Stitch: pendiente.** Botones táctiles "extruidos" (borde inferior
   2–4px), gauges recesados con relleno rayado, bloom en íconos de rareza alta, tipografía Rubik/
   Hanken/JetBrains Mono sobre la base cálida del prototipo.
+- **Layout de escritorio con sidebar: pendiente, no es solo estilo de componentes.** El Agente 2
+  (Fase 2) dejó a propósito un layout mobile-first con tabbar inferior en todos los anchos (el
+  mínimo funcional que pedía esa fase — ver `agentes/HANDOFF.md`, bloque Agente 2). Pero la mayoría
+  de los mockups Stitch (`the_workbench`, `refined_scavenge_station`, `tactile_clear`,
+  `clean_scavenge_area`, `scritchy_shop`, `container_shop`, `automation_gadgets`,
+  `expanded_prestige_tree`) usan en **desktop** un `<aside>` fijo a la izquierda de navegación/tienda
+  (`hidden md:flex`, ancho `w-64`) y `tactile_clear` además un panel fijo a la derecha (`w-80`) con
+  las mejoras — el layout de **tres columnas** (sidebar izquierda · escarbado centro · mejoras a los
+  costados) que el usuario pidió explícitamente mantener. El único mockup mobile puro es
+  `main_game`, que sí coincide con el tabbar inferior actual. **La Fase 4 tiene que reconstruir la
+  grilla de `apps/game/index.html`/`layout.css` con ese breakpoint** (mobile = tabbar inferior tal
+  como está hoy; `md:`/desktop = sidebar(s) fija(s) reemplazando el tabbar), no solo repintar los
+  componentes existentes con los tokens nuevos.
 - **Estados vacío/error explícitos** en cada vista (hoy algunos son implícitos).
 - **Capa Steam:** pantalla de créditos/atribución si se usan fuentes/íconos con licencia; manejo
   de "guardado en la nube en conflicto".
+- **Catálogo de estética de `dumpster_empire_main_game` (la pantalla principal que el usuario pidió
+  explícitamente conservar entera, no solo su grilla): cada elemento visual, con la fase que lo
+  implementa.** Sacado de `reference/ui/stitch_est_tica_de_vanguardia/dumpster_empire_main_game/code.html`
+  línea por línea para que no se pierda nada al pasar por varios agentes:
+  - **Fondo:** grilla industrial sutil (`industrial-grid`: dos `linear-gradient` cruzados color
+    primario al 5% de opacidad, celda 20×20px) cubriendo toda la pantalla. → **Fase 4** (token de
+    fondo en `layout.css`/`tokens.css`).
+  - **Header:** dinero y llaves como **pastillas redondeadas** (`bg-surface-container-highest`,
+    borde, `rounded-lg`) con ícono Material Symbols *filled* + valor en Fredoka bold — no texto
+    plano como hoy. Botón de ajustes circular (`rounded-full`) con ícono, no un botón rectangular
+    de texto. → **Fase 3** (íconos) para el glifo, **Fase 4** para la pastilla/botón circular.
+  - **Tarjeta de escarbado (`scavenge-card`):** esquinas muy redondeadas (`rounded-3xl`), sombra
+    interior fuerte + gradiente sutil (`inset 0 4px 12px` + `linear-gradient(145deg, ...)`), borde
+    de 2px. Encima, una **etiqueta flotante tipo pestaña** con el nombre del contenedor actual,
+    pegada al borde superior de la tarjeta. → **Fase 4**.
+  - **Texturas de la zona de escarbado:** textura metálica sutil superpuesta a todo (`metal-texture`,
+    7% opacidad, patrón de aluminio cepillado) y textura tipo "fibra de carbono" en la capa de
+    suciedad (`scratch-surface`) en vez de un color plano. → **Fase 4** (se aplican como capas CSS
+    sobre el `<canvas>` de `DigCanvas.js`, no dentro del propio canvas).
+  - **Prompt de "arrastrá para escarbar":** antes de que el jugador toque el contenedor, se ve un
+    ícono `touch_app` + un anillo pulsante (`animate-ping`) + el texto "DRAG TO SCAVENGE" centrado
+    sobre la zona de revelado. **Hoy `DigCanvas.js` no tiene este estado inicial** — arranca
+    directo mostrando el contenido dibujado bajo la capa de suciedad. Esto es a la vez un hueco
+    funcional (falta un estado antes del primer gesto) y estético. → **Fase 3** (agregar el estado/
+    el ícono) con el pulido final en **Fase 4**.
+  - **Glow de rareza ("Rarity Pulse"):** una franja de blur de color debajo de la tarjeta
+    (`blur-md`, color primario al 20%) que se intensifica al revelar un objeto de rareza alta.
+    → **Fase 3** (`fx/particles.js`, ya está en el alcance de "partícula/destello por rareza en
+    `finishDig`" del prompt del Agente 3, solo que ahora queda claro que el mockup lo resuelve como
+    un glow debajo de la tarjeta, no como confeti).
+  - **Mejoras rápidas (Suerte/Fuerza/Área):** **no son botones de texto plano** como en la versión
+    actual — son botones "extruidos" (`tactile-btn`: sombra inferior sólida de color, se hunde al
+    presionar) con un **ícono en círculo de color** arriba (grifo/brazo mecánico/radar), label en
+    mayúsculas chico, y el costo de la próxima compra en Fredoka bold debajo. → **Fase 3** (íconos)
+    + **Fase 4** (forma circular + extrusión del botón).
+  - **Barra inferior (tabbar móvil):** la pestaña activa tiene fondo de pastilla de color +
+    sombra interior "hundida" (`shadow-[inset_0_2px_4px_...]`) simulando estar presionada; las
+    inactivas van atenuadas (`opacity-70`) y se iluminan en hover. Hoy la pestaña activa solo
+    cambia de color de texto. → **Fase 4**.
+  - **Contador de dinero:** el mockup define una animación de "rodillo" (`@keyframes counter-roll`,
+    traslada el texto -10% en Y) para cuando sube el número, más específica que un tween genérico
+    de conteo. → **Fase 3** (`fx/tween.js`), decisión de diseño: usar este efecto de rodillo en vez
+    de (o además de) un conteo numérico incremental.
 
 ### Mapeo visual (fusión ámbar + Stitch)
 - **Base (del prototipo):** `--amber #ffb627`, `--olive #86a14a`, fondos `--bg-0..3` cálidos,
   fuentes Fredoka/Nunito → se conservan como identidad de marca.
 - **De Stitch se adopta:** rigor tipográfico (Rubik para números grandes, Hanken para cuerpo,
   JetBrains Mono para readouts técnicos), botones extruidos, gauges recesados con rayado hazard,
-  bloom de rareza, colores de rareza ya presentes en `:root` del prototipo (`--r-common`…`--r-future`).
-- Todo esto vive en `styles/tokens.css` y `styles/components.css`. Cero valores sueltos.
+  bloom de rareza, colores de rareza ya presentes en `:root` del prototipo (`--r-common`…`--r-future`),
+  **y la estructura de layout de escritorio de tres columnas** (sidebar izquierda de navegación/
+  tienda + área de escarbado centrada + panel de mejoras a los costados) — ver el detalle de qué
+  mockup usa qué grilla en la sección "Falta" de arriba. En mobile (`< md`) esas columnas colapsan
+  al tabbar inferior + panel deslizable que ya define PLAN.md §5.1; esto es responsive, no dos
+  layouts separados.
+- Todo esto vive en `styles/tokens.css`, `styles/layout.css` (la grilla/breakpoints) y
+  `styles/components.css`. Cero valores sueltos.
 
 ---
 
@@ -320,7 +382,16 @@ de la anterior. Las fases 1–3 son secuenciales; dentro de la 4 se puede parale
 **Fase 4 — Pulido visual fusión ámbar + Stitch**
 - `tokens.css` + `components.css`: botones extruidos, gauges recesados, bloom de rareza,
   tipografía Rubik/Hanken/JetBrains sobre base cálida. Aplicar a cada vista. Paralelizable por vista.
-- Salida: identidad visual coherente, mobile-first, sin colores hardcodeados.
+- **`layout.css` (no solo componentes): reconstruir la grilla de escritorio con sidebar(s), no
+  repintar el tabbar móvil escalado.** Mobile (`< md`) sigue con el tabbar inferior que dejó la
+  Fase 2 (ya cumple PLAN.md §5.1). Desktop (`>= md`) pasa a las tres columnas de los mockups Stitch:
+  sidebar fija a la izquierda con Tienda/Automatización/Logros/Prestigio/Ajustes (reemplaza el
+  tabbar, no convive con él), área de escarbado centrada, y un panel de mejoras rápidas a un costado
+  (ver `dumpster_empire_tactile_clear/code.html` para el caso con panel a ambos lados). Ver el
+  detalle de qué mockup usa qué grilla en la sección 6 de arriba ("Layout de escritorio con
+  sidebar"). Decisión explícita del usuario (no asumir "mobile-first" como "un solo layout escalado").
+- Salida: identidad visual coherente, mobile-first en angosto y sidebar de tres columnas en
+  desktop/Steam Deck horizontal, sin colores hardcodeados.
 
 **Fase 5 — Pase de balance**
 - Jugar mentalmente/scriptear la curva contra los hitos de PLAN.md §3 y ajustar **constantes de

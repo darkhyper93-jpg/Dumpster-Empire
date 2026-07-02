@@ -12,6 +12,10 @@ offline con highlights.
 3. `DESARROLLO.md` — **sección 6** (inventario de UI: qué falta exactamente), **sección 4** (`src/fx/`, `src/icons/`).
 4. `agentes/HANDOFF.md` — puntos de enganche que dejó el Agente 2.
 5. `reference/ui/` — los mockups Stitch (`expanded_prestige_tree`, íconos Material Symbols) como referencia visual.
+6. **`reference/ui/stitch_est_tica_de_vanguardia/dumpster_empire_main_game/code.html`** — el usuario
+   pidió explícitamente conservar toda esta estética, no solo el layout. `DESARROLLO.md` §6 tiene el
+   catálogo completo elemento por elemento con qué fase implementa cada uno; los que te tocan a vos
+   están repetidos en la tarea 10 de abajo.
 
 ## Precondiciones
 El Agente 2 dejó el juego jugable con vistas funcionales mínimas y puntos de enganche marcados.
@@ -36,6 +40,20 @@ Cumplir **completo** PLAN.md §5.2 y §5.4. El juego debe *sentirse* bien, no so
 7. **Modal celebratorio** al desbloquear categoría (auto-cierra en 3s o con tap).
 8. **Shake + flash rojo tenue** de pantalla al caer en trampa.
 9. Asegurá **estados vacío/error explícitos** en toda vista que aún los tenga implícitos.
+10. **Elementos puntuales del mockup `main_game` que te tocan a vos** (ver DESARROLLO.md §6 para el
+    detalle completo; el pulido fino de forma/color de cada uno es del Agente 4, pero la lógica/
+    estado nuevo que necesitan es tuya):
+    - **Estado "antes de tocar" del canvas de escarbado:** hoy `DigCanvas.js` arranca mostrando
+      directo el contenido bajo la suciedad. El mockup muestra un ícono + anillo pulsante + texto
+      "arrastrá para escarbar" ANTES del primer gesto. Agregá ese estado inicial (podés usar un
+      ícono de tu registro nuevo de `icons/icons.js` + una clase CSS de pulso que le entregás
+      preparada al Agente 4 para el pulido final).
+    - **Glow de rareza:** el mockup lo resuelve como un resplandor de color debajo de la tarjeta de
+      escarbado al revelar un objeto raro (no confeti/partículas voladoras) — implementalo así en
+      `fx/particles.js` si no tenés una razón mejor para desviarte.
+    - **Contador de dinero tipo "rodillo":** el mockup anima el número con una traslación vertical
+      (`@keyframes counter-roll`) en vez de (o además de) un conteo incremental clásico. Usalo como
+      base para `fx/tween.js`.
 
 ## Lo que NO debés hacer
 - No sumar librerías de terceros pesadas (audio/partículas/tween son funciones propias cortas).
