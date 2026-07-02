@@ -41,9 +41,8 @@ export const QuickUpgrades = {
       const missing = canAfford ? '' : `Te faltan ${formatMoney(cost - state.money)}`;
       return (
         `<button type="button" class="quick-upgrade-btn" data-upgrade="${upgrade.id}" ${canAfford ? '' : 'disabled'} title="${missing}">` +
-        `<span class="quick-upgrade-icon">${iconMarkup(upgrade.icon, { size: 22 })}</span>` +
-        `<span class="quick-upgrade-label">${upgrade.label}</span>` +
-        `<span class="quick-upgrade-level">(${level})</span>` +
+        `<span class="quick-upgrade-icon-circle">${iconMarkup(upgrade.icon, { size: 22 })}</span>` +
+        `<span class="quick-upgrade-label">${upgrade.label} · LV. ${level}</span>` +
         `<span class="quick-upgrade-cost">${formatMoney(cost)}</span>` +
         `</button>`
       );

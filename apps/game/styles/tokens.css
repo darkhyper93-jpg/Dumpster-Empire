@@ -1,37 +1,70 @@
-/* Tokens: paleta fusión ámbar + Stitch, tipografía, radios, sombras. Agente 4 lo completa (PLAN.md §5.3). */
-/* AJUSTE (Agente 2): set mínimo de tokens (paleta base de PLAN.md §5.3) para no hardcodear
-   colores en la UI funcional de Fase 2. El Agente 4 los reemplaza/expande con el pulido Stitch. */
+/* Tokens: paleta fusión ámbar + Stitch, tipografía, radios, sombras (PLAN.md §5.3). */
+/* AJUSTE (Agente 4): expande el set mínimo del Agente 2/3 con el pulido Stitch completo:
+   variantes de superficie (bg-0..3 + surface-highest para pastillas/tarjetas), sombras de
+   extrusión/recesado, rayado hazard y glow de bloom por rareza. Todo en base 4px. */
 :root {
+  /* --- Paleta base (prototipo, se conserva como identidad de marca) --- */
   --amber: #ffb627;
+  --amber-dark: #cf8f12;
   --olive: #86a14a;
   --bg-0: #121110;
   --bg-1: #1c1a15;
   --bg-2: #26221a;
   --bg-3: #322c20;
+  --bg-surface-highest: #3d3625;
   --fg-0: #f4ede1;
   --fg-1: #cfc6b4;
+  --fg-2: #9c9484;
   --danger: #c0392b;
+  --outline: #4a4128;
 
+  /* --- Tipografía (DESARROLLO.md §6): Fredoka para números/titulares, Nunito para cuerpo,
+     JetBrains Mono para readouts técnicos/labels en mayúsculas. Cargadas en index.html. --- */
+  --font-display: 'Fredoka', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* --- Radios y espaciado, base 4px --- */
   --radius-sm: 6px;
   --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
 
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 16px;
   --space-4: 24px;
+  --space-5: 32px;
 
   --touch-target: 44px;
+  --container-max: 1440px;
 
-  /* Colores de rareza (PLAN.md §2.5/§5.3): progresión de opaco/común a vívido/futurista.
-     AJUSTE (Agente 3): faltaban en tokens.css (Agente 1 los definió solo como colorToken en
-     items.json); son necesarios para el glow de rareza y el color de ítems en DigCanvas. El
-     tono exacto es del Agente 4 (PLAN.md §5.3, "bloom en íconos de rareza alta"). */
+  /* --- Sombras Stitch: botón extruido, gauge recesado, tarjeta con relieve --- */
+  --shadow-extrude: 0 4px 0 var(--amber-dark);
+  --shadow-extrude-pressed: 0 1px 0 var(--amber-dark);
+  --shadow-recessed: inset 0 2px 4px rgba(0, 0, 0, 0.55);
+  --shadow-card: inset 0 4px 12px rgba(0, 0, 0, 0.8), 0 1px 1px rgba(255, 255, 255, 0.05);
+  --shadow-pressed-pill: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+
+  --hazard-stripe: #ffd600;
+
+  /* Colores de rareza (PLAN.md §2.5/§5.3): progresión de opaco/común a vívido/futurista,
+     cada uno con su color de "bloom" (glow) a intensidad creciente. */
   --r-common: #9c9484;
+  --r-common-glow: rgba(156, 148, 132, 0.35);
   --r-reusable: #8fae53;
+  --r-reusable-glow: rgba(143, 174, 83, 0.4);
   --r-electronics: #4fb8d1;
+  --r-electronics-glow: rgba(79, 184, 209, 0.45);
   --r-antiques: #c98a4b;
+  --r-antiques-glow: rgba(201, 138, 75, 0.45);
   --r-historic: #b5763a;
+  --r-historic-glow: rgba(181, 118, 58, 0.5);
   --r-art: #c65fae;
+  --r-art-glow: rgba(198, 95, 174, 0.55);
   --r-relics: #7d5fd9;
+  --r-relics-glow: rgba(125, 95, 217, 0.6);
   --r-future: #58e6c9;
+  --r-future-glow: rgba(88, 230, 201, 0.7);
 }

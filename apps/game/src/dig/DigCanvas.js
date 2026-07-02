@@ -173,6 +173,30 @@ export class DigCanvas {
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.fillStyle = '#4a4128';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.fillStyle = ctx.createPattern(this.getDirtTexture(), 'repeat');
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  }
+
+  /**
+   * Textura tipo fibra de carbono para la capa de suciedad (DESARROLLO.md §6), en vez de un
+   * color plano. Se pinta dentro del propio canvas (no como capa CSS aparte) para que el
+   * `destination-out` del escarbado la borre junto con el resto de la capa.
+   * @returns {HTMLCanvasElement}
+   */
+  getDirtTexture() {
+    if (DigCanvas._dirtTexture) return DigCanvas._dirtTexture;
+    const tile = document.createElement('canvas');
+    tile.width = 16;
+    tile.height = 16;
+    const tctx = tile.getContext('2d');
+    tctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+    tctx.fillRect(0, 0, 8, 8);
+    tctx.fillRect(8, 8, 8, 8);
+    tctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    tctx.fillRect(8, 0, 8, 8);
+    tctx.fillRect(0, 8, 8, 8);
+    DigCanvas._dirtTexture = tile;
+    return tile;
   }
 
   /**
@@ -185,6 +209,13 @@ export class DigCanvas {
     const radius = BASE_ERASE_RADIUS * this.areaMult;
     const ctx = this.ctxTop;
     ctx.globalCompositeOperation = 'destination-out';
+    // AJUSTE (Agente 4): `destination-out` quita alpha del destino proporcional al alpha de lo
+    // que se dibuja encima. `drawTopLayer` deja el `fillStyle` en el patrón de textura (que tiene
+    // zonas con alpha bajo, 0.05-0.18) para el dibujo visual de la suciedad; si `erase()` reusara
+    // ese mismo `fillStyle` solo borraría una fracción de cada píxel en vez de revelarlo del todo
+    // (encontrado con el smoke e2e: el progreso nunca superaba unos pocos puntos porcentuales).
+    // El área borrada necesita alpha 1 sin importar el color.
+    ctx.fillStyle = '#000';
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
     ctx.fill();

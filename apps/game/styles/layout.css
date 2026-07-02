@@ -1,6 +1,8 @@
-/* Grilla responsive mobile-first / Steam Deck / desktop. Agente 2/4 lo completan (PLAN.md §5.1). */
-/* AJUSTE (Agente 2): estructura funcional mínima mobile-first. Sin extrusiones/bloom/gauges
-   recesados todavía (eso es Fase 4, Agente 4) — foco en que el loop completo sea usable. */
+/* Grilla responsive mobile-first / Steam Deck / desktop (PLAN.md §5.1, DESARROLLO.md §6). */
+/* AJUSTE (Agente 4): mobile (< 1024px) conserva el tabbar inferior del Agente 2 tal cual pide
+   el prompt de esta fase. Desktop (>= 1024px) reconstruye `.game-shell` como grilla de tres
+   columnas (nav fija · escarbado centrado · mejoras rápidas) en vez de escalar el mismo layout
+   móvil a un ancho mayor — pedido explícito del usuario, ver DESARROLLO.md §6/§7 Fase 4. */
 
 *,
 *::before,
@@ -14,7 +16,15 @@ body {
   height: 100%;
   background: var(--bg-0);
   color: var(--fg-0);
-  font-family: system-ui, sans-serif;
+  font-family: var(--font-body);
+}
+
+/* Fondo con grilla industrial sutil en toda la pantalla (mockup main_game). */
+body {
+  background-image:
+    linear-gradient(rgba(255, 182, 39, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 182, 39, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 #app {
@@ -29,6 +39,7 @@ body {
   display: none;
   padding: var(--space-4);
   text-align: center;
+  font-family: var(--font-display);
 }
 
 #app[data-state='loading'] #boot-status,
@@ -55,6 +66,23 @@ body {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: var(--bg-1);
+  border-bottom: 2px solid var(--outline);
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--amber);
+  letter-spacing: -0.02em;
+  display: none;
+}
+
+.topbar-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  margin-right: var(--space-2);
 }
 
 #dig-area {
@@ -70,10 +98,17 @@ body {
   position: relative;
 }
 
+.scavenge-card {
+  position: relative;
+}
+
 #dig-canvas-host {
   position: relative;
   width: 100%;
   aspect-ratio: 600 / 330;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  touch-action: none;
 }
 
 .dig-canvas-layer {
@@ -81,6 +116,7 @@ body {
   inset: 0;
   width: 100%;
   height: 100%;
+  touch-action: none;
 }
 
 #quick-upgrades {
@@ -93,31 +129,48 @@ body {
 #tabbar {
   display: flex;
   overflow-x: auto;
-  border-top: 1px solid var(--bg-3);
+  border-top: 2px solid var(--outline);
+  background: var(--bg-1);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
+  padding: var(--space-1);
+  gap: var(--space-1);
 }
 
 #tabbar button {
   flex: 1;
-  border-radius: 0;
-  background: var(--bg-1);
-  color: var(--fg-0);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--fg-1);
+  box-shadow: none;
+  opacity: 0.7;
   /* AJUSTE: los <button> traen `white-space: nowrap` por defecto del navegador, lo que recortaba
      "Automatización" a "Automatiza" en 375px (detectado con el screenshot del smoke e2e). */
   white-space: normal;
   font-size: 0.85rem;
   line-height: 1.2;
-}
-
-#tabbar button.is-active {
-  background: var(--bg-3);
-  color: var(--amber);
-}
-
-#tabbar button {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+#tabbar button:hover:not(.is-active) {
+  opacity: 1;
+  color: var(--amber);
+}
+
+#tabbar button:active:not(:disabled) {
+  transform: none;
+}
+
+/* Pestaña activa: pastilla de color + sombra interior "hundida" (mockup main_game). */
+#tabbar button.is-active {
+  background: var(--amber);
+  color: var(--bg-0);
+  opacity: 1;
+  box-shadow: var(--shadow-pressed-pill);
 }
 
 #app {
@@ -181,15 +234,108 @@ body {
   left: 50%;
   transform: translateX(-50%);
   background: var(--bg-2);
+  border: 1px solid var(--outline);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   z-index: 20;
   width: min(90vw, 420px);
   text-align: center;
+  /* AJUSTE (Agente 4): al sacarle su alto de bloque al <h2> del título del contenedor (ahora es
+     una etiqueta flotante absoluta, `.scavenge-card-label`), el canvas de escarbado sube y queda
+     debajo de este overlay. Sin `pointer-events:none` acá, el tooltip tapaba el gesto de arrastre
+     del smoke e2e (encontrado con `npm run test:e2e`). Solo su contenido interactivo recupera
+     pointer-events. */
+  pointer-events: none;
 }
 
+#tutorial-overlay button {
+  pointer-events: auto;
+}
+
+/* --- Steam Deck (1280x800) / tablets: sigue siendo el layout móvil, solo con más aire --- */
 @media (min-width: 768px) {
   #app {
     max-width: 960px;
+  }
+}
+
+/* --- Desktop (>= 1024px): grilla de tres columnas de los mockups Stitch, no el tabbar móvil
+   escalado. El `<aside>` de navegación reemplaza al tabbar inferior; las mejoras rápidas pasan
+   a un panel fijo al costado (DESARROLLO.md §6, "Layout de escritorio con sidebar"). --- */
+@media (min-width: 1024px) {
+  #app {
+    max-width: var(--container-max, 1440px);
+  }
+
+  .brand {
+    display: block;
+  }
+
+  .game-shell {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr) 300px;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'topbar topbar topbar'
+      'nav dig quick'
+      'nav tabcontent quick';
+    gap: var(--space-3);
+    padding: var(--space-3);
+    align-items: start;
+  }
+
+  #topbar {
+    grid-area: topbar;
+    border-radius: var(--radius-lg);
+    border-bottom: none;
+  }
+
+  #dig-area {
+    grid-area: dig;
+    padding: 0;
+  }
+
+  #tab-content {
+    grid-area: tabcontent;
+    background: var(--bg-1);
+    border: 1px solid var(--outline);
+    border-radius: var(--radius-lg);
+  }
+
+  /* El <nav> de tabs pasa a ser el sidebar izquierdo fijo, vertical. */
+  #tabbar {
+    grid-area: nav;
+    flex-direction: column;
+    overflow-x: visible;
+    align-self: start;
+    position: sticky;
+    top: var(--space-3);
+    border-radius: var(--radius-lg);
+    border-top: none;
+    box-shadow: none;
+    padding: var(--space-2);
+  }
+
+  #tabbar button {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.9rem;
+  }
+
+  /* El panel de mejoras rápidas pasa a columna fija a la derecha del área de escarbado. */
+  #quick-upgrades {
+    grid-area: quick;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    padding: 0;
+    align-self: start;
+    position: sticky;
+    top: var(--space-3);
+  }
+
+  .quick-upgrade-btn {
+    width: 100%;
   }
 }

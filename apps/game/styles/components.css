@@ -1,5 +1,26 @@
-/* Botones táctiles extruidos, gauges recesados, bloom de rareza. Agente 4 lo completa (PLAN.md §5.3). */
-/* AJUSTE (Agente 2): componentes funcionales mínimos, sin el pulido visual de Fase 4. */
+/* Botones táctiles extruidos, gauges recesados, bloom de rareza (PLAN.md §5.3). */
+/* AJUSTE (Agente 4): pulido visual completo sobre la base funcional del Agente 2/3. Todo
+   valor sale de tokens.css — cero hex/px sueltos fuera de acá. */
+
+body {
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  margin: 0;
+}
+
+.label-caps {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-1);
+}
+
+/* --- Botones extruidos (mejoras rápidas, acciones primarias) --- */
 
 button {
   min-height: var(--touch-target);
@@ -9,8 +30,17 @@ button {
   border-radius: var(--radius-sm);
   background: var(--amber);
   color: var(--bg-0);
+  font-family: var(--font-display);
+  font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
+  box-shadow: var(--shadow-extrude);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: var(--shadow-extrude-pressed);
 }
 
 button:disabled {
@@ -18,14 +48,57 @@ button:disabled {
   color: var(--fg-1);
   opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 button:hover:not(:disabled) {
   filter: brightness(1.08);
 }
 
-#settings-btn {
+#settings-btn,
+.icon-btn-circle {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: var(--radius-full);
   background: var(--bg-3);
+  color: var(--fg-0);
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#settings-btn:hover:not(:disabled),
+.icon-btn-circle:hover:not(:disabled) {
+  background: var(--bg-surface-highest);
+  filter: none;
+}
+
+/* --- Pastillas de stats (dinero / llaves) del topbar --- */
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--bg-surface-highest);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-1) var(--space-3);
+  color: var(--amber);
+}
+
+.stat-pill .icon {
+  color: var(--amber);
+}
+
+#money-value,
+#keys-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
   color: var(--fg-0);
 }
 
@@ -45,12 +118,16 @@ button:hover:not(:disabled) {
 .automation-status,
 .prestige-summary,
 .settings-block {
-  background: var(--bg-2);
+  background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
+  border: 1px solid var(--outline);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  /* Textura sutil de metal gastado (PLAN.md §5.3), superpuesta sin tapar el contenido. */
+  background-image: linear-gradient(145deg, var(--bg-2), var(--bg-1)),
+    repeating-linear-gradient(100deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 3px);
 }
 
 .settings-block {
@@ -77,22 +154,28 @@ button:hover:not(:disabled) {
   padding: var(--space-4);
 }
 
+/* --- Gauge recesado con relleno de rayas hazard (barra de progreso de escarbado) --- */
+
 #dig-progress {
-  height: 12px;
+  height: 14px;
   background: var(--bg-2);
   border-radius: var(--radius-sm);
   overflow: hidden;
   margin-top: var(--space-2);
+  box-shadow: var(--shadow-recessed);
 }
 
 #dig-progress-fill {
   height: 100%;
   width: 0%;
-  background: var(--amber);
+  background: repeating-linear-gradient(45deg, var(--amber), var(--amber) 10px, var(--amber-dark) 10px, var(--amber-dark) 20px);
+  box-shadow: 0 0 8px 1px rgba(255, 182, 39, 0.6);
+  transition: width 0.1s linear;
 }
 
 .toast {
   background: var(--bg-2);
+  border: 1px solid var(--outline);
   color: var(--fg-0);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
@@ -112,7 +195,7 @@ textarea {
   color: var(--fg-0);
   border: 1px solid var(--bg-3);
   border-radius: var(--radius-sm);
-  font-family: inherit;
+  font-family: var(--font-mono);
   padding: var(--space-2);
 }
 
@@ -146,7 +229,7 @@ textarea {
   gap: var(--space-1);
 }
 
-/* --- Contador de dinero: tween + "rodillo" (PLAN.md §5.2, mockup main_game §DESARROLLO.md §6) --- */
+/* --- Contador de dinero: tween + "rodillo" (PLAN.md §5.2, mockup main_game) --- */
 
 #money-value.is-rolling,
 #keys-value.is-rolling {
@@ -168,9 +251,18 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  color: var(--fg-0);
+  color: var(--amber);
   pointer-events: none;
   text-align: center;
+  z-index: 2;
+}
+
+.dig-idle-prompt p {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0;
 }
 
 /* AJUSTE: mismo bug que `.dig-state[hidden]` (ver layout.css, hallado por Agente 2 con el
@@ -185,7 +277,7 @@ textarea {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  border: 2px solid var(--amber);
+  border: 4px solid rgba(255, 182, 39, 0.4);
   animation: idle-ring-pulse 1.6s ease-out infinite;
 }
 
@@ -239,14 +331,55 @@ textarea {
   100% { transform: scale(calc(var(--pop-scale, 1) * 2.4)); opacity: 0; }
 }
 
-/* --- Mejoras rápidas con ícono (QuickUpgrades.js) --- */
+/* --- Mejoras rápidas: botones extruidos con ícono en círculo (mockup main_game) --- */
 
 .quick-upgrade-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-1);
   flex: 1;
+  background: var(--bg-2);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-2);
+  box-shadow: none;
+}
+
+.quick-upgrade-btn:active:not(:disabled) {
+  transform: translateY(2px);
+}
+
+.quick-upgrade-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-highest);
+  color: var(--amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-1);
+}
+
+.quick-upgrade-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-1);
+}
+
+.quick-upgrade-level {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--fg-2);
+}
+
+.quick-upgrade-cost {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--amber);
 }
 
 /* --- Íconos en tarjetas (Shop/Automation/Achievements/Prestige) --- */
@@ -281,8 +414,9 @@ textarea {
 }
 
 .modal-card {
-  background: var(--bg-2);
-  border-radius: var(--radius-md);
+  background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-lg);
   padding: var(--space-4);
   max-width: 360px;
   width: 100%;
@@ -290,9 +424,11 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  box-shadow: var(--shadow-card);
 }
 
 .offline-money {
+  font-family: var(--font-display);
   font-size: 1.5rem;
   color: var(--amber);
   margin: 0;
@@ -311,8 +447,7 @@ textarea {
 }
 
 /* Mobile-first (CLAUDE.md): la grilla de 5 ramas solo tiene sentido con ancho de sobra.
-   Debajo de ese punto, los nodos caen a lista simple (sin conectores) para no desbordar
-   la pantalla — el layout de escritorio con sidebar es del Agente 4 (DESARROLLO.md §6). */
+   Debajo de ese punto, los nodos caen a lista simple (sin conectores). */
 .prestige-tree {
   display: flex;
   flex-direction: column;
@@ -347,10 +482,56 @@ textarea {
     left: 50%;
     width: 2px;
     height: var(--space-3);
-    background: var(--bg-3);
+    background: var(--outline);
   }
 }
 
 .prestige-node--active {
-  border: 1px solid var(--amber);
+  border-color: var(--amber);
+  box-shadow: 0 0 0 1px var(--amber);
 }
+
+/* --- Tarjeta de escarbado (`scavenge-card`, mockup main_game) --- */
+
+.scavenge-card {
+  position: relative;
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--outline);
+  background: linear-gradient(145deg, var(--bg-2), var(--bg-0));
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3);
+  /* AJUSTE: sin `overflow:hidden` acá — la etiqueta flotante (`.scavenge-card-label`) pincha
+     a propósito por encima del borde superior de la tarjeta (mockup main_game); recortarla
+     con overflow hidden en la tarjeta la cortaba a la mitad. La textura de metal ya usa
+     `inset:0` dentro del padding, así que no necesita el recorte del contenedor padre. */
+}
+
+.scavenge-card-metal-texture {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  opacity: 0.07;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(115deg, var(--fg-0) 0 1px, transparent 1px 4px);
+  mix-blend-mode: overlay;
+}
+
+.scavenge-card-label {
+  position: absolute;
+  top: calc(-1 * var(--space-3));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-2);
+  border: 2px solid var(--outline);
+  border-bottom: none;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  z-index: 3;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--fg-1);
+}
+

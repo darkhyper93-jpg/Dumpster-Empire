@@ -4,6 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Dumpster Empire</title>
+  <!-- DECISIÓN (Agente 4): fuentes vía Google Fonts (Fredoka/Nunito/JetBrains Mono, todas OFL,
+       sin atribución obligatoria en créditos de Steam) en vez de auto-hospedarlas, para no meter
+       un paso de build en apps/game (CLAUDE.md prohíbe bundler). Riesgo: el build de Electron
+       (Fase 6, Agente 6) corre offline en Steam Deck/desktop, así que hay que descargar los
+       archivos .woff2 reales a apps/game/assets/fonts/ y reemplazar este <link> por @font-face
+       local antes de empaquetar — queda anotado en HANDOFF.md para el Agente 6. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="styles/tokens.css" />
   <link rel="stylesheet" href="styles/layout.css" />
   <link rel="stylesheet" href="styles/components.css" />
@@ -21,9 +33,12 @@
 
     <div class="game-shell">
       <header id="topbar">
-        <span id="money">Dinero: $0</span>
-        <span id="keys">Llaves: 0</span>
-        <button id="settings-btn" type="button">Ajustes</button>
+        <span class="brand">DUMPSTER EMPIRE</span>
+        <div class="topbar-stats">
+          <span id="money" class="stat-pill">Dinero: $0</span>
+          <span id="keys" class="stat-pill">Llaves: 0</span>
+        </div>
+        <button id="settings-btn" class="icon-btn-circle" type="button">Ajustes</button>
       </header>
 
       <main id="dig-area">
@@ -32,9 +47,12 @@
           <button type="button" data-start-dig="tachoVereda">Escarbar el Tacho de Vereda (gratis)</button>
         </div>
         <div id="dig-active" class="dig-state" hidden>
-          <h2 id="dig-container-title"></h2>
-          <div id="dig-rarity-glow"></div>
-          <div id="dig-canvas-host"></div>
+          <div class="scavenge-card">
+            <span id="dig-container-title" class="scavenge-card-label"></span>
+            <div class="scavenge-card-metal-texture"></div>
+            <div id="dig-rarity-glow"></div>
+            <div id="dig-canvas-host"></div>
+          </div>
           <div id="dig-progress"><div id="dig-progress-fill"></div></div>
           <p id="dig-trap-hint"></p>
           <button type="button" id="dig-abandon-btn" hidden>Abandonar</button>

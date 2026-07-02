@@ -14,7 +14,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | 1 Engine + tests | 1 | ✅ hecho |
 | 2 Juego jugable | 2 | ✅ hecho |
 | 3 Huecos de UI | 3 | ✅ hecho |
-| 4 Pulido visual | 4 | ⬜ pendiente |
+| 4 Pulido visual | 4 | ✅ hecho |
 | 5 Balance | 5 | ⬜ pendiente |
 | 6 Steam | 6 | ⬜ pendiente |
 | 7 Auditoría | 7 | ⬜ pendiente |
@@ -573,4 +573,116 @@ las 6 fórmulas de §4 literales y testeadas, data completa sin placeholders ni 
 [x] Modal de offline con highlights (íconos de categoría + monto tweened), no bloqueante.
 [x] Estados vacío/error explícitos en las vistas (ya existían en su mayoría desde la Fase 2; no
     encontré vistas con estados implícitos que necesitaran agregarse en esta pasada).
+```
+
+---
+
+## Agente 4 (Pulido visual — fusión ámbar + Stitch)
+
+**Qué hice:**
+- `styles/tokens.css`: reescrito completo. Sumé `--bg-surface-highest` (pastillas/tarjetas),
+  `--amber-dark` (sombra de extrusión), `--outline`, radios `--radius-lg/xl/full`, `--space-5`,
+  `--container-max`, sombras reutilizables (`--shadow-extrude`, `--shadow-extrude-pressed`,
+  `--shadow-recessed`, `--shadow-card`, `--shadow-pressed-pill`), `--hazard-stripe`, y un tono de
+  "glow" por rareza (`--r-*-glow`) además del color base ya definido por el Agente 3. Variables de
+  tipografía `--font-display` (Fredoka), `--font-body` (Nunito), `--font-mono` (JetBrains Mono).
+- `styles/components.css`: botones extruidos (`box-shadow` inferior sólida + se hunden al
+  `:active`), pastillas de stat (`.stat-pill`, dinero/llaves del topbar), botón de ajustes y demás
+  íconos circulares (`.icon-btn-circle`), gauge recesado con relleno rayado hazard en
+  `#dig-progress-fill`, tarjetas con textura sutil de metal gastado (`repeating-linear-gradient`
+  a 5-10% vía `background-image` combinado), mejoras rápidas como botones extruidos con ícono en
+  círculo (`.quick-upgrade-icon-circle`), tabbar con pestaña activa en pastilla + sombra hundida,
+  `.scavenge-card` (esquinas muy redondeadas, sombra interior + gradiente, `.scavenge-card-label`
+  como pestaña flotante pegada al borde superior) y `.scavenge-card-metal-texture` (7% opacidad,
+  clip propio con `border-radius:inherit; overflow:hidden` para no salirse de las esquinas).
+- `styles/layout.css`: fondo con grilla industrial sutil en `body` (dos `linear-gradient`
+  cruzados al 5%, celda 20×20px). **Reconstruí `.game-shell` a una grilla de tres columnas en
+  `>= 1024px`** (`grid-template-areas`: topbar arriba spanneada, `nav` = el mismo `<nav
+  id="tabbar">` reestilizado vertical y con `position: sticky`, `dig` = área de escarbado
+  centrada, `quick` = `#quick-upgrades` reestilizado como panel vertical fijo a la derecha, y
+  `tabcontent` debajo del área de escarbado en la misma columna central). Mobile (`< 1024px`)
+  sigue siendo el tabbar inferior del Agente 2, sin tocarlo estructuralmente — solo estilo.
+- `apps/game/src/dig/DigCanvas.js`: agregué una textura tipo fibra de carbono a la capa de
+  suciedad (`getDirtTexture()`, un patrón procedural 16×16 dibujado con `createPattern`, sin
+  imágenes externas) — se pinta **dentro del propio canvas**, no como capa CSS aparte, porque
+  tiene que desaparecer junto con el resto de la capa al escarbar (`destination-out`).
+- `apps/game/src/ui/QuickUpgrades.js`: el ícono de cada mejora rápida ahora va envuelto en
+  `.quick-upgrade-icon-circle` (círculo de color) y el nivel se fusionó con el label
+  (`SUERTE · LV. 3`) en vez de un `(3)` aparte, más cerca del mockup.
+- `apps/game/index.html`: agregué el `<link>` de Google Fonts (Fredoka/Nunito/JetBrains Mono),
+  `.brand` ("DUMPSTER EMPIRE", solo visible en `>= 1024px`), envolví los stats del topbar en
+  `.topbar-stats`, clases `.stat-pill`/`.icon-btn-circle` en los elementos existentes (mismos
+  ids, sin romper ningún `querySelector` de `Topbar.js`/`UIManager.js`), y reestructuré
+  `#dig-active` con el wrapper `.scavenge-card` (título pasó de `<h2>` a un `<span
+  class="scavenge-card-label">` posicionado como pestaña flotante).
+
+**Bug real encontrado y arreglado (no cosmético) — el smoke e2e lo detectó:**
+```
+// AJUSTE: `erase()` en DigCanvas.js reusaba el `fillStyle` que hubiera quedado de la última
+// `drawTopLayer()`. Al meterle ahí un patrón semitransparente (0.05-0.18 de alpha) para la
+// textura de fibra de carbono, el `destination-out` del escarbado dejó de borrar del todo cada
+// píxel (solo quitaba una fracción del alpha proporcional al alpha del patrón) — el progreso de
+// escarbado nunca pasaba de un par de puntos porcentuales por más que se arrastrara sobre todo
+// el canvas. `erase()` ahora fija `ctx.fillStyle = '#000'` explícitamente antes de dibujar el
+// círculo de borrado (el color es irrelevante para `destination-out`, solo importa el alpha).
+// Encontrado con `npm run test:e2e` (el segundo test, el del pointer drag real) — la simulación
+// headless de Fases anteriores no lo hubiera visto porque no ejecuta el canvas real.
+```
+También encontré y arreglé un segundo bug de mi propia introducción: `.scavenge-card` con
+`overflow: hidden` recortaba a la mitad la pestaña flotante del título (que a propósito pincha
+por encima del borde de la tarjeta). Saqué el `overflow:hidden` de la tarjeta y se lo puse solo
+a `.scavenge-card-metal-texture` (con `border-radius: inherit`) para que la textura no se salga
+de las esquinas redondeadas sin recortar la pestaña. Y un tercero: el tooltip del tutorial
+(`#tutorial-overlay`) tapaba parte del canvas de escarbado al subir el canvas de posición (por
+sacarle el alto de bloque al viejo `<h2>` del título) — le puse `pointer-events: none` al overlay
+y `pointer-events: auto` solo a su botón, para que el arrastre pase a través del texto.
+
+**Decisión de fuentes (para créditos de Steam):**
+```
+// DECISIÓN: Fredoka/Nunito/JetBrains Mono se cargan vía Google Fonts (<link> en index.html), las
+// tres bajo licencia SIL Open Font License — no exigen atribución obligatoria en los créditos,
+// aunque es buena práctica mencionarlas. Elegí no auto-hospedarlas para no meter un paso de build
+// en apps/game (CLAUDE.md prohíbe bundler para el juego).
+// RIESGO PARA EL AGENTE 6: el build de Electron corre offline en Steam Deck/desktop — hay que
+// descargar los .woff2 reales a apps/game/assets/fonts/, reemplazar el <link> por @font-face
+// local, y actualizar la licencia en los créditos de Steam (OFL, ver arriba) antes de empaquetar.
+// Documentado también como comentario inline en index.html.
+```
+
+**Verificado a los 3 anchos de referencia (`npm run test:e2e`, capturas en
+`apps/game/e2e/.results/screenshots/`):**
+- **375px (mobile):** tabbar inferior con pestaña activa en pastilla ámbar + sombra hundida,
+  mejoras rápidas en fila con ícono circular, tarjetas con textura de metal sutil.
+- **1280×800 (Steam Deck):** layout de escritorio de tres columnas ya activo (`>= 1024px`):
+  sidebar de navegación a la izquierda, escarbado centrado, mejoras rápidas a la derecha, grilla
+  industrial de fondo visible.
+- **1440px (desktop):** igual que Steam Deck con más aire; `.brand` visible en el topbar.
+- `npm test`: engine sigue **48/48 verde** (no toqué `packages/engine`).
+- `npm run test:e2e`: **2/2 verde** tras el arreglo del bug de `erase()`.
+- `grep` de hex/colores sueltos fuera de `tokens.css` en `styles/`/`index.html`/`src/ui`/`src/dig`:
+  0 resultados (el único que apareció, un `#fff` en la textura de metal, se reemplazó por
+  `var(--fg-0)`). `grep` de `console.log`/`// TODO` en `apps/game/src`: 0 resultados.
+
+**Qué necesita saber el Agente 5:**
+- La UI está lista para el pase de balance: ningún cambio de esta fase tocó `packages/engine`,
+  `store.js` ni las fórmulas — solo CSS, `index.html` y ajustes puntuales de markup/JS de
+  presentación en `apps/game/src/ui/QuickUpgrades.js` y `apps/game/src/dig/DigCanvas.js`.
+- El layout de escritorio con sidebar es nuevo (antes no existía, era tabbar inferior a cualquier
+  ancho) — si el Agente 5 corre capturas o smoke tests a 1280×800/1440px va a ver una disposición
+  distinta a los handoffs de Fases 2/3, es intencional (DESARROLLO.md §6/§7 Fase 4).
+- Pendiente para el Agente 6 (Steam): auto-hospedar las 3 fuentes (ver DECISIÓN arriba) y sumar la
+  atribución OFL a la pantalla de créditos.
+
+**Estado del DoD:**
+```
+[x] Todos los tokens en tokens.css; grep de colores/hex sueltos fuera de tokens ≈ 0.
+[x] Botones extruidos, gauges recesados y bloom de rareza (glow bajo la tarjeta + find-pop)
+    aplicados según §5.3.
+[x] Tipografía Fredoka/Nunito/JetBrains Mono en su rol correcto (vía Google Fonts, ver DECISIÓN).
+[x] Layout correcto en 375px, 1280×800 (Steam Deck) y 1440px, sin texto desbordado con números
+    grandes (verificado con capturas de Playwright).
+[x] Desktop (>= 1024px) usa el layout de sidebar de tres columnas de los mockups Stitch, no el
+    tabbar móvil escalado a un ancho mayor.
+[x] Identidad coherente en todas las vistas (Tienda/Automatización/Logros/Prestigio verificadas
+    con captura a 1440px).
 ```
