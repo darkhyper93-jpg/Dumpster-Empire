@@ -48,6 +48,7 @@ export class UIManager {
 
     this.topbarEl = root.querySelector('#topbar');
     this.quickUpgradesEl = root.querySelector('#quick-upgrades');
+    this.digAreaEl = root.querySelector('#dig-area');
     this.digEmptyEl = root.querySelector('#dig-empty');
     this.digActiveEl = root.querySelector('#dig-active');
     this.digCanvasHost = root.querySelector('#dig-canvas-host');
@@ -152,6 +153,11 @@ export class UIManager {
   render(state) {
     setSoundEnabled(state.soundOn);
     this.renderTopbar(state);
+    // PLAN.md §11.9: la pantalla de escarbado (prompt de contenedor + mejoras rápidas) solo se
+    // muestra en la Tienda; el resto de las pestañas son secciones distintas.
+    const showDigScreen = this.activeTab === 'tienda';
+    this.digAreaEl.hidden = !showDigScreen;
+    this.quickUpgradesEl.hidden = !showDigScreen;
     QuickUpgrades.render(this.quickUpgradesEl, state, this.store);
     this.renderDigArea(state);
     this.renderTabContent(state);

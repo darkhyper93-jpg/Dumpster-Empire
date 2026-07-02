@@ -126,6 +126,14 @@ body {
   padding: 0 var(--space-3) var(--space-3);
 }
 
+/* AJUSTE (Agente 5, PLAN.md §11.1/§11.9): `#quick-upgrades` fija `display:flex` por id, que
+   pisa el `display:none` por defecto del atributo `[hidden]` (mismo bug de especificidad que ya
+   documentó el Agente 3 para `.dig-idle-prompt`). Se oculta fuera de la pantalla de escarbado
+   (pestaña Tienda) desde UIManager.render(). */
+#quick-upgrades[hidden] {
+  display: none;
+}
+
 #tabbar {
   display: flex;
   overflow-x: auto;

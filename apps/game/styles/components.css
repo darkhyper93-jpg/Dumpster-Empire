@@ -116,6 +116,7 @@ button:hover:not(:disabled) {
 .achievement-card,
 .prestige-node,
 .automation-status,
+.automation-explainer,
 .prestige-summary,
 .settings-block {
   background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
@@ -132,6 +133,15 @@ button:hover:not(:disabled) {
 
 .settings-block {
   margin-bottom: var(--space-3);
+}
+
+.automation-explainer {
+  margin-bottom: var(--space-3);
+}
+
+.automation-explainer-hint {
+  color: var(--fg-1);
+  font-size: 0.85rem;
 }
 
 .shop-card--locked,

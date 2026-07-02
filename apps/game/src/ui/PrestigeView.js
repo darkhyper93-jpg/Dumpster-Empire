@@ -93,7 +93,7 @@ export const PrestigeView = {
       `<p>Si prestigiás ahora ganás: ${formatNumber(preview)} llaves.</p>` +
       `<button type="button" class="prestige-btn-main" data-action="do-prestige" ${eligible ? '' : 'disabled'} title="${
         eligible ? '' : 'Necesitás $1.000.000.000 ganados en total para prestigiar.'
-      }">Prestigiar</button>` +
+      }">Hacer Prestigio</button>` +
       `</section>` +
       `<div class="prestige-tree">${nodes}</div>`;
   },

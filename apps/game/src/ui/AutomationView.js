@@ -1,6 +1,9 @@
 /**
  * Panel de automatización: mejoras de un solo uso, estado de la cola/procesamiento
  * en curso y la mejora de Capacidad (controla el tamaño de la cola, ver QuickUpgrades.js).
+ *
+ * PLAN.md §11.1: la sección debe explicar qué hace cada máquina, cómo se encola y cómo
+ * procesa el robot — antes era solo una lista de tarjetas sin contexto.
  */
 
 import { formatMoney, formatNumber, getQueueMax, getParallelAutoSlots, nextUpgradeCost } from '@dumpster/engine';
@@ -69,6 +72,17 @@ export const AutomationView = {
       .join('');
 
     container.innerHTML =
+      `<section class="automation-explainer">` +
+      `<p>Cada máquina que comprás abajo hace un trabajo fijo: junta contenedores solo, sin que` +
+      ` los tengas que escarbar a mano. Al comprar una automatización nueva, se van sumando` +
+      ` contenedores a la <strong>cola</strong> de forma automática; el <strong>robot</strong>` +
+      ` toma contenedores de esa cola y los procesa uno por uno (o varios a la vez, según cuántos` +
+      ` "slots simultáneos" tengas), hasta agotarla. Ampliá la cola con la mejora de Capacidad de` +
+      ` abajo si se te llena seguido.</p>` +
+      `<p class="automation-explainer-hint">Los botones grises no son un error: significan que` +
+      ` todavía no te alcanza el dinero. El texto al pasar el mouse (o mantener tocado) te dice` +
+      ` cuánto te falta.</p>` +
+      `</section>` +
       `<section class="automation-status">` +
       `<p>Cola: ${state.autoQueue.length} / ${formatNumber(queueMax)}</p>` +
       `<p>Slots simultáneos: ${parallelSlots}</p>` +

@@ -8,16 +8,24 @@ qué necesita saber el próximo agente · estado del DoD.
 
 ## Estado global
 
+> **Roadmap re-secuenciado tras el playtest (ver PLAN.md §11 / DESARROLLO.md §7).** Las Fases 5–7
+> viejas (Balance/Steam/Auditoría) se corrieron a 9/10/11 y entraron fases nuevas en el medio.
+
 | Fase | Agente | Estado |
 |---|---|---|
+| S Setup/Infra | S | ✅ hecho |
 | 0 Andamiaje | 0 | ✅ hecho |
 | 1 Engine + tests | 1 | ✅ hecho |
 | 2 Juego jugable | 2 | ✅ hecho |
 | 3 Huecos de UI | 3 | ✅ hecho |
-| 4 Pulido visual | 4 | ✅ hecho |
-| 5 Balance | 5 | ⬜ pendiente |
-| 6 Steam | 6 | ⬜ pendiente |
-| 7 Auditoría | 7 | ⬜ pendiente |
+| 4 Pulido visual (1er pase) | 4 | ✅ hecho |
+| 5 Fixes de UX | 5 | ✅ hecho |
+| 6 Mecánicas de contenido | 6 | ⬜ pendiente |
+| 7 UI de mecánicas nuevas | 7 | ⬜ pendiente |
+| 8 Re-anclaje visual | 8 | ⬜ pendiente |
+| 9 Balance | 9 | ⬜ pendiente |
+| 10 Steam | 10 | ⬜ pendiente |
+| 11 Auditoría | 11 | ⬜ pendiente |
 
 ---
 
@@ -685,4 +693,77 @@ y `pointer-events: auto` solo a su botón, para que el arrastre pase a través d
     tabbar móvil escalado a un ancho mayor.
 [x] Identidad coherente en todas las vistas (Tienda/Automatización/Logros/Prestigio verificadas
     con captura a 1440px).
+```
+
+---
+
+## Agente 5 (Fixes de UX)
+
+**Qué hice — los seis fixes de PLAN.md §11.1:**
+- **Prompt de contenedor + botón gratis solo en la Tienda:** `UIManager.render()` ahora calcula
+  `showDigScreen = this.activeTab === 'tienda'` y oculta `#dig-area` completo (`digEmptyEl` +
+  `digActiveEl`) fuera de esa pestaña, en vez de mostrarlo siempre superpuesto al tabbar.
+- **Mejoras rápidas solo en la pantalla de escarbado:** mismo `showDigScreen` oculta
+  `#quick-upgrades` fuera de la Tienda (PLAN.md §11.9: la Tienda es, en los hechos, la "pantalla
+  de escarbado" — no hay una pestaña separada para eso).
+- **Copy de prestigio:** `PrestigeView.js`, el botón principal pasa de "Prestigiar" a
+  "Hacer Prestigio".
+- **Eliminado export/importar guardado de `SettingsView.js`:** saqué los dos `<textarea>`, el
+  botón de importar/exportar y el estado local asociado (`exportText`/`importText`/
+  `importStatus`, el listener de `input` del textarea de import). Solo queda sonido + reset.
+  **No toqué `store.js`**: `store.actions.exportSave`/`importSave` siguen ahí para uso interno
+  (ej. Steam Cloud, Fase 10) — el DoD de esta fase prohibía tocar el store.
+- **Automatización explicada:** `AutomationView.js` suma un bloque `.automation-explainer` arriba
+  de las tarjetas, con copy en texto claro: qué hace una máquina, cómo se encola un contenedor y
+  cómo lo procesa el robot (incluye "slots simultáneos"), más una aclaración explícita de que los
+  botones grises son por falta de dinero, no un bug (el tooltip de "cuánto falta" ya existía y no
+  se tocó).
+- **Estados implícitos revisados:** ninguna vista quedó con estado implícito nuevo. El único
+  estado que se elimina es el de import de `SettingsView` (ya no aplica, se sacó la feature
+  entera junto con su mensaje de error).
+
+**Bug de especificidad CSS encontrado y arreglado (mismo patrón que ya documentó el Agente 3 para
+`.dig-idle-prompt`):**
+```
+// AJUSTE: #quick-upgrades fija `display:flex` por selector de id, que pisa el `display:none` por
+// defecto del atributo [hidden] (un id gana por especificidad a un selector de atributo). Agregué
+// `#quick-upgrades[hidden] { display:none }` explícito en layout.css. `#dig-area` no tenía este
+// problema porque nunca fija `display` por su cuenta (solo position/padding/grid-area), así que
+// el [hidden] por defecto le alcanza sin tocar CSS.
+```
+
+**Archivos tocados:** `apps/game/src/ui/UIManager.js`, `PrestigeView.js`, `SettingsView.js`,
+`AutomationView.js`, `apps/game/styles/layout.css`, `apps/game/styles/components.css`. No toqué
+`packages/engine`, `store.js`, `loop.js` ni ninguna fórmula — todo el cambio es UI/copy/CSS, tal
+como pedía el prompt del agente.
+
+**Verificado:**
+- `npm test`: engine sigue **48/48 verde** (no se tocó `packages/engine`).
+- `npm run test:e2e`: **2/2 verde**, sin cambios necesarios en el smoke existente.
+- Script descartable de Playwright (no quedó en el repo) que ejercitó los seis fixes contra el
+  DOM real: confirma que `#dig-area`/`#quick-upgrades` se ocultan al salir de Tienda y reaparecen
+  al volver, que el botón de prestigio dice "Hacer Prestigio", que `#export-output`/`#import-input`
+  ya no existen en el DOM de Ajustes, y que `.automation-explainer` se renderiza en Automatización.
+- `grep` de `console.log`/`// TODO` sobre `apps/game/src`: **0 resultados**.
+
+**Qué necesita saber el Agente 6:**
+- La base de UI queda limpia para colgar mecánicas nuevas: `UIManager.render()` ahora tiene el
+  patrón `showDigScreen` como único punto de verdad de "estoy en la pantalla de escarbado" — si la
+  Fase 7 agrega una pantalla de inicio/menú (PLAN.md §11.8) antes de la Tienda, hay que decidir si
+  ese flujo cambia `activeTab` inicial o agrega un estado nuevo fuera del tabbar actual.
+- `SettingsView.js` quedó minimalista (sonido + reset); cualquier ajuste nuevo de Fase 6/7/8 que
+  necesite un control en Ajustes se agrega ahí sin reintroducir export/import.
+- El patrón `#selector[hidden] { display:none }` explícito hay que replicarlo en cualquier
+  elemento nuevo que fije su propio `display` por id/clase y también use el atributo `hidden` para
+  esconderse — es la segunda vez que aparece este bug (ver AJUSTE arriba y el handoff del
+  Agente 3).
+
+**Estado del DoD:**
+```
+[x] El prompt de contenedor y el botón gratis solo aparecen en la Tienda.
+[x] Las mejoras rápidas solo se ven en la pantalla de escarbado.
+[x] "Hacer Prestigio" en la vista de prestigio.
+[x] Settings sin export/import, sin código muerto.
+[x] Automatización explicada y comprensible.
+[x] npm test 48/48 y npm run test:e2e verdes; sin console.log/// TODO.
 ```
