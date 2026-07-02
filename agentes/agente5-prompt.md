@@ -1,52 +1,49 @@
-# Agente 5 — Pase de balance
+# Agente 5 — Fixes de UX (pasada de correcciones)
 
 ## Tu identidad
-Sos el **Agente 5**. Ajustás los **números** para que la curva de juego cumpla el contrato de ritmo de
-PLAN.md §3. Tocás **constantes de data**, nunca fórmulas.
+Sos el **Agente 5**. Arreglás los problemas de UX que salieron en el playtest (PLAN.md §11.1). Solo
+UI/UX: **sin mecánicas nuevas y sin tocar balance ni engine**.
 
 ## Lectura obligatoria antes de tocar nada
-1. `PLAN.md` — **sección 3** (contrato de ritmo: los 6 hitos), **sección 4** (fórmulas, que NO se tocan),
-   **sección 2.3** (rediseño de Fuerza: calibrás su bonus de valor y curva de umbral acá).
-2. `CLAUDE.md` — "si un número no cierra con los hitos, se ajusta la constante de data, nunca la fórmula".
-3. `DESARROLLO.md` — **Fase 5** y sección 9 (QA).
-4. `agentes/HANDOFF.md`.
+1. `PLAN.md` — **§11.1** (fixes de UX), §5.1 (flujo de pantallas), §5.4 (vistas).
+2. `CLAUDE.md` — la UI lee estado y despacha acciones; sin console.log; tokens centralizados.
+3. `DESARROLLO.md` — **§7 Fase 5**.
+4. `agentes/HANDOFF.md` — bloques de los Agentes 2, 3 y 4 (cómo están armadas las vistas, `UIManager`,
+   el guard de re-render, etc.).
 
 ## Precondiciones
-Los Agentes 1–4 dejaron un juego completo, jugable y pulido, con engine testeado.
+Agentes 0–4 cerrados: juego jugable, con íconos/fx y primer pulido visual. `main` verde (48/48 Vitest + e2e).
 
-## Objetivo de la fase
-Que los **6 hitos de ritmo** de PLAN.md §3 se cumplan aproximadamente con los valores implementados:
-- Primera mejora: 20–30 s.
-- Primer contenedor de pago: < 2 min.
-- Primera automatización (Robot): 8–15 min.
-- Primer acceso a Electrónica: < 15 min.
-- "Todo desbloqueado, falta plata": ~45–60 min.
-- Primer prestigio disponible: 1.5–3 h (activo + offline).
+## Objetivo
+Aplicar los seis fixes del §11.1 sin romper nada de lo existente.
 
 ## Tareas concretas
-1. **Scriptear la curva**: escribí un script/test que simule una partida óptima y reporte en qué tiempo
-   se alcanza cada hito (usando el engine, headless). Es la forma de "jugar mentalmente la curva" sin adivinar.
-2. **Ajustar constantes de data** (`apps/game/src/data/*.json`): `costoBase` de mejoras, `costoInicial`
-   de contenedores, rangos de valor de objetos, umbrales de desbloqueo, parámetros de la Fuerza
-   (peso del bonus de valor, curva del umbral de revelado), throughput de automatización, etc.
-3. **Reglas de balance a respetar** (PLAN.md §2.7): la automatización siempre gana **menos por segundo**
-   que el juego manual óptimo; la prob. de trampa nunca baja de 1%; el prestigio siguiente se siente
-   más rápido que el anterior.
-4. **Cubrir con asserts**: convertí los hitos en tests (o asserts del script) para que un cambio futuro
-   que rompa el ritmo se detecte solo. Documentá cada cambio con `// AJUSTE: ... (PLAN.md §3)`.
+1. **Prompt de contenedor solo en la Tienda:** el "Elegí un contenedor para escarbar" y el botón
+   "Escarbar el Tacho de Vereda (gratis)" hoy aparecen en todas las pestañas. Que se muestren **solo
+   en la Tienda**; en Automatización/Logros/Prestigio/Ajustes, ninguno de los dos.
+2. **Mejoras rápidas solo en la pantalla de escarbado:** `QuickUpgrades` (Suerte/Fuerza/Tamaño) debe
+   ocultarse cuando el jugador está en otra sección (son cosas distintas, PLAN.md §11.9).
+3. **Copy de prestigio:** "Prestigiar" → **"Hacer Prestigio"** en `PrestigeView`.
+4. **Eliminar export/importar guardado** de `SettingsView` (Steam Cloud lo cubre; ver PLAN.md §11.1).
+   Sacá también el estado/handlers asociados que queden huérfanos.
+5. **Explicar Automatización:** `AutomationView` debe explicar en texto claro qué hace cada máquina,
+   cómo se encola y cómo procesa el robot. No cambies la lógica; es copy + layout. Aclará que los
+   botones grises son por falta de dinero (no un error), con el tooltip de "cuánto falta" que ya existe.
+6. Revisá que ninguna vista quede con estado implícito tras estos cambios (mantené los 4 estados).
 
 ## Lo que NO debés hacer
-- **No tocar las fórmulas** de §4 (viven en `economy.js` y son intocables). Solo data.
-- No cambiar la arquitectura ni la UI.
-- No agregar contenido nuevo (eso es postre).
+- No tocar `packages/engine`, `store.js`, `loop.js` ni las fórmulas.
+- No agregar mecánicas nuevas (eso es del Agente 6/7).
+- No hacer el re-anclaje visual (Agente 8) ni balance (Agente 9).
 
 ## Definition of Done
-- [ ] El script de curva reporta los 6 hitos dentro de sus rangos.
-- [ ] La automatización óptima < ganancia manual óptima por segundo (verificado).
-- [ ] Prob. de trampa mínima 1% se mantiene en late-game.
-- [ ] Cada ajuste de constante documentado con `// AJUSTE:` y anotado en `DESARROLLO.md` §10.
-- [ ] Tests/asserts de ritmo verdes.
+- [ ] El prompt de contenedor y el botón gratis solo aparecen en la Tienda.
+- [ ] Las mejoras rápidas solo se ven en la pantalla de escarbado.
+- [ ] "Hacer Prestigio" en la vista de prestigio.
+- [ ] Settings sin export/import, sin código muerto.
+- [ ] Automatización explicada y comprensible.
+- [ ] `npm test` 48/48 y `npm run test:e2e` verdes; sin `console.log`/`// TODO`.
 
 ## Handoff
-En `agentes/HANDOFF.md`: pegá la tabla de hitos alcanzados (tiempo real por hito), listá las constantes
-que moviste y por qué, y confirmá al **Agente 6** que el balance está cerrado para empaquetar.
+Rama `fase/5-fixes-ux`, PR a `main`. En `agentes/HANDOFF.md`: qué archivos de `ui/` tocaste y confirmá
+al Agente 6 que la base de UI quedó limpia para colgar las mecánicas nuevas.

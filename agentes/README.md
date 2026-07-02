@@ -17,16 +17,27 @@ Ejemplo: *"Sos el Agente 2. Leé agentes/agente2-prompt.md y ejecutá esa fase."
 
 ## Mapa de agentes → fases
 
-| Agente | Fase | Título | Depende de |
-|---|---|---|---|
-| **0** | 0 | Andamiaje del monorepo | — |
-| **1** | 1 | Engine puro + tests (el cerebro) | 0 |
-| **2** | 2 | Juego jugable modular (portar prototipo) | 1 |
-| **3** | 3 | Cerrar huecos de UI del PLAN | 2 |
-| **4** | 4 | Pulido visual (fusión ámbar + Stitch) | 3 |
-| **5** | 5 | Pase de balance | 4 |
-| **6** | 6 | Empaquetado Steam (la caja) | 5 |
-| **7** | 7 | Auditoría final + QA | 6 |
+El roadmap se re-secuenció tras el playtest (ver PLAN.md §11 y DESARROLLO.md §7). Orden de agente =
+orden de ejecución. Los Agentes S y 0–4 ya están cerrados.
+
+| Agente | Fase | Título | Estado | Depende de |
+|---|---|---|---|---|
+| **S** | — | Setup/Infra (git, CI, gitignore) | ✅ hecho | — |
+| **0** | 0 | Andamiaje del monorepo | ✅ hecho | S |
+| **1** | 1 | Engine puro + tests (el cerebro) | ✅ hecho | 0 |
+| **2** | 2 | Juego jugable modular | ✅ hecho | 1 |
+| **3** | 3 | Cerrar huecos de UI del PLAN | ✅ hecho | 2 |
+| **4** | 4 | Pulido visual (primer pase) | ✅ hecho | 3 |
+| **5** | 5 | Fixes de UX (PLAN §11.1) | ⬜ | 4 |
+| **6** | 6 | Mecánicas de contenido (engine+data, §11.2–11.7) | ⬜ | 4 |
+| **7** | 7 | UI de mecánicas nuevas (INDEX, inicio, prestigio real) | ⬜ | 6 |
+| **8** | 8 | Re-anclaje visual a "The Workshop" (§5.3) | ⬜ | 7 |
+| **9** | 9 | Pase de balance | ⬜ | 6, 7, 8 |
+| **10** | 10 | Empaquetado Steam | ⬜ | 9 |
+| **11** | 11 | Auditoría final + QA | ⬜ | 10 |
+
+**Paralelización:** el Agente 5 (solo `ui/*`) puede solaparse con el arranque del Agente 6 (engine/
+data), porque tocan archivos distintos. 7 y 8 dependen de 6; 9 depende de 6/7/8; 10 de 9; 11 último.
 
 ## Reglas comunes a todos los agentes
 

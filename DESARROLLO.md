@@ -155,13 +155,15 @@ dumpster-empire/                    ← raíz del monorepo (npm workspaces)
 │   │   │   │   └── digInput.js      ← puntero/touch, touch-action none
 │   │   │   ├── ui/
 │   │   │   │   ├── UIManager.js
+│   │   │   │   ├── TitleScreen.js    ← pantalla de inicio (logo/Jugar/config) [Fase 7]
 │   │   │   │   ├── Topbar.js
-│   │   │   │   ├── QuickUpgrades.js
-│   │   │   │   ├── ShopView.js
+│   │   │   │   ├── QuickUpgrades.js  ← visible solo en pantalla de escarbado [Fase 5]
+│   │   │   │   ├── ShopView.js       ← muestra Suerte recomendada por contenedor [Fase 7]
+│   │   │   │   ├── CollectionView.js ← INDEX de recompensas por contenedor [Fase 7]
 │   │   │   │   ├── AutomationView.js
-│   │   │   │   ├── AchievementsView.js
-│   │   │   │   ├── PrestigeView.js  ← árbol real de nodos conectados
-│   │   │   │   ├── SettingsView.js
+│   │   │   │   ├── AchievementsView.js ← muestra recompensa (llaves/dinero) [Fase 7]
+│   │   │   │   ├── PrestigeView.js  ← árbol real de nodos conectados por `requires` [Fase 7]
+│   │   │   │   ├── SettingsView.js  ← sin export/import (eliminado) [Fase 5]
 │   │   │   │   ├── OfflineModal.js  ← "mientras no estabas" con highlights
 │   │   │   │   ├── Toast.js
 │   │   │   │   └── Tutorial.js
@@ -350,63 +352,69 @@ Comparado con lo que exigen PLAN.md §5.2 y §5.4, esto es lo que el prototipo *
 ## 7. Roadmap por fases (orden de ejecución de los agentes)
 
 Cada fase es un lote de tareas para un agente Sonnet. No se avanza de fase sin cerrar el checklist
-de la anterior. Las fases 1–3 son secuenciales; dentro de la 4 se puede paralelizar por vista.
+de la anterior. El **orden de agente = orden de ejecución**.
 
-**Fase 0 — Andamiaje del monorepo**
-- Crear `package.json` raíz con workspaces, `packages/engine` y `apps/game` vacíos con su
-  `package.json`, `index.html` con import map, `README.md` de 3 pasos. Configurar Vitest.
-- Salida: `npm install` funciona; `npm test` corre (aunque sin tests todavía); `apps/game` abre
-  una página en blanco servida estáticamente.
+### Fases 0–4 — COMPLETADAS (Agentes S, 0, 1, 2, 3, 4)
 
-**Fase 1 — Engine puro + tests (el cerebro)**
-- Portar data a `apps/game/src/data/*.json`.
-- Portar `state.js`, `save.js` (con validación + `saveVersion` + migración), `economy.js` (fórmulas
-  §4 literales), `rng.js`, `format.js` y `systems/*`.
-- Escribir tests Vitest: costos de los primeros 10 niveles de cada mejora vs fórmula; llaves de
-  prestigio; ida/vuelta de export/import; tope y factor de offline; prob. de trampa nunca < 1%.
-- Salida: engine 100% headless y verde en CI local, sin una sola referencia al DOM.
+Andamiaje del monorepo, engine puro + tests (48/48 verde), juego jugable modular, huecos de UI
+(sonido/partículas/tween/íconos SVG/modales), y primer pase de pulido visual. Detalle en
+`agentes/HANDOFF.md`. **A partir de acá el roadmap se re-secuenció tras el playtest** (ver PLAN.md
+§11): entran una pasada de fixes, las mecánicas nuevas y el re-anclaje visual **antes** del balance.
 
-**Fase 2 — Juego jugable modular (portar el prototipo)**
-- Portar canvas de escarbado (`dig/`), loop (`loop.js`), y las vistas existentes (`ui/*`)
-  consumiendo el engine vía import map. Migración 1:1 del comportamiento del prototipo.
-- Salida: el juego es jugable de punta a punta en el navegador (escarbar → vender → mejorar →
-  comprar → automatizar → prestigiar), guardando en localStorage, con paridad funcional al prototipo.
+### Cola re-secuenciada (Agentes 5–11)
 
-**Fase 3 — Cerrar los huecos de UI del PLAN**
-- `fx/audio.js`, `fx/particles.js`, `fx/tween.js` y su cableado en `finishDig`/topbar/trampa.
-- Reemplazo total de emojis por `icons/icons.js`.
-- Árbol de prestigio real (nodos conectados) y modal de offline con highlights.
-- Estados vacío/error explícitos en todas las vistas.
-- Salida: se cumple PLAN.md §5.2 y §5.4 completo.
+**Fase 5 — Fixes de UX (Agente 5)** — PLAN.md §11.1
+- Prompt de "elegí contenedor" + botón de escarbado gratis: solo en la Tienda; sacarlos del resto.
+- Ocultar mejoras rápidas fuera de la pantalla de escarbado.
+- "Prestigiar" → "Hacer Prestigio". Eliminar export/import de guardado. Explicar Automatización.
+- Solo UI/UX, sin mecánicas nuevas ni balance. Toca `apps/game/src/ui/*` e `index.html`.
+- Salida: los seis fixes del §11.1 aplicados; smoke e2e verde.
 
-**Fase 4 — Pulido visual fusión ámbar + Stitch**
-- `tokens.css` + `components.css`: botones extruidos, gauges recesados, bloom de rareza,
-  tipografía Rubik/Hanken/JetBrains sobre base cálida. Aplicar a cada vista. Paralelizable por vista.
-- **`layout.css` (no solo componentes): reconstruir la grilla de escritorio con sidebar(s), no
-  repintar el tabbar móvil escalado.** Mobile (`< md`) sigue con el tabbar inferior que dejó la
-  Fase 2 (ya cumple PLAN.md §5.1). Desktop (`>= md`) pasa a las tres columnas de los mockups Stitch:
-  sidebar fija a la izquierda con Tienda/Automatización/Logros/Prestigio/Ajustes (reemplaza el
-  tabbar, no convive con él), área de escarbado centrada, y un panel de mejoras rápidas a un costado
-  (ver `dumpster_empire_tactile_clear/code.html` para el caso con panel a ambos lados). Ver el
-  detalle de qué mockup usa qué grilla en la sección 6 de arriba ("Layout de escritorio con
-  sidebar"). Decisión explícita del usuario (no asumir "mobile-first" como "un solo layout escalado").
-- Salida: identidad visual coherente, mobile-first en angosto y sidebar de tres columnas en
-  desktop/Steam Deck horizontal, sin colores hardcodeados.
+**Fase 6 — Mecánicas de contenido (Agente 6)** — PLAN.md §11.2–11.4, 11.6, 11.7 (engine + data)
+- **Ítems únicos por contenedor** (reestructura `items.json`/`containers.json`: cada contenedor su
+  propio set, sin repetidos).
+- **Niveles de contenedor 1–10** que mejoran odds (estado persistente + fórmula en engine).
+- **Resistencia / Fuerza mínima** por contenedor; escarbado que escala esfuerzo con el tier.
+- **Trampas más caras** (escalan con el tier, suavizadas por Suerte).
+- **Suerte recomendada por contenedor** (valor derivado calculado por el engine).
+- **Recompensas de logros** (llaves/dinero declaradas en `achievements.json`).
+- **Dependencias reales del árbol de prestigio** (`requires` en `prestigeTree.json`).
+- Todo con **tests de Vitest**. Cero DOM.
+- Salida: engine + data con las mecánicas nuevas, tests verdes, API pública documentada en HANDOFF.
 
-**Fase 5 — Pase de balance**
-- Jugar mentalmente/scriptear la curva contra los hitos de PLAN.md §3 y ajustar **constantes de
-  data** (no fórmulas) hasta cumplirlos. Cubrir los ajustes con asserts en tests.
-- Salida: los 6 hitos de ritmo de §3 se cumplen con los números implementados.
+**Fase 7 — UI de las mecánicas nuevas (Agente 7)** — PLAN.md §11.5, 11.7, 11.8, 11.9 (consume Fase 6)
+- **Colección / INDEX por contenedor** (recompensas ocultas → reveladas con %, precio, cantidad).
+- **Pantalla de inicio / menú** (logo, "Jugar", config) y el flujo inicio → escarbado.
+- **Árbol de prestigio real y simétrico** (nodos conectados según `requires`, estilo n8n/scritchy).
+- Mostrar **Suerte recomendada** en la Tienda y **recompensa** en cada logro.
+- Salida: las vistas nuevas consumen el engine (no reimplementan lógica), con sus 4 estados.
 
-**Fase 6 — Empaquetado Steam (la caja)**
-- `apps/desktop`: Electron carga `apps/game`; `preload.js` + `steam.js` con steamworks.js;
-  logros de Steam espejados desde el engine; Steam Cloud mapeando userData; manejo de conflicto de
-  guardado. `electron-builder.yml` con targets Win/Mac/Linux. `tools/steam/` con los VDF de SteamPipe.
-- Salida: builds instalables por plataforma; logros y cloud saves funcionando contra el appId de prueba.
+**Fase 8 — Re-anclaje visual a "The Workshop" (Agente 8)** — PLAN.md §5.3
+- Re-anclar **todas** las pantallas al mockup `clean_scavenge_area`: paleta `#191208` + madera,
+  **Plus Jakarta Sans**, tarjetas `.tactile-card`/`.squishy-button`, texturas de veta y superficie
+  rascable, bordes rasgados. Reemplaza la "fusión" de la Fase 4.
+- `tokens.css`/`components.css`/`layout.css` centralizados; cero valores sueltos.
+- Salida: identidad "The Workshop" coherente en todas las vistas (inicio, escarbado, tienda,
+  automatización, logros, prestigio, INDEX), mobile-first + Steam Deck, smoke e2e verde.
 
-**Fase 7 — Auditoría final (checklist de PLAN.md §10) + QA**
-- Recorrer explícitamente el checklist de PLAN.md §10 y el de QA de la sección 9 de este doc.
-- Salida: cero ítems sin marcar; nota final breve de qué se construyó y qué queda como postre.
+**Fase 9 — Pase de balance (Agente 9)** — corre DESPUÉS de las mecánicas nuevas
+- Scriptear la curva contra los hitos de PLAN.md §3 **y** los objetivos del §11.2 (rentabilidad con
+  la Suerte recomendada, pérdida que baja con Suerte, esfuerzo de escarbado, costo de trampa,
+  recompensas de logros no-OP). Ajustar **constantes de data**, nunca fórmulas. Asserts en tests.
+- Salida: hitos §3 y objetivos §11.2 cumplidos con los números implementados.
+
+**Fase 10 — Empaquetado Steam (Agente 10)**
+- `apps/desktop`: Electron + steamworks.js (logros espejados, Steam Cloud, conflicto de guardado),
+  electron-builder Win/Mac/Linux, `tools/steam/` con VDF. Auto-hospedar fuentes/íconos para offline.
+- Salida: builds instalables; logros y cloud saves contra el appId de prueba.
+
+**Fase 11 — Auditoría final + QA (Agente 11)**
+- Recorrer el checklist de PLAN.md §10 y el QA de la sección 9. Verificar además el scope §11 completo.
+- Salida: cero ítems sin marcar; nota final de qué se construyó y qué queda como postre.
+
+> **Paralelización posible** (ver también sección 9): la Fase 5 (fixes, solo `ui/*`) puede solaparse
+> con el arranque de la Fase 6 (engine/data) porque tocan archivos distintos. Las Fases 7 y 8 dependen
+> de la 6; la 9 depende de 6/7/8; 10 depende de que el juego esté completo; 11 es la última.
 
 ---
 

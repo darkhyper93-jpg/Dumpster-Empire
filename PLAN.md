@@ -268,24 +268,27 @@ En mobile: la barra de pestañas inferior se vuelve barra de íconos fijos (esti
 - Botones de compra: deshabilitados (grises, opacidad 50%) cuando no alcanza el dinero, con tooltip mostrando cuánto falta.
 - Al desbloquear una categoría nueva de objeto: modal corto y celebratorio, no bloqueante (auto-cierra en 3s o con tap).
 
-### 5.3 Identidad visual: fusión ámbar + pulido Stitch
+### 5.3 Identidad visual: "The Workshop" (mockup canónico)
 
-Dirección de arte definida: **base cálida ámbar (del prototipo) + rigor de componentes Stitch.**
+Dirección de arte **canónica y única**: el mockup
+`reference/ui/stitch_est_tica_de_vanguardia/dumpster_empire_clean_scavenge_area/code.html`
+("The Workshop"). Todas las pantallas se re-anclan a ese diseño; reemplaza cualquier "fusión"
+anterior. Es el mejor diseño disponible y la fuente de verdad visual.
 
-- **Base (identidad de marca):** paleta cálida del prototipo — `--amber #ffb627`, oliva `#86a14a`,
-  fondos oscuros cálidos (`--bg-0 #121110` … `--bg-3 #322c20`). Es lo que da al juego su carácter de
-  "basura industrial" y se conserva como identidad.
-- **Colores de rareza (sección 2.5):** los ocho tonos ya definidos (`--r-common` … `--r-future`)
-  resaltan sobre el fondo cálido oscuro. Los objetos de rareza alta llevan **bloom** (glow de color).
-- **De los mockups Stitch se adopta el rigor:** botones táctiles "extruidos" (borde inferior de
-  2–4px, se hunden 2px al presionar), gauges/barras **recesados** con relleno de rayas hazard y glow
-  en el borde de avance, tarjetas con textura sutil de metal gastado.
-- **Tipografía:** **Fredoka** para números y titulares grandes (redondeada, amigable para "1.42B"),
-  **Nunito/Hanken Grotesk** para cuerpo, y una monoespaciada (**JetBrains Mono**) solo para readouts
-  técnicos y etiquetas tipo "código de máquina". Nunca una monoespaciada fría para todo.
-- **Sin emojis como íconos, en ningún lado** (ni en data ni en UI). Se usan **SVG propios o Material
-  Symbols** coherentes con Stitch. El prototipo usa ~60 emojis; se reemplazan por completo.
-- Todos los tokens (colores, tipografía, radios, sombras) viven centralizados en
+- **Paleta:** fondo muy oscuro cálido tipo taller/madera (`#191208` de base), superficies de
+  madera/banco de trabajo, acentos ámbar/verde para acciones. Warm, no frío.
+- **Tipografía:** **Plus Jakarta Sans** (400/500/700/800) para todo — titulares, números y cuerpo.
+  (Reemplaza Fredoka/Nunito/JetBrains Mono del intento anterior.)
+- **Componentes táctiles del mockup:** tarjetas con extrusión fuerte (`box-shadow: 0 8px 0 0
+  rgba(0,0,0,.4)`, se hunden 4px al `:active` → `.tactile-card`), botones "squishy" (`0 6px 0 0`,
+  hundimiento con easing elástico → `.squishy-button`), texturas de **veta de madera** (`.wood-texture`)
+  y de **superficie rascable** (`.scratch-surface`), y bordes "rasgados" (`.torn-edge`, clip-path).
+- **Colores de rareza (sección 2.5):** los ocho tonos (`--r-common` … `--r-future`) resaltan sobre
+  el fondo oscuro; los objetos de rareza alta llevan **bloom** (glow de color).
+- **Íconos:** **Material Symbols** (como el mockup) o el registro SVG propio ya existente, pero con
+  el trazo/estilo del mockup. **Cero emojis**, en ningún lado (data ni UI). Si se usan Material
+  Symbols, se auto-hospedan para el build offline de Steam y se acredita su licencia (Apache/OFL).
+- Todos los tokens (colores, tipografía, radios, sombras, texturas) viven centralizados en
   `apps/game/styles/tokens.css`. Cero valores sueltos hardcodeados.
 
 ### 5.4 Pantallas secundarias requeridas
@@ -463,7 +466,102 @@ Antes de considerar el proyecto entregado, recorré esta lista explícitamente y
 Trabajá de forma continua hasta entregar el proyecto completo y auditado contra la sección 10. No te detengas a mitad de camino. No me pidas que confirme decisiones de diseño menores — este documento ya contiene todo lo necesario para que tomes esas decisiones vos mismo. Priorizá siempre tener un juego pequeño y funcional por sobre uno grande y roto.
 
 
+## 11. REVISIÓN POST-PLAYTEST — SCOPE V1.1
+
+> Tras jugar el V1 (Agentes S y 0–4 cerrados), se detectaron ajustes de diseño y features nuevas que
+> **entran al V1**. Esta sección **extiende y, donde se indica, reemplaza** partes anteriores del plan.
+> El detalle de ejecución (fases, agentes) está en `DESARROLLO.md`.
+
+### 11.1 Fixes de UX (corrigen comportamiento actual)
+
+- El prompt "Elegí un contenedor para escarbar" y el botón "Escarbar el Tacho de Vereda (gratis)"
+  aparecen hoy en **todas** las pestañas. Deben mostrarse **solo en la Tienda**; en el resto, ninguno.
+- Las mejoras rápidas (Suerte / Fuerza / Tamaño) hoy están **siempre visibles**. Deben mostrarse
+  **solo en la pantalla de escarbado**, no en otras secciones (son cosas distintas).
+- En Prestigio, el copy "Prestigiar" se reemplaza por **"Hacer Prestigio"**.
+- La sección de **exportar/importar guardado se elimina** (Steam Cloud cubre la persistencia; era
+  ruido inútil para el jugador).
+- La sección de **Automatización debe explicar cómo funciona** (qué hace cada máquina, cómo se
+  encola y procesa). Hoy no se entiende. (Nota: que los botones estén deshabilitados es correcto —
+  es falta de dinero, que se corrige en el pase de balance, no un bug.)
+
+### 11.2 Economía jugable (extiende §2.3, §2.6, §4)
+
+- **Se pierde demasiada plata.** La pérdida debe **bajar a medida que sube la Suerte** y ningún
+  contenedor recién comprado debe ser una ruina segura. Objetivo: con la Suerte recomendada de un
+  contenedor (ver abajo), ese contenedor es **rentable en promedio**. Perder sigue siendo posible,
+  pero acotado.
+- **Suerte recomendada por contenedor:** cada contenedor muestra, al lado, un **nivel de Suerte
+  recomendado** a partir del cual conviene comprarlo (punto de rentabilidad esperada positiva). Es
+  un dato derivado de la economía (lo calcula el engine), visible en la Tienda.
+- **Resistencia por contenedor (extiende §2.3 Fuerza):** cada contenedor tiene una **resistencia**;
+  escarbarlo requiere una **Fuerza mínima** para hacerlo a ritmo normal — con menos Fuerza se puede
+  igual, pero es mucho más lento. A mejor contenedor, más resistencia. Hoy se escarba demasiado
+  fácil incluso con Fuerza 1: eso se corrige (el escarbado debe costar esfuerzo y escalar con el tier).
+- **Trampas más caras (extiende §4.6):** el castigo de trampa debe **sacar más plata** y escalar con
+  el tier del contenedor, para que el riesgo importe de verdad (siempre suavizado por la Suerte, §4.6).
+
+### 11.3 Niveles de contenedor (NUEVO — extiende §2.6)
+
+- Cada contenedor tiene un **nivel propio, de 1 a 10**, que sube a medida que el jugador lo escarba
+  (por cantidad de escarbados o de progreso acumulado en ese contenedor).
+- A mayor nivel, **mejoran las probabilidades de ítems de mejor rareza** dentro de ese contenedor.
+- El nivel es **persistente** (parte del save) y por contenedor.
+- Fórmula de subida y curva de mejora de odds: se definen en el engine y se calibran en el pase de
+  balance (§3). Documentar las constantes en `data/containers.json`.
+
+### 11.4 Ítems únicos por contenedor (NUEVO — reemplaza el modelo de categorías compartidas de §2.5)
+
+- Hoy los contenedores comparten *categorías*, así que el mismo ítem sale en varios. **Cada
+  contenedor debe tener su propio set de ítems, sin ninguno repetido entre contenedores.**
+- Se conservan las **rarezas** (§2.5) como escala de valor, pero cada ítem individual pertenece a un
+  único contenedor. Cada contenedor tiene 6–8 ítems propios con nombre, ícono y rango de valor.
+- Esto habilita la Colección/INDEX (abajo) y hace que descubrir un contenedor nuevo se sienta distinto.
+
+### 11.5 Colección / INDEX por contenedor (NUEVO — promovido desde "postre")
+
+- Cada contenedor tiene una vista **INDEX** que lista **todas sus recompensas posibles**.
+- Las que el jugador **todavía no encontró** aparecen **ocultas** (silueta / "???").
+- Una vez que salió al menos una vez, la recompensa se **revela** mostrando: **ícono, nombre,
+  probabilidad (%), valor/precio y cantidad obtenida** (contador de cuántas veces se encontró).
+- El tracking se apoya en lo ya existente (`itemsFoundByCategory` / hallazgos por ítem).
+
+### 11.6 Recompensas de logros (NUEVO — extiende §7)
+
+- Los logros dejan de ser solo texto: **otorgan recompensa**.
+- **Llaves de Ciudad** para hitos difíciles o significativos (p. ej. primer millón, primer prestigio,
+  hallar un ítem muy raro).
+- **Dinero** para el resto — una cantidad **buena pero no rota** (no regalar dinero que vuelva OP al
+  jugador). Los montos se calibran en el pase de balance.
+- Cada logro declara su recompensa en `data/achievements.json` (tipo + cantidad), verificable en engine.
+
+### 11.7 Árbol de prestigio real y simétrico (reemplaza el layout plano actual, extiende §2.8)
+
+- El árbol actual es una grilla/agrupación visual sin dependencias reales. Se rediseña como un
+  **árbol conectado y simétrico**, estilo grafo de nodos (referencia visual: n8n o Scritchy Scratchy).
+- Para que sea un árbol de verdad, `data/prestigeTree.json` debe declarar **dependencias reales**
+  entre nodos (`requires`), de modo que desbloquear ramas tenga orden y estructura.
+- Las conexiones se dibujan explícitas y balanceadas (simétricas), no una lista.
+
+### 11.8 Pantalla de inicio / menú (NUEVO — extiende §5)
+
+- El juego **arranca en una pantalla de inicio** (title screen) con **logo del juego**, botón
+  **"Jugar"**, acceso a **Configuración** (engranaje abajo a la derecha) y los elementos clásicos de
+  un menú. "Jugar" entra directo a la pantalla de escarbado.
+- Estética: la misma de §5.3 ("The Workshop").
+
+### 11.9 Flujo de pantallas (extiende §5.1)
+
+`Pantalla de inicio` → "Jugar" → `Pantalla de escarbado` (default). La pantalla de escarbado muestra
+las mejoras rápidas; las demás pestañas (Tienda / Automatización / Logros / Prestigio / INDEX) no
+muestran ni el prompt de "elegí contenedor" ni las mejoras rápidas.
+
+---
+
 ## Posibles adiciones a futuro:
+> **Nota:** varios ítems que antes estaban acá fueron **promovidos al V1** en la sección 11
+> (colección/INDEX, y las bases para logros con recompensa). Lo que sigue queda como postre real.
+
 Contenido nuevo (fácil de sumar con la estructura actual)
 
 Objetos especiales/legendarios raros: un ítem único por categoría con probabilidad bajísima (ej. 1 en 500) que dé un logro + un multiplicador cosmético o un "trofeo" visible en un salón de la casa.

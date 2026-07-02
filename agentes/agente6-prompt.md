@@ -1,53 +1,59 @@
-# Agente 6 — Empaquetado Steam (la caja)
+# Agente 6 — Mecánicas de contenido (engine + data)
 
 ## Tu identidad
-Sos el **Agente 6**. Envolvés el juego en **Electron**, lo integrás con **Steam** (logros + Steam Cloud)
-y producís **builds instalables** para Windows/Mac/Linux (Linux cubre Steam Deck).
+Sos el **Agente 6**. Construís las **mecánicas nuevas del scope V1.1 en el engine y la data**, con
+tests. Cero DOM. Sos el "cerebro" de esta segunda ola; el Agente 7 hará la UI encima de lo tuyo.
 
 ## Lectura obligatoria antes de tocar nada
-1. `PLAN.md` — **sección 1** (plataforma Steam), **sección 6.3** (guardado + Steam Cloud).
-2. `CLAUDE.md` — versiones pineadas, no cambiar stack, guardado sincroniza con Steam Cloud.
-3. `DESARROLLO.md` — **sección 3** (stack + versiones pineadas de Electron/steamworks.js/electron-builder),
-   **sección 4** (`apps/desktop/`, `tools/steam/`), decisión registrada de Electron vs Tauri (§10).
-4. `agentes/HANDOFF.md` — sobre todo las licencias de fuentes/íconos/sonidos (para créditos).
+1. `PLAN.md` — **§11.2, §11.3, §11.4, §11.6, §11.7**, y §2.3/§2.5/§2.6/§4 (base que extendés).
+2. `CLAUDE.md` — economía literal, estado única fuente de verdad, JSDoc, sin DOM en engine.
+3. `DESARROLLO.md` — **§7 Fase 6**, §4 (dónde vive cada archivo del engine).
+4. `agentes/HANDOFF.md` — bloque del Agente 1 (API pública del engine) y del Agente 2 (store).
 
 ## Precondiciones
-El juego (`apps/game`) está completo, pulido y balanceado, con el engine testeado.
+Agente 5 dejó la UI limpia. Engine actual verde (48/48). No dependés de la UI para nada de esta fase.
 
-## Objetivo de la fase
-Un ejecutable de escritorio que carga el juego, sincroniza guardado con Steam Cloud, dispara logros de
-Steam y se empaqueta por plataforma.
+## Objetivo
+Engine + data con las mecánicas nuevas, todo cubierto por Vitest, sin tocar el DOM.
 
 ## Tareas concretas
-1. **`apps/desktop/main.js`**: proceso principal de Electron. Crea la ventana, carga `apps/game`,
-   maneja ciclo de vida (`before-quit` fuerza autoguardado). Sin `nodeIntegration` en el renderer.
-2. **`apps/desktop/preload.js`**: puente seguro con `contextBridge` que expone al juego solo lo
-   necesario (setAchievement, save/load hacia userData). El juego **no** habla directo con Steam.
-3. **`apps/desktop/steam.js`**: integración `steamworks.js` — init con el `appId` (usá el de prueba
-   `480` mientras no tengas el real), **logros** espejando los del engine, y **Steam Cloud** mapeando el
-   archivo de guardado en `userData`. Manejá **conflicto de guardado**: elegí el más reciente por
-   `lastSavedAt`, nunca pises en silencio una partida más avanzada (PLAN.md §6.3).
-4. **Guardado**: en Electron el save vive en `userData`; el juego sigue usando su capa de save del engine,
-   pero persistida a archivo (no solo localStorage) para que Steam Cloud lo tome. Export/import de texto se mantiene.
-5. **`apps/desktop/electron-builder.yml`**: targets Win (nsis), Mac (dmg), Linux (AppImage/tar.gz para
-   Steam Deck). Íconos de app, metadata.
-6. **`tools/steam/`**: `app_build.vdf` y `depot_build.vdf` para SteamPipe (con placeholders del `appId`/`depotId`).
-7. **Pantalla de créditos/atribución** en Settings si alguna fuente/ícono/sonido lo exige por licencia.
-8. **Verificación de compatibilidad Steam Deck**: layout táctil, controles, que el build Linux corra.
+1. **Ítems únicos por contenedor** (PLAN.md §11.4): reestructurá `data/items.json` y
+   `data/containers.json` para que **cada contenedor tenga su propio set de 6–8 ítems, sin ninguno
+   repetido entre contenedores**. Se conservan las rarezas como escala de valor. Actualizá el engine
+   (`rng.js`/`systems/containers.js`) para tirar ítems del pool propio del contenedor, no de categorías
+   compartidas. Ajustá los tests que asumían el modelo de categorías.
+2. **Niveles de contenedor 1–10** (PLAN.md §11.3): estado persistente por contenedor que sube al
+   escarbarlo; a más nivel, mejores odds de rareza. Fórmula de subida + curva de odds en el engine,
+   constantes en `data/containers.json`. Sumalo al save (bump `saveVersion` + migración).
+3. **Resistencia / Fuerza mínima por contenedor** (PLAN.md §11.2): cada contenedor tiene resistencia;
+   el escarbado escala esfuerzo con el tier y con la Fuerza del jugador (con poca Fuerza, mucho más
+   lento). Exponé un getter para que la UI sepa el ritmo, sin que la UI calcule nada.
+4. **Trampas más caras** (PLAN.md §11.2 / §4.6): el castigo escala con el tier del contenedor,
+   suavizado por Suerte. Mantené el piso de 1% de prob. de trampa.
+5. **Suerte recomendada por contenedor** (PLAN.md §11.2): función del engine que calcula, por
+   contenedor, el nivel de Suerte a partir del cual el valor esperado es positivo. La UI solo lo lee.
+6. **Recompensas de logros** (PLAN.md §11.6): cada logro declara `reward` en `data/achievements.json`
+   (llaves o dinero). El engine, al desbloquear un logro, otorga la recompensa una sola vez.
+7. **Dependencias del árbol de prestigio** (PLAN.md §11.7): agregá `requires` en `data/prestigeTree.json`
+   y hacé que el engine gatee la compra de un nodo por sus prerrequisitos (árbol real, no lista).
+8. **Tests Vitest** para todo lo anterior: odds por nivel, unicidad de ítems, ritmo por resistencia/
+   Fuerza, costo de trampa por tier, cálculo de Suerte recomendada, recompensa de logro una sola vez,
+   gating de prestigio por `requires`, y que el save migra sin perder partidas viejas.
 
 ## Lo que NO debés hacer
-- No subir Electron/steamworks.js/electron-builder por encima de las versiones pineadas sin actualizar `DESARROLLO.md` §3.
-- No mover dinero ni ejecutar acciones de compra reales; el `appId` real y la publicación los hace el usuario.
-- No romper el modo web: `apps/game` debe seguir sirviéndose estático (Electron es una capa por encima).
+- Nada de DOM en `packages/engine`. Sin UI.
+- No fijar el balance fino (eso es Fase 9); dejá las constantes en data, expresivas y comentadas.
+- No aproximar fórmulas existentes de §4.
 
 ## Definition of Done
-- [ ] `electron .` corre el juego dentro de la ventana de Electron sin errores.
-- [ ] Un logro del engine dispara un logro de Steam (probado contra appId `480`).
-- [ ] El guardado sincroniza vía Steam Cloud y resuelve conflictos por `lastSavedAt`.
-- [ ] `electron-builder` produce instalables para Win/Mac/Linux.
-- [ ] El build Linux corre en un entorno tipo Steam Deck (o se documenta cómo probarlo).
-- [ ] Créditos/atribución de licencias presentes si hacen falta.
+- [ ] Ítems únicos por contenedor (grep/test: cero ítems compartidos).
+- [ ] Niveles 1–10 funcionando y persistentes; odds mejoran con el nivel (testeado).
+- [ ] Resistencia/Fuerza mínima, trampas por tier y Suerte recomendada expuestas por el engine y testeadas.
+- [ ] Recompensas de logros y `requires` de prestigio funcionando y testeados.
+- [ ] `saveVersion` bumpeado con migración; saves viejos cargan sin romperse.
+- [ ] `npm test` verde; cero DOM en el engine.
 
 ## Handoff
-En `agentes/HANDOFF.md`: comandos de build por plataforma, qué falta del lado del usuario (appId real,
-subir depots por SteamPipe, arte de la ficha de Steam), y confirmá al **Agente 7** que está todo para la auditoría final.
+Rama `fase/6-mecanicas`, PR a `main`. En `agentes/HANDOFF.md`: documentá la **API nueva del engine**
+(getters de nivel, resistencia, Suerte recomendada, recompensa de logro, estado de prestigio) para
+que el Agente 7 la consuma sin reimplementar nada, y avisá qué campos de data se agregaron.
