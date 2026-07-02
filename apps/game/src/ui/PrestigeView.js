@@ -1,34 +1,57 @@
 /**
  * Vista de Prestigio: preview de llaves a ganar, botón de prestigiar y árbol real de
- * nodos conectados (PLAN.md §2.8/§5.4.4, mockup Stitch `expanded_prestige_tree`).
+ * nodos conectados (PLAN.md §11.7, mockup Stitch `expanded_prestige_tree`).
  *
- * DECISIÓN: `prestigeTree.json` (Agente 1) no define dependencias reales entre nodos —
- * cualquiera se puede comprar en cualquier orden, la única restricción es tener Llaves
- * suficientes (economía intacta, no se toca). El "árbol" que pide PLAN.md §5.4 es una
- * agrupación **visual** en 5 ramas temáticas desde una raíz común, puramente de
- * presentación: agrupa los 12 nodos por lo que mejoran (riqueza, suerte, escarbado,
- * automatización, especiales) y dibuja conectores CSS entre padre/hijo. No gatea la
- * compra — mostrar el árbol no cambia qué se puede comprar, solo cómo se ve.
+ * El Agente 6 agregó dependencias reales (`requires`) a `prestigeTree.json` y las gatea en el
+ * engine (`isPrestigeNodeUnlocked`/`buyPrestigeNode`). Esta vista deriva el layout del grafo
+ * (rama/profundidad) directamente de `requires` — no hay una tabla estática de posiciones: si
+ * el árbol de datos cambia de forma, el dibujo se recalcula solo.
  */
 
-import { formatMoney, formatNumber, canPrestige, prestigeKeysPreview, nextPrestigeNodeCost } from '@dumpster/engine';
+import { formatMoney, formatNumber, canPrestige, prestigeKeysPreview, nextPrestigeNodeCost, isPrestigeNodeUnlocked } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 
-/** id de nodo -> { branch: 0-4, depth: 0 (raíz) en adelante, parent: id|null } */
-const TREE_LAYOUT = {
-  capitalInicial: { branch: 2, depth: 0, parent: null },
-  tasadorExperto: { branch: 0, depth: 1, parent: 'capitalInicial' },
-  negociador: { branch: 0, depth: 2, parent: 'tasadorExperto' },
-  suerteAncestral: { branch: 1, depth: 1, parent: 'capitalInicial' },
-  instintoCarronero: { branch: 1, depth: 2, parent: 'suerteAncestral' },
-  brazosDeAcero: { branch: 2, depth: 1, parent: 'capitalInicial' },
-  visionPeriferica: { branch: 2, depth: 2, parent: 'brazosDeAcero' },
-  flotaAmpliada: { branch: 3, depth: 1, parent: 'capitalInicial' },
-  vigilanciaNocturna: { branch: 3, depth: 2, parent: 'flotaAmpliada' },
-  guardiaPermanente: { branch: 3, depth: 3, parent: 'vigilanciaNocturna' },
-  coleccionista: { branch: 4, depth: 1, parent: 'capitalInicial' },
-  portalEstable: { branch: 4, depth: 2, parent: 'coleccionista' },
-};
+/**
+ * Deriva { branch, depth, parent } por nodo a partir de `requires` (cada nodo tiene 0 o 1
+ * prerrequisito directo en la data actual). La raíz reparte una rama por hijo directo; cada
+ * rama hereda la de su hijo-raíz para que las cadenas largas queden en una sola columna.
+ * @param {Array<Object>} nodes
+ * @returns {Object<string, { branch: number, depth: number, parent: string|null }>}
+ */
+function buildTreeLayout(nodes) {
+  const root = nodes.find((n) => !n.requires.length);
+  if (!root) return {};
+
+  const childrenOf = new Map();
+  for (const n of nodes) {
+    const parent = n.requires[0] || null;
+    if (parent) {
+      if (!childrenOf.has(parent)) childrenOf.set(parent, []);
+      childrenOf.get(parent).push(n.id);
+    }
+  }
+
+  const rootChildren = childrenOf.get(root.id) || [];
+  const branchOf = new Map([[root.id, Math.max(0, (rootChildren.length - 1) / 2)]]);
+  const assignBranch = (id, branch) => {
+    branchOf.set(id, branch);
+    for (const childId of childrenOf.get(id) || []) assignBranch(childId, branch);
+  };
+  rootChildren.forEach((childId, i) => assignBranch(childId, i));
+
+  const depthOf = new Map([[root.id, 0]]);
+  const assignDepth = (id, depth) => {
+    depthOf.set(id, depth);
+    for (const childId of childrenOf.get(id) || []) assignDepth(childId, depth + 1);
+  };
+  assignDepth(root.id, 0);
+
+  const layout = {};
+  for (const n of nodes) {
+    layout[n.id] = { branch: branchOf.get(n.id) ?? 0, depth: depthOf.get(n.id) ?? 0, parent: n.requires[0] || null };
+  }
+  return layout;
+}
 
 export const PrestigeView = {
   /**
@@ -60,6 +83,8 @@ export const PrestigeView = {
 
     const eligible = canPrestige(state);
     const preview = prestigeKeysPreview(state);
+    const treeLayout = buildTreeLayout(data.prestigeTree);
+    const nodeById = new Map(data.prestigeTree.map((n) => [n.id, n]));
 
     const nodes = data.prestigeTree
       .map((node) => {
@@ -67,16 +92,30 @@ export const PrestigeView = {
         const maxed = level >= node.nivelMaximo;
         const cost = maxed ? 0 : nextPrestigeNodeCost(state, node);
         const canAfford = state.prestigeKeys >= cost;
-        const layout = TREE_LAYOUT[node.id] || { branch: 0, depth: 0, parent: null };
-        const action = maxed
-          ? '<span class="badge">Máximo</span>'
-          : `<button type="button" data-action="buy-node" data-id="${node.id}" ${canAfford ? '' : 'disabled'} title="${
-              canAfford ? '' : `Te faltan ${formatNumber(cost - state.prestigeKeys)} llaves`
-            }">Mejorar por ${formatNumber(cost)} llaves</button>`;
+        const unlocked = isPrestigeNodeUnlocked(state, node);
+        const layout = treeLayout[node.id] || { branch: 0, depth: 0, parent: null };
+        let action;
+        if (!unlocked) {
+          const parentName = layout.parent ? nodeById.get(layout.parent)?.name || layout.parent : '';
+          action = `<span class="badge badge--locked">Requiere: ${parentName}</span>`;
+        } else if (maxed) {
+          action = '<span class="badge">Máximo</span>';
+        } else {
+          action = `<button type="button" data-action="buy-node" data-id="${node.id}" ${canAfford ? '' : 'disabled'} title="${
+            canAfford ? '' : `Te faltan ${formatNumber(cost - state.prestigeKeys)} llaves`
+          }">Mejorar por ${formatNumber(cost)} llaves</button>`;
+        }
+        const stateClass = !unlocked
+          ? 'prestige-node--locked'
+          : maxed
+          ? 'prestige-node--maxed'
+          : level > 0
+          ? 'prestige-node--active'
+          : '';
         return (
-          `<article class="prestige-node ${maxed ? 'prestige-node--maxed' : ''} ${level > 0 ? 'prestige-node--active' : ''}" ` +
+          `<article class="prestige-node ${stateClass}" ` +
           `style="--branch:${layout.branch};--depth:${layout.depth}" data-parent="${layout.parent || ''}">` +
-          `<span class="prestige-node-icon">${iconMarkup(node.icon, { size: 26 })}</span>` +
+          `<span class="prestige-node-icon">${iconMarkup(unlocked ? node.icon : 'locked', { size: 26 })}</span>` +
           `<h3>${node.name} (${level}/${node.nivelMaximo})</h3>` +
           `<p>${node.desc}</p>` +
           action +

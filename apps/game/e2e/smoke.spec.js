@@ -26,6 +26,10 @@ test.describe('Dumpster Empire — smoke', () => {
     await page.goto('/apps/game/');
     await expect(page.locator('#app')).toHaveAttribute('data-state', 'ready');
 
+    // PLAN.md §11.8/§11.9: el juego arranca en la pantalla de inicio; "Jugar" entra al escarbado.
+    await expect(page.locator('#title-screen')).toBeVisible();
+    await page.locator('#title-play-btn').click();
+
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       // El área de escarbado y el tabbar tienen que seguir visibles a cualquier ancho de referencia.
@@ -40,6 +44,7 @@ test.describe('Dumpster Empire — smoke', () => {
   test('escarbar el Tacho de Vereda revela con un pointer drag real y suma dinero', async ({ page }) => {
     await page.goto('/apps/game/');
     await expect(page.locator('#app')).toHaveAttribute('data-state', 'ready');
+    await page.locator('#title-play-btn').click();
 
     const moneyBefore = await page.locator('#money').textContent();
     expect(moneyBefore).toContain('$0');

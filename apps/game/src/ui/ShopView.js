@@ -5,7 +5,15 @@
  * mismo gesto, no hay un paso de "comprar" separado de "escarbar" a mano.
  */
 
-import { formatMoney, getContainerCost, isContainerUnlocked, getEffectiveTrapProbability } from '@dumpster/engine';
+import {
+  formatMoney,
+  formatNumber,
+  getContainerCost,
+  isContainerUnlocked,
+  getEffectiveTrapProbability,
+  getLuck,
+  getRecommendedLuck,
+} from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 
 export const ShopView = {
@@ -24,7 +32,7 @@ export const ShopView = {
       });
     }
 
-    const { allContainers, data } = store.ctx;
+    const { allContainers, data, itemsData } = store.ctx;
     if (!allContainers.length) {
       container.innerHTML = '<p class="empty-state">No hay contenedores configurados.</p>';
       return;
@@ -52,6 +60,11 @@ export const ShopView = {
         ? ''
         : `Te faltan ${formatMoney(cost - state.money)}`;
       const label = cost === 0 ? 'Escarbar (gratis)' : `Escarbar por ${formatMoney(cost)}`;
+      // PLAN.md §11.2: Suerte recomendada — punto de rentabilidad esperada positiva, calculado
+      // por el engine (getRecommendedLuck), nunca aproximado acá.
+      const recommendedLuck = getRecommendedLuck(state, c, itemsData, data);
+      const currentLuck = getLuck(state, data);
+      const luckReached = currentLuck >= recommendedLuck;
       return (
         `<article class="shop-card">` +
         `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
@@ -59,6 +72,9 @@ export const ShopView = {
         `<p>Categorías: ${c.categorias.join(', ')}</p>` +
         `<p>Riesgo de trampa: ${Math.round(trapProb * 100)}%</p>` +
         `<p>Comprados: ${state.ownedContainers[c.id] || 0}</p>` +
+        `<p class="shop-card-luck ${luckReached ? 'shop-card-luck--reached' : ''}">` +
+        `Suerte recomendada: ${formatNumber(recommendedLuck)} ${luckReached ? '(alcanzada)' : `(tenés ${formatNumber(currentLuck)})`}` +
+        `</p>` +
         `<button type="button" data-action="dig-container" data-container-id="${c.id}" ${disabled ? 'disabled' : ''} title="${reason}">${label}</button>` +
         `</article>`
       );

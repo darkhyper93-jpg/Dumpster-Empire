@@ -24,10 +24,11 @@ export const OfflineModal = {
     const container_ = bestAffordableUnlockedContainer(state, allContainers, data);
     const categorias = container_ ? container_.categorias : [];
 
+    const containerPool = container_ ? itemsData.containers[container_.id] || [] : [];
     const highlightIcons = categorias
       .map((categoriaId) => {
-        const pool = itemsData.categories[categoriaId];
-        if (!pool || !pool.length) return '';
+        const pool = containerPool.filter((item) => item.categoria === categoriaId);
+        if (!pool.length) return '';
         const rarity = itemsData.rarities.find((r) => r.id === categoriaId);
         const sample = pool[0];
         return (

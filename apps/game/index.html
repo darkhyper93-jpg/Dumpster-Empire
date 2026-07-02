@@ -31,7 +31,9 @@
   <div id="app" data-state="loading">
     <p id="boot-status">Cargando Dumpster Empire…</p>
 
-    <div class="game-shell">
+    <div id="title-screen" class="title-screen" hidden></div>
+
+    <div class="game-shell" hidden>
       <header id="topbar">
         <span class="brand">DUMPSTER EMPIRE</span>
         <div class="topbar-stats">
@@ -66,6 +68,7 @@
         <button type="button" data-tab="automatizacion">Automatización</button>
         <button type="button" data-tab="logros">Logros</button>
         <button type="button" data-tab="prestigio">Prestigio</button>
+        <button type="button" data-tab="index">INDEX</button>
       </nav>
       <section id="tab-content"></section>
     </div>

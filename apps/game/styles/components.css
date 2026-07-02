@@ -149,6 +149,23 @@ button:hover:not(:disabled) {
   opacity: 0.55;
 }
 
+.shop-card-luck {
+  font-size: 0.85rem;
+  color: var(--fg-1);
+}
+
+.shop-card-luck--reached {
+  color: var(--amber);
+}
+
+.achievement-card-reward {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--amber);
+  font-size: 0.9rem;
+}
+
 .badge {
   align-self: flex-start;
   background: var(--olive);
@@ -406,6 +423,63 @@ textarea {
   display: inline-flex;
 }
 
+/* --- INDEX / colección por contenedor (CollectionView.js, PLAN.md §11.5) --- */
+
+.index-container-tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.index-container-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  background: var(--bg-2);
+  color: var(--fg-1);
+  box-shadow: none;
+  opacity: 0.75;
+}
+
+.index-container-tab.is-active {
+  background: var(--amber);
+  color: var(--bg-0);
+  opacity: 1;
+}
+
+.index-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+
+.index-card {
+  background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: center;
+  align-items: center;
+}
+
+.index-card-icon {
+  color: var(--rarity-color, var(--amber));
+}
+
+.index-card--hidden {
+  opacity: 0.5;
+}
+
+.index-card--hidden .index-card-icon {
+  color: var(--fg-1);
+  filter: grayscale(1);
+}
+
 /* --- Modales no bloqueantes (offline + celebración de categoría) --- */
 
 .modal-overlay {
@@ -499,6 +573,15 @@ textarea {
 .prestige-node--active {
   border-color: var(--amber);
   box-shadow: 0 0 0 1px var(--amber);
+}
+
+.prestige-node--locked {
+  opacity: 0.5;
+}
+
+.badge--locked {
+  background: var(--bg-3);
+  color: var(--fg-1);
 }
 
 /* --- Tarjeta de escarbado (`scavenge-card`, mockup main_game) --- */

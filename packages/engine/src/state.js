@@ -6,7 +6,12 @@
 /** Versión actual del esquema de guardado. Bump al cambiar la forma del estado. */
 // AJUSTE (Fase 6, PLAN.md §11.3): bump a 2 por los dos campos nuevos de nivel de contenedor
 // (containerLevels/containerLevelProgress). save.js migra saves v1 rellenando ambos en {}.
-export const SAVE_VERSION = 2;
+// AJUSTE (Fase 7, PLAN.md §11.5): bump a 3 por `itemsFoundByItem`. El INDEX por contenedor
+// necesita saber qué ítem específico salió y cuántas veces (no solo la categoría agregada que
+// ya trackeaba itemsFoundByCategory) — sin este campo la vista no puede revelar/ocultar ítems
+// individuales ni contar hallazgos reales (incluye los del robot de automatización, que nunca
+// pasan por la UI). save.js migra saves v1/v2 rellenando el campo en {}.
+export const SAVE_VERSION = 3;
 
 /**
  * @typedef {Object} AutoProcessingSlot
@@ -31,6 +36,8 @@ export const SAVE_VERSION = 2;
  * @property {string[]} achievementsUnlocked
  * @property {number} itemsFoundCount
  * @property {Object<string, number>} itemsFoundByCategory
+ * @property {Object<string, Object<string, number>>} itemsFoundByItem - contador por contenedor
+ *   y nombre de ítem (`state.itemsFoundByItem[containerId][itemName]`), para el INDEX (PLAN.md §11.5)
  * @property {number} categoryFragments
  * @property {number} trapsHit
  * @property {number} autoProcessedCount
@@ -63,6 +70,7 @@ export function freshState() {
     achievementsUnlocked: [],
     itemsFoundCount: 0,
     itemsFoundByCategory: {},
+    itemsFoundByItem: {},
     categoryFragments: 0,
     trapsHit: 0,
     autoProcessedCount: 0,

@@ -203,6 +203,8 @@ const ICON_MAP = {
   'tab-automatizacion': 'gear',
   'tab-logros': 'medal',
   'tab-prestigio': 'crown',
+  'tab-index': 'clipboard',
+  locked: 'shield',
 };
 
 /**

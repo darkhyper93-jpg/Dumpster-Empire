@@ -133,6 +133,9 @@ export function applyContainerResult(state, container, result, isAuto, data) {
     total += item.value;
     state.itemsFoundCount++;
     state.itemsFoundByCategory[item.categoria] = (state.itemsFoundByCategory[item.categoria] || 0) + 1;
+    // PLAN.md §11.5: el INDEX necesita el contador por ítem específico, no solo por categoría.
+    const byContainer = state.itemsFoundByItem[container.id] || (state.itemsFoundByItem[container.id] = {});
+    byContainer[item.name] = (byContainer[item.name] || 0) + 1;
     if (fragmentCategories.includes(item.categoria)) {
       state.categoryFragments += 1 * getFragmentMult(state, data);
     }

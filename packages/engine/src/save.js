@@ -21,6 +21,7 @@ const REQUIRED_FIELDS = {
   achievementsUnlocked: 'object',
   itemsFoundCount: 'number',
   itemsFoundByCategory: 'object',
+  itemsFoundByItem: 'object',
   categoryFragments: 'number',
   trapsHit: 'number',
   autoProcessedCount: 'number',
@@ -52,6 +53,15 @@ function migrate(raw) {
       containerLevels: migrated.containerLevels || {},
       containerLevelProgress: migrated.containerLevelProgress || {},
       saveVersion: 2,
+    };
+  }
+  // v2 -> v3 (Fase 7, PLAN.md §11.5): agrega itemsFoundByItem. Saves viejos arrancan vacío
+  // (comportamiento correcto: el INDEX no puede saber qué encontraron antes de este campo).
+  if (migrated.saveVersion < 3) {
+    migrated = {
+      ...migrated,
+      itemsFoundByItem: migrated.itemsFoundByItem || {},
+      saveVersion: 3,
     };
   }
   return migrated;

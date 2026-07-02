@@ -35,7 +35,7 @@ const OFFLINE_MIN_SECONDS = 5;
 /**
  * @typedef {Object} StoreContext
  * @property {{ upgrades: Array<Object>, automations: Array<Object>, prestigeTree: Array<Object> }} data
- * @property {{ rarities: Array<Object>, categories: Object<string, Array<Object>> }} itemsData
+ * @property {{ rarities: Array<Object>, containers: Object<string, Array<Object>> }} itemsData
  * @property {Array<Object>} allContainers
  * @property {Array<Object>} achievementsData
  */

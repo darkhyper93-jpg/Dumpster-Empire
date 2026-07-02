@@ -13,6 +13,7 @@ import { ShopView } from './ShopView.js';
 import { AutomationView } from './AutomationView.js';
 import { AchievementsView } from './AchievementsView.js';
 import { PrestigeView } from './PrestigeView.js';
+import { CollectionView } from './CollectionView.js';
 import { SettingsView } from './SettingsView.js';
 import { Toast } from './Toast.js';
 import { Tutorial } from './Tutorial.js';
@@ -27,6 +28,7 @@ const TAB_VIEWS = {
   automatizacion: AutomationView,
   logros: AchievementsView,
   prestigio: PrestigeView,
+  index: CollectionView,
   ajustes: SettingsView,
 };
 

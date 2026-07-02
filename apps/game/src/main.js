@@ -8,6 +8,7 @@
 import { createStore } from './store.js';
 import { startLoop } from './loop.js';
 import { UIManager } from './ui/UIManager.js';
+import { TitleScreen } from './ui/TitleScreen.js';
 
 const DATA_FILES = {
   items: './data/items.json',
@@ -64,6 +65,24 @@ async function boot() {
   const store = createStore({ data, itemsData, allContainers, achievementsData });
   const ui = new UIManager(app, store);
   startLoop(store, ui);
+
+  // PLAN.md §11.8/§11.9: el juego arranca en la pantalla de inicio; "Jugar" entra al escarbado,
+  // el engranaje entra directo a Configuración.
+  const titleScreen = app.querySelector('#title-screen');
+  const gameShell = app.querySelector('.game-shell');
+  const enterGame = () => {
+    titleScreen.hidden = true;
+    gameShell.hidden = false;
+  };
+  TitleScreen.mount(titleScreen, {
+    onPlay: enterGame,
+    onSettings: () => {
+      enterGame();
+      ui.activeTab = 'ajustes';
+      ui.render(store.getState());
+    },
+  });
+  titleScreen.hidden = false;
 
   app.dataset.state = 'ready';
 }
