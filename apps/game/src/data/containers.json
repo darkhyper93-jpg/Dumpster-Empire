@@ -1,0 +1,84 @@
+[
+  {
+    "id": "tachoVereda",
+    "name": "Tacho de Vereda",
+    "icon": "trash-bin-street",
+    "costoInicial": 0,
+    "categorias": ["common"],
+    "probTrampaBase": 0.05,
+    "digTime": 3,
+    "slots": 3
+  },
+  {
+    "id": "contenedorBarrio",
+    "name": "Contenedor de Barrio",
+    "icon": "dumpster-street",
+    "costoInicial": 15,
+    "categorias": ["common", "reusable"],
+    "probTrampaBase": 0.08,
+    "digTime": 4,
+    "slots": 3
+  },
+  {
+    "id": "containerIndustrial",
+    "name": "Container Industrial",
+    "icon": "container-industrial",
+    "costoInicial": 150,
+    "categorias": ["reusable", "electronics"],
+    "probTrampaBase": 0.15,
+    "digTime": 6,
+    "slots": 4
+  },
+  {
+    "id": "depositoAbandonado",
+    "name": "Depósito Abandonado",
+    "icon": "warehouse-abandoned",
+    "costoInicial": 1200,
+    "categorias": ["electronics", "antiques"],
+    "probTrampaBase": 0.20,
+    "digTime": 8,
+    "slots": 4
+  },
+  {
+    "id": "mudanzaMansion",
+    "name": "Mudanza de Mansión",
+    "icon": "mansion-move",
+    "costoInicial": 9000,
+    "categorias": ["antiques", "historic"],
+    "probTrampaBase": 0.12,
+    "digTime": 10,
+    "slots": 4
+  },
+  {
+    "id": "galeriaLiquidacion",
+    "name": "Galería en Liquidación",
+    "icon": "gallery-liquidation",
+    "costoInicial": 60000,
+    "categorias": ["historic", "art"],
+    "probTrampaBase": 0.18,
+    "digTime": 14,
+    "slots": 5
+  },
+  {
+    "id": "bovedaPerdida",
+    "name": "Bóveda Perdida",
+    "icon": "vault-lost",
+    "costoInicial": 400000,
+    "categorias": ["art", "relics"],
+    "probTrampaBase": 0.25,
+    "digTime": 18,
+    "slots": 5
+  },
+  {
+    "id": "containerExtradimensional",
+    "name": "Contenedor Extradimensional",
+    "icon": "container-portal",
+    "costoInicial": 2500000,
+    "categorias": ["relics", "future"],
+    "probTrampaBase": 0.30,
+    "digTime": 22,
+    "slots": 6,
+    "requiresPrestigeCount": 1,
+    "requiresAutomationId": "redDrones"
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "luck",
+    "label": "Suerte",
+    "icon": "clover",
+    "costoBase": 10,
+    "factorCrecimiento": 1.13,
+    "statKey": "luck",
+    "mode": "flat",
+    "baseValue": 0,
+    "perNivel": 2
+  },
+  {
+    "id": "digPower",
+    "label": "Fuerza de Escarbado",
+    "icon": "fist-dig",
+    "costoBase": 12,
+    "factorCrecimiento": 1.13,
+    "statKey": "digPower",
+    "mode": "multiplierBase1",
+    "baseValue": 1,
+    "perNivel": 0.04
+  },
+  {
+    "id": "area",
+    "label": "Tamaño de Búsqueda",
+    "icon": "hand-spread",
+    "costoBase": 12,
+    "factorCrecimiento": 1.13,
+    "statKey": "area",
+    "mode": "multiplierBase1",
+    "baseValue": 1,
+    "perNivel": 0.05
+  },
+  {
+    "id": "capacity",
+    "label": "Capacidad",
+    "icon": "crate-stack",
+    "costoBase": 500,
+    "factorCrecimiento": 1.22,
+    "statKey": "capacity",
+    "mode": "flat",
+    "baseValue": 3,
+    "perNivel": 1
+  }
+]

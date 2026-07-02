@@ -1,0 +1,129 @@
+[
+  {
+    "id": "capitalInicial",
+    "name": "Capital Inicial",
+    "icon": "cash-stack",
+    "costoBase": 1,
+    "factorCrecimiento": 1.5,
+    "nivelMaximo": 10,
+    "desc": "+$100 de dinero inicial por nivel.",
+    "effects": [{ "type": "startMoneyFlatPerNivel", "flatPerNivel": 100 }]
+  },
+  {
+    "id": "suerteAncestral",
+    "name": "Suerte Ancestral",
+    "icon": "clover-glow",
+    "costoBase": 1,
+    "factorCrecimiento": 1.6,
+    "nivelMaximo": 10,
+    "desc": "+3% Suerte global permanente por nivel.",
+    "effects": [{ "type": "statPercentFinal", "stat": "luck", "percentPerNivel": 0.03 }]
+  },
+  {
+    "id": "instintoCarronero",
+    "name": "Instinto de Carroñero",
+    "icon": "eagle-eye",
+    "costoBase": 2,
+    "factorCrecimiento": 1.6,
+    "nivelMaximo": 8,
+    "desc": "-1.5% prob. de trampa global por nivel.",
+    "effects": [{ "type": "trapPercentReductionPerNivel", "percentPerNivel": 0.015 }]
+  },
+  {
+    "id": "vigilanciaNocturna",
+    "name": "Vigilancia Nocturna",
+    "icon": "moon-watch",
+    "costoBase": 2,
+    "factorCrecimiento": 1.7,
+    "nivelMaximo": 6,
+    "desc": "+8% eficiencia de progreso offline por nivel.",
+    "effects": [{ "type": "offlineEfficiencyPercentPerNivel", "percentPerNivel": 0.08 }]
+  },
+  {
+    "id": "flotaAmpliada",
+    "name": "Flota Ampliada",
+    "icon": "truck-fleet",
+    "costoBase": 3,
+    "factorCrecimiento": 1.8,
+    "nivelMaximo": 5,
+    "desc": "+1 slot de cola de automatización por nivel.",
+    "effects": [{ "type": "queueSlotsFlatPerNivel", "flatPerNivel": 1 }]
+  },
+  {
+    "id": "tasadorExperto",
+    "name": "Tasador Experto",
+    "icon": "appraiser-loupe",
+    "costoBase": 2,
+    "factorCrecimiento": 1.65,
+    "nivelMaximo": 10,
+    "desc": "+4% valor de venta global por nivel.",
+    "effects": [{ "type": "sellPercentGlobalPerNivel", "percentPerNivel": 0.04 }]
+  },
+  {
+    "id": "brazosDeAcero",
+    "name": "Brazos de Acero",
+    "icon": "steel-arm",
+    "costoBase": 2,
+    "factorCrecimiento": 1.6,
+    "nivelMaximo": 8,
+    "desc": "+8% Fuerza de Escarbado permanente por nivel.",
+    "effects": [{ "type": "statPercentFinal", "stat": "digPower", "percentPerNivel": 0.08 }]
+  },
+  {
+    "id": "visionPeriferica",
+    "name": "Visión Periférica",
+    "icon": "eye-wide",
+    "costoBase": 2,
+    "factorCrecimiento": 1.6,
+    "nivelMaximo": 8,
+    "desc": "+8% Área de Búsqueda permanente por nivel.",
+    "effects": [{ "type": "statPercentFinal", "stat": "area", "percentPerNivel": 0.08 }]
+  },
+  {
+    "id": "negociador",
+    "name": "Negociador",
+    "icon": "handshake-deal",
+    "costoBase": 3,
+    "factorCrecimiento": 1.9,
+    "nivelMaximo": 5,
+    "desc": "-2% costo de contenedores por nivel.",
+    "effects": [{ "type": "containerCostPercentReductionPerNivel", "percentPerNivel": 0.02 }]
+  },
+  {
+    "id": "coleccionista",
+    "name": "Coleccionista",
+    "icon": "archive-box",
+    "costoBase": 2,
+    "factorCrecimiento": 1.7,
+    "nivelMaximo": 5,
+    "desc": "+25% fragmentos de categoría por nivel.",
+    "effects": [{ "type": "fragmentPercentPerNivel", "percentPerNivel": 0.25 }]
+  },
+  {
+    "id": "guardiaPermanente",
+    "name": "Guardia Permanente",
+    "icon": "shield-clock",
+    "costoBase": 5,
+    "factorCrecimiento": 2.2,
+    "nivelMaximo": 3,
+    "desc": "+4 horas de tope de progreso offline por nivel.",
+    "effects": [{ "type": "offlineCapHorasFlatPerNivel", "horasPerNivel": 4 }]
+  },
+  {
+    "id": "portalEstable",
+    "name": "Portal Estable",
+    "icon": "portal-swirl",
+    "costoBase": 4,
+    "factorCrecimiento": 2.0,
+    "nivelMaximo": 3,
+    "desc": "-10% costo y -5% trampa del Contenedor Extradimensional por nivel.",
+    "effects": [
+      {
+        "type": "containerSpecificPerNivel",
+        "containerId": "containerExtradimensional",
+        "costPercentPerNivel": 0.10,
+        "trapPercentPerNivel": 0.05
+      }
+    ]
+  }
+]

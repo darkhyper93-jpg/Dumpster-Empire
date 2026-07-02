@@ -1,0 +1,73 @@
+[
+  {
+    "id": "guantes",
+    "name": "Guantes",
+    "icon": "gloves-work",
+    "cost": 50,
+    "desc": "+20% Fuerza de Escarbado permanente.",
+    "effects": [{ "type": "statPercent", "stat": "digPower", "percent": 0.20 }]
+  },
+  {
+    "id": "carrito",
+    "name": "Carrito",
+    "icon": "cart-push",
+    "cost": 300,
+    "desc": "+1 contenedor en la cola de automatización.",
+    "effects": [{ "type": "queueSlots", "flat": 1 }]
+  },
+  {
+    "id": "detectorMetales",
+    "name": "Detector de Metales",
+    "icon": "metal-detector",
+    "cost": 800,
+    "desc": "+10 Suerte global.",
+    "effects": [{ "type": "statFlat", "stat": "luck", "flat": 10 }]
+  },
+  {
+    "id": "robotClasificador",
+    "name": "Robot Clasificador Básico",
+    "icon": "robot-sorter",
+    "cost": 5000,
+    "desc": "Escarba contenedores solo, sin poder espiar antes (más riesgo de trampa).",
+    "effects": [
+      { "type": "enablesAutoDig" },
+      { "type": "autoTrapMultiplier", "mult": 1.3 },
+      { "type": "parallelSlots", "flat": 1 }
+    ]
+  },
+  {
+    "id": "cintaTransportadora",
+    "name": "Cinta Transportadora",
+    "icon": "conveyor-belt",
+    "cost": 25000,
+    "desc": "+3 slots de cola de automatización.",
+    "effects": [{ "type": "queueSlots", "flat": 3 }]
+  },
+  {
+    "id": "plantaReciclaje",
+    "name": "Planta de Reciclaje",
+    "icon": "recycling-plant",
+    "cost": 100000,
+    "desc": "+20% valor de venta de Basura Común y Reutilizables.",
+    "effects": [{ "type": "sellPercentCategories", "categorias": ["common", "reusable"], "percent": 0.20 }]
+  },
+  {
+    "id": "centroSubastas",
+    "name": "Centro de Subastas",
+    "icon": "auction-house",
+    "cost": 750000,
+    "desc": "+15% valor de venta de Arte y Reliquias.",
+    "effects": [{ "type": "sellPercentCategories", "categorias": ["art", "relics"], "percent": 0.15 }]
+  },
+  {
+    "id": "redDrones",
+    "name": "Red de Drones",
+    "icon": "drone-network",
+    "cost": 5000000,
+    "desc": "Segundo robot procesando en paralelo. Habilita el Contenedor Extradimensional.",
+    "effects": [
+      { "type": "parallelSlots", "flat": 1 },
+      { "type": "unlocksContainer", "containerId": "containerExtradimensional" }
+    ]
+  }
+]
