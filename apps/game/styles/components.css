@@ -1,1 +1,123 @@
 /* Botones táctiles extruidos, gauges recesados, bloom de rareza. Agente 4 lo completa (PLAN.md §5.3). */
+/* AJUSTE (Agente 2): componentes funcionales mínimos, sin el pulido visual de Fase 4. */
+
+button {
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--amber);
+  color: var(--bg-0);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: var(--bg-3);
+  color: var(--fg-1);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+#settings-btn {
+  background: var(--bg-3);
+  color: var(--fg-0);
+}
+
+.shop-grid,
+.automation-grid,
+.achievements-grid,
+.prestige-tree {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.shop-card,
+.automation-card,
+.achievement-card,
+.prestige-node,
+.automation-status,
+.prestige-summary,
+.settings-block {
+  background: var(--bg-2);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.settings-block {
+  margin-bottom: var(--space-3);
+}
+
+.shop-card--locked,
+.achievement-card--locked {
+  opacity: 0.55;
+}
+
+.badge {
+  align-self: flex-start;
+  background: var(--olive);
+  color: var(--bg-0);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--fg-1);
+  padding: var(--space-4);
+}
+
+#dig-progress {
+  height: 12px;
+  background: var(--bg-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: var(--space-2);
+}
+
+#dig-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--amber);
+}
+
+.toast {
+  background: var(--bg-2);
+  color: var(--fg-0);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+textarea {
+  width: 100%;
+  background: var(--bg-1);
+  color: var(--fg-0);
+  border: 1px solid var(--bg-3);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  padding: var(--space-2);
+}
+
+.fatal-error {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--danger);
+}

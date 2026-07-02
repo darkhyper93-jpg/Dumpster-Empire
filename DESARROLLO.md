@@ -76,7 +76,8 @@ que escribe **JS vanilla**, máximo de solidez para Steam.
 | Empaquetado de escritorio | **Electron** | Integración Steam madura y **en JS puro** (sin Rust). Precedente amplio de juegos HTML5 en Steam. Trade-off aceptado: binario más pesado que Tauri, irrelevante para un idle. |
 | Integración Steam | **steamworks.js** | Logros + Steam Cloud + presencia, desde el proceso principal de Electron. |
 | Guardado | **localStorage** en la app + **Steam Cloud** vía userData en Electron + export/import de texto | Cubre "que se guarde tras jugarlo" sin cuentas ni backend propio. |
-| Tests | **Vitest** (Node) | Cubre el engine (economía, save, sistemas) sin DOM. |
+| Tests (unit/lógica) | **Vitest** (Node) | Cubre el engine (economía, save, sistemas) sin DOM. Es el script `npm test`. |
+| Tests (smoke visual/e2e) | **Playwright** (Chromium) | Verifica el juego servido por HTTP: cero errores de consola, layout a 375/1280/1440px y el gesto de escarbado en canvas (pointer/touch). Script **separado** `test:e2e`, NO dentro de `npm test`. Aprobado en Fase 2. |
 | Build de distribución | **electron-builder** | Genera instaladores Win/Mac/Linux; el build Linux sirve para Steam Deck (nativo o Proton). |
 | Publicación | **SteamPipe** (steamcmd) | Sube los depots a Steam. |
 | Demo web (opcional, postre) | **Cloudflare Pages** | Demo gratis en navegador para marketing; mismo `apps/game` estático. |
@@ -374,15 +375,20 @@ tests rojos o checklist incompleto.
 
 ## 9. Plan de QA y verificación ("que todas las funciones anden")
 
-Tres capas de red de seguridad:
+Cuatro capas de red de seguridad:
 
-1. **Tests automáticos (engine, Vitest).** Economía, save, prestigio, offline, formato de números.
-   Es la defensa contra que un agente rompa una fórmula sin darse cuenta. Corren en cada tarea de
-   engine y en la auditoría final.
-2. **Checklist manual de UI por vista.** Para cada vista: ¿tiene estados cargando/vacío/error/datos?
+1. **Tests automáticos de lógica (engine, Vitest).** Economía, save, prestigio, offline, formato de
+   números. Es la defensa contra que un agente rompa una fórmula sin darse cuenta. Es el script
+   `npm test`; corre en cada tarea de engine, en CI y en la auditoría final.
+2. **Smoke test automático de UI (Playwright, Chromium).** Sirve `apps/game/` por HTTP y verifica:
+   cero errores de consola, layout a 375px / 1280×800 (Steam Deck) / 1440px, y el gesto de escarbado
+   en el canvas (pointer/touch) revelando y sumando dinero al completar. Script **separado**
+   (`test:e2e`), fuera de `npm test` para que la suite unitaria siga siendo rápida y sin browser. Es
+   la red que la simulación headless en Node no cubre (no toca el DOM ni el canvas). Aprobado en Fase 2.
+3. **Checklist manual de UI por vista.** Para cada vista: ¿tiene estados cargando/vacío/error/datos?
    ¿el botón deshabilitado muestra cuánto falta? ¿hay feedback en tap/hover? ¿se rompe en 375px y
-   en Steam Deck (1280×800) y en 1440px? ¿algún número desborda?
-3. **Prueba de loop de punta a punta.** Partida nueva real: escarbar el tacho gratis → comprar
+   en Steam Deck (1280×800) y en 1440px? ¿algún número desborda? (Complementa el smoke test con juicio humano.)
+4. **Prueba de loop de punta a punta.** Partida nueva real: escarbar el tacho gratis → comprar
    primera mejora → comprar primer contenedor → automatizar → llegar a prestigio → prestigiar.
    Verificar que ningún botón queda muerto por `NaN`/`Infinity` y que el guardado persiste al
    recargar y al cerrar/abrir Electron (con Steam Cloud).

@@ -16,29 +16,43 @@
   </script>
 </head>
 <body>
-  <div id="app">
-    <header id="topbar">
-      <span id="money">Dinero: $0</span>
-      <span id="keys">Llaves: 0</span>
-      <button id="settings-btn" type="button">Ajustes</button>
-    </header>
+  <div id="app" data-state="loading">
+    <p id="boot-status">Cargando Dumpster Empire…</p>
 
-    <main id="dig-area">
-      <!-- Agente 2: acá va el canvas de escarbado (DigCanvas.js) -->
-    </main>
+    <div class="game-shell">
+      <header id="topbar">
+        <span id="money">Dinero: $0</span>
+        <span id="keys">Llaves: 0</span>
+        <button id="settings-btn" type="button">Ajustes</button>
+      </header>
 
-    <section id="quick-upgrades">
-      <button type="button" data-upgrade="suerte">Suerte ▲</button>
-      <button type="button" data-upgrade="fuerza">Fuerza ▲</button>
-      <button type="button" data-upgrade="area">Área ▲</button>
-    </section>
+      <main id="dig-area">
+        <div id="dig-empty" class="dig-state">
+          <p>Elegí un contenedor para escarbar.</p>
+          <button type="button" data-start-dig="tachoVereda">Escarbar el Tacho de Vereda (gratis)</button>
+        </div>
+        <div id="dig-active" class="dig-state" hidden>
+          <h2 id="dig-container-title"></h2>
+          <div id="dig-canvas-host"></div>
+          <div id="dig-progress"><div id="dig-progress-fill"></div></div>
+          <p id="dig-trap-hint"></p>
+          <button type="button" id="dig-abandon-btn" hidden>Abandonar</button>
+        </div>
+      </main>
 
-    <nav id="tabbar">
-      <button type="button" data-tab="tienda">Tienda</button>
-      <button type="button" data-tab="automatizacion">Automatización</button>
-      <button type="button" data-tab="logros">Logros</button>
-      <button type="button" data-tab="prestigio">Prestigio</button>
-    </nav>
+      <section id="quick-upgrades"></section>
+
+      <nav id="tabbar">
+        <button type="button" data-tab="tienda">Tienda</button>
+        <button type="button" data-tab="automatizacion">Automatización</button>
+        <button type="button" data-tab="logros">Logros</button>
+        <button type="button" data-tab="prestigio">Prestigio</button>
+      </nav>
+      <section id="tab-content"></section>
+    </div>
+
+    <div id="toast-container" aria-live="polite"></div>
+    <div id="tutorial-overlay" hidden></div>
   </div>
 
   <script type="module" src="src/main.js"></script>

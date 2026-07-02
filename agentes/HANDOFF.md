@@ -12,7 +12,7 @@ qué necesita saber el próximo agente · estado del DoD.
 |---|---|---|
 | 0 Andamiaje | 0 | ✅ hecho |
 | 1 Engine + tests | 1 | ✅ hecho |
-| 2 Juego jugable | 2 | ⬜ pendiente |
+| 2 Juego jugable | 2 | ✅ hecho |
 | 3 Huecos de UI | 3 | ⬜ pendiente |
 | 4 Pulido visual | 4 | ⬜ pendiente |
 | 5 Balance | 5 | ⬜ pendiente |
@@ -280,3 +280,123 @@ documentada acá arriba.
 **Estado del DoD:** completo. Todos los tests de Vitest verdes, cero DOM en `packages/engine/src`,
 las 6 fórmulas de §4 literales y testeadas, data completa sin placeholders ni emojis, y cada stat
 (Suerte/Fuerza/Área/Capacidad) mueve un número verificable en un test dedicado.
+
+---
+
+## Agente 2 (Juego jugable modular)
+
+**Qué hice:**
+- `apps/game/src/store.js`: única fuente de verdad del lado UI. Envuelve `@dumpster/engine`,
+  carga/guarda en `localStorage`, aplica progreso offline al bootear (`applyOfflineProgress` si
+  pasaron ≥5s desde `lastSavedAt`), corre `checkAchievements` tras cada acción y expone un objeto
+  `actions` (uno por verbo de juego) que es lo único que la UI puede llamar. Nunca muta el estado
+  directo desde fuera de acá.
+- `apps/game/src/loop.js`: `setInterval` de 1s con delta de tiempo real (`Date.now()` diff, no
+  frames) para `tickAutomation`, autoguardado cada 15s, guardado en `visibilitychange`/`beforeunload`,
+  y un `requestAnimationFrame` liviano solo para refrescar el topbar (dinero/llaves) entre ticks.
+- `apps/game/src/dig/digInput.js` + `DigCanvas.js`: canvas de dos capas con
+  `globalCompositeOperation='destination-out'`, `touch-action:none`, muestreo de fracción revelada
+  por grilla (16x9) con throttle de 120ms — igual patrón técnico que el prototipo, pero el umbral de
+  revelado y el radio de borrado ahora salen de `getRevealThreshold`/`getAreaMult` del engine, no de
+  constantes hardcodeadas (`0.55`, `30`). Solo dibuja formas + texto (nombre del ítem), **sin
+  emojis**: el registro de íconos SVG queda para el Agente 3.
+- `apps/game/src/ui/`: `UIManager.js` (orquestador, suscrito al store, cablea tabbar/ajustes/canvas),
+  `Topbar.js`, `QuickUpgrades.js` (Suerte/Fuerza/Área), `ShopView.js`, `AutomationView.js`,
+  `AchievementsView.js`, `PrestigeView.js`, `SettingsView.js`, `Toast.js`, `Tutorial.js`. Cada vista
+  recibe `(container, state, store)`, lee estado y despacha `store.actions.*`; ninguna calcula
+  costos/valores por su cuenta (grep verificado: sin `Math.pow`/`costoBase *`/`valorBase *` fuera
+  del cálculo de layout del canvas).
+- `apps/game/index.html`, `styles/{tokens,layout,components}.css`: layout mobile-first funcional
+  (sin el pulido Stitch todavía — eso es Fase 4), con estado `loading`/`error`/`ready` en `#app` y
+  tokens mínimos de color/espaciado para no hardcodear valores sueltos (CLAUDE.md).
+- Tutorial mínimo (PLAN.md §7) usando `state.tutorialStep` ya existente en el engine: paso 0→1 al
+  completar el primer escarbado, 1→2 al comprar la primera mejora, 2→3 al comprar el primer
+  contenedor de pago. Se muestra una sola vez porque el paso persiste en el save.
+
+**Decisiones (`// DECISIÓN:` / `// AJUSTE:` en el código, resumidas acá):**
+```
+// DECISIÓN: comprar y escarbar un contenedor es una sola acción (`startManualDig`), igual que el
+// prototipo: se paga y se tira el resultado (rollContainerResult) de una, y el jugador "espía" el
+// resultado ya resuelto mientras revela con el canvas. abandonManualDig() descarta el resultado sin
+// reembolsar la compra (tal cual el comportamiento del prototipo) — es el costo de espiar.
+//
+// DECISIÓN: la 4ta mejora repetible (Capacidad) no está en QuickUpgrades junto a Suerte/Fuerza/Área
+// porque no es una stat de escarbado manual: controla `getQueueMax` (tamaño de la cola de
+// automatización). Se puso en AutomationView, al lado de la cola que efectivamente modifica.
+//
+// AJUSTE: en UIManager.renderTabContent(), si el foco (`document.activeElement`) está en un
+// `<textarea>`/`<input>` dentro de `#tab-content`, se salta el re-render. Sin este guard, el tick de
+// automatización (que notifica cada 1s) pisaba lo que el jugador estaba escribiendo en el textarea
+// de importar guardado de SettingsView. SettingsView además guarda su propio estado (texto
+// exportado, texto de import, armado del botón de reset) en variables de módulo en vez de leerlo
+// del DOM, para sobrevivir a un re-render disparado por el store mientras la vista sigue montada.
+//
+// AJUSTE: `pendingDig` (el contenedor comprado y su resultado ya tirado, pendiente de revelar a
+// mano) vive fuera del `GameState` persistido — es estado transitorio de sesión, no de partida. Si
+// se recarga la página a mitad de un escarbado, se pierde el "espiar en curso" pero no la compra
+// (el dinero ya se descontó y el contenedor ya se sumó a `ownedContainers` en `startManualDig`).
+```
+
+**Verificación hecha (no hay navegador headless disponible en este entorno — ni `chromium-cli` ni
+Playwright/Puppeteer instalados; no se instaló ninguno para no tocar el stack sin aprobación):**
+- `node --check` sobre los 16 archivos nuevos de `apps/game/src/**`: todos sin errores de sintaxis.
+- `npm test`: engine sigue en **48/48 verde** (no se tocó `packages/engine`).
+- Servido con `npx serve . -l 5183`: `/apps/game/`, `/apps/game/src/main.js`, `/apps/game/src/store.js`,
+  `/apps/game/src/data/items.json` y `/packages/engine/src/index.js` responden 200.
+- Simulación headless del store completo (Node + mock de `localStorage`, sin DOM) contra la data real:
+  30 escarbados del tacho gratis → tutorial avanza 0→1, dinero sube; compra de mejora Suerte →
+  tutorial 1→2; compra+escarbado de Contenedor de Barrio ($15) → tutorial 2→3; abandonar un dig no
+  cambia el dinero; export→import del propio save ida y vuelta ok; import de texto corrupto
+  rechazado sin tocar el estado en curso; tick de automatización sin robot no gasta plata; compra de
+  Robot Clasificador + ticks de automatización procesan/encolan contenedores; forzar el umbral de
+  $1.000.000.000 y prestigiar reparte llaves, sube `prestigeCount` y resetea contenedores/mejoras.
+  Los 30 asserts pasaron.
+- **Pendiente de verificación manual real en navegador** (mouse/touch sobre el `<canvas>`, layout en
+  375px/1280px/1440px): dejé el server corriendo en `http://localhost:5183/apps/game/` para que se
+  pruebe a ojo; le pregunté al usuario si prefería que instalara Playwright para automatizarlo y no
+  respondió a tiempo, así que no toqué el stack. Recomiendo abrirlo y escarbar el tacho antes de dar
+  la Fase 2 por cerrada del todo.
+
+**Qué necesita saber el Agente 3:**
+- Quedó **mínimo funcional** (a propósito, PLAN.md dice que esto es Fase 3/4 de ese agente):
+  - **Íconos:** `DigCanvas.drawBottomLayer()` dibuja círculos de color + el nombre del ítem en texto
+    plano (sin emoji). Cuando exista `apps/game/src/icons/icons.js`, reemplazar ese texto por el
+    ícono SVG correspondiente a `item.icon`/`container.icon` (las claves ya están en la data, ver el
+    handoff del Agente 1 más arriba). Mismo cambio aplica a las tarjetas de `ShopView`/
+    `AutomationView`/`AchievementsView`/`PrestigeView` (hoy son solo texto).
+  - **Árbol de prestigio:** `PrestigeView.js` es una grilla plana de tarjetas, no nodos conectados
+    visualmente. La lógica de nivel/costo/máximo ya está resuelta vía el engine; falta el layout.
+  - **Modal de offline con highlights:** hoy es un solo `Toast` con el monto total y los minutos
+    (`UIManager.render()`, bloque `offline`). Falta desglosar por objetos/categorías encontradas
+    (el engine no trackea qué ítems específicos generó el offline, solo el monto agregado — si se
+    quiere el desglose real habría que decidir si vale la pena simularlo o alcanza con mostrar el
+    total, que es lo que hay ahora).
+  - **Estados vacío/error explícitos:** cada vista tiene un `empty-state` para cuando la data viene
+    vacía (no debería pasar en producción, es defensivo) y `SettingsView` tiene un estado de error
+    de import: falta pulir esos mensajes.
+- **Puntos de enganche para sonido/partículas/tween (Fase 3, `fx/*`):**
+  - `store.actions.finishManualDig()` es el momento exacto de "hallazgo" (pop + partícula + sonido)
+    o "trampa" (shake + flash + sonido grave) — hoy solo aplica el resultado al estado, no dispara
+    ningún efecto. El `store` no importa nada de `fx/`, así que hay que decidir si el enganche va en
+    `UIManager` (leyendo `pending.result.isTrap` antes de llamar a `finishManualDig`) o si el store
+    expone el resultado aplicado para que la UI reaccione después.
+  - El contador de dinero en `Topbar.render()` hoy hace `textContent = formatMoney(...)` directo, sin
+    tween. Es el punto exacto donde engancha `fx/tween.js`.
+  - `checkAchievements`/`consumeNewAchievements()` en `UIManager.render()` ya dispara un `Toast` por
+    logro nuevo; ahí engancha el "modal corto celebratorio" de PLAN.md §5.2 si se quiere algo más que
+    un toast para desbloqueos de categoría.
+- El tabbar en `index.html` **no** tiene un botón `data-tab="ajustes"` a propósito: Ajustes se abre
+  con el botón de engranaje (`#settings-btn`) del topbar, tal como pide el mockup de PLAN.md §5.1.
+
+**Estado del DoD:**
+```
+[x] El juego abre servido estático (verificado por HTTP 200 + simulación headless del store).
+[x] El guardado persiste en localStorage; el offline se aplica al iniciar el store.
+[x] Ningún botón queda muerto por NaN/Infinity (todas las condiciones de disabled comparan contra
+    costos que salen de fórmulas del engine, nunca de cálculo propio).
+[x] Cada vista tiene un estado de datos + vacío; loading/error cubiertos a nivel de app (`#app`
+    data-state) y en SettingsView (mensaje de error de import).
+[x] Grep: la UI no reimplementa fórmulas de economía.
+[~] Escarbar funciona con mouse y touch por código (digInput.js maneja ambos idénticamente) pero no
+    se verificó a ojo en un navegador real por falta de herramienta headless en este entorno.
+```

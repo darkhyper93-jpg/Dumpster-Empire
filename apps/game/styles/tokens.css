@@ -1,1 +1,24 @@
 /* Tokens: paleta fusión ámbar + Stitch, tipografía, radios, sombras. Agente 4 lo completa (PLAN.md §5.3). */
+/* AJUSTE (Agente 2): set mínimo de tokens (paleta base de PLAN.md §5.3) para no hardcodear
+   colores en la UI funcional de Fase 2. El Agente 4 los reemplaza/expande con el pulido Stitch. */
+:root {
+  --amber: #ffb627;
+  --olive: #86a14a;
+  --bg-0: #121110;
+  --bg-1: #1c1a15;
+  --bg-2: #26221a;
+  --bg-3: #322c20;
+  --fg-0: #f4ede1;
+  --fg-1: #cfc6b4;
+  --danger: #c0392b;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+
+  --touch-target: 44px;
+}

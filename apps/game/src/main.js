@@ -1,5 +1,66 @@
-// Andamiaje temporal (Agente 0): confirma que el import map resuelve @dumpster/engine.
-// El Agente 2 reemplaza esto por la inicialización real (engine + UI + loop).
-import '@dumpster/engine';
+/**
+ * Punto de entrada: carga la data JSON, inicializa el store (engine + save + offline),
+ * monta la UI y arranca el loop. El engine no importa esta data directo (DECISIÓN del
+ * Agente 1, ver HANDOFF.md): acá se hace fetch() de los 6 archivos y se arman los
+ * paquetes `data`/`itemsData` que se pasan a cada llamada de @dumpster/engine.
+ */
 
-document.getElementById('app').dataset.ready = 'true';
+import { createStore } from './store.js';
+import { startLoop } from './loop.js';
+import { UIManager } from './ui/UIManager.js';
+
+const DATA_FILES = {
+  items: './data/items.json',
+  containers: './data/containers.json',
+  upgrades: './data/upgrades.json',
+  automations: './data/automations.json',
+  prestigeTree: './data/prestigeTree.json',
+  achievements: './data/achievements.json',
+};
+
+async function loadData() {
+  const entries = await Promise.all(
+    Object.entries(DATA_FILES).map(async ([key, path]) => {
+      const response = await fetch(path);
+      if (!response.ok) throw new Error(`No se pudo cargar ${path} (HTTP ${response.status}).`);
+      return [key, await response.json()];
+    })
+  );
+  return Object.fromEntries(entries);
+}
+
+function renderFatalError(app, message) {
+  const status = app.querySelector('#boot-status');
+  status.textContent = `No se pudo iniciar Dumpster Empire: ${message}`;
+}
+
+async function boot() {
+  const app = document.getElementById('app');
+  app.dataset.state = 'loading';
+
+  let loaded;
+  try {
+    loaded = await loadData();
+  } catch (err) {
+    app.dataset.state = 'error';
+    renderFatalError(app, err.message);
+    return;
+  }
+
+  const data = {
+    upgrades: loaded.upgrades,
+    automations: loaded.automations,
+    prestigeTree: loaded.prestigeTree,
+  };
+  const itemsData = loaded.items;
+  const allContainers = loaded.containers;
+  const achievementsData = loaded.achievements;
+
+  const store = createStore({ data, itemsData, allContainers, achievementsData });
+  const ui = new UIManager(app, store);
+  startLoop(store, ui);
+
+  app.dataset.state = 'ready';
+}
+
+boot();
