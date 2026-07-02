@@ -1,6 +1,8 @@
-/* Botones táctiles extruidos, gauges recesados, bloom de rareza (PLAN.md §5.3). */
-/* AJUSTE (Agente 4): pulido visual completo sobre la base funcional del Agente 2/3. Todo
-   valor sale de tokens.css — cero hex/px sueltos fuera de acá. */
+/* Componentes "The Workshop" (PLAN.md §5.3, mockup canónico clean_scavenge_area): tarjetas
+   `.tactile-card`, botones `.squishy-button`, texturas de madera/rascado, bordes rasgados,
+   gauges recesados, bloom de rareza. */
+/* AJUSTE (Agente 8): retinte + reemplazo de las clases del mockup sobre la base funcional del
+   Agente 2/3/4. Todo valor sale de tokens.css — cero hex/px sueltos fuera de acá. */
 
 body {
   font-family: var(--font-body);
@@ -8,6 +10,7 @@ body {
 
 h1, h2, h3, h4 {
   font-family: var(--font-display);
+  font-weight: 800;
   margin: 0;
 }
 
@@ -20,26 +23,74 @@ h1, h2, h3, h4 {
   color: var(--fg-1);
 }
 
-/* --- Botones extruidos (mejoras rápidas, acciones primarias) --- */
+/* --- Clases del mockup, portadas literal (PLAN.md §5.3 tarea 2) --- */
+
+.tactile-card {
+  box-shadow: var(--shadow-tactile);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.tactile-card:active {
+  transform: translateY(4px);
+  box-shadow: var(--shadow-tactile-pressed);
+}
+
+.squishy-button {
+  box-shadow: var(--shadow-extrude);
+  transition: transform 0.075s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.075s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.squishy-button:active {
+  transform: translateY(4px);
+  box-shadow: var(--shadow-extrude-pressed);
+}
+
+/* Veta de madera 100% CSS (ver DECISIÓN en tokens.css: sin imagen remota, para el build
+   offline de Steam). Se usa como fondo del "banco de trabajo" detrás del área de escarbado. */
+.wood-texture {
+  background-color: var(--wood-surface);
+  background-image: var(--wood-grain);
+}
+
+/* Superficie rascable (mockup: tarjeta "sin revelar"), usada en estados bloqueados/ocultos. */
+.scratch-surface {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--scratch-a),
+    var(--scratch-a) 10px,
+    var(--scratch-b) 10px,
+    var(--scratch-b) 20px
+  );
+}
+
+.torn-edge {
+  clip-path: polygon(0% 2%, 5% 0%, 10% 3%, 15% 1%, 20% 4%, 25% 1%, 30% 3%, 35% 0%, 40% 2%, 45% 1%, 50% 4%, 55% 1%, 60% 3%, 65% 0%, 70% 2%, 75% 1%, 80% 4%, 85% 1%, 90% 3%, 95% 0%, 100% 2%, 100% 98%, 95% 100%, 90% 97%, 85% 99%, 80% 96%, 75% 99%, 70% 97%, 65% 100%, 60% 98%, 55% 99%, 50% 96%, 45% 99%, 40% 97%, 35% 100%, 30% 98%, 25% 99%, 20% 96%, 15% 99%, 10% 97%, 5% 100%, 0% 98%);
+}
+
+.recessed-slot {
+  box-shadow: var(--shadow-recessed);
+}
+
+/* --- Botones extruidos/"squishy" (mejoras rápidas, acciones primarias) --- */
 
 button {
   min-height: var(--touch-target);
   min-width: var(--touch-target);
   padding: var(--space-2) var(--space-3);
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--amber);
   color: var(--bg-0);
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
   box-shadow: var(--shadow-extrude);
-  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+  transition: transform 0.075s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.075s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.1s ease;
 }
 
 button:active:not(:disabled) {
-  transform: translateY(3px);
+  transform: translateY(4px);
   box-shadow: var(--shadow-extrude-pressed);
 }
 
@@ -62,9 +113,10 @@ button:hover:not(:disabled) {
   min-width: 40px;
   min-height: 40px;
   padding: 0;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-lg);
   background: var(--bg-3);
-  color: var(--fg-0);
+  color: var(--fg-1);
+  border-bottom: 4px solid var(--bg-surface-highest);
   box-shadow: none;
   display: inline-flex;
   align-items: center;
@@ -73,8 +125,13 @@ button:hover:not(:disabled) {
 
 #settings-btn:hover:not(:disabled),
 .icon-btn-circle:hover:not(:disabled) {
-  background: var(--bg-surface-highest);
+  background: var(--amber-container);
   filter: none;
+}
+
+#settings-btn:active:not(:disabled),
+.icon-btn-circle:active:not(:disabled) {
+  transform: translateY(2px);
 }
 
 /* --- Pastillas de stats (dinero / llaves) del topbar --- */
@@ -83,9 +140,9 @@ button:hover:not(:disabled) {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  background: var(--bg-surface-highest);
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
+  background: var(--bg-2);
+  border-bottom: 2px solid var(--bg-surface-highest);
+  border-radius: var(--radius-full);
   padding: var(--space-1) var(--space-3);
   color: var(--amber);
 }
@@ -119,16 +176,14 @@ button:hover:not(:disabled) {
 .automation-explainer,
 .prestige-summary,
 .settings-block {
-  background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-md);
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  /* Textura sutil de metal gastado (PLAN.md §5.3), superpuesta sin tapar el contenido. */
-  background-image: linear-gradient(145deg, var(--bg-2), var(--bg-1)),
-    repeating-linear-gradient(100deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 3px);
+  /* Tarjeta "tactile" del mockup: extrusión sólida en vez de borde + textura de metal. */
+  box-shadow: var(--shadow-tactile);
 }
 
 .settings-block {
@@ -146,7 +201,20 @@ button:hover:not(:disabled) {
 
 .shop-card--locked,
 .achievement-card--locked {
-  opacity: 0.55;
+  opacity: 0.7;
+}
+
+.shop-card--locked,
+.achievement-card--locked,
+.index-card--hidden {
+  background: var(--scratch-a);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--scratch-a),
+    var(--scratch-a) 10px,
+    var(--scratch-b) 10px,
+    var(--scratch-b) 20px
+  );
 }
 
 .shop-card-luck {
@@ -195,17 +263,17 @@ button:hover:not(:disabled) {
 #dig-progress-fill {
   height: 100%;
   width: 0%;
-  background: repeating-linear-gradient(45deg, var(--amber), var(--amber) 10px, var(--amber-dark) 10px, var(--amber-dark) 20px);
-  box-shadow: 0 0 8px 1px rgba(255, 182, 39, 0.6);
+  background: repeating-linear-gradient(45deg, var(--amber), var(--amber) 10px, var(--tertiary) 10px, var(--tertiary) 20px);
+  box-shadow: 0 0 8px 1px rgba(240, 188, 146, 0.6);
   transition: width 0.1s linear;
 }
 
 .toast {
   background: var(--bg-2);
-  border: 1px solid var(--outline);
   color: var(--fg-0);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-tactile);
   opacity: 0;
   transform: translateY(8px);
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -304,7 +372,7 @@ textarea {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  border: 4px solid rgba(255, 182, 39, 0.4);
+  border: 4px solid rgba(240, 188, 146, 0.4);
   animation: idle-ring-pulse 1.6s ease-out infinite;
 }
 
@@ -367,26 +435,27 @@ textarea {
   gap: var(--space-1);
   flex: 1;
   background: var(--bg-2);
-  border: 1px solid var(--outline);
   border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-2);
-  box-shadow: none;
+  box-shadow: var(--shadow-tactile);
 }
 
 .quick-upgrade-btn:active:not(:disabled) {
-  transform: translateY(2px);
+  transform: translateY(4px);
+  box-shadow: var(--shadow-tactile-pressed);
 }
 
 .quick-upgrade-icon-circle {
   width: 48px;
   height: 48px;
   border-radius: var(--radius-full);
-  background: var(--bg-surface-highest);
+  background: var(--amber-container);
   color: var(--amber);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: var(--space-1);
+  border-bottom: 2px solid var(--amber-dark);
 }
 
 .quick-upgrade-label {
@@ -439,6 +508,7 @@ textarea {
   flex-shrink: 0;
   background: var(--bg-2);
   color: var(--fg-1);
+  border-radius: var(--radius-full);
   box-shadow: none;
   opacity: 0.75;
 }
@@ -456,15 +526,15 @@ textarea {
 }
 
 .index-card {
-  background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-md);
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
   padding: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   text-align: center;
   align-items: center;
+  box-shadow: var(--shadow-tactile);
 }
 
 .index-card-icon {
@@ -498,9 +568,8 @@ textarea {
 }
 
 .modal-card {
-  background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
-  border: 1px solid var(--outline);
-  border-radius: var(--radius-lg);
+  background: var(--bg-2);
+  border-radius: var(--radius-xl);
   padding: var(--space-4);
   max-width: 360px;
   width: 100%;
@@ -539,11 +608,20 @@ textarea {
 }
 
 @media (min-width: 700px) {
+  /* AJUSTE (Agente 8): `repeat(5, 1fr)` no dejaba lugar a que las tarjetas mantuvieran su
+     ancho de contenido mínimo dentro de la columna central del layout de escritorio (`minmax(0,
+     1fr)` en `.game-shell`, ~700px de ancho útil en 1280x800) — la quinta rama se recortaba
+     contra el borde de `#tab-content` sin ninguna forma de llegar a ella (ni scroll ni wrap).
+     `minmax(150px, 1fr)` fuerza un ancho mínimo por columna; si las 5 no entran, la grilla se
+     agranda hacia la derecha y `overflow-x: auto` en el propio contenedor deja scrollear hasta
+     la última rama en vez de perderla fuera de la pantalla. */
   .prestige-tree {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
     grid-auto-rows: min-content;
     gap: var(--space-3) var(--space-2);
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
   }
 }
 
@@ -571,12 +649,19 @@ textarea {
 }
 
 .prestige-node--active {
-  border-color: var(--amber);
-  box-shadow: 0 0 0 1px var(--amber);
+  box-shadow: var(--shadow-tactile), 0 0 0 2px var(--amber);
 }
 
 .prestige-node--locked {
-  opacity: 0.5;
+  opacity: 0.6;
+  background: var(--scratch-a);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--scratch-a),
+    var(--scratch-a) 10px,
+    var(--scratch-b) 10px,
+    var(--scratch-b) 20px
+  );
 }
 
 .badge--locked {
@@ -588,10 +673,10 @@ textarea {
 
 .scavenge-card {
   position: relative;
-  border-radius: var(--radius-xl);
-  border: 2px solid var(--outline);
-  background: linear-gradient(145deg, var(--bg-2), var(--bg-0));
-  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-2xl);
+  border: 8px solid var(--bg-surface-highest);
+  background: var(--bg-2);
+  box-shadow: var(--shadow-tactile);
   padding: var(--space-3);
   /* AJUSTE: sin `overflow:hidden` acá — la etiqueta flotante (`.scavenge-card-label`) pincha
      a propósito por encima del borde superior de la tarjeta (mockup main_game); recortarla
@@ -615,9 +700,7 @@ textarea {
   top: calc(-1 * var(--space-3));
   left: 50%;
   transform: translateX(-50%);
-  background: var(--bg-2);
-  border: 2px solid var(--outline);
-  border-bottom: none;
+  background: var(--bg-surface-highest);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   z-index: 3;

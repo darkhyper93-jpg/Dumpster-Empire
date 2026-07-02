@@ -4,16 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Dumpster Empire</title>
-  <!-- DECISIÓN (Agente 4): fuentes vía Google Fonts (Fredoka/Nunito/JetBrains Mono, todas OFL,
-       sin atribución obligatoria en créditos de Steam) en vez de auto-hospedarlas, para no meter
-       un paso de build en apps/game (CLAUDE.md prohíbe bundler). Riesgo: el build de Electron
-       (Fase 6, Agente 6) corre offline en Steam Deck/desktop, así que hay que descargar los
-       archivos .woff2 reales a apps/game/assets/fonts/ y reemplazar este <link> por @font-face
-       local antes de empaquetar — queda anotado en HANDOFF.md para el Agente 6. -->
+  <!-- DECISIÓN (Agente 8, re-anclaje a "The Workshop", PLAN.md §5.3): reemplaza Fredoka/Nunito/
+       JetBrains Mono (Fase 4) por Plus Jakarta Sans (400/500/700/800), la única familia del
+       mockup canónico, para titulares, números y cuerpo. Se mantiene vía Google Fonts (OFL, sin
+       atribución obligatoria) por el mismo motivo que documentó el Agente 4: no meter un paso de
+       build en apps/game (CLAUDE.md prohíbe bundler). RIESGO PARA EL AGENTE 10 (Steam): el build
+       de Electron corre offline en Steam Deck/desktop — hay que descargar los .woff2 reales a
+       apps/game/assets/fonts/, reemplazar este <link> por @font-face local y sumar la atribución
+       OFL a los créditos antes de empaquetar (mismo riesgo que ya señalaba el Agente 4, ahora con
+       una sola familia en vez de tres). No se usa Material Symbols: se mantiene el registro SVG
+       propio de icons/icons.js (Agente 3), 100% original y sin licencia que declarar — evita
+       sumar un segundo riesgo de auto-hospedaje offline. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="styles/tokens.css" />

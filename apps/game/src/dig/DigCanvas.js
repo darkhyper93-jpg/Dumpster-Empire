@@ -171,7 +171,7 @@ export class DigCanvas {
     const ctx = this.ctxTop;
     ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    ctx.fillStyle = '#4a4128';
+    ctx.fillStyle = '#4a3526';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.fillStyle = ctx.createPattern(this.getDirtTexture(), 'repeat');
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);

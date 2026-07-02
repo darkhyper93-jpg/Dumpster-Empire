@@ -1,34 +1,46 @@
-/* Tokens: paleta fusión ámbar + Stitch, tipografía, radios, sombras (PLAN.md §5.3). */
-/* AJUSTE (Agente 4): expande el set mínimo del Agente 2/3 con el pulido Stitch completo:
-   variantes de superficie (bg-0..3 + surface-highest para pastillas/tarjetas), sombras de
-   extrusión/recesado, rayado hazard y glow de bloom por rareza. Todo en base 4px. */
+/* Tokens: identidad "The Workshop" (PLAN.md §5.3, mockup canónico
+   reference/ui/stitch_est_tica_de_vanguardia/dumpster_empire_clean_scavenge_area/code.html). */
+/* AJUSTE (Agente 8): reemplaza la paleta "fusión ámbar+Stitch" de la Fase 4 por los tonos
+   exactos del mockup canónico (fondo #191208 + superficies de madera/taller, acentos
+   ámbar-durazno/verde), Plus Jakarta Sans como única familia tipográfica, y las sombras
+   "tactile"/"squishy" del mockup. Se conservan los nombres de variable ya usados en todo
+   `apps/game` (--amber, --bg-*, --fg-*, --shadow-extrude, etc.) para no tener que tocar cada
+   selector de components.css/layout.css uno por uno — solo cambian los VALORES. */
 :root {
-  /* --- Paleta base (prototipo, se conserva como identidad de marca) --- */
-  --amber: #ffb627;
-  --amber-dark: #cf8f12;
-  --olive: #86a14a;
-  --bg-0: #121110;
-  --bg-1: #1c1a15;
-  --bg-2: #26221a;
-  --bg-3: #322c20;
-  --bg-surface-highest: #3d3625;
-  --fg-0: #f4ede1;
-  --fg-1: #cfc6b4;
-  --fg-2: #9c9484;
-  --danger: #c0392b;
-  --outline: #4a4128;
+  /* --- Superficies (paleta del mockup: surface/surface-container-*) --- */
+  --bg-0: #191208; /* surface / background */
+  --bg-1: #221a0f; /* surface-container-low */
+  --bg-2: #261e13; /* surface-container */
+  --bg-3: #3c3427; /* surface-variant */
+  --bg-surface-highest: #41382b; /* surface-bright / surface-container-highest */
 
-  /* --- Tipografía (DESARROLLO.md §6): Fredoka para números/titulares, Nunito para cuerpo,
-     JetBrains Mono para readouts técnicos/labels en mayúsculas. Cargadas en index.html. --- */
-  --font-display: 'Fredoka', system-ui, sans-serif;
-  --font-body: 'Nunito', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* --- Acentos: ámbar-durazno (primary) y verde (secondary), warm no frío --- */
+  --amber: #f0bc92; /* primary */
+  --amber-dark: #623f1e; /* on-primary-fixed-variant, usado como sombra/borde de extrusión */
+  --amber-container: #5d3a1a; /* primary-container, fondo de chips/íconos ámbar */
+  --olive: #78dc77; /* secondary (verde), reemplaza el oliva del intento anterior */
+  --olive-dark: #00761f; /* secondary-container, sombra/borde de extrusión verde */
+  --tertiary: #ffb870; /* naranja secundario del mockup (ej. "Dig Strength") */
+  --tertiary-container: #633800;
 
-  /* --- Radios y espaciado, base 4px --- */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 18px;
-  --radius-xl: 28px;
+  --fg-0: #efe0cd; /* on-surface */
+  --fg-1: #d4c3b8; /* on-surface-variant */
+  --fg-2: #9d8e84; /* outline */
+  --danger: #ffb4ab; /* error */
+  --danger-container: #93000a; /* error-container */
+  --outline: #50453c; /* outline-variant, bordes de tarjetas/inputs */
+
+  /* --- Tipografía: Plus Jakarta Sans única familia (titulares, números, cuerpo, labels) --- */
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  /* --- Radios (mockup: DEFAULT .25rem, lg .5rem, xl .75rem, full) + escala grande de tarjetas --- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
   --radius-full: 9999px;
 
   --space-1: 4px;
@@ -40,17 +52,21 @@
   --touch-target: 44px;
   --container-max: 1440px;
 
-  /* --- Sombras Stitch: botón extruido, gauge recesado, tarjeta con relieve --- */
-  --shadow-extrude: 0 4px 0 var(--amber-dark);
-  --shadow-extrude-pressed: 0 1px 0 var(--amber-dark);
-  --shadow-recessed: inset 0 2px 4px rgba(0, 0, 0, 0.55);
-  --shadow-card: inset 0 4px 12px rgba(0, 0, 0, 0.8), 0 1px 1px rgba(255, 255, 255, 0.05);
+  /* --- Sombras "tactile"/"squishy" del mockup: extrusión sólida que se hunde al presionar --- */
+  --shadow-extrude: 0 6px 0 0 rgba(0, 0, 0, 0.4); /* .squishy-button */
+  --shadow-extrude-pressed: 0 2px 0 0 rgba(0, 0, 0, 0.4);
+  --shadow-tactile: 0 8px 0 0 rgba(0, 0, 0, 0.4); /* .tactile-card */
+  --shadow-tactile-pressed: 0 4px 0 0 rgba(0, 0, 0, 0.4);
+  --shadow-recessed: inset 0 4px 8px 0 rgba(0, 0, 0, 0.5); /* .recessed-slot */
+  --shadow-card: 0 8px 0 0 rgba(0, 0, 0, 0.4), 0 1px 1px rgba(255, 255, 255, 0.05);
   --shadow-pressed-pill: inset 0 2px 4px rgba(0, 0, 0, 0.35);
 
   --hazard-stripe: #ffd600;
 
   /* Colores de rareza (PLAN.md §2.5/§5.3): progresión de opaco/común a vívido/futurista,
-     cada uno con su color de "bloom" (glow) a intensidad creciente. */
+     cada uno con su color de "bloom" (glow) a intensidad creciente. Se conservan del pase
+     anterior (ya validados sobre fondo oscuro), solo se retocó levemente el contraste sobre
+     el nuevo --bg-0 #191208. */
   --r-common: #9c9484;
   --r-common-glow: rgba(156, 148, 132, 0.35);
   --r-reusable: #8fae53;
@@ -67,4 +83,17 @@
   --r-relics-glow: rgba(125, 95, 217, 0.6);
   --r-future: #58e6c9;
   --r-future-glow: rgba(88, 230, 201, 0.7);
+
+  /* --- Texturas del mockup, 100% CSS (sin imágenes/CDN externos: DECISIÓN de abajo) --- */
+  /* DECISIÓN (Agente 8): el mockup carga `.wood-texture` desde transparenttextures.com (CDN
+     externo). apps/game debe poder servirse offline para el build de Steam (CLAUDE.md/PLAN.md
+     §6.4), así que la veta de madera se genera 100% con gradientes CSS (`--wood-grain`, usado
+     por `.wood-texture` en components.css) en vez de una imagen remota — mismo criterio que el
+     Agente 3 ya aplicó a íconos/sonido (evitar assets de terceros que compliquen el offline). */
+  --wood-grain:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 34px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 17px);
+  --wood-surface: #3d2b1f;
+  --scratch-a: #3c3427;
+  --scratch-b: #261e13;
 }

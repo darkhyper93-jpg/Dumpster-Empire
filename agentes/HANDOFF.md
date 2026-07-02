@@ -21,8 +21,8 @@ qué necesita saber el próximo agente · estado del DoD.
 | 4 Pulido visual (1er pase) | 4 | ✅ hecho |
 | 5 Fixes de UX | 5 | ✅ hecho |
 | 6 Mecánicas de contenido | 6 | ✅ hecho |
-| 7 UI de mecánicas nuevas | 7 | ⬜ pendiente |
-| 8 Re-anclaje visual | 8 | ⬜ pendiente |
+| 7 UI de mecánicas nuevas | 7 | ✅ hecho |
+| 8 Re-anclaje visual | 8 | ✅ hecho |
 | 9 Balance | 9 | ⬜ pendiente |
 | 10 Steam | 10 | ⬜ pendiente |
 | 11 Auditoría | 11 | ⬜ pendiente |
@@ -1106,4 +1106,118 @@ balance ni ningún otro agente.
     ShopView.js, AutomationView.js x2; resto confirmado seguro, documentado arriba).
 [x] Test de regresión: save malicioso rechazado (6 variantes), save legítimo aceptado.
 [x] npm test (82/82) y npm run test:e2e (2/2) verdes; sin console.log/// TODO.
+```
+
+---
+
+## Agente 8 (Re-anclaje visual a "The Workshop")
+
+**Qué hice:** re-ancló toda la identidad visual al mockup canónico
+`reference/ui/stitch_est_tica_de_vanguardia/dumpster_empire_clean_scavenge_area/code.html`,
+reemplazando la "fusión ámbar+Stitch" de la Fase 4 (PLAN.md §5.3). Solo toqué
+`apps/game/styles/{tokens,layout,components}.css`, `apps/game/index.html` y una línea de color
+en `apps/game/src/dig/DigCanvas.js` — **cero cambios de lógica, ids o markup que rompan
+`querySelector`** (verificado contra el inventario completo de `class="..."` de los 13 archivos
+de `apps/game/src/ui/*.js`, ninguno se tocó).
+
+- **`tokens.css` (reescrito):** paleta exacta del mockup (`--bg-0: #191208` y la escala
+  `surface-container-*` del tema Material que usa Tailwind ahí, `--amber` repuntado al primary
+  ámbar-durazno `#f0bc92` del mockup, `--olive` repuntado al secondary verde `#78dc77`), Plus
+  Jakarta Sans como única familia (`--font-display`/`--font-body`/`--font-mono` apuntan las tres
+  a la misma fuente — ya no hay Fredoka/Nunito/JetBrains Mono), radios en la escala del mockup
+  (`.25rem`/`.5rem`/`.75rem` + `--radius-2xl` nuevo para la tarjeta grande de escarbado), sombras
+  `--shadow-tactile`/`--shadow-tactile-pressed` (`0 8px 0 rgba(0,0,0,.4)` → `0 4px 0`) y
+  `--shadow-extrude`/`--shadow-extrude-pressed` (`.squishy-button`, `0 6px 0` → `0 2px 0`) con los
+  valores **literales** del mockup, y `--wood-grain`/`--wood-surface`/`--scratch-a`/`--scratch-b`
+  para las texturas (ver DECISIÓN abajo). Se conservan los 8 tokens `--r-*` de rareza tal cual
+  (ya estaban validados sobre fondo oscuro).
+- **`components.css`:** portadas las clases literales del mockup — `.tactile-card`,
+  `.squishy-button`, `.wood-texture`, `.scratch-surface`, `.torn-edge`, `.recessed-slot` — más el
+  retinte de todos los componentes ya existentes (botones, `.stat-pill`, `.shop-card`/
+  `.automation-card`/`.achievement-card`/`.prestige-node`/`.index-card`/`.modal-card`/
+  `.quick-upgrade-btn`/`.scavenge-card`, ahora con `box-shadow: var(--shadow-tactile)` en vez de
+  borde + textura de metal) para que todos usen la extrusión sólida del mockup en vez del
+  degradé+borde de la Fase 4. Los estados bloqueados/ocultos (`.shop-card--locked`,
+  `.achievement-card--locked`, `.index-card--hidden`, `.prestige-node--locked`) ahora usan
+  `.scratch-surface` (rayas diagonales) en vez de solo opacidad — mismo lenguaje visual que la
+  tarjeta "sin revelar" del mockup.
+- **`layout.css`:** fondo del taller (`--wood-grain`/`--wood-surface`) detrás de `#dig-area` y
+  `.title-screen` (mockup: "Wooden Table Surface"), topbar/tabbar retintados con bordes de
+  extrusión (`border-bottom/top: 4px solid var(--bg-surface-highest)`), pestaña activa del tabbar
+  pasada de ámbar a **verde** (`--olive-dark`/`--olive`) para calcar el nav item
+  `bg-secondary-container` del mockup y diferenciarlo visualmente de los botones de acción
+  (ámbar). Sidebar de escritorio (`>=1024px`) con el mismo tratamiento tactile del `<aside>` del
+  mockup.
+- **`index.html`:** fuente cambiada a Plus Jakarta Sans 400/500/700/800 (antes Fredoka/Nunito/
+  JetBrains Mono). **No se sumó Material Symbols** — se mantiene el registro SVG propio de
+  `icons/icons.js` (Agente 3), 100% original, sin licencia que declarar y sin un segundo riesgo
+  de auto-hospedaje offline.
+
+**DECISIÓN (veta de madera 100% CSS, sin imagen remota):**
+```
+// El mockup carga `.wood-texture` desde `transparenttextures.com` (CDN externo). apps/game debe
+// poder servirse offline para el build de Steam (CLAUDE.md/PLAN.md §6.4), así que la veta de
+// madera se generó con dos `repeating-linear-gradient` superpuestos (`--wood-grain` en
+// tokens.css) en vez de una imagen remota — mismo criterio que ya aplicó el Agente 3 al evitar
+// librerías de íconos/audio de terceros. `.scratch-surface`/`.torn-edge` sí se portaron
+// literales del mockup porque son gradientes/clip-path puros, sin dependencia externa.
+```
+
+**Bug real encontrado y arreglado (no solo cosmético):**
+```
+// AJUSTE: `.prestige-tree` en `>= 700px` usaba `grid-template-columns: repeat(5, 1fr)`. En el
+// layout de escritorio (columna central `minmax(0, 1fr)` de `.game-shell`, ~640-700px útiles a
+// 1280x800), las 5 columnas no alcanzaban a mostrar el contenido mínimo de las tarjetas: la
+// quinta rama del árbol (Brazos de Acero → Visión Periférica) quedaba recortada contra el borde
+// de `#tab-content` SIN NINGUNA FORMA de llegar a ella (ni scroll ni wrap) — encontrado con una
+// captura de Playwright a 1280x800 (descartable, no quedó en el repo), confirmado programáticamente
+// verificando `scrollWidth > clientWidth` antes/después del fix. Arreglado con
+// `grid-template-columns: repeat(5, minmax(150px, 1fr))` + `overflow-x: auto` en el propio
+// `.prestige-tree`: si las 5 columnas no entran, la grilla crece y el contenedor scrollea en vez
+// de perder contenido fuera de la pantalla. Este bug es anterior a esta fase (el grid no cambió
+// desde el Agente 3/7) pero cae directo en el DoD de esta fase ("sin texto desbordado con
+// números grandes" a 1280x800), así que se arregló acá.
+```
+
+**Verificado:**
+- `npm test`: **82/82 verde** (no se tocó `packages/engine`).
+- `npm run test:e2e`: **2/2 verde**, capturas a 375px / 1280×800 (Steam Deck) / 1440px revisadas
+  una por una (`apps/game/e2e/.results/screenshots/`), más una ronda de capturas descartables
+  (Playwright ad-hoc, no quedaron en el repo) de Automatización/Logros/Prestigio/INDEX/Ajustes a
+  1280×800 para confirmar la identidad "The Workshop" en todas las vistas.
+- `grep` de hex/rgba sueltos fuera de `tokens.css` en `styles/`/`index.html`: los únicos
+  resultados son sombras negras (`rgba(0,0,0,X)`) y el glow ámbar del gauge de escarbado, mismo
+  patrón que ya usaba el Agente 4 sin tokenizar (valores literales del mockup, no un color de
+  marca nuevo) — cero hex de superficie/marca sueltos.
+- `grep` de `console.log`/`// TODO`/emojis en `styles/`, `index.html`: **0 resultados**.
+- Inventario completo de `class="..."` en los 13 archivos de `apps/game/src/ui/*.js` +
+  `dig/DigCanvas.js` contrastado contra los selectores de `components.css`/`layout.css`: cero
+  clases sin estilo nuevo, cero id/clase renombrada.
+
+**Qué necesita saber el Agente 9 (balance):**
+- La UI está lista para el pase de balance: esta fase no tocó `packages/engine`, `store.js` ni
+  ninguna fórmula — solo CSS, `index.html` y una línea de color de canvas en `DigCanvas.js`.
+- No hay nada visual pendiente que bloquee el balance; los números grandes (K/M/B/T) ya se
+  probaron en las capturas de Automatización/Logros a 1280×800 sin desborde.
+
+**Qué necesita saber el Agente 10 (Steam):**
+- **Riesgo de offline (fuente):** Plus Jakarta Sans se carga vía Google Fonts `<link>` en
+  `index.html` (OFL, sin atribución obligatoria). Antes de empaquetar hay que descargar los
+  `.woff2` reales a `apps/game/assets/fonts/`, reemplazar el `<link>` por `@font-face` local y
+  sumar la atribución OFL a los créditos — mismo riesgo que ya señalaba el Agente 4, ahora con
+  una sola familia en vez de tres (documentado también inline en `index.html`).
+- **No hay riesgo de íconos:** se descartó sumar Material Symbols; el registro SVG de
+  `icons/icons.js` sigue siendo 100% original, sin licencia que declarar.
+- La veta de madera (`.wood-texture`, `--wood-grain`) es 100% CSS — no hay ninguna imagen externa
+  que auto-hospedar para esta fase.
+
+**Estado del DoD:**
+```
+[x] Todas las pantallas se ven "The Workshop" (fondo #191208, madera, Plus Jakarta Sans, tarjetas
+    tactile-card) — inicio, escarbado, tienda, automatización, logros, prestigio, INDEX, settings,
+    modales, toasts.
+[x] Tokens centralizados; grep de hex/colores de superficie sueltos fuera de tokens.css ≈ 0.
+[x] Layout correcto en 375px, 1280×800 y 1440px, sin texto desbordado con números grandes (incluye
+    el fix del árbol de prestigio que sí desbordaba antes de esta fase).
+[x] npm test (82/82) y npm run test:e2e (2/2) verdes, con capturas a los 3 anchos.
 ```

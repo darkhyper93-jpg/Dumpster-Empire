@@ -19,11 +19,14 @@ body {
   font-family: var(--font-body);
 }
 
-/* Fondo con grilla industrial sutil en toda la pantalla (mockup main_game). */
+/* Fondo del taller (mockup clean_scavenge_area): superficie de mesada de madera detrás de la
+   grilla industrial sutil ya existente. Ver DECISIÓN en tokens.css sobre por qué la veta de
+   madera se genera con gradientes CSS en vez de la imagen remota del mockup. */
 body {
+  background-color: var(--bg-0);
   background-image:
-    linear-gradient(rgba(255, 182, 39, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 182, 39, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(240, 188, 146, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240, 188, 146, 0.045) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
@@ -76,6 +79,8 @@ body {
   gap: var(--space-4);
   position: relative;
   padding: var(--space-4);
+  background-color: var(--wood-surface);
+  background-image: var(--wood-grain);
 }
 
 .title-screen[hidden] {
@@ -122,7 +127,8 @@ body {
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: var(--bg-1);
-  border-bottom: 2px solid var(--outline);
+  border-bottom: 4px solid var(--bg-surface-highest);
+  box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.3);
 }
 
 .brand {
@@ -141,9 +147,13 @@ body {
   margin-right: var(--space-2);
 }
 
+/* Mesada de madera del taller detrás del área de escarbado (mockup: "Wooden Table Surface"). */
 #dig-area {
   position: relative;
   padding: var(--space-3);
+  border-radius: var(--radius-2xl);
+  background-color: var(--wood-surface);
+  background-image: var(--wood-grain);
 }
 
 .dig-state[hidden] {
@@ -193,8 +203,8 @@ body {
 #tabbar {
   display: flex;
   overflow-x: auto;
-  border-top: 2px solid var(--outline);
-  background: var(--bg-1);
+  border-top: 4px solid var(--bg-surface-highest);
+  background: var(--bg-2);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
   padding: var(--space-1);
@@ -222,6 +232,7 @@ body {
 
 #tabbar button:hover:not(.is-active) {
   opacity: 1;
+  background: var(--amber-container);
   color: var(--amber);
 }
 
@@ -229,10 +240,10 @@ body {
   transform: none;
 }
 
-/* Pestaña activa: pastilla de color + sombra interior "hundida" (mockup main_game). */
+/* Pestaña activa: pastilla verde + sombra interior "hundida" (mockup: nav item bg-secondary-container). */
 #tabbar button.is-active {
-  background: var(--amber);
-  color: var(--bg-0);
+  background: var(--olive-dark);
+  color: var(--olive);
   opacity: 1;
   box-shadow: var(--shadow-pressed-pill);
 }
@@ -362,11 +373,11 @@ body {
   #tab-content {
     grid-area: tabcontent;
     background: var(--bg-1);
-    border: 1px solid var(--outline);
     border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-tactile);
   }
 
-  /* El <nav> de tabs pasa a ser el sidebar izquierdo fijo, vertical. */
+  /* El <nav> de tabs pasa a ser el sidebar izquierdo fijo, vertical (mockup: <aside>). */
   #tabbar {
     grid-area: nav;
     flex-direction: column;
@@ -376,7 +387,8 @@ body {
     top: var(--space-3);
     border-radius: var(--radius-lg);
     border-top: none;
-    box-shadow: none;
+    background: var(--bg-2);
+    box-shadow: var(--shadow-tactile);
     padding: var(--space-2);
   }
 
