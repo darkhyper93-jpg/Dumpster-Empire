@@ -88,7 +88,7 @@ export const PrestigeView = {
 
     const nodes = data.prestigeTree
       .map((node) => {
-        const level = state.prestigeTreeLevels[node.id] || 0;
+        const level = Number(state.prestigeTreeLevels[node.id]) || 0;
         const maxed = level >= node.nivelMaximo;
         const cost = maxed ? 0 : nextPrestigeNodeCost(state, node);
         const canAfford = state.prestigeKeys >= cost;
@@ -128,7 +128,7 @@ export const PrestigeView = {
       `<section class="prestige-summary">` +
       `<span class="prestige-summary-icon">${iconMarkup('key', { size: 22 })}</span>` +
       `<p>Llaves de Ciudad: ${formatNumber(state.prestigeKeys)}</p>` +
-      `<p>Prestigios completados: ${state.prestigeCount}</p>` +
+      `<p>Prestigios completados: ${Number(state.prestigeCount) || 0}</p>` +
       `<p>Si prestigiás ahora ganás: ${formatNumber(preview)} llaves.</p>` +
       `<button type="button" class="prestige-btn-main" data-action="do-prestige" ${eligible ? '' : 'disabled'} title="${
         eligible ? '' : 'Necesitás $1.000.000.000 ganados en total para prestigiar.'

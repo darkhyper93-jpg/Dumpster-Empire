@@ -31,7 +31,7 @@ export const AutomationView = {
       });
     }
 
-    const { data } = store.ctx;
+    const { data, allContainers } = store.ctx;
     if (!data.automations.length) {
       container.innerHTML = '<p class="empty-state">No hay automatizaciones configuradas.</p>';
       return;
@@ -47,7 +47,8 @@ export const AutomationView = {
     const processingItems = state.autoProcessing
       .map((slot) => {
         const pct = Math.round(((slot.totalTime - slot.remaining) / slot.totalTime) * 100);
-        return `<li>${slot.containerId}: ${pct}%</li>`;
+        const containerName = allContainers.find((c) => c.id === slot.containerId)?.name || 'Contenedor desconocido';
+        return `<li>${containerName}: ${pct}%</li>`;
       })
       .join('');
 
@@ -89,7 +90,7 @@ export const AutomationView = {
       `<p>Procesando: ${processingItems ? `<ul>${processingItems}</ul>` : 'Nada en curso.'}</p>` +
       (capacityUpgrade
         ? `<button type="button" data-action="buy-capacity" ${capacityCanAfford ? '' : 'disabled'} title="${capacityReason}">` +
-          `Ampliar Capacidad (nivel ${state.upgradeLevels.capacity || 0}) por ${formatMoney(capacityCost)}</button>`
+          `Ampliar Capacidad (nivel ${Number(state.upgradeLevels.capacity) || 0}) por ${formatMoney(capacityCost)}</button>`
         : '') +
       `</section>` +
       `<div class="automation-grid">${automationCards}</div>`;

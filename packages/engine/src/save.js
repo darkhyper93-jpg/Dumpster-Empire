@@ -5,6 +5,101 @@
 
 import { SAVE_VERSION, freshState } from './state.js';
 
+/** Mapas planos `id -> number` (freshState() los arranca en `{}` o con valores numéricos). */
+const NUMERIC_MAP_FIELDS = [
+  'upgradeLevels',
+  'ownedContainers',
+  'containerLevels',
+  'containerLevelProgress',
+  'prestigeTreeLevels',
+  'itemsFoundByCategory',
+];
+
+/** Mapa plano `id -> boolean` (compras de un solo uso). */
+const BOOLEAN_MAP_FIELDS = ['automationOwned'];
+
+/** Arrays cuyos elementos deben ser strings (ids, no texto libre). */
+const STRING_ARRAY_FIELDS = ['achievementsUnlocked', 'autoQueue'];
+
+/**
+ * Valida que todo valor propio de `obj` sea un número finito.
+ * @param {unknown} obj
+ * @returns {boolean}
+ */
+function isFiniteNumberMap(obj) {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return false;
+  return Object.values(obj).every((v) => Number.isFinite(v));
+}
+
+/**
+ * Valida que todo valor propio de `obj` sea un booleano.
+ * @param {unknown} obj
+ * @returns {boolean}
+ */
+function isBooleanMap(obj) {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return false;
+  return Object.values(obj).every((v) => typeof v === 'boolean');
+}
+
+/**
+ * Valida `itemsFoundByItem`: mapa `containerId -> { itemName -> number }`.
+ * @param {unknown} obj
+ * @returns {boolean}
+ */
+function isValidItemsFoundByItem(obj) {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return false;
+  return Object.values(obj).every((byItem) => isFiniteNumberMap(byItem));
+}
+
+/**
+ * Valida `autoProcessing`: array de slots `{ containerId: string, totalTime: number, remaining: number }`.
+ * @param {unknown} arr
+ * @returns {boolean}
+ */
+function isValidAutoProcessing(arr) {
+  if (!Array.isArray(arr)) return false;
+  return arr.every(
+    (slot) =>
+      typeof slot === 'object' &&
+      slot !== null &&
+      typeof slot.containerId === 'string' &&
+      Number.isFinite(slot.totalTime) &&
+      Number.isFinite(slot.remaining)
+  );
+}
+
+/**
+ * Valida el contenido profundo de los campos de tipo `object`/array que `REQUIRED_FIELDS`
+ * solo chequea a nivel de tipo. Capa primaria de defensa contra saves manipulados (XSS
+ * almacenado vía `state → innerHTML` en la UI, ver agentes/fix-xss-save-prompt.md).
+ * @param {Object} migrated
+ * @returns {string | null} mensaje de error, o `null` si todo es válido.
+ */
+function validateDeepContent(migrated) {
+  for (const field of NUMERIC_MAP_FIELDS) {
+    if (!isFiniteNumberMap(migrated[field])) {
+      return `Contenido inválido en ${field}: todos los valores deben ser números.`;
+    }
+  }
+  for (const field of BOOLEAN_MAP_FIELDS) {
+    if (!isBooleanMap(migrated[field])) {
+      return `Contenido inválido en ${field}: todos los valores deben ser booleanos.`;
+    }
+  }
+  for (const field of STRING_ARRAY_FIELDS) {
+    if (!Array.isArray(migrated[field]) || !migrated[field].every((v) => typeof v === 'string')) {
+      return `Contenido inválido en ${field}: debe ser un array de strings.`;
+    }
+  }
+  if (!isValidItemsFoundByItem(migrated.itemsFoundByItem)) {
+    return 'Contenido inválido en itemsFoundByItem: debe ser containerId -> { itemName -> número }.';
+  }
+  if (!isValidAutoProcessing(migrated.autoProcessing)) {
+    return 'Contenido inválido en autoProcessing: debe ser un array de slots { containerId, totalTime, remaining }.';
+  }
+  return null;
+}
+
 /** Campos que deben existir y tener el tipo correcto para aceptar un save como válido. */
 const REQUIRED_FIELDS = {
   saveVersion: 'number',
@@ -87,6 +182,10 @@ export function validateSave(candidate) {
     if (typeof migrated[field] !== type) {
       return { valid: false, error: `Campo inválido o faltante: ${field}` };
     }
+  }
+  const deepError = validateDeepContent(migrated);
+  if (deepError) {
+    return { valid: false, error: deepError };
   }
   return { valid: true, data: migrated };
 }

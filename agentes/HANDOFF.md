@@ -1025,3 +1025,85 @@ como pedía el prompt del agente.
     compartido por toda la UI desde la Fase 0 — ninguna vista nueva hace su propio fetch).
 [x] `npm test` (75/75) y `npm run test:e2e` (3/3) verdes.
 ```
+
+---
+
+## Fix puntual — XSS vía save no confiable (fuera del pipeline numerado)
+
+Ejecutado según `agentes/fix-xss-save-prompt.md` (detectado por revisión de seguridad tras la
+Fase 7). Rama `fix/xss-save-collection`.
+
+**Vulnerabilidad:** `validateSave` en `save.js` solo chequeaba el tipo de primer nivel de los
+mapas del save (`itemsFoundByItem: 'object'`, etc.) pero no su contenido. Un save
+importado/manipulado con `itemsFoundByItem: { tachoVereda: { "Lata aplastada": "<img src=x
+onerror=...>" } }` pasaba la validación, y `CollectionView.js` lo interpolaba crudo en
+`grid.innerHTML` vía `Encontrado: ${foundCount}` (con `foundCount <= 0` dando `false` para un
+string, así que entraba a la rama "revelado") → XSS almacenado.
+
+**Fix en dos capas:**
+
+1. **Capa primaria — `packages/engine/src/save.js` (fail-closed):** agregué
+   `validateDeepContent()`, llamada desde `validateSave()` después del chequeo de tipos de primer
+   nivel. Valida:
+   - Mapas planos `id -> number` (`upgradeLevels`, `ownedContainers`, `containerLevels`,
+     `containerLevelProgress`, `prestigeTreeLevels`, `itemsFoundByCategory`): todo valor debe ser
+     `Number.isFinite`.
+   - `automationOwned`: todo valor debe ser `boolean`.
+   - `itemsFoundByItem` (mapa anidado `containerId -> { itemName -> number }`): cada sub-objeto
+     validado como mapa numérico.
+   - `autoProcessing`: array de slots `{ containerId: string, totalTime: number, remaining:
+     number }`.
+   - `achievementsUnlocked` / `autoQueue`: arrays de strings (no texto libre arbitrario, pero
+     tampoco restringido a un allow-list de ids — ver capa 2 para por qué no alcanza solo).
+   - Si algo no cuadra, `validateSave` rechaza con mensaje claro (`{ valid: false, error }`) sin
+     tocar el estado en curso, igual que el resto de los rechazos existentes.
+
+2. **Capa de defensa en el sink — coerción numérica y resolución contra ids conocidos:**
+   - `CollectionView.js`: `foundCount = Number(foundInContainer[item.name]) || 0`.
+   - `PrestigeView.js`: `level = Number(state.prestigeTreeLevels[node.id]) || 0` y
+     `Prestigios completados: ${Number(state.prestigeCount) || 0}`.
+   - `ShopView.js`: `Comprados: ${Number(state.ownedContainers[c.id]) || 0}`.
+   - `AutomationView.js`: `nivel ${Number(state.upgradeLevels.capacity) || 0}` y, en la lista de
+     "Procesando", en vez de interpolar `slot.containerId` (string libre validado solo en tipo por
+     la capa 1, no en contenido/allow-list) se resuelve contra `allContainers` y se interpola el
+     `.name` del contenedor conocido (o `'Contenedor desconocido'` si el id no matchea ninguno) —
+     así un `containerId` manipulado nunca llega a `innerHTML`.
+
+   Por qué la capa 2 no se limita a la capa 1: la capa 1 valida *tipo* de contenido
+   (`Number.isFinite`, `typeof === 'string'`), no que el string sea HTML-safe ni que matchee un id
+   real de `data/containers.json`. La coerción numérica en el sink cubre el resto de los mapas
+   numéricos con `|| 0` (patrón que no coacciona strings truthy no numéricos), y la resolución
+   contra `allContainers` cubre el único caso de string libre (`containerId`) que se mostraba tal
+   cual.
+
+**Barrido de otros sinks (`state → innerHTML`) en `apps/game/src/ui/**` y `apps/game/src/dig/**`:**
+revisé los 15 archivos con `innerHTML`. Además de los 5 ya listados arriba, todo lo demás resultó
+seguro: `state.money`/`state.prestigeKeys` siempre pasan por `formatMoney`/`formatNumber`/
+aritmética antes de interpolarse (coacciona a `NaN`, no ejecuta el string); `state.tutorialStep`
+solo indexa un array estático; `state.soundOn`/`achievementsUnlocked.includes(...)` solo alimentan
+ternarios de strings fijos; `Topbar.js` usa `tweenNumberText` que hace `textContent`, no
+`innerHTML`. No encontré más sinks reales.
+
+**Tests de regresión** (`packages/engine/tests/save.test.js`): nuevo bloque `describe` con 7 casos
+— rechaza HTML malicioso en `itemsFoundByItem`, en un mapa numérico plano (`ownedContainers`), en
+`containerLevels`, `autoProcessing` con `containerId` no-string, `autoQueue`/`achievementsUnlocked`
+con elementos no-string; y un caso de camino feliz con contenido numérico/string legítimo en todos
+los mapas (ida y vuelta por `serializeState`/`deserializeState`).
+
+**No toqué:** esquema del save (`saveVersion` sigue en 3, no hubo migración nueva), UI visual,
+balance ni ningún otro agente.
+
+**Verificado:**
+- `npm test`: **82/82 verde** (75 preexistentes + 7 nuevos de la validación profunda).
+- `npm run test:e2e`: **2/2 verde**, sin errores de consola.
+- `grep` de `console.log` y `// TODO` sobre los 6 archivos tocados: **0 resultados**.
+
+**Estado del DoD:**
+```
+[x] save.js valida en profundidad los mapas y rechaza contenido no numérico donde corresponde.
+[x] CollectionView.js coerce foundCount a número en el sink.
+[x] Barrido de otros sinks state → innerHTML hecho (4 más arreglados: PrestigeView.js x2,
+    ShopView.js, AutomationView.js x2; resto confirmado seguro, documentado arriba).
+[x] Test de regresión: save malicioso rechazado (6 variantes), save legítimo aceptado.
+[x] npm test (82/82) y npm run test:e2e (2/2) verdes; sin console.log/// TODO.
+```

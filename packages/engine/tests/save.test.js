@@ -65,3 +65,69 @@ describe('save.js — rechazo de save corrupto sin romper el estado en curso', (
     expect(result.valid).toBe(true);
   });
 });
+
+describe('save.js — validación profunda contra XSS almacenado (agentes/fix-xss-save-prompt.md)', () => {
+  it('rechaza un string malicioso dentro de itemsFoundByItem', () => {
+    const state = freshState();
+    state.itemsFoundByItem = { tachoVereda: { 'Lata aplastada': '<img src=x onerror=alert(1)>' } };
+    const result = validateSave(state);
+    expect(result.valid).toBe(false);
+    expect(typeof result.error).toBe('string');
+  });
+
+  it('rechaza un string malicioso dentro de un mapa numérico plano (ownedContainers)', () => {
+    const state = freshState();
+    state.ownedContainers = { tachoVereda: '<script>alert(1)</script>' };
+    const result = validateSave(state);
+    expect(result.valid).toBe(false);
+  });
+
+  it('rechaza un string malicioso dentro de containerLevels', () => {
+    const state = freshState();
+    state.containerLevels = { tachoVereda: '<img src=x onerror=alert(1)>' };
+    const result = validateSave(state);
+    expect(result.valid).toBe(false);
+  });
+
+  it('rechaza autoProcessing con containerId que no es string', () => {
+    const state = freshState();
+    state.autoProcessing = [{ containerId: { evil: true }, totalTime: 10, remaining: 5 }];
+    const result = validateSave(state);
+    expect(result.valid).toBe(false);
+  });
+
+  it('rechaza autoQueue con elementos que no son strings', () => {
+    const state = freshState();
+    state.autoQueue = [{ toString: () => '<img src=x onerror=alert(1)>' }];
+    const result = validateSave(state);
+    expect(result.valid).toBe(false);
+  });
+
+  it('rechaza achievementsUnlocked con elementos que no son strings', () => {
+    const state = freshState();
+    state.achievementsUnlocked = [123, '<img src=x onerror=alert(1)>'];
+    const result = validateSave(state);
+    // el elemento numérico ya viola "debe ser array de strings"
+    expect(result.valid).toBe(false);
+  });
+
+  it('acepta un save legítimo con contenido numérico normal en todos los mapas', () => {
+    const state = freshState();
+    state.ownedContainers = { tachoVereda: 3 };
+    state.containerLevels = { tachoVereda: 5 };
+    state.containerLevelProgress = { tachoVereda: 12 };
+    state.upgradeLevels = { luck: 4, digPower: 2, area: 1, capacity: 0 };
+    state.prestigeTreeLevels = { nodo1: 2 };
+    state.itemsFoundByCategory = { comun: 10 };
+    state.itemsFoundByItem = { tachoVereda: { 'Lata aplastada': 3 } };
+    state.automationOwned = { robot1: true };
+    state.achievementsUnlocked = ['a1', 'a10'];
+    state.autoQueue = ['tachoVereda', 'contenedorIndustrial'];
+    state.autoProcessing = [{ containerId: 'tachoVereda', totalTime: 10, remaining: 4 }];
+
+    const raw = serializeState(state);
+    const result = deserializeState(raw);
+    expect(result.ok).toBe(true);
+    expect(result.state.itemsFoundByItem.tachoVereda['Lata aplastada']).toBe(3);
+  });
+});

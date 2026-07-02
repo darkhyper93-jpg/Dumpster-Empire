@@ -71,7 +71,7 @@ export const ShopView = {
         `<h3>${c.name}</h3>` +
         `<p>Categorías: ${c.categorias.join(', ')}</p>` +
         `<p>Riesgo de trampa: ${Math.round(trapProb * 100)}%</p>` +
-        `<p>Comprados: ${state.ownedContainers[c.id] || 0}</p>` +
+        `<p>Comprados: ${Number(state.ownedContainers[c.id]) || 0}</p>` +
         `<p class="shop-card-luck ${luckReached ? 'shop-card-luck--reached' : ''}">` +
         `Suerte recomendada: ${formatNumber(recommendedLuck)} ${luckReached ? '(alcanzada)' : `(tenés ${formatNumber(currentLuck)})`}` +
         `</p>` +
