@@ -97,6 +97,11 @@ body {
   border-radius: 0;
   background: var(--bg-1);
   color: var(--fg-0);
+  /* AJUSTE: los <button> traen `white-space: nowrap` por defecto del navegador, lo que recortaba
+     "Automatización" a "Automatiza" en 375px (detectado con el screenshot del smoke e2e). */
+  white-space: normal;
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 
 #tabbar button.is-active {

@@ -21,7 +21,12 @@ const DATA_FILES = {
 async function loadData() {
   const entries = await Promise.all(
     Object.entries(DATA_FILES).map(async ([key, path]) => {
-      const response = await fetch(path);
+      // AJUSTE: `fetch()` resuelve rutas relativas contra la URL del documento (`/apps/game/`),
+      // no contra la de este módulo (`/apps/game/src/main.js`) — a diferencia de un `import`.
+      // Sin `import.meta.url` acá, `./data/items.json` pedía `/apps/game/data/items.json` (404)
+      // en vez de `/apps/game/src/data/items.json`. Detectado con el smoke test de Playwright.
+      const url = new URL(path, import.meta.url);
+      const response = await fetch(url);
       if (!response.ok) throw new Error(`No se pudo cargar ${path} (HTTP ${response.status}).`);
       return [key, await response.json()];
     })

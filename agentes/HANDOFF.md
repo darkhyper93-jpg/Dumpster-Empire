@@ -337,12 +337,9 @@ las 6 fórmulas de §4 literales y testeadas, data completa sin placeholders ni 
 // (el dinero ya se descontó y el contenedor ya se sumó a `ownedContainers` en `startManualDig`).
 ```
 
-**Verificación hecha (no hay navegador headless disponible en este entorno — ni `chromium-cli` ni
-Playwright/Puppeteer instalados; no se instaló ninguno para no tocar el stack sin aprobación):**
+**Verificación hecha:**
 - `node --check` sobre los 16 archivos nuevos de `apps/game/src/**`: todos sin errores de sintaxis.
 - `npm test`: engine sigue en **48/48 verde** (no se tocó `packages/engine`).
-- Servido con `npx serve . -l 5183`: `/apps/game/`, `/apps/game/src/main.js`, `/apps/game/src/store.js`,
-  `/apps/game/src/data/items.json` y `/packages/engine/src/index.js` responden 200.
 - Simulación headless del store completo (Node + mock de `localStorage`, sin DOM) contra la data real:
   30 escarbados del tacho gratis → tutorial avanza 0→1, dinero sube; compra de mejora Suerte →
   tutorial 1→2; compra+escarbado de Contenedor de Barrio ($15) → tutorial 2→3; abandonar un dig no
@@ -351,11 +348,37 @@ Playwright/Puppeteer instalados; no se instaló ninguno para no tocar el stack s
   Robot Clasificador + ticks de automatización procesan/encolan contenedores; forzar el umbral de
   $1.000.000.000 y prestigiar reparte llaves, sube `prestigeCount` y resetea contenedores/mejoras.
   Los 30 asserts pasaron.
-- **Pendiente de verificación manual real en navegador** (mouse/touch sobre el `<canvas>`, layout en
-  375px/1280px/1440px): dejé el server corriendo en `http://localhost:5183/apps/game/` para que se
-  pruebe a ojo; le pregunté al usuario si prefería que instalara Playwright para automatizarlo y no
-  respondió a tiempo, así que no toqué el stack. Recomiendo abrirlo y escarbar el tacho antes de dar
-  la Fase 2 por cerrada del todo.
+- **Smoke e2e con Playwright/Chromium (agregado a pedido del usuario tras esta fase — ver DECISIÓN
+  abajo), `npm run test:e2e`, 2/2 verde:** sirve `apps/game/` por HTTP, navega a `/apps/game/`, chequea
+  `#app[data-state="ready"]` y cero errores de consola, saca screenshot a 375px / 1280×800 (Steam Deck)
+  / 1440px, y simula un pointer drag en zigzag sobre `.dig-canvas-top` (mouse down/move/up reales,
+  no eventos sintéticos) verificando que el juego solo — sin que el test llame `finishManualDig` a
+  mano — vuelve al estado `#dig-empty` y que `#money` cambió. Esto valida contra el **DOM y canvas
+  reales** lo que la simulación headless de arriba no podía tocar.
+  - **Este smoke test encontró un bug real** que la simulación headless no detectaba: en `main.js`,
+    `fetch('./data/items.json')` resolvía relativo a la URL del **documento** (`/apps/game/`), no a
+    la del módulo (`/apps/game/src/main.js`), pidiendo `/apps/game/data/items.json` (404) en vez de
+    `/apps/game/src/data/items.json`. La simulación headless usaba `fs.readFileSync` directo y nunca
+    pasaba por `fetch()`, así que no lo veía. Arreglado con `new URL(path, import.meta.url)` (ver
+    `// AJUSTE:` en `main.js`). **Esta es la razón de fondo por la que vale la pena mantener este
+    smoke test como capa permanente**, no solo como verificación puntual de esta fase.
+  - También encontró (por el screenshot a 375px) que el tabbar recortaba "Automatización" a
+    "Automatiza" (los `<button>` traen `white-space: nowrap` por defecto del navegador). Arreglado
+    en `styles/layout.css`.
+
+**DECISIÓN (Playwright como herramienta permanente, aprobada explícitamente por el usuario):**
+```
+// DECISIÓN: se agrega @playwright/test (^1.61.x) como devDependency en la raíz, con script
+// `test:e2e` SEPARADO de `npm test` (Vitest sigue siendo la suite rápida sin browser para
+// packages/engine). Config en playwright.config.js (raíz): levanta `npx serve . -l 5185` como
+// webServer y corre apps/game/e2e/smoke.spec.js contra Chromium. Motivo: la simulación headless de
+// store.js (sin DOM) no puede detectar bugs de integración DOM/fetch/canvas — y de hecho encontró
+// uno real en el primer run (ver arriba). Queda como capa permanente de QA para las Fases 3/4/7
+// (DESARROLLO.md §9 ahora documenta 4 capas de red de seguridad en vez de 3). CI: job **separado**
+// `e2e` en .github/workflows/ci.yml (instala Chromium con `npx playwright install --with-deps
+// chromium` y sube el reporte de Playwright como artifact si falla), no está dentro del job `test`
+// para no acoplar la suite rápida de Vitest a tener que instalar un browser.
+```
 
 **Qué necesita saber el Agente 3:**
 - Quedó **mínimo funcional** (a propósito, PLAN.md dice que esto es Fase 3/4 de ese agente):
@@ -390,13 +413,16 @@ Playwright/Puppeteer instalados; no se instaló ninguno para no tocar el stack s
 
 **Estado del DoD:**
 ```
-[x] El juego abre servido estático (verificado por HTTP 200 + simulación headless del store).
+[x] El juego abre servido estático (verificado por HTTP 200, simulación headless del store y el
+    smoke e2e de Playwright, que además detectó y disparó el arreglo de un 404 real de fetch()).
 [x] El guardado persiste en localStorage; el offline se aplica al iniciar el store.
 [x] Ningún botón queda muerto por NaN/Infinity (todas las condiciones de disabled comparan contra
     costos que salen de fórmulas del engine, nunca de cálculo propio).
 [x] Cada vista tiene un estado de datos + vacío; loading/error cubiertos a nivel de app (`#app`
     data-state) y en SettingsView (mensaje de error de import).
 [x] Grep: la UI no reimplementa fórmulas de economía.
-[~] Escarbar funciona con mouse y touch por código (digInput.js maneja ambos idénticamente) pero no
-    se verificó a ojo en un navegador real por falta de herramienta headless en este entorno.
+[x] Escarbar funciona con mouse (digInput.js soporta mouse y touch con el mismo código; el smoke
+    e2e ejerce la rama de mouse con un pointer drag real). Touch queda cubierto por código pero no
+    se probó con un emulador táctil real dentro de este smoke — Agente 3/4 puede sumar un proyecto
+    `devices['iPhone ...']` a playwright.config.js si se quiere ese caso automatizado también.
 ```

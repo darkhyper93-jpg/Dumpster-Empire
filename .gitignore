@@ -19,6 +19,12 @@ apps/desktop/dist/
 coverage/
 .nyc_output/
 
+# Playwright (test:e2e) — artefactos, no el spec ni la config.
+apps/game/e2e/.results/
+playwright-report/
+test-results/
+blob-report/
+
 *.log
 npm-debug.log
 yarn-debug.log
