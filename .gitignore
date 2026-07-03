@@ -47,6 +47,9 @@ desktop.ini
 !.vscode/extensions.json
 .idea/
 
+# Claude Code — config local de la herramienta (no se trackea)
+.claude/
+
 *.swp
 *.swo
 

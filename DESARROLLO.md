@@ -99,11 +99,16 @@ del Steam Deck. En desktop, el mismo layout se centra con ancho máximo. No se d
 ### Versiones pineadas (no subir sin actualizar este doc)
 
 ```
-electron           ^31.x   (LTS estable con soporte de Node reciente)
-steamworks.js      ^0.4.x
-electron-builder   ^24.x
-vitest             ^2.x
+electron           ^43.x   (bump 2026-07: Electron 31 quedó EOL y con 17 advisories — npm audit)
+steamworks.js      ^0.4.x   (verificar compat con Electron 43 al reinstalar; N-API, suele ser estable)
+electron-builder   ^26.x    (bump 2026-07: cierra las vulns high de tar/app-builder-lib)
+vitest             ^2.x     (bump a 4.x diferido: dev-only, moderate; hacerlo aparte para no romper los 109 tests)
+node (dev)         >=20     (20 quedó EOL; dev corre en 22/24 — la app usa el Node embebido de Electron)
 ```
+
+> **Nota (2026-07):** el bump de Electron 31→43 es 12 majors; cambia APIs que el Agente 10 usó
+> (registro de protocolo `dumpster://`, ciclo de vida, ABI de steamworks.js). Requiere una pasada de
+> re-verificación del código de `apps/desktop` — ver `agentes/bump-electron-stack-prompt.md`.
 
 ---
 
