@@ -126,6 +126,7 @@ const REQUIRED_FIELDS = {
   marketFluctuationAt: 'number',
   tutorialStep: 'number',
   soundOn: 'boolean',
+  volume: 'number',
   lastSavedAt: 'number',
 };
 
@@ -157,6 +158,15 @@ function migrate(raw) {
       ...migrated,
       itemsFoundByItem: migrated.itemsFoundByItem || {},
       saveVersion: 3,
+    };
+  }
+  // v3 -> v4 (PUNTOS_A_MEJORAR_2.md §5): agrega `volume` (0..1). Saves viejos arrancan con volumen
+  // 1 (comportamiento actual: sonido a todo volumen si estaba encendido).
+  if (migrated.saveVersion < 4) {
+    migrated = {
+      ...migrated,
+      volume: typeof migrated.volume === 'number' ? migrated.volume : 1,
+      saveVersion: 4,
     };
   }
   return migrated;

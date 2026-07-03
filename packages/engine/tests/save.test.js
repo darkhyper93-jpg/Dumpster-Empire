@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { freshState } from '../src/state.js';
+import { freshState, SAVE_VERSION } from '../src/state.js';
 import { serializeState, deserializeState, exportSave, importSave, validateSave } from '../src/save.js';
 
 describe('save.js — ida y vuelta sin pérdida', () => {
@@ -129,5 +129,26 @@ describe('save.js — validación profunda contra XSS almacenado (agentes/fix-xs
     const result = deserializeState(raw);
     expect(result.ok).toBe(true);
     expect(result.state.itemsFoundByItem.tachoVereda['Lata aplastada']).toBe(3);
+  });
+});
+
+describe('save v3 -> v4 migra sin perder partidas viejas (PUNTOS_A_MEJORAR_2.md §5)', () => {
+  it('un save v3 sin volume se acepta y se completa con volume: 1', () => {
+    const v3 = freshState();
+    delete v3.volume;
+    v3.saveVersion = 3;
+
+    const result = validateSave(v3);
+    expect(result.valid).toBe(true);
+    expect(result.data.saveVersion).toBe(SAVE_VERSION);
+    expect(result.data.volume).toBe(1);
+  });
+
+  it('un save v4 conserva el volume guardado en la ida y vuelta', () => {
+    const state = freshState();
+    state.volume = 0.4;
+    const result = deserializeState(serializeState(state));
+    expect(result.ok).toBe(true);
+    expect(result.state.volume).toBe(0.4);
   });
 });

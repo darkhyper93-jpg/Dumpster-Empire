@@ -11,7 +11,9 @@
 // ya trackeaba itemsFoundByCategory) — sin este campo la vista no puede revelar/ocultar ítems
 // individuales ni contar hallazgos reales (incluye los del robot de automatización, que nunca
 // pasan por la UI). save.js migra saves v1/v2 rellenando el campo en {}.
-export const SAVE_VERSION = 3;
+// AJUSTE (PUNTOS_A_MEJORAR_2.md §5): bump a 4 por `volume` (0..1) — el control de volumen de
+// Configuración se persiste junto a `soundOn`. save.js migra saves v1/v2/v3 rellenando `volume: 1`.
+export const SAVE_VERSION = 4;
 
 /**
  * @typedef {Object} AutoProcessingSlot
@@ -47,6 +49,7 @@ export const SAVE_VERSION = 3;
  * @property {number} marketFluctuationAt - epoch ms de la última recalculación
  * @property {number} tutorialStep
  * @property {boolean} soundOn
+ * @property {number} volume - volumen maestro de SFX, 0..1 (PUNTOS_A_MEJORAR_2.md §5)
  * @property {number} lastSavedAt - epoch ms, usado para calcular progreso offline
  */
 
@@ -80,6 +83,7 @@ export function freshState() {
     marketFluctuationAt: 0,
     tutorialStep: 0,
     soundOn: true,
+    volume: 1,
     lastSavedAt: Date.now(),
   };
 }
