@@ -34,6 +34,12 @@ const BASE_ERASE_RADIUS = 20;
 // alpha parcial reduce el alpha del destino multiplicativamente, no lo pone en 0 de una).
 const DIG_RATE_RADIUS_FLOOR = 0.45;
 const DIG_RATE_ALPHA_FLOOR = 0.35;
+// Higiene de input de la UI (no economía): exige que el jugador haya arrastrado al menos esta
+// distancia real (px de canvas) antes de poder disparar onThresholdReached. El umbral de
+// revelado en sí sigue viniendo 100% del engine (getRevealThreshold); esto solo evita que un
+// buffer vaciado por una causa externa (contexto GPU perdido, hover fantasma) se confunda con
+// un escarbado legítimo.
+const MIN_DRAG_DISTANCE = 400; // px de canvas ≈ dos tercios del ancho (CANVAS_WIDTH=600)
 
 export class DigCanvas {
   /**
@@ -75,8 +81,10 @@ export class DigCanvas {
     this.thresholdFired = false;
     this.touched = false;
     this.lastSampleAt = 0;
+    this._lastErasePos = null;
+    this._dragDistance = 0;
 
-    this.detachInput = attachDigInput(this.topCanvas, {
+    this.input = attachDigInput(this.topCanvas, {
       onStart: (pos) => {
         this.markTouched();
         if (this.active) startScratchSound();
@@ -108,6 +116,12 @@ export class DigCanvas {
     this.revealThreshold = revealThreshold;
     this.areaMult = areaMult;
     this.digRate = digRate;
+    this.lastSampleAt = 0;
+    this._lastErasePos = null;
+    this._dragDistance = 0;
+    // Reset silencioso del input: un escarbado nuevo no debe heredar un `dragging` que haya
+    // quedado prendido de un gesto anterior (ver digInput.js).
+    this.input.cancel();
     // Generación de escarbado: cada `start()` la incrementa para que un callback de carga de
     // ícono de un escarbado anterior (que llega tarde) se descarte en vez de pintar sobre el
     // contenido actual (PUNTOS_A_MEJORAR_2.md §1).
@@ -121,6 +135,7 @@ export class DigCanvas {
     this.active = false;
     this.idlePrompt.hidden = true;
     stopScratchSound();
+    this.input.cancel();
     this.ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     this.ctxBottom.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   }
@@ -254,6 +269,15 @@ export class DigCanvas {
    */
   erase(pos) {
     if (!this.active) return;
+    // Compuerta de esfuerzo: acumula la distancia real recorrida en este arrastre (ver
+    // MIN_DRAG_DISTANCE arriba). `_lastErasePos` se resetea a null en start(), así que el primer
+    // erase() de cada gesto no suma distancia (no hay punto anterior con el que compararlo).
+    if (this._lastErasePos) {
+      const dx = pos.x - this._lastErasePos.x;
+      const dy = pos.y - this._lastErasePos.y;
+      this._dragDistance += Math.sqrt(dx * dx + dy * dy);
+    }
+    this._lastErasePos = pos;
     // AJUSTE (agentes/rework-escarbado-y-landing-prompt.md): el ritmo de escarbado (digRate, 1 =
     // normal) ya lo calcula el engine (economy.js getDigRate) combinando Resistencia del
     // contenedor y Fuerza del jugador; acá se traduce a un pincel más chico Y más "débil" (alpha
@@ -283,8 +307,17 @@ export class DigCanvas {
     if (now - this.lastSampleAt <= SAMPLE_THROTTLE_MS) return;
     this.lastSampleAt = now;
     const fraction = this.sampleClearedFraction();
+    if (fraction >= this.revealThreshold && this._dragDistance < MIN_DRAG_DISTANCE) {
+      // Reparación de anomalía: la fracción revelada saltó sin que hubiera arrastre real
+      // suficiente (buffer vaciado por una causa externa — contexto GPU perdido, hover fantasma
+      // residual, etc.). Se repinta la capa de suciedad completa y se reporta progreso 0; el
+      // escarbado sigue "vivo" (no se marca thresholdFired) y exige arrastre real desde cero.
+      this.drawTopLayer();
+      this.callbacks.onProgress(0);
+      return;
+    }
     this.callbacks.onProgress(fraction);
-    if (!this.thresholdFired && fraction >= this.revealThreshold) {
+    if (!this.thresholdFired && fraction >= this.revealThreshold && this._dragDistance >= MIN_DRAG_DISTANCE) {
       this.thresholdFired = true;
       this.callbacks.onThresholdReached();
     }
@@ -306,7 +339,7 @@ export class DigCanvas {
   }
 
   destroy() {
-    this.detachInput();
+    this.input.detach();
     this.host.innerHTML = '';
   }
 }
