@@ -21,7 +21,7 @@ import { Tutorial } from './Tutorial.js';
 import { OfflineModal } from './OfflineModal.js';
 import { CategoryUnlockModal } from './CategoryUnlockModal.js';
 import { iconMarkup } from '../icons/icons.js';
-import { setEnabled as setSoundEnabled, playFindPop, playTrapThud } from '../fx/audio.js';
+import { setEnabled as setSoundEnabled, setVolume as setMasterVolume, playFindPop, playTrapThud } from '../fx/audio.js';
 import { spawnFindPop, triggerRarityGlow, triggerTrapShake } from '../fx/particles.js';
 
 const TAB_VIEWS = {
@@ -50,6 +50,7 @@ export class UIManager {
     this.activeTab = 'escarbar';
     this.mountedDig = null;
 
+    this.shellEl = root.querySelector('.game-shell');
     this.topbarEl = root.querySelector('#topbar');
     this.quickUpgradesEl = root.querySelector('#quick-upgrades');
     this.digAreaEl = root.querySelector('#dig-area');
@@ -153,12 +154,13 @@ export class UIManager {
 
   render(state) {
     setSoundEnabled(state.soundOn);
+    setMasterVolume(state.volume);
     this.renderTopbar(state);
-    // PLAN.md §11.9: la pantalla de escarbado (prompt de contenedor + mejoras rápidas) es su
-    // propia pestaña/home ('escarbar'), separada de la Tienda y del resto de secciones.
-    const showDigScreen = this.activeTab === 'escarbar';
-    this.digAreaEl.hidden = !showDigScreen;
-    this.quickUpgradesEl.hidden = !showDigScreen;
+    // PLAN.md §11.9 / PUNTOS_A_MEJORAR_2.md §3: la visibilidad de dig-area/quick-upgrades por
+    // pantalla la decide el CSS según el breakpoint, leyendo `data-active-tab` en `.game-shell`.
+    // En mobile solo se ven en la home de escarbado; en desktop (≥1024px) quedan siempre visibles
+    // (sidebar izquierdo con nav+lista · escarbado al centro · mejoras a la derecha, paneles fijos).
+    this.shellEl.dataset.activeTab = this.activeTab;
     QuickUpgrades.render(this.quickUpgradesEl, state, this.store);
     this.renderDigArea(state);
     this.renderTabContent(state);

@@ -210,6 +210,16 @@ body {
   display: none;
 }
 
+/* PUNTOS_A_MEJORAR_2.md §3: la visibilidad de dig-area/quick-upgrades por pantalla ahora la maneja
+   el CSS (no JS `.hidden`), leyendo `data-active-tab` en `.game-shell`, para poder dar una regla
+   distinta por breakpoint. En mobile/Steam-Deck angosto (< 1024px), fuera de la home de escarbado
+   estos dos ceden la pantalla al contenido de la pestaña activa (comportamiento igual al de antes).
+   En desktop se sobreescribe (ver el bloque @media (min-width:1024px)) para dejarlos siempre visibles. */
+.game-shell:not([data-active-tab='escarbar']) #dig-area,
+.game-shell:not([data-active-tab='escarbar']) #quick-upgrades {
+  display: none;
+}
+
 #tabbar {
   display: flex;
   overflow-x: auto;
@@ -360,14 +370,18 @@ body {
     display: block;
   }
 
+  /* PUNTOS_A_MEJORAR_2.md §3 (mockup clean_scavenge_area): el sidebar izquierdo lleva el menú
+     ARRIBA (`nav`) y la lista/contenido de pestañas apilado DEBAJO (`content`), en la misma columna
+     izquierda. El escarbado queda siempre al centro (`dig`) y las mejoras rápidas siempre a la
+     derecha (`quick`), como paneles fijos de tres columnas. */
   .game-shell {
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr) 300px;
+    grid-template-columns: 320px minmax(0, 1fr) 300px;
     grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
-      'topbar topbar topbar'
-      'nav dig quick'
-      'nav tabcontent quick';
+      'topbar  topbar  topbar'
+      'nav     dig     quick'
+      'content dig     quick';
     gap: var(--space-3);
     padding: var(--space-3);
     align-items: start;
@@ -384,26 +398,39 @@ body {
     padding: 0;
   }
 
+  /* El contenido de pestañas (Contenedores, Automatización, etc.) se apila en el sidebar izquierdo,
+     debajo del menú. En la home de escarbado va oculto (`#tab-content[hidden]`), así el sidebar
+     muestra solo el nav. Look de aside coherente con `#tabbar`. */
   #tab-content {
-    grid-area: tabcontent;
+    grid-area: content;
+    align-self: stretch;
     background: var(--bg-1);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-tactile);
+    overflow-x: auto;
   }
 
-  /* El <nav> de tabs pasa a ser el sidebar izquierdo fijo, vertical (mockup: <aside>). */
+  /* El <nav> de tabs es la fila superior del sidebar izquierdo (mockup: <aside>). */
   #tabbar {
     grid-area: nav;
     flex-direction: column;
     overflow-x: visible;
     align-self: start;
-    position: sticky;
-    top: var(--space-3);
     border-radius: var(--radius-lg);
     border-top: none;
     background: var(--bg-2);
     box-shadow: var(--shadow-tactile);
     padding: var(--space-2);
+  }
+
+  /* Desktop: dig-area y quick-upgrades quedan SIEMPRE visibles (paneles fijos), pisando la regla
+     mobile que los oculta fuera de la home de escarbado (PUNTOS_A_MEJORAR_2.md §3). */
+  .game-shell:not([data-active-tab='escarbar']) #dig-area {
+    display: block;
+  }
+
+  .game-shell:not([data-active-tab='escarbar']) #quick-upgrades {
+    display: flex;
   }
 
   #tabbar button {

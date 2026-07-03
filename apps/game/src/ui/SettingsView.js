@@ -28,11 +28,28 @@ export const SettingsView = {
     if (!container.dataset.bound) {
       container.dataset.bound = 'true';
       container.addEventListener('click', (evt) => onClick(evt, container, store));
+      // El volumen se despacha en 'input' (arrastre en vivo), no en 'click'. Mientras el slider
+      // está enfocado, UIManager.renderTabContent NO re-renderiza (evita cortar el arrastre), así
+      // que el % del label se actualiza a mano acá; el volumen real sí se aplica en cada 'input'
+      // (store.setVolume → UIManager.render → setMasterVolume).
+      container.addEventListener('input', (evt) => {
+        const slider = evt.target.closest('[data-action="set-volume"]');
+        if (!slider) return;
+        store.actions.setVolume(Number(slider.value) / 100);
+        const label = container.querySelector('[data-volume-label]');
+        if (label) label.textContent = `Volumen: ${slider.value}%`;
+      });
     }
 
+    const volumePct = Math.round(state.volume * 100);
     container.innerHTML =
       `<section class="settings-block">` +
       `<button type="button" data-action="toggle-sound">Sonido: ${state.soundOn ? 'Encendido' : 'Apagado'}</button>` +
+      `</section>` +
+      `<section class="settings-block settings-volume">` +
+      `<label class="settings-volume-label" for="volume-slider" data-volume-label>Volumen: ${volumePct}%</label>` +
+      `<input class="settings-volume-slider" type="range" id="volume-slider" data-action="set-volume"` +
+      ` min="0" max="100" step="1" value="${volumePct}" />` +
       `</section>` +
       `<section class="settings-block">` +
       `<button type="button" data-action="reset-game">${

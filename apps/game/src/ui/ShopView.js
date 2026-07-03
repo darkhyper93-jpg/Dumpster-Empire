@@ -1,8 +1,9 @@
 /**
- * Tienda de contenedores: grid de tarjetas con costo, categorías, riesgo de trampa
- * y botón de escarbar/comprar (PLAN.md §5.4.1). Comprar y escarbar son la misma
- * acción (`startManualDig`): igual que el prototipo, se paga y se revela en el
- * mismo gesto, no hay un paso de "comprar" separado de "escarbar" a mano.
+ * Contenedores (antes "Tienda"): catálogo **meramente informativo** de contenedores con costo,
+ * categorías, riesgo de trampa, comprados y Suerte recomendada (PLAN.md §5.4.1,
+ * PUNTOS_A_MEJORAR_2.md §2). NO dispara escarbado: el flujo de escarbar (que en este juego es
+ * también el de "comprar", pagando y revelando en el mismo gesto) vive 100% en la pantalla
+ * Escarbar (`DigContainerPicker.js`). Esta vista solo lee estado; no despacha acciones.
  */
 
 import {
@@ -23,22 +24,12 @@ export const ShopView = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
-    if (!container.dataset.boundClick) {
-      container.dataset.boundClick = 'true';
-      container.addEventListener('click', (evt) => {
-        const btn = evt.target.closest('[data-action="dig-container"]');
-        if (!btn || btn.disabled) return;
-        store.actions.startManualDig(btn.dataset.containerId);
-      });
-    }
-
     const { allContainers, data, itemsData } = store.ctx;
     if (!allContainers.length) {
       container.innerHTML = '<p class="empty-state">No hay contenedores configurados.</p>';
       return;
     }
 
-    const pendingDig = store.getPendingDig();
     const cards = allContainers.map((c) => {
       const unlocked = isContainerUnlocked(state, c, allContainers);
       if (!unlocked) {
@@ -51,15 +42,8 @@ export const ShopView = {
         );
       }
       const cost = getContainerCost(state, c, data);
-      const canAfford = state.money >= cost;
+      const costLabel = cost === 0 ? 'Gratis' : formatMoney(cost);
       const trapProb = getEffectiveTrapProbability(state, c, false, data);
-      const disabled = !canAfford || Boolean(pendingDig);
-      const reason = pendingDig
-        ? 'Terminá o abandoná el escarbado actual primero.'
-        : canAfford
-        ? ''
-        : `Te faltan ${formatMoney(cost - state.money)}`;
-      const label = cost === 0 ? 'Escarbar (gratis)' : `Escarbar por ${formatMoney(cost)}`;
       // PLAN.md §11.2: Suerte recomendada — punto de rentabilidad esperada positiva, calculado
       // por el engine (getRecommendedLuck), nunca aproximado acá.
       const recommendedLuck = getRecommendedLuck(state, c, itemsData, data);
@@ -69,13 +53,13 @@ export const ShopView = {
         `<article class="shop-card">` +
         `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
         `<h3>${c.name}</h3>` +
+        `<p>Costo: ${costLabel}</p>` +
         `<p>Categorías: ${c.categorias.join(', ')}</p>` +
         `<p>Riesgo de trampa: ${Math.round(trapProb * 100)}%</p>` +
         `<p>Comprados: ${Number(state.ownedContainers[c.id]) || 0}</p>` +
         `<p class="shop-card-luck ${luckReached ? 'shop-card-luck--reached' : ''}">` +
         `Suerte recomendada: ${formatNumber(recommendedLuck)} ${luckReached ? '(alcanzada)' : `(tenés ${formatNumber(currentLuck)})`}` +
         `</p>` +
-        `<button type="button" data-action="dig-container" data-container-id="${c.id}" ${disabled ? 'disabled' : ''} title="${reason}">${label}</button>` +
         `</article>`
       );
     });

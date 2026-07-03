@@ -7,7 +7,7 @@
 const STEPS = [
   'Escarbá el Tacho de Vereda (gratis) arrastrando sobre el contenedor para empezar.',
   'Comprá tu primera mejora de Suerte, Fuerza o Área en el panel de mejoras rápidas.',
-  'Comprá tu primer contenedor de pago en la pestaña Tienda.',
+  'Escarbá tu primer contenedor de pago eligiéndolo en la pantalla Escarbar.',
 ];
 
 export class Tutorial {

@@ -7,20 +7,44 @@
 
 let ctx = null;
 let enabled = true;
+// Ganancia maestra por la que pasan TODOS los SFX, así el slider de Configuración controla el
+// volumen real de todo (PUNTOS_A_MEJORAR_2.md §5). Se persiste en el save (`state.volume`).
+let masterGain = null;
+let volume = 1;
 
 function getCtx() {
   if (!ctx) {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     ctx = new AudioCtx();
+    masterGain = ctx.createGain();
+    masterGain.gain.value = volume;
+    masterGain.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
+}
+
+/** Nodo maestro (creado junto al AudioContext). Todos los SFX se conectan acá, no a `destination`. */
+function getMasterGain() {
+  getCtx();
+  return masterGain;
 }
 
 /** @param {boolean} value - espeja `state.soundOn`. */
 export function setEnabled(value) {
   enabled = value;
   if (!value) stopScratchSound();
+}
+
+/**
+ * Ajusta el volumen maestro de todos los SFX (PUNTOS_A_MEJORAR_2.md §5). Espeja `state.volume`.
+ * No crea el AudioContext si todavía no existe (respeta el gating por gesto del navegador); el
+ * valor se aplica al crearse el contexto en el primer sonido.
+ * @param {number} value - 0..1 (se clampa).
+ */
+export function setVolume(value) {
+  volume = Math.max(0, Math.min(1, value));
+  if (masterGain) masterGain.gain.value = volume;
 }
 
 /**
@@ -38,7 +62,7 @@ function playTone({ freq, duration, type = 'sine', gain = 0.18, freqEnd }) {
   gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime);
   gainNode.gain.exponentialRampToValueAtTime(gain, audioCtx.currentTime + 0.02);
   gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-  osc.connect(gainNode).connect(audioCtx.destination);
+  osc.connect(gainNode).connect(getMasterGain());
   osc.start();
   osc.stop(audioCtx.currentTime + duration + 0.02);
 }
@@ -65,7 +89,7 @@ export function playFindPop(rarityIndex = 0) {
     gainNode.gain.setValueAtTime(0.0001, start);
     gainNode.gain.exponentialRampToValueAtTime(0.15, start + 0.015);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, start + 0.24);
-    osc.connect(gainNode).connect(audioCtx.destination);
+    osc.connect(gainNode).connect(getMasterGain());
     osc.start(start);
     osc.stop(start + 0.26);
   });
@@ -132,7 +156,7 @@ export function startScratchSound() {
   lfo.connect(lfoGain).connect(gainNode.gain);
   lfo.start();
 
-  source.connect(filter).connect(gainNode).connect(audioCtx.destination);
+  source.connect(filter).connect(gainNode).connect(getMasterGain());
   source.start();
 
   scratchSource = source;

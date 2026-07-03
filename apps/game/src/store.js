@@ -225,6 +225,17 @@ export function createStore(ctx) {
       notify();
     },
 
+    /**
+     * Ajusta el volumen maestro de SFX (PUNTOS_A_MEJORAR_2.md §5). Se clampa 0..1 y se persiste
+     * en el save junto a `soundOn`. La capa de audio (fx/audio.js) es la que lo aplica al mixer.
+     * @param {number} value - 0..1
+     */
+    setVolume(value) {
+      state.volume = Math.max(0, Math.min(1, value));
+      persist();
+      notify();
+    },
+
     skipTutorial() {
       state.tutorialStep = 3;
       persist();

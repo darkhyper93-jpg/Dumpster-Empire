@@ -26,6 +26,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | 9 Balance | 9 | ✅ hecho |
 | 10 Steam | 10 | ✅ hecho (verificado: sintaxis, tests, e2e — ver bloque, `electron .` real pendiente de confirmar por el usuario) |
 | Correctivo — Escarbado real + landing | agentes/rework-escarbado-y-landing-prompt.md | ✅ hecho (ver bloque abajo) |
+| Correctivo — Pulido ronda 2 | PUNTOS_A_MEJORAR_2.md | ✅ hecho (ver bloque abajo) |
 | 11 Auditoría | 11 | ⬜ pendiente |
 
 ---
@@ -1662,4 +1663,73 @@ para que quede claro que es una decisión consciente, no un punto sin cerrar.
 [x] Auditoría de PUNTOS_A_MEJORAR.md completa arriba (22 puntos: 19 hechos, 2 documentados como
     "no es bug"/desactualizados, 1 parcial documentado con su porqué).
 [x] `npm test` (110/110) y `npm run test:e2e` (2/2) verdes.
+```
+
+---
+
+## Correctivo — Pulido ronda 2 (PUNTOS_A_MEJORAR_2.md) — rama `fix/pulido-ronda2`
+
+**Qué hice:** los 7 puntos del brief `PUNTOS_A_MEJORAR_2.md`. Solo UI/estructura/CSS/audio + un fix
+de render de canvas; el único cambio de engine fue agregar el campo persistente `volume` (no toca
+economía).
+
+- **§1 — Ítems del canvas siempre con nombre.** `apps/game/src/dig/DigCanvas.js`: `drawBottomLayer`
+  refactorizado con un helper `drawEntry()` (círculo → ícono → nombre, seteando el estado del ctx
+  adentro) y un contador `this.digGeneration` que se incrementa en `start()`. El callback async de
+  carga de ícono ahora redibuja el ítem **completo** (no solo el ícono) y solo si sigue siendo la
+  misma generación, así el nombre nunca queda sin pintar ni una carga tardía de un escarbado previo
+  pisa el actual. `maxWidth` con piso para que `fillText` nunca reciba ancho 0.
+- **§2 — "Tienda" → "Contenedores", informativa.** Nav label en `index.html` (id `tienda` intacto).
+  `ShopView.js`: removido el botón de escarbar (`data-action="dig-container"`) y su handler; ahora es
+  catálogo puro (agrega `Costo:`), no despacha acciones. El escarbado real sigue 100% en la pantalla
+  Escarbar (`DigContainerPicker.js`, sin tocar). Tutorial paso 3 reescrito (apuntaba a "la Tienda").
+- **§3 — Lista de contenedores en el sidebar izquierdo, bajo el menú** (decisión del usuario: mockup
+  `clean_scavenge_area`, NO "contenido a ancho completo"). `layout.css` `@media (min-width:1024px)`:
+  grilla `'nav dig quick' / 'content dig quick'` → el menú arriba y `#tab-content` apilado debajo en
+  la columna izquierda (320px); dig al centro, quick a la derecha, siempre visibles. La visibilidad
+  de dig/quick pasó de `.hidden` en JS a un atributo `data-active-tab` en `.game-shell` + CSS por
+  breakpoint (`UIManager.render`), así en mobile se conserva el tabbar + contenido a pantalla y en
+  desktop quedan fijos. Verificado con screenshot a 1440px.
+- **§4 — Capitalización del nav + `INDEX` → `Índice`.** Strings finales en `index.html`:
+  `Escarbar · Contenedores · Automatización · Logros · Prestigio · Índice`. Ningún `text-transform`
+  caía sobre el nav (las 3 reglas uppercase son de `.label-caps`/`.dig-idle-prompt p`/
+  `.quick-upgrade-label`), así que no hubo CSS que remover. Confirmado en screenshot.
+- **§5 — Control de volumen persistente.** Engine: `state.js` agrega `volume` (0..1) y bump
+  `SAVE_VERSION` 3→4; `save.js` suma `volume` a `REQUIRED_FIELDS` + migración v3→v4 (default 1);
+  `save.test.js` con 2 tests nuevos. Audio: `fx/audio.js` agrega un **master gain** y `setVolume()`,
+  todos los SFX pasan por él. Store: acción `setVolume`. UI: `SettingsView.js` con slider de rango
+  (input en vivo, label % a mano porque el re-render se saltea con el input enfocado) y
+  `UIManager.render` llama `setMasterVolume(state.volume)`. CSS `.settings-volume-slider` con tokens.
+- **§6 — Barra + "Riesgo de trampa" dentro de la tarjeta.** `components.css`: `#dig-progress` y una
+  regla nueva `#dig-trap-hint` con `margin-inline: var(--space-3)` (inset respecto de la tarjeta) +
+  `overflow-wrap: anywhere` en el hint. Verificado con screenshot: ya no tocan/desbordan el borde.
+- **§7 — Consola de Steam (`[API loaded no]`).** No es bug: la Steam API no se cargó en ese arranque
+  (cliente de Steam cerrado / appId de prueba 480), así que logros y Steam Cloud **no se ejercitan**.
+  Verificación real pendiente: cliente de Steam abierto + appId real (usuario / Agente Steam).
+
+**Archivos tocados:** `apps/game/src/dig/DigCanvas.js`, `apps/game/index.html`,
+`apps/game/src/ui/ShopView.js`, `apps/game/src/ui/Tutorial.js`, `apps/game/src/ui/UIManager.js`,
+`apps/game/src/ui/SettingsView.js`, `apps/game/src/fx/audio.js`, `apps/game/src/store.js`,
+`apps/game/styles/layout.css`, `apps/game/styles/components.css`, `packages/engine/src/state.js`,
+`packages/engine/src/save.js`, `packages/engine/tests/save.test.js`.
+
+**Qué necesita saber el próximo agente:**
+- `SAVE_VERSION` ahora es **4**. Saves v1/v2/v3 migran solos (volume=1). Cualquier bump futuro parte
+  de 4.
+- La visibilidad de `#dig-area`/`#quick-upgrades` ya **no** se toca por JS `.hidden`: se maneja por
+  CSS leyendo `data-active-tab` en `.game-shell`. Si hace falta ocultarlos por otra razón, usar ese
+  atributo, no volver a `.hidden` (chocaría con las reglas nuevas).
+- El punto 🟡 histórico de "fidelidad al mockup `clean_scavenge_area`" (bloque anterior) quedó
+  resuelto: el sidebar izquierdo ahora lleva nav + lista de contenedores apilada.
+
+**Estado del DoD:**
+```
+[x] §1 ítems siempre con nombre (refactor drawEntry + generación); e2e de escarbado sigue verde.
+[x] §2 Contenedores informativa, sin botón de escarbar (verificado en screenshot).
+[x] §3 sidebar izquierdo: menú arriba + lista debajo; dig centro / quick derecha fijos (screenshot 1440).
+[x] §4 nav con capitalización normal + "Índice" (screenshot).
+[x] §5 slider de volumen que controla todos los SFX y persiste (SAVE_VERSION 4, migración + tests).
+[x] §6 barra + "Riesgo de trampa" inset dentro de la tarjeta (screenshot).
+[x] §7 documentado como verificación Steam pendiente (no requiere fix).
+[x] `npm test` (112/112) y `npm run test:e2e` (2/2) verdes.
 ```

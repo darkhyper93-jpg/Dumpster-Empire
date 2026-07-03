@@ -201,6 +201,47 @@ button:hover:not(:disabled) {
   font-size: 0.85rem;
 }
 
+/* --- Slider de volumen en Configuración (PUNTOS_A_MEJORAR_2.md §5) --- */
+.settings-volume-label {
+  font-size: 0.9rem;
+  color: var(--fg-0);
+}
+
+/* Riel recesado (mismo gauge hazard/recessed que el resto del taller) + pulgar ámbar grande para
+   toque cómodo en Steam Deck. Todos los colores salen de tokens. */
+.settings-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  margin: var(--space-2) 0 0;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-highest);
+  box-shadow: var(--shadow-recessed);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.settings-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--amber);
+  border: 2px solid var(--bg-surface-highest);
+  box-shadow: var(--shadow-tactile-pressed);
+}
+
+.settings-volume-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--bg-surface-highest);
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: var(--shadow-tactile-pressed);
+}
+
 .automation-explainer {
   margin-bottom: var(--space-3);
 }
@@ -309,12 +350,15 @@ button:hover:not(:disabled) {
 
 /* --- Gauge recesado con relleno de rayas hazard (barra de progreso de escarbado) --- */
 
+/* AJUSTE (PUNTOS_A_MEJORAR_2.md §6): `margin-inline` inseta la barra y el hint respecto de la
+   tarjeta de escarbado (son hermanos de `.scavenge-card` dentro de `#dig-active`), para que queden
+   dentro del ancho de la mesa de madera y no pegados/desbordando su borde ("la R sobresalía"). */
 #dig-progress {
   height: 14px;
   background: var(--bg-2);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  margin-top: var(--space-2);
+  margin: var(--space-2) var(--space-3) 0;
   box-shadow: var(--shadow-recessed);
 }
 
@@ -324,6 +368,16 @@ button:hover:not(:disabled) {
   background: repeating-linear-gradient(45deg, var(--amber), var(--amber) 10px, var(--tertiary) 10px, var(--tertiary) 20px);
   box-shadow: 0 0 8px 1px rgba(240, 188, 146, 0.6);
   transition: width 0.1s linear;
+}
+
+/* Texto "Riesgo de trampa…" inset dentro de la tarjeta, centrado y con wrap para que el hint largo
+   (incluye "Ritmo de escarbado…") no desborde a 375px (PUNTOS_A_MEJORAR_2.md §6). */
+#dig-trap-hint {
+  margin: var(--space-2) var(--space-3) 0;
+  text-align: center;
+  color: var(--fg-1);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
 }
 
 .toast {

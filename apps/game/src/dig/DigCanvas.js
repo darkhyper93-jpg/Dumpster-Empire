@@ -108,6 +108,10 @@ export class DigCanvas {
     this.revealThreshold = revealThreshold;
     this.areaMult = areaMult;
     this.digRate = digRate;
+    // Generación de escarbado: cada `start()` la incrementa para que un callback de carga de
+    // ícono de un escarbado anterior (que llega tarde) se descarte en vez de pintar sobre el
+    // contenido actual (PUNTOS_A_MEJORAR_2.md §1).
+    this.digGeneration = (this.digGeneration || 0) + 1;
     this.idlePrompt.hidden = false;
     this.drawBottomLayer(digResult);
     this.drawTopLayer();
@@ -140,24 +144,53 @@ export class DigCanvas {
           colorHex: this.resolveCssColor(this.rarityColorToken(item.categoria)),
         }));
     const positions = this.layoutPositions(entries.length);
+    // Piso en maxWidth para que fillText nunca reciba un ancho 0/negativo (que dejaría el nombre
+    // invisible con muchos ítems por contenedor).
+    const maxWidth = Math.max(40, CANVAS_WIDTH / positions.length - 8);
+    // El ítem se dibuja completo y síncrono (garantiza que el nombre SIEMPRE aparezca). Si el
+    // ícono todavía no cargó, al llegar se redibuja el ítem completo (círculo + ícono + nombre),
+    // no solo el ícono, guardado por generación de escarbado: así el nombre nunca queda pisado y
+    // una carga tardía de un escarbado anterior no ensucia el actual (PUNTOS_A_MEJORAR_2.md §1).
+    const gen = this.digGeneration;
+    entries.forEach((entry, i) => {
+      const pos = positions[i];
+      const iconImg = getIconImage(entry.icon, { size: 64, color: '#161310' });
+      this.drawEntry(ctx, entry, pos, maxWidth, iconImg);
+      if (!iconImg.complete) {
+        iconImg.addEventListener(
+          'load',
+          () => {
+            if (this.active && this.digGeneration === gen) this.drawEntry(ctx, entry, pos, maxWidth, iconImg);
+          },
+          { once: true }
+        );
+      }
+    });
+  }
+
+  /**
+   * Dibuja un ítem completo en la capa de abajo, en orden círculo → ícono → nombre y seteando el
+   * estado del contexto adentro. Se llama tanto en el dibujo síncrono como en el callback async de
+   * carga de ícono, donde no se puede confiar en un estado de contexto seteado antes del loop.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {{name:string, colorHex:string}} entry
+   * @param {{x:number,y:number}} pos
+   * @param {number} maxWidth
+   * @param {HTMLImageElement} iconImg
+   */
+  drawEntry(ctx, entry, pos, maxWidth, iconImg) {
+    ctx.beginPath();
+    ctx.fillStyle = entry.colorHex;
+    ctx.arc(pos.x, pos.y, 28, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (iconImg.complete) ctx.drawImage(iconImg, pos.x - 16, pos.y - 16, 32, 32);
+
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '13px sans-serif';
-    entries.forEach((entry, i) => {
-      const pos = positions[i];
-      ctx.beginPath();
-      ctx.fillStyle = entry.colorHex;
-      ctx.arc(pos.x, pos.y, 28, 0, Math.PI * 2);
-      ctx.fill();
-
-      const iconImg = getIconImage(entry.icon, { size: 64, color: '#161310' });
-      const drawIcon = () => ctx.drawImage(iconImg, pos.x - 16, pos.y - 16, 32, 32);
-      if (iconImg.complete) drawIcon();
-      else iconImg.addEventListener('load', () => this.active && this.ctxBottom === ctx && drawIcon(), { once: true });
-
-      ctx.fillStyle = '#f4ede1';
-      ctx.fillText(entry.name, pos.x, pos.y + 44, CANVAS_WIDTH / positions.length - 8);
-    });
+    ctx.fillStyle = '#f4ede1';
+    ctx.fillText(entry.name, pos.x, pos.y + 44, maxWidth);
   }
 
   /** Resuelve una variable CSS de rareza (ej. `--r-relics`) a un color concreto para el canvas. */
