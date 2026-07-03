@@ -10,6 +10,7 @@ import {
   getDepthValueMult,
   getAreaMult,
   getQueueMax,
+  getDigRate,
 } from '../src/economy.js';
 import { freshState } from '../src/state.js';
 import upgrades from '../../../apps/game/src/data/upgrades.json';
@@ -113,6 +114,21 @@ describe('rediseño de stats (PLAN.md §2.3): cada stat mueve un número distint
     const depthAfter = getDepthValueMult(state, data);
     expect(thresholdAfter).toBeLessThan(thresholdBefore);
     expect(depthAfter).toBeGreaterThan(depthBefore);
+  });
+
+  it('el ritmo de escarbado (getDigRate) sube hacia 1 a medida que sube la Fuerza, contra un contenedor de alta resistencia (agentes/rework-escarbado-y-landing-prompt.md)', () => {
+    const highResistance = containers.reduce((max, c) => (c.resistencia > max.resistencia ? c : max));
+    const low = freshState();
+    const mid = freshState();
+    mid.upgradeLevels.digPower = 10;
+    const high = freshState();
+    high.upgradeLevels.digPower = 40;
+    const rateLow = getDigRate(low, highResistance, data);
+    const rateMid = getDigRate(mid, highResistance, data);
+    const rateHigh = getDigRate(high, highResistance, data);
+    expect(rateLow).toBeLessThan(rateMid);
+    expect(rateMid).toBeLessThanOrEqual(rateHigh);
+    expect(rateHigh).toBeLessThanOrEqual(1);
   });
 
   it('Área es independiente de Fuerza (no quedan redundantes)', () => {

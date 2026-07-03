@@ -9,6 +9,7 @@
 import { DigCanvas } from '../dig/DigCanvas.js';
 import { Topbar } from './Topbar.js';
 import { QuickUpgrades } from './QuickUpgrades.js';
+import { DigContainerPicker } from './DigContainerPicker.js';
 import { ShopView } from './ShopView.js';
 import { AutomationView } from './AutomationView.js';
 import { AchievementsView } from './AchievementsView.js';
@@ -45,7 +46,8 @@ export class UIManager {
   constructor(root, store) {
     this.root = root;
     this.store = store;
-    this.activeTab = 'tienda';
+    // PLAN.md §11.8/§11.9: la pantalla de escarbado es la home — ya no está pegada a la Tienda.
+    this.activeTab = 'escarbar';
     this.mountedDig = null;
 
     this.topbarEl = root.querySelector('#topbar');
@@ -105,11 +107,8 @@ export class UIManager {
     }
 
     this.digAbandonBtn.addEventListener('click', () => this.store.actions.abandonManualDig());
-    this.digEmptyEl.addEventListener('click', (evt) => {
-      const btn = evt.target.closest('[data-start-dig]');
-      if (!btn || btn.disabled) return;
-      this.store.actions.startManualDig(btn.dataset.startDig);
-    });
+    // El click de "elegir contenedor" lo bindea DigContainerPicker.render() sobre #dig-empty
+    // (mismo patrón que ShopView/QuickUpgrades: delegación bindeada una sola vez por vista).
   }
 
   /** Captura el resultado antes de que `finishManualDig` lo descarte, para disparar el juice. */
@@ -155,9 +154,9 @@ export class UIManager {
   render(state) {
     setSoundEnabled(state.soundOn);
     this.renderTopbar(state);
-    // PLAN.md §11.9: la pantalla de escarbado (prompt de contenedor + mejoras rápidas) solo se
-    // muestra en la Tienda; el resto de las pestañas son secciones distintas.
-    const showDigScreen = this.activeTab === 'tienda';
+    // PLAN.md §11.9: la pantalla de escarbado (prompt de contenedor + mejoras rápidas) es su
+    // propia pestaña/home ('escarbar'), separada de la Tienda y del resto de secciones.
+    const showDigScreen = this.activeTab === 'escarbar';
     this.digAreaEl.hidden = !showDigScreen;
     this.quickUpgradesEl.hidden = !showDigScreen;
     QuickUpgrades.render(this.quickUpgradesEl, state, this.store);
@@ -185,15 +184,20 @@ export class UIManager {
       this.digEmptyEl.hidden = true;
       this.digActiveEl.hidden = false;
       this.digContainerTitle.textContent = pending.container.name;
-      this.digTrapHint.textContent = `Riesgo de trampa: ${Math.round(pending.trapProb * 100)}%`;
+      const trapPct = Math.round(pending.trapProb * 100);
+      // Feedback de "cuánto falta" (CLAUDE.md): si el ritmo está por debajo de lo normal, se lo
+      // decimos al jugador en vez de dejar que el arrastre lento se sienta como un bug.
+      const rateHint = pending.digRate < 0.99 ? ` · Ritmo de escarbado: ${Math.round(pending.digRate * 100)}% (subí Fuerza)` : '';
+      this.digTrapHint.textContent = `Riesgo de trampa: ${trapPct}%${rateHint}`;
       if (this.mountedDig !== pending) {
         this.mountedDig = pending;
-        this.digCanvas.start(pending.result, pending.revealThreshold, pending.areaMult);
+        this.digCanvas.start(pending.result, pending.revealThreshold, pending.areaMult, pending.digRate);
         this.updateDigProgress(0);
       }
     } else {
       this.digActiveEl.hidden = true;
       this.digEmptyEl.hidden = false;
+      DigContainerPicker.render(this.digEmptyEl, state, this.store);
       if (this.mountedDig !== null) {
         this.mountedDig = null;
         this.digCanvas.stop();
@@ -211,6 +215,15 @@ export class UIManager {
     for (const btn of this.tabbarEl.querySelectorAll('[data-tab]')) {
       btn.classList.toggle('is-active', btn.dataset.tab === this.activeTab);
     }
+
+    // 'escarbar' es la home (dig-area + mejoras rápidas, ver render()); no tiene vista propia
+    // en #tab-content — PLAN.md §11.9: las demás pestañas no muestran el prompt de escarbado.
+    if (this.activeTab === 'escarbar') {
+      this.tabContentEl.hidden = true;
+      this.tabContentEl.innerHTML = '';
+      return;
+    }
+    this.tabContentEl.hidden = false;
 
     const view = TAB_VIEWS[this.activeTab];
     if (!view) {

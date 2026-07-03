@@ -8,6 +8,7 @@ import {
   freshState,
   getRevealThreshold,
   getAreaMult,
+  getDigRate,
   getEffectiveTrapProbability,
   serializeState,
   deserializeState,
@@ -128,6 +129,11 @@ export function createStore(ctx) {
         result: digResult,
         revealThreshold: getRevealThreshold(state, data),
         areaMult: getAreaMult(state, data),
+        // AJUSTE (agentes/rework-escarbado-y-landing-prompt.md): el ritmo de escarbado (Resistencia
+        // del contenedor vs. Fuerza del jugador, ya calculado por el engine para automatización/
+        // offline) ahora también viaja al canvas manual — antes DigCanvas solo recibía
+        // revealThreshold/areaMult y la resistencia del contenedor no afectaba el gesto a mano.
+        digRate: getDigRate(state, container, data),
         trapProb: getEffectiveTrapProbability(state, container, false, data),
       };
       if (state.tutorialStep === 2 && container.costoInicial > 0) state.tutorialStep = 3;

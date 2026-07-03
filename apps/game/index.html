@@ -40,10 +40,7 @@
       </header>
 
       <main id="dig-area">
-        <div id="dig-empty" class="dig-state">
-          <p>Elegí un contenedor para escarbar.</p>
-          <button type="button" data-start-dig="tachoVereda">Escarbar el Tacho de Vereda (gratis)</button>
-        </div>
+        <div id="dig-empty" class="dig-state dig-picker"></div>
         <div id="dig-active" class="dig-state" hidden>
           <div class="scavenge-card">
             <span id="dig-container-title" class="scavenge-card-label"></span>
@@ -60,6 +57,7 @@
       <section id="quick-upgrades"></section>
 
       <nav id="tabbar">
+        <button type="button" data-tab="escarbar">Escarbar</button>
         <button type="button" data-tab="tienda">Tienda</button>
         <button type="button" data-tab="automatizacion">Automatización</button>
         <button type="button" data-tab="logros">Logros</button>

@@ -199,6 +199,7 @@ const ICON_MAP = {
   money: 'cashStack',
   keys: 'key',
   'touch-app': 'touchApp',
+  'tab-escarbar': 'touchApp',
   'tab-tienda': 'dumpster',
   'tab-automatizacion': 'gear',
   'tab-logros': 'medal',

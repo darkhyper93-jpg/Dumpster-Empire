@@ -20,6 +20,7 @@ function getCtx() {
 /** @param {boolean} value - espeja `state.soundOn`. */
 export function setEnabled(value) {
   enabled = value;
+  if (!value) stopScratchSound();
 }
 
 /**
@@ -42,10 +43,32 @@ function playTone({ freq, duration, type = 'sine', gain = 0.18, freqEnd }) {
   osc.stop(audioCtx.currentTime + duration + 0.02);
 }
 
-/** "Pop" corto y alegre al hallar un objeto (PLAN.md §5.2). Más brillante si la rareza es alta. */
+/**
+ * "Pop" al hallar un objeto (PLAN.md §5.2) — AJUSTE (agentes/rework-escarbado-y-landing-prompt.md,
+ * PUNTOS_A_MEJORAR.md: "el sonido al reclamar los items es horrible"): reemplazado el barrido de
+ * un solo triángulo (sonaba a alarma de juguete) por un "ding" de dos notas senoidales en
+ * intervalo de quinta (consonante, tipo moneda/campana), más brillante en rarezas altas.
+ * @param {number} [rarityIndex]
+ */
 export function playFindPop(rarityIndex = 0) {
-  const brightness = Math.min(rarityIndex, 7) * 60;
-  playTone({ freq: 520 + brightness, freqEnd: 780 + brightness, duration: 0.14, type: 'triangle', gain: 0.16 });
+  if (!enabled) return;
+  const audioCtx = getCtx();
+  const now = audioCtx.currentTime;
+  const brightness = Math.min(rarityIndex, 7) * 45;
+  const notes = [660 + brightness, 990 + brightness * 1.5];
+  notes.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    const start = now + i * 0.035;
+    gainNode.gain.setValueAtTime(0.0001, start);
+    gainNode.gain.exponentialRampToValueAtTime(0.15, start + 0.015);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, start + 0.24);
+    osc.connect(gainNode).connect(audioCtx.destination);
+    osc.start(start);
+    osc.stop(start + 0.26);
+  });
 }
 
 /**
@@ -59,4 +82,77 @@ export function playTrapThud() {
 /** Sonido corto y ascendente para logros/celebraciones. */
 export function playCelebration() {
   playTone({ freq: 440, freqEnd: 660, duration: 0.25, type: 'sine', gain: 0.14 });
+}
+
+// ---------------------------------------------------------------------------
+// Sonido de rascado continuo (agentes/rework-escarbado-y-landing-prompt.md, PUNTOS_A_MEJORAR.md:
+// "no hay ruido mientras escarbás"). Ruido blanco pasado por un filtro pasa-banda angosto (recrea
+// la textura de "raspar" sin samples de audio) con la ganancia modulada por un LFO chico para que
+// no suene a tono plano sostenido. Arranca en el primer gesto de arrastre (onStart) y se apaga
+// suave en onEnd/stop() — WebAudio puro, sin archivos que licenciar.
+// ---------------------------------------------------------------------------
+
+let scratchSource = null;
+let scratchGain = null;
+let scratchLfo = null;
+
+function createNoiseBuffer(audioCtx) {
+  const bufferSize = audioCtx.sampleRate * 1;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const channel = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) channel[i] = Math.random() * 2 - 1;
+  return buffer;
+}
+
+/** Arranca el rascado en loop. No-op si ya está sonando o el sonido está apagado. */
+export function startScratchSound() {
+  if (!enabled || scratchSource) return;
+  const audioCtx = getCtx();
+  const now = audioCtx.currentTime;
+
+  const source = audioCtx.createBufferSource();
+  source.buffer = createNoiseBuffer(audioCtx);
+  source.loop = true;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 2200;
+  filter.Q.value = 0.9;
+
+  const gainNode = audioCtx.createGain();
+  gainNode.gain.setValueAtTime(0.0001, now);
+  gainNode.gain.exponentialRampToValueAtTime(0.05, now + 0.06);
+
+  // LFO chico sobre el volumen: sin esto el ruido filtrado suena a "shhh" continuo plano; con la
+  // modulación se percibe más como pasadas de raspado que como un tono sostenido.
+  const lfo = audioCtx.createOscillator();
+  lfo.frequency.value = 14;
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 0.015;
+  lfo.connect(lfoGain).connect(gainNode.gain);
+  lfo.start();
+
+  source.connect(filter).connect(gainNode).connect(audioCtx.destination);
+  source.start();
+
+  scratchSource = source;
+  scratchGain = gainNode;
+  scratchLfo = lfo;
+}
+
+/** Apaga el rascado con un fadeout corto. No-op si no estaba sonando. */
+export function stopScratchSound() {
+  if (!scratchSource) return;
+  const audioCtx = getCtx();
+  const now = audioCtx.currentTime;
+  const source = scratchSource;
+  const lfo = scratchLfo;
+  scratchGain.gain.cancelScheduledValues(now);
+  scratchGain.gain.setValueAtTime(Math.max(scratchGain.gain.value, 0.0001), now);
+  scratchGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+  source.stop(now + 0.1);
+  lfo.stop(now + 0.1);
+  scratchSource = null;
+  scratchGain = null;
+  scratchLfo = null;
 }

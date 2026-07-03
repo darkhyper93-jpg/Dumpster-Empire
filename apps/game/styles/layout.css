@@ -160,6 +160,16 @@ body {
   display: none;
 }
 
+/* AJUSTE (agentes/rework-escarbado-y-landing-prompt.md, PUNTOS_A_MEJORAR.md: el prompt "Elegí un
+   contenedor..." se salía de su globo y quedaba pegado a la izquierda): #dig-empty ahora es una
+   "tarjeta" propia con padding real y contenido centrado en vez de un <p>/<button> sueltos sin
+   contenedor visual — ver .dig-picker* más abajo (components.css) para las tarjetas de cada
+   contenedor disponible. */
+.dig-picker {
+  padding: var(--space-4) var(--space-3);
+  text-align: center;
+}
+
 #dig-active {
   position: relative;
 }
@@ -212,14 +222,17 @@ body {
 }
 
 #tabbar button {
-  flex: 1;
+  /* AJUSTE (agentes/rework-escarbado-y-landing-prompt.md): con la 6ta pestaña ("Escarbar") sumada,
+     `flex:1` a ancho parejo apretaba tanto el texto que "Automatización"/"Logros" se superponían
+     en 375px. `flex:0 0 auto` + `min-width` deja que el tabbar scrollee horizontal (ya tenía
+     `overflow-x:auto`) en vez de comprimir cada botón hasta romper el texto. */
+  flex: 0 0 auto;
+  min-width: 72px;
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--fg-1);
   box-shadow: none;
   opacity: 0.7;
-  /* AJUSTE: los <button> traen `white-space: nowrap` por defecto del navegador, lo que recortaba
-     "Automatización" a "Automatiza" en 375px (detectado con el screenshot del smoke e2e). */
   white-space: normal;
   font-size: 0.85rem;
   line-height: 1.2;
@@ -227,6 +240,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  padding: var(--space-1) var(--space-2);
   transition: opacity 0.15s ease, background 0.15s ease;
 }
 

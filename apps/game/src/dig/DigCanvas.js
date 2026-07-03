@@ -17,13 +17,23 @@
 
 import { attachDigInput } from './digInput.js';
 import { getIconImage, iconMarkup } from '../icons/icons.js';
+import { startScratchSound, stopScratchSound } from '../fx/audio.js';
 
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 330;
 const SAMPLE_GRID_X = 16;
 const SAMPLE_GRID_Y = 9;
 const SAMPLE_THROTTLE_MS = 120;
-const BASE_ERASE_RADIUS = 26;
+// AJUSTE (agentes/rework-escarbado-y-landing-prompt.md): bajado de 26 a 20 — con el radio viejo,
+// un solo barrido en zigzag sobre el canvas ya cubría casi todo el umbral de revelado ("un solo
+// click" con forma de arrastre). Un pincel más chico exige más recorrido real por contenedor.
+const BASE_ERASE_RADIUS = 20;
+// El ritmo de escarbado (getDigRate del engine, 0.15-1) escala el radio y el alpha efectivos del
+// borrado: con poca Fuerza contra un contenedor resistente, cada pasada limpia menos superficie
+// y dos pasadas por el mismo punto no alcanzan a agotar el alpha del todo (destination-out con
+// alpha parcial reduce el alpha del destino multiplicativamente, no lo pone en 0 de una).
+const DIG_RATE_RADIUS_FLOOR = 0.45;
+const DIG_RATE_ALPHA_FLOOR = 0.35;
 
 export class DigCanvas {
   /**
@@ -61,6 +71,7 @@ export class DigCanvas {
     this.active = false;
     this.revealThreshold = 0.6;
     this.areaMult = 1;
+    this.digRate = 1;
     this.thresholdFired = false;
     this.touched = false;
     this.lastSampleAt = 0;
@@ -68,10 +79,11 @@ export class DigCanvas {
     this.detachInput = attachDigInput(this.topCanvas, {
       onStart: (pos) => {
         this.markTouched();
+        if (this.active) startScratchSound();
         this.erase(pos);
       },
       onMove: (pos) => this.erase(pos),
-      onEnd: () => {},
+      onEnd: () => stopScratchSound(),
     });
   }
 
@@ -87,13 +99,15 @@ export class DigCanvas {
    * @param {{ isTrap: boolean, items: Array<{name:string}> }} digResult
    * @param {number} revealThreshold - fracción 0-1, viene de getRevealThreshold()
    * @param {number} areaMult - viene de getAreaMult()
+   * @param {number} [digRate] - viene de getDigRate() (Resistencia del contenedor vs. Fuerza), 1 = ritmo normal.
    */
-  start(digResult, revealThreshold, areaMult) {
+  start(digResult, revealThreshold, areaMult, digRate = 1) {
     this.active = true;
     this.thresholdFired = false;
     this.touched = false;
     this.revealThreshold = revealThreshold;
     this.areaMult = areaMult;
+    this.digRate = digRate;
     this.idlePrompt.hidden = false;
     this.drawBottomLayer(digResult);
     this.drawTopLayer();
@@ -102,6 +116,7 @@ export class DigCanvas {
   stop() {
     this.active = false;
     this.idlePrompt.hidden = true;
+    stopScratchSound();
     this.ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     this.ctxBottom.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   }
@@ -206,7 +221,15 @@ export class DigCanvas {
    */
   erase(pos) {
     if (!this.active) return;
-    const radius = BASE_ERASE_RADIUS * this.areaMult;
+    // AJUSTE (agentes/rework-escarbado-y-landing-prompt.md): el ritmo de escarbado (digRate, 1 =
+    // normal) ya lo calcula el engine (economy.js getDigRate) combinando Resistencia del
+    // contenedor y Fuerza del jugador; acá se traduce a un pincel más chico Y más "débil" (alpha
+    // parcial) cuando el ritmo es bajo, para que escarbar un contenedor por encima de la Fuerza
+    // actual sea notoriamente más lento sin quedar nunca trabado del todo (digRate nunca baja de
+    // 0.15, ver economy.js).
+    const radiusScale = DIG_RATE_RADIUS_FLOOR + (1 - DIG_RATE_RADIUS_FLOOR) * this.digRate;
+    const alphaScale = DIG_RATE_ALPHA_FLOOR + (1 - DIG_RATE_ALPHA_FLOOR) * this.digRate;
+    const radius = BASE_ERASE_RADIUS * this.areaMult * radiusScale;
     const ctx = this.ctxTop;
     ctx.globalCompositeOperation = 'destination-out';
     // AJUSTE (Agente 4): `destination-out` quita alpha del destino proporcional al alpha de lo
@@ -214,11 +237,14 @@ export class DigCanvas {
     // zonas con alpha bajo, 0.05-0.18) para el dibujo visual de la suciedad; si `erase()` reusara
     // ese mismo `fillStyle` solo borraría una fracción de cada píxel en vez de revelarlo del todo
     // (encontrado con el smoke e2e: el progreso nunca superaba unos pocos puntos porcentuales).
-    // El área borrada necesita alpha 1 sin importar el color.
+    // El área borrada necesita alpha 1 sin importar el color (el debilitamiento por digRate se
+    // aplica con `globalAlpha`, no reusando el patrón semitransparente).
     ctx.fillStyle = '#000';
+    ctx.globalAlpha = alphaScale;
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
 
     const now = performance.now();
     if (now - this.lastSampleAt <= SAMPLE_THROTTLE_MS) return;

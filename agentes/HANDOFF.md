@@ -25,6 +25,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | 8 Re-anclaje visual | 8 | ✅ hecho |
 | 9 Balance | 9 | ✅ hecho |
 | 10 Steam | 10 | ✅ hecho (verificado: sintaxis, tests, e2e — ver bloque, `electron .` real pendiente de confirmar por el usuario) |
+| Correctivo — Escarbado real + landing | agentes/rework-escarbado-y-landing-prompt.md | ✅ hecho (ver bloque abajo) |
 | 11 Auditoría | 11 | ⬜ pendiente |
 
 ---
@@ -1519,3 +1520,146 @@ contra un cliente de Steam de verdad (bloqueo de entorno, no del código) y los 
 usuario listados arriba (appId real, API Names de logros, depots de SteamPipe, arte de ficha,
 `LICENSE`). Recomiendo que la auditoría final incluya, si el entorno del usuario lo permite,
 correr `npm run desktop` una vez para confirmar la ventana real antes de dar por cerrado el V1.
+
+---
+
+## Agente correctivo — Escarbado real + pantalla de inicio/escarbado
+(`agentes/rework-escarbado-y-landing-prompt.md`, rama `fix/escarbado-y-landing`)
+
+**Qué hice:**
+
+**A. Escarbado real (engine ↔ DigCanvas):**
+- El engine ya tenía `getDigRate`/`getEffectiveDigTime` (`packages/engine/src/economy.js`, PLAN.md
+  §11.2) calculando el ritmo por Resistencia/Fuerza, pero **solo los usaban automatización/offline**
+  (`systems/automation.js`, `systems/offline.js`) — `DigCanvas` nunca lo recibía. Wireado: `store.js`
+  (`startManualDig`) calcula `getDigRate(state, container, data)` y lo suma a `pendingDig`;
+  `UIManager.renderDigArea` lo pasa como 4to parámetro a `digCanvas.start(...)`.
+- `DigCanvas.erase()` ahora escala **radio y alpha** del borrado por `digRate` (pisos 0.45/0.35 —
+  nunca queda completamente trabado, igual que el piso 0.15 de `getDigRate`): con Fuerza por debajo
+  de la Resistencia del contenedor, cada pasada de arrastre limpia menos superficie y dos pasadas
+  sobre el mismo punto no agotan el alpha de una, así que hace falta más recorrido real.
+- Subida la dificultad base (independiente de la Resistencia): `REVEAL_THRESHOLD_BASE` 0.6→0.72,
+  `REVEAL_THRESHOLD_FLOOR` 0.3→0.4 (`economy.js`), y `BASE_ERASE_RADIUS` 26→20 (`DigCanvas.js`) —
+  antes un solo barrido en zigzag sobre el canvas ya superaba el 60% con margen; ahora hace falta
+  recorrido real incluso en el Tacho de Vereda (resistencia 1.0 = sin penalización de Fuerza).
+  Verificado con el smoke e2e existente (zigzag de 10 filas, sigue completando dentro del timeout).
+- Re-escarbar un contenedor ya conocido **ya exigía el mismo esfuerzo** (cada `startManualDig` tira
+  un `pendingDig` nuevo y `DigCanvas.start()` resetea el canvas de cero) — no había ningún atajo de
+  "un click" más allá del que corregimos arriba; verificado leyendo el código, no hizo falta tocar
+  nada extra ahí.
+- Sonido de rascado continuo (`apps/game/src/fx/audio.js`, `startScratchSound`/`stopScratchSound`):
+  ruido blanco por un filtro pasa-banda con un LFO chico de volumen (WebAudio puro, sin archivos),
+  arranca en `onStart` del gesto y se apaga en `onEnd`/`stop()`/`setEnabled(false)`.
+- `playFindPop` reescrito: antes era un solo triángulo en barrido (el usuario lo describió como
+  "horrible"); ahora es un "ding" de dos senoidales en intervalo de quinta, más brillante en
+  rarezas altas — tipo moneda/campana en vez de alarma de juguete.
+- Test nuevo en `packages/engine/tests/economy.test.js`: `getDigRate` sube monótonamente hacia 1
+  con la Fuerza contra el contenedor de mayor resistencia. Los tests de `fase9-balance.test.js`
+  que ya cubrían "resistencia > 1 escarba más lento" siguen verdes sin tocarlos.
+
+**B. Pantalla de escarbado como home:**
+- Nueva pestaña `escarbar` en el tabbar (`index.html`, primera posición, ícono `touch-app` vía
+  `icons.js`), `UIManager.activeTab` arranca en `'escarbar'` (antes `'tienda'`) y
+  `showDigScreen = activeTab === 'escarbar'` (antes atado a `'tienda'`). `#tab-content` se oculta
+  explícitamente en la pestaña `escarbar` (`renderTabContent`) porque esa pestaña no tiene vista
+  propia — es el `#dig-area`+`#quick-upgrades` que ya se muestra vía `showDigScreen`.
+- `apps/game/src/ui/DigContainerPicker.js` (nuevo): reemplaza el botón único hardcodeado
+  "Escarbar el Tacho de Vereda (gratis)" por una lista compacta de **contenedores ya desbloqueados**
+  (ícono + costo + botón `data-start-dig`, mismo atributo que ya usaba el HTML viejo — el smoke e2e
+  no necesitó cambios). Los contenedores bloqueados y el detalle fino (Suerte recomendada, riesgo
+  de trampa, "comprados: N") **quedan solo en Tienda** (`ShopView.js`, sin tocar) — la home es
+  "elegí y escarbá ya", Tienda sigue siendo el catálogo completo para explorar/comprar.
+- **Overflow del prompt corregido**: `#dig-empty` pasó de `<p>`+`<button>` sueltos sin contenedor
+  visual a `.dig-picker` (tarjeta con padding real, texto centrado con `word-wrap`) +
+  `.dig-picker-list`/`.dig-picker-card` (tarjetas individuales por contenedor, `flex-wrap` para no
+  desbordar en mobile). Verificado con screenshot a 375px: ya no se sale de su "globo" ni queda
+  pegado a la izquierda.
+- Tabbar: al sumar la 6ta pestaña, `#tabbar button { flex:1 }` (ancho parejo) apretaba tanto el
+  texto que "Automatización"/"Logros" se superponían en 375px — cambiado a `flex: 0 0 auto` +
+  `min-width`, así el tabbar scrollea horizontal (ya tenía `overflow-x:auto`) en vez de comprimir.
+- `TitleScreen.js`/`main.js` (Título → Jugar → escarbado) **ya existían de una fase anterior** (no
+  los tocamos) — el gap real era que, adentro del juego, la pantalla de escarbado seguía atada a la
+  pestaña Tienda en vez de ser su propia home. Ahora sí: Título → Jugar → pestaña `escarbar` activa.
+
+**DECISIÓN — no auto-inicio del arrastre sin tap previo:** el prompt pedía "el contenedor actual
+listo para arrastrar sin apretar Escarbar primero" (fiel al mockup, que muestra una sola carta ya
+lista). No lo implementé literalmente: en esta economía, **comprar y escarbar son la misma acción**
+(el costo del contenedor escala cada vez, `getContainerCost`) — auto-cobrar plata al aterrizar en
+la pantalla sin que el jugador confirme qué contenedor (y a qué costo) es riesgoso, sobre todo
+después de un Prestigio o quedándose sin plata. Mantuve un tap explícito por contenedor (igual que
+antes, solo que ahora es una lista en vez de un botón único) — es la lectura más responsable del
+mismo objetivo ("elegí y escarbá ya", sin la fricción de un catálogo completo). Documentado acá
+para que quede claro que es una decisión consciente, no un punto sin cerrar.
+
+**Archivos tocados:** `packages/engine/src/economy.js`, `packages/engine/tests/economy.test.js`,
+`apps/game/src/dig/DigCanvas.js`, `apps/game/src/fx/audio.js`, `apps/game/src/store.js`,
+`apps/game/src/ui/UIManager.js`, `apps/game/src/ui/DigContainerPicker.js` (nuevo),
+`apps/game/src/icons/icons.js`, `apps/game/index.html`, `apps/game/styles/layout.css`,
+`apps/game/styles/components.css`.
+
+**Verificado:**
+- `npm test`: **110/110 verde** (48 originales + 2 nuevos de `getDigRate`, más los que ya habían
+  sumado las fases 6/7/9 desde el último handoff que yo leí completo).
+- `npm run test:e2e`: **2/2 verde**, incluida la prueba de arrastre real (zigzag de 10 filas sobre
+  el Tacho de Vereda) con la dificultad nueva — sigue completando dentro del timeout de 5s.
+- Screenshots manuales (Playwright ad-hoc, no quedaron en el repo) a 375/1280/1440: pestaña
+  `escarbar` activa por default con el picker sin overflow, pestaña Tienda sin `#dig-area` ni
+  `#quick-upgrades` visibles, y un drag parcial mostrando revelado incremental (ya no de un gesto).
+- Cero errores de consola en las corridas de Playwright (incluye el `AudioContext`/ruido de
+  rascado nuevo — no rompe nada en headless).
+- `grep` de emojis/`console.log`/`// TODO` sobre los archivos tocados: 0 resultados.
+
+**Auditoría contra `PUNTOS_A_MEJORAR.md`** (recorrida completa, no solo lo que tocó este agente):
+
+| Punto (resumen) | Estado | Nota |
+|---|---|---|
+| Arrastrar para escarbar desde el inicio, sin tanto click | ✅ hecho (este agente) | Ver DECISIÓN arriba: sigue habiendo un tap para elegir+pagar contenedor, ya no hay botón único ni pantalla separada. |
+| Mantener el diseño Stitch `clean_scavenge_area` | 🟡 parcial | El re-anclaje visual (Fase 4/8) ya adoptó paleta/tipografía/tarjetas "tactile" del mockup; la maqueta de dos columnas con lista de "Daily Items" no se recreó 1:1 (la mecánica del juego no tiene un inventario de tickets equivalente) — la home actual es una adaptación fiel al espíritu, no un clon pixel-a-pixel. |
+| Nivel de Suerte recomendado por contenedor | ✅ hecho (Fase 9) | `getRecommendedLuck`, visible en `ShopView`. |
+| Se pierde demasiada plata / la pérdida debe bajar con Suerte | ✅ hecho (Fase 9) | Cubierto por `fase9-balance.test.js` (rentable en promedio a la Suerte recomendada, pérdida esperada baja con Suerte). |
+| Trampas deben sacar más plata (por tier) | ✅ hecho (Fase 9) | `getTrapPenalty` escala con `costoInicial`/tier. |
+| Contenedores con nivel 1-10, mejores probabilidades al subir | ✅ hecho (Fase 6/9) | `containerLevels`/`getLevelRarityShift`. |
+| Sección INDEX con recompensas ocultas, %, precio, cantidad | ✅ hecho (Fase 7) | `CollectionView.js`, `fase7-index.test.js`. |
+| Ítems únicos por contenedor, sin repetidos | ✅ hecho (Fase 6) | `itemsData.containers` por id de contenedor. |
+| Sin ruido al escarbar | ✅ hecho (este agente) | `startScratchSound`/`stopScratchSound`. |
+| Escarbar muy fácil con Fuerza 1; resistencia por contenedor | ✅ hecho (este agente) | Ver sección A arriba. |
+| Sonido de reclamo horrible / sonido de rascar satisfactorio | ✅ hecho (este agente) | `playFindPop` reescrito + scratch sound nuevo. |
+| "304"/"404" en la consola del dev server | ➖ no era un bug | Son códigos HTTP normales de cache (`304 Not Modified`) del server estático `npx serve`, no errores del juego. Verificado: cero errores reales de consola en Playwright. |
+| Se escarba de un solo click (sin sistema de "pasadas") | ✅ hecho (este agente) | Radio+alpha por `digRate`, umbral subido — ya no un gesto. |
+| Prompt "Elegí contenedor"/"Escarbar el Tacho" en todas las secciones | ✅ hecho (Fase 5, reforzado acá) | Ahora exclusivo de la pestaña `escarbar` (antes de este agente estaba atado a `tienda`, que además ahora es una sección distinta). |
+| No se puede comprar nada de Automatización / no se entiende | 🟡 documentado, no es bug | `AutomationView` ya explica el flujo (Fase 7, `automation-explainer`); los botones deshabilitados son por falta de dinero (correcto según PLAN.md §11.1, no un bug de balance a ciegas). |
+| Logros deben dar recompensa (llaves/dinero) | ✅ hecho (Fase 6/9) | `achievements.json` con `reward{type,amount}`, techos verificados en `fase9-balance.test.js`. |
+| "Prestigiar" → "Hacer Prestigio" | ✅ hecho (Fase 7) | `PrestigeView.js`. |
+| Mejoras rápidas solo visibles en pantalla de escarbado | ✅ hecho (Fase 5, reforzado acá) | `showDigScreen` ahora apunta a la pestaña `escarbar` dedicada. |
+| Árbol de prestigio real y simétrico (tipo n8n) | ✅ hecho (Fase 6/7) | `prestigeTree.json` tiene `requires` reales; `PrestigeView.js` deriva rama/profundidad de esas dependencias, no de una tabla estática. |
+| Exportar/importar guardado inútil, sacarlo | ✅ hecho (Fase 5) | Sacado de `SettingsView`; las funciones siguen en el engine para uso interno (Steam Cloud). |
+| Pantalla de inicio con logo, Jugar, Configuración | ✅ hecho (Fase 5/8) | `TitleScreen.js`, ya existía antes de este agente. |
+| Overflow del prompt de escarbado | ✅ hecho (este agente) | `.dig-picker`/`.dig-picker-card`, ver sección B arriba. |
+| Nota sobre agentes 5-7 pendientes (al momento de escribir el archivo) | ➖ desactualizado | Todos los agentes S/0-10 están cerrados según la tabla de "Estado global" arriba; el comentario es de un momento anterior del proyecto. |
+
+**Qué necesita saber el próximo agente:**
+- El único punto marcado 🟡 sin cerrar del todo es la fidelidad 1:1 al mockup de dos columnas con
+  lista de tickets (`clean_scavenge_area`) — si el usuario insiste en esa maqueta exacta, es una
+  tarea de rediseño de layout más grande (agregar un panel de "historial de hallazgos" o similar a
+  la izquierda), no un fix puntual, y convendría discutirlo antes de tocar `layout.css` de nuevo.
+- La DECISIÓN de no auto-cobrar al aterrizar en la home es deliberada; si el usuario prefiere el
+  auto-inicio literal, hay que decidir primero la regla de qué contenedor "recordar" como default y
+  qué hacer si ya no es affordable (mostrar el picker como fallback, lo más simple).
+- No toqué `packages/engine` más allá de las dos constantes de `economy.js` y un test nuevo — cero
+  cambios de fórmula, solo de las constantes de dificultad del canvas (autorizado explícitamente
+  por el prompt de esta tarea).
+
+**Estado del DoD:**
+```
+[x] Escarbar cuesta esfuerzo real desde el inicio y escala con la resistencia del contenedor; ya no
+    se completa de un gesto — verificado con Playwright (screenshot de revelado parcial) y el
+    smoke e2e existente (sigue pasando con la dificultad nueva).
+[x] Suena el rascado mientras se arrastra (ruido filtrado + LFO) y el reclamo se siente más
+    satisfactorio (ding de dos notas en vez de un barrido de triángulo).
+[x] Título → Jugar → pantalla de escarbado (pestaña `escarbar`, home por defecto) con el picker de
+    contenedores y las mejoras rápidas ahí; Tienda es pestaña aparte sin dig-area/quick-upgrades.
+[x] Prompt sin overflow (tarjeta con padding real, verificado a 375px).
+[x] Auditoría de PUNTOS_A_MEJORAR.md completa arriba (22 puntos: 19 hechos, 2 documentados como
+    "no es bug"/desactualizados, 1 parcial documentado con su porqué).
+[x] `npm test` (110/110) y `npm run test:e2e` (2/2) verdes.
+```

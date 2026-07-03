@@ -179,10 +179,12 @@ export function getDigPowerMult(state, data) {
   return mult;
 }
 
-// AJUSTE (PLAN.md §2.3): umbral de revelado por defecto 60% (5.1/2.2), baja con la Fuerza hasta
-// un piso de 30% para que nunca se pueda completar un contenedor con un solo toque.
-const REVEAL_THRESHOLD_BASE = 0.6;
-const REVEAL_THRESHOLD_FLOOR = 0.3;
+// AJUSTE (agentes/rework-escarbado-y-landing-prompt.md, PLAN.md §11.2): el 60%/30% original se
+// completaba de un solo gesto continuo (el radio de borrado era grande contra el canvas). Subido
+// a 72%/40% para que escarbar cueste esfuerzo real desde el primer contenedor, incluso con Fuerza
+// base; sigue bajando con la Fuerza para que la mejora se sienta, pero nunca a "un toque".
+const REVEAL_THRESHOLD_BASE = 0.72;
+const REVEAL_THRESHOLD_FLOOR = 0.4;
 const REVEAL_THRESHOLD_DROP_PER_MULT = 0.25;
 
 /**
