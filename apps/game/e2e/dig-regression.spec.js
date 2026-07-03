@@ -237,4 +237,31 @@ test.describe('Dumpster Empire — regresión escarbado de un solo click', () =>
       expect(panelOverflows).toBe(true);
     });
   }
+
+  // Regresión (task-2-report.md): el fix del scroll interno de arriba en algún momento agregó
+  // `overflow: hidden` a `#app` para forzar el clampeo. `#toast-container`, `#tutorial-overlay`,
+  // `#offline-modal` y `#category-modal` son hijos DIRECTOS de `#app` con `position: fixed;
+  // inset: 0` (components.css .modal-overlay): un `overflow: hidden` en `#app` los recorta a la
+  // caja de `#app` (max-width: 720px/var(--container-max) centrada), así que en viewports más
+  // anchos que ese máximo el backdrop del modal no cubre los costados. Se prueba a 1920x1080
+  // (bien por encima de cualquier max-width configurado) forzando visible un modal y midiendo
+  // que su rect cubra el viewport completo.
+  test('el backdrop de un modal cubre el viewport completo en una pantalla ancha (1920x1080)', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto('/apps/game/');
+    await expect(page.locator('#app')).toHaveAttribute('data-state', 'ready');
+    await page.locator('#title-play-btn').click();
+
+    const rect = await page.evaluate(() => {
+      const modal = document.querySelector('#category-modal');
+      modal.hidden = false;
+      const r = modal.getBoundingClientRect();
+      return { top: r.top, left: r.left, width: r.width, height: r.height };
+    });
+
+    expect(rect.left).toBe(0);
+    expect(rect.top).toBe(0);
+    expect(rect.width).toBe(1920);
+    expect(rect.height).toBe(1080);
+  });
 });
