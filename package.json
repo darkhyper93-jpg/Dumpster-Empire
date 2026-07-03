@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "description": "Dumpster Empire — monorepo (engine + juego + escritorio Steam)",
-  "//versionesPineadas": "Ver DESARROLLO.md §3. No subir sin actualizar ese doc: electron ^31.x, steamworks.js ^0.4.x, electron-builder ^24.x, vitest ^2.x, @playwright/test ^1.61.x (smoke e2e, Fase 2). Electron/steamworks.js los fija el Agente 6 en apps/desktop.",
+  "//versionesPineadas": "Ver DESARROLLO.md §3. No subir sin actualizar ese doc: electron ^31.x, steamworks.js ^0.4.x, electron-builder ^24.x, vitest ^2.x, @playwright/test ^1.61.x (smoke e2e, Fase 2). Electron/steamworks.js/electron-builder están pineados en apps/desktop/package.json (Agente 10).",
   "engines": {
     "node": "20.x"
   },
@@ -15,8 +15,10 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "dev": "npx serve . -l 5173",
-    "desktop": "echo 'Agente 6: empaquetado Steam pendiente (apps/desktop)' && exit 1",
-    "build": "echo 'Agente 6: build de distribución pendiente (electron-builder)' && exit 1"
+    "desktop": "electron apps/desktop",
+    "build:win": "electron-builder --config apps/desktop/electron-builder.yml --win",
+    "build:mac": "electron-builder --config apps/desktop/electron-builder.yml --mac",
+    "build:linux": "electron-builder --config apps/desktop/electron-builder.yml --linux"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

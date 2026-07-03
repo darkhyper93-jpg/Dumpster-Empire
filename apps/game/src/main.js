@@ -5,7 +5,7 @@
  * paquetes `data`/`itemsData` que se pasan a cada llamada de @dumpster/engine.
  */
 
-import { createStore } from './store.js';
+import { createStore, SAVE_KEY } from './store.js';
 import { startLoop } from './loop.js';
 import { UIManager } from './ui/UIManager.js';
 import { TitleScreen } from './ui/TitleScreen.js';
@@ -40,6 +40,36 @@ function renderFatalError(app, message) {
   status.textContent = `No se pudo iniciar Dumpster Empire: ${message}`;
 }
 
+/**
+ * @param {string | null} text
+ * @returns {number}
+ */
+function lastSavedAtOf(text) {
+  if (!text) return -1;
+  try {
+    const parsed = JSON.parse(text);
+    return typeof parsed.lastSavedAt === 'number' ? parsed.lastSavedAt : -1;
+  } catch {
+    return -1;
+  }
+}
+
+/**
+ * Fuera de Electron, `undefined` hace que `createStore` lea `localStorage` como siempre (ver
+ * `store.js`). Dentro de Electron, `apps/desktop/main.js` ya reconcilió userData vs. Steam
+ * Cloud (PLAN.md §6.3) — acá solo falta comparar contra `localStorage` del propio renderer
+ * (que puede ser más nueva si, por ejemplo, el archivo de Steam Cloud todavía no se sincronizó)
+ * y quedarse con la más reciente por `lastSavedAt`, nunca pisando en silencio la más avanzada.
+ * @returns {Promise<string | undefined>}
+ */
+async function resolveInitialSaveText() {
+  const bridge = globalThis.dumpsterDesktop;
+  if (!bridge) return undefined;
+  const fileText = await bridge.loadGame();
+  const localText = localStorage.getItem(SAVE_KEY);
+  return lastSavedAtOf(localText) > lastSavedAtOf(fileText) ? localText : fileText;
+}
+
 async function boot() {
   const app = document.getElementById('app');
   app.dataset.state = 'loading';
@@ -61,10 +91,18 @@ async function boot() {
   const itemsData = loaded.items;
   const allContainers = loaded.containers;
   const achievementsData = loaded.achievements;
+  const initialSaveText = await resolveInitialSaveText();
 
-  const store = createStore({ data, itemsData, allContainers, achievementsData });
+  const store = createStore({ data, itemsData, allContainers, achievementsData, initialSaveText });
   const ui = new UIManager(app, store);
   startLoop(store, ui);
+
+  // Electron fuerza un autoguardado antes de cerrar de verdad (`before-quit` en
+  // apps/desktop/main.js); en modo web `globalThis.dumpsterDesktop` no existe y esto no hace nada.
+  globalThis.dumpsterDesktop?.onBeforeQuit(() => {
+    store.persist();
+    globalThis.dumpsterDesktop.confirmQuit();
+  });
 
   // PLAN.md §11.8/§11.9: el juego arranca en la pantalla de inicio; "Jugar" entra al escarbado,
   // el engranaje entra directo a Configuración.

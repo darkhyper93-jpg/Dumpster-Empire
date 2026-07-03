@@ -190,6 +190,17 @@ button:hover:not(:disabled) {
   margin-bottom: var(--space-3);
 }
 
+.settings-credits h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.settings-credits p {
+  margin: 0;
+  color: var(--fg-1);
+  font-size: 0.85rem;
+}
+
 .automation-explainer {
   margin-bottom: var(--space-3);
 }

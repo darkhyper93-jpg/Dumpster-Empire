@@ -1,0 +1,14 @@
+// SteamPipe: script de build de la app. Placeholders (appid/desc) — el usuario los completa
+// con el appId real antes de subir vía `steamcmd +run_app_build`. Ver README de esta carpeta
+// (agentes/HANDOFF.md, bloque del Agente 10) para el flujo completo.
+"AppBuild"
+{
+	"AppID" "480" // TODO(usuario): reemplazar por el appId real asignado por Steamworks.
+	"Desc" "Dumpster Empire build" // descripción libre, aparece en el historial de builds de Steamworks.
+	"ContentRoot" "..\..\dist\" // carpeta donde electron-builder deja los instalables (apps/desktop/dist/).
+	"BuildOutput" "..\builder_output\"
+	"Depots"
+	{
+		"480" "depot_build.vdf" // TODO(usuario): reemplazar "480" por el depotId real de Windows.
+	}
+}

@@ -38,6 +38,13 @@ export const SettingsView = {
       `<button type="button" data-action="reset-game">${
         local.resetArmed ? '¿Seguro? Tocá de nuevo para confirmar' : 'Reiniciar partida'
       }</button>` +
+      `</section>` +
+      `<section class="settings-block settings-credits">` +
+      `<h3>Créditos</h3>` +
+      `<p>Tipografía: <strong>Plus Jakarta Sans</strong> por Tokotype, bajo` +
+      ` <strong>SIL Open Font License 1.1</strong> (no requiere atribución obligatoria; se acredita igual acá).</p>` +
+      `<p>Íconos: registro SVG original de este proyecto (sin librería de terceros).</p>` +
+      `<p>Sonido: sintetizado con la Web Audio API (sin archivos de audio de terceros).</p>` +
       `</section>`;
   },
 };

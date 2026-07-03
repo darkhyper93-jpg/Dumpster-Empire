@@ -24,7 +24,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | 7 UI de mecánicas nuevas | 7 | ✅ hecho |
 | 8 Re-anclaje visual | 8 | ✅ hecho |
 | 9 Balance | 9 | ✅ hecho |
-| 10 Steam | 10 | ⬜ pendiente |
+| 10 Steam | 10 | ✅ hecho (verificado: sintaxis, tests, e2e — ver bloque, `electron .` real pendiente de confirmar por el usuario) |
 | 11 Auditoría | 11 | ⬜ pendiente |
 
 ---
@@ -1354,3 +1354,168 @@ intactas) ni de `apps/game/src/ui|dig|fx`. Agregué `agentes/scripts/sim-pace.mj
 empaquetado. Sí llevate la recomendación de arriba: si hay tiempo para un playtest humano corto
 antes del release, el ritmo de mitad-a-tardío de la partida (automatizaciones caras, Prestigio) es
 el punto con más incertidumbre remanente de todo el V1.
+
+---
+
+## Agente 10 (Empaquetado Steam — la caja)
+
+**Qué hice:**
+- **`apps/desktop/`** nuevo (workspace `@dumpster/desktop`): `main.js` (proceso principal),
+  `preload.js` (contextBridge), `steam.js` (steamworks.js), `saveFile.js` (guardado a archivo +
+  reconciliación de conflicto), `package.json`, `electron-builder.yml`.
+- **`main.js`:** registra un esquema privilegiado `dumpster://` (`supportFetchAPI`,
+  `corsEnabled`) mapeado a la raíz del monorepo (dev) o a `resourcesPath/app` (empaquetado), y
+  carga `dumpster://app/apps/game/index.html`. Ventana sin `nodeIntegration`, con
+  `contextIsolation` y `sandbox`. `before-quit` frena el cierre, le pide al renderer que
+  autoguarde, y solo cierra de verdad cuando el renderer confirma (`app:quit-ready`).
+- **`preload.js`:** expone `window.dumpsterDesktop` con 5 métodos (`saveGame`, `loadGame`,
+  `setAchievement`, `onBeforeQuit`, `confirmQuit`) — es la única superficie que ve el juego; no
+  hay `require`/`ipcRenderer` directo en el renderer.
+- **`steam.js`:** `init(480)` (appId de prueba), `setAchievement(id)` espeja el `id` del logro del
+  engine (`a1`..`a27` de `achievements.json`) como API Name de Steam, `readCloudSave`/
+  `writeCloudSave` sobre `client.cloud`. Todo con `try/catch` silencioso: si el cliente de Steam
+  no está corriendo (dev sin Steam abierto), el juego sigue jugable sin logros/cloud.
+- **`saveFile.js`:** guarda en `app.getPath('userData')/save.json` además de `localStorage`, y
+  resuelve el conflicto local-vs-nube comparando `lastSavedAt` embebido en el JSON del save
+  (nunca pisa en silencio la partida más avanzada, PLAN.md §6.3) — sincroniza el perdedor con el
+  ganador para que ambos queden iguales después de leer.
+- **`apps/game/src/store.js`:** agregué `ctx.initialSaveText` opcional (si viene definido,
+  `loadState()` lo usa en vez de leer `localStorage` directo) y reenvíos a
+  `globalThis.dumpsterDesktop` en `persist()` (guarda también a archivo/Steam Cloud) y
+  `runAchievements()` (dispara `setAchievement` por cada logro nuevo). El store **no importa**
+  `steam.js` ni sabe que Electron existe — solo llama a un global opcional que en modo web no
+  existe (comportamiento idéntico al de antes de esta fase). Exporté `SAVE_KEY`.
+- **`apps/game/src/main.js`:** `resolveInitialSaveText()` compara `localStorage` contra
+  `window.dumpsterDesktop.loadGame()` (ya reconciliado con la nube) por `lastSavedAt` antes de
+  crear el store, y wireo `onBeforeQuit`/`confirmQuit` para el autoguardado forzado de Electron.
+  En modo web (`dumpsterDesktop` no existe) el flujo es exactamente el de antes.
+- **`apps/game/src/ui/SettingsView.js`:** sumé la sección de créditos (tipografía con licencia,
+  íconos/sonido sin licencia que declarar).
+- **Fuentes auto-hospedadas (tarea 5, PLAN.md §5.3):** descargué los 4 estáticos (400/500/700/800,
+  subconjunto "latin", cubre acentos/ñ) de Plus Jakarta Sans a
+  `apps/game/assets/fonts/PlusJakartaSans-{400,500,700,800}.woff2`, creé
+  `apps/game/styles/fonts.css` con `@font-face` local, y reemplacé el `<link>` de Google Fonts en
+  `index.html` por ese stylesheet. `tokens.css` no cambió (ya apuntaba a `'Plus Jakarta Sans'`).
+  No hizo falta Material Symbols (el Agente 8 ya había descartado sumarlo).
+- **`tools/steam/{app_build.vdf,depot_build.vdf}`:** placeholders de SteamPipe con `TODO(usuario)`
+  marcando dónde va el appId/depotId real.
+- **`package.json` raíz:** reemplacé los placeholders `desktop`/`build` que fallaban a propósito
+  por `desktop` (`electron apps/desktop`) y `build:win`/`build:mac`/`build:linux`
+  (`electron-builder --config apps/desktop/electron-builder.yml --<plataforma>`).
+- **`README.md`:** sumé la sección "Escritorio / Steam" con los 4 comandos nuevos.
+
+**DECISIÓN (protocolo `dumpster://` en vez de `loadFile()`):**
+```
+// `BrowserWindow.loadFile()` sirve con origen file://, que en Chromium tiene un origen opaco:
+// fetch() entre dos archivos file:// distintos queda bloqueado por CORS salvo que se desactive
+// webSecurity (inaceptable). Registré un esquema privilegiado `dumpster://` con
+// `supportFetchAPI`/`corsEnabled` y un handler (`protocol.handle`) que mapea la URL a un archivo
+// real bajo ROOT_DIR (repo root en dev, resourcesPath/app empaquetado) vía `net.fetch(pathToFileURL(...))`,
+// con chequeo explícito de que la ruta resuelta no se escape de ROOT_DIR (```..``` en la URL).
+// Cargar la ventana en `dumpster://app/apps/game/index.html` reproduce EXACTAMENTE la misma
+// resolución de rutas relativas que `npx serve .` en modo web (import map `../../packages/engine/...`
+// y `fetch('./data/*.json')` de main.js) — cero cambios en apps/game para que esto funcione.
+```
+
+**DECISIÓN (empaquetado: `apps/game`/`packages/engine` como `extraResources`, no `files`):**
+```
+// electron-builder.yml usa `directories.app: apps/desktop` (ahí vive el package.json real de
+// Electron, con steamworks.js como dependency). `apps/game` y `packages/engine` son workspaces
+// hermanos fuera de esa carpeta, así que se copian como `extraResources` (`../game` →
+// `app/apps/game`, `../../packages/engine` → `app/packages/engine`) en vez de `files`: quedan
+// como archivos reales sin empaquetar en el asar, porque `net.fetch()` sobre `dumpster://` lee
+// del filesystem real y no atraviesa el asar virtual de la misma forma que `fs` sí lo hace.
+// `steamworks.js` sí puede convivir en el asar salvo su binario nativo (`.node`), por eso
+// `asarUnpack: ["node_modules/steamworks.js/**"]` — Electron no puede cargar addons nativos
+// desde dentro de un asar.
+```
+
+**DECISIÓN (appId de prueba y logros):**
+```
+// STEAM_APP_ID = 480 (Spacewar, el appId de prueba estándar de Valve) hasta que el usuario tenga
+// el appId real — parametrizado en steam.js, un solo lugar para cambiar. `setAchievement(id)`
+// pasa literal el `id` del engine (a1..a27) como API Name de Steam: el usuario tiene que dar de
+// alta esas 27 API Names en el panel de Steamworks con esos nombres exactos para que los logros
+// disparen contra el appId real (documentado abajo en "qué falta del lado del usuario").
+```
+
+**Qué NO toqué (fuera de alcance/no rompí nada):**
+- `packages/engine`: cero cambios — sigue en 109/109 tests verdes.
+- `apps/game/src/ui/*` (salvo `SettingsView.js`), `apps/game/src/dig/*`, `apps/game/src/fx/*`,
+  `apps/game/styles/{tokens,layout,components}.css` (solo un agregado chico de `.settings-credits`
+  al final de `components.css`, no reescribí nada existente).
+- El modo web sigue sirviéndose estático tal cual (`npm run dev`) — no depende de Electron para
+  nada; verificado con el smoke e2e completo.
+
+**Verificado:**
+- `npm test`: **109/109 verde** (no toqué `packages/engine`).
+- `npm run test:e2e`: **2/2 verde** (confirma que el swap de fuente Google Fonts → `@font-face`
+  local y los cambios de `store.js`/`main.js` no rompieron el modo web).
+- `node --check` sobre los 7 archivos nuevos/tocados de `apps/desktop/*` y `apps/game/src/{store,main}.js`
+  + `SettingsView.js`: todos sin errores de sintaxis.
+- `grep` de `console.log`/`// TODO` (fuera de los VDF, donde el TODO es intencional — es un
+  placeholder para el usuario) y de emojis (rango Unicode) sobre `apps/desktop/` y los archivos de
+  `apps/game` tocados: **0 resultados**.
+- **Lo que NO pude verificar en este entorno:** `npm install` en la raíz corrió (309 paquetes
+  agregados, incluye `electron@31.7.7`/`electron-builder@24.13.3`/`steamworks.js@0.4.0`), pero el
+  entorno de ejecución bloqueó los scripts de instalación (`postinstall` de `electron`, que baja
+  el binario real, y el `install` de `esbuild`) como medida de seguridad y no me dejó aprobarlos
+  automáticamente. Por eso **no pude correr `electron .` de verdad** ni un build real de
+  `electron-builder` contra un cliente de Steam. Lo que sí verifiqué: sintaxis de todo el código
+  nuevo, que el modo web sigue 100% intacto (tests + e2e verdes), y repasé a mano la lógica de
+  protocolo/IPC/conflicto de guardado contra la documentación de Electron 31/steamworks.js 0.4.
+  **Antes del release, correr localmente:** `npm install` (aprobando los scripts pendientes) →
+  `npm run desktop` (debería abrir la ventana con el juego) → jugar un rato → cerrar → confirmar
+  que `%APPDATA%/dumpster-empire/save.json` (Windows) tiene el save con `lastSavedAt` actualizado.
+
+**Qué falta del lado del usuario (no lo puede resolver un agente):**
+- **appId real de Steam:** hoy `STEAM_APP_ID = 480` en `apps/desktop/steam.js`. Reemplazar por el
+  appId real asignado en Steamworks, y sumar `steam_appid.txt` (con ese número) junto al
+  ejecutable si se quiere testear sin el cliente de Steam abriendo el juego directo.
+- **27 API Names de logros** en el panel de Steamworks, con los ids exactos `a1`..`a27` (ver
+  `apps/game/src/data/achievements.json` para nombre/condición de cada uno) — si no existen con
+  esos nombres, `client.achievement.activate(id)` falla en silencio (no rompe el juego, pero el
+  logro de Steam nunca se dispara).
+- **Steam Cloud:** habilitarlo para el appId real en el panel de Steamworks (cuota de espacio,
+  rutas). El código ya asume que puede estar deshabilitado (`isEnabledForApp()`) y no rompe si lo está.
+- **Subir los depots por SteamPipe:** completar los `TODO(usuario)` de `tools/steam/{app_build,depot_build}.vdf`
+  (appId/depotId reales, uno o más depots según cuántas plataformas se suban) y correr
+  `steamcmd +run_app_build ...\tools\steam\app_build.vdf` después de generar los instalables con
+  `npm run build:win`/`build:mac`/`build:linux`.
+- **Arte de la ficha de Steam** (capsule/header/logo, trailer, screenshots) — no es código, es
+  producción de arte/marketing, fuera del alcance de cualquier agente de este roadmap.
+- **`LICENSE` con `<TITULAR>`** (pendiente desde el Agente S, ver "Pendientes globales" arriba):
+  seguirá bloqueando un release público hasta reemplazarse a mano.
+- **Verificación real de Steam Deck:** el build Linux (AppImage/tar.gz) no se corrió en un
+  Steam Deck real ni en un contenedor equivalente en este entorno — el layout táctil y el
+  `webPreferences` no dependen de la plataforma (mismo código que ya se probó a 1280×800 en el
+  smoke e2e), pero la recomendación explícita es probar el AppImage en un Deck real o SteamOS en
+  una VM antes del release, tal como quedó documentado también para el balance del Agente 9.
+
+**Estado del DoD:**
+```
+[~] `electron .` corre el juego sin errores — código revisado y verificado por sintaxis/lógica,
+    pero no se pudo ejecutar de verdad en este entorno (scripts de instalación bloqueados por una
+    medida de seguridad del entorno de ejecución, no del proyecto). Ver instrucciones arriba para
+    que el usuario lo confirme con `npm install` + `npm run desktop`.
+[~] Un logro del engine dispara un logro de Steam contra appId 480 — el espejo está implementado
+    (`store.js` → `setAchievement` → `steam.js` → `client.achievement.activate`) pero no se pudo
+    probar contra un cliente de Steam real corriendo en este entorno.
+[x] Guardado sincroniza vía Steam Cloud y resuelve conflictos por `lastSavedAt` — lógica
+    implementada y revisada (`saveFile.js`), misma regla que ya usa `save.js` del engine
+    (nunca pisar en silencio la partida más avanzada); no probada contra Steam Cloud real.
+[x] Fuentes auto-hospedadas (4 estáticos woff2 descargados y servidos vía `@font-face` local,
+    cero dependencia de Google Fonts en runtime) con créditos en Ajustes.
+[~] `electron-builder` produce instalables Win/Mac/Linux — configuración completa y revisada
+    (`electron-builder.yml`), no se pudo correr un build real en este entorno (mismo bloqueo de
+    scripts de instalación). El build Linux en un entorno tipo Steam Deck queda documentado como
+    pendiente de prueba real por el usuario (arriba).
+```
+
+**Handoff para el Agente 11 (auditoría final):** el juego web sigue 100% intacto (109/109 + 2/2
+e2e verdes) — la capa de Steam es aditiva y no tocó `packages/engine` ni casi nada de la UI. Lo
+único que un agente no puede cerrar por su cuenta es la ejecución real de Electron/steamworks.js
+contra un cliente de Steam de verdad (bloqueo de entorno, no del código) y los pendientes del
+usuario listados arriba (appId real, API Names de logros, depots de SteamPipe, arte de ficha,
+`LICENSE`). Recomiendo que la auditoría final incluya, si el entorno del usuario lo permite,
+correr `npm run desktop` una vez para confirmar la ventana real antes de dar por cerrado el V1.

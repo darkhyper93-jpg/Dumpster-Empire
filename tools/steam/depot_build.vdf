@@ -1,0 +1,14 @@
+// SteamPipe: script de depot (contenido de una plataforma). Se necesita un depot por
+// plataforma (Win/Mac/Linux) — este es el placeholder de Windows; duplicar y ajustar
+// "DepotID"/"FileMapping" para Mac (dmg) y Linux (AppImage/tar.gz) cuando el usuario tenga los
+// depotIds reales.
+"DepotBuild"
+{
+	"DepotID" "480" // TODO(usuario): reemplazar por el depotId real (uno por plataforma).
+	"FileMapping"
+	{
+		"LocalPath" "..\..\dist\win-unpacked\*"
+		"DepotPath" "."
+		"recursive" "1"
+	}
+}

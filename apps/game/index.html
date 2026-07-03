@@ -4,23 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Dumpster Empire</title>
-  <!-- DECISIÓN (Agente 8, re-anclaje a "The Workshop", PLAN.md §5.3): reemplaza Fredoka/Nunito/
-       JetBrains Mono (Fase 4) por Plus Jakarta Sans (400/500/700/800), la única familia del
-       mockup canónico, para titulares, números y cuerpo. Se mantiene vía Google Fonts (OFL, sin
-       atribución obligatoria) por el mismo motivo que documentó el Agente 4: no meter un paso de
-       build en apps/game (CLAUDE.md prohíbe bundler). RIESGO PARA EL AGENTE 10 (Steam): el build
-       de Electron corre offline en Steam Deck/desktop — hay que descargar los .woff2 reales a
-       apps/game/assets/fonts/, reemplazar este <link> por @font-face local y sumar la atribución
-       OFL a los créditos antes de empaquetar (mismo riesgo que ya señalaba el Agente 4, ahora con
-       una sola familia en vez de tres). No se usa Material Symbols: se mantiene el registro SVG
-       propio de icons/icons.js (Agente 3), 100% original y sin licencia que declarar — evita
-       sumar un segundo riesgo de auto-hospedaje offline. -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
-    rel="stylesheet"
-  />
+  <!-- DECISIÓN (Agente 10, empaquetado Steam, PLAN.md §5.3): Plus Jakarta Sans (400/500/700/800)
+       auto-hospedada en apps/game/assets/fonts/ vía @font-face en styles/fonts.css, en vez del
+       <link> a Google Fonts que traía la Fase 8. El build de Electron/Steam Deck corre offline
+       (CLAUDE.md), así que no podemos depender de una CDN externa en tiempo de carga. Licencia
+       SIL OFL 1.1 (sin atribución obligatoria) acreditada igual en Ajustes > Créditos. No se usa
+       Material Symbols: se mantiene el registro SVG propio de icons/icons.js (Agente 3), 100%
+       original y sin licencia que declarar. -->
+  <link rel="stylesheet" href="styles/fonts.css" />
   <link rel="stylesheet" href="styles/tokens.css" />
   <link rel="stylesheet" href="styles/layout.css" />
   <link rel="stylesheet" href="styles/components.css" />

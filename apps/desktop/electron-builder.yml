@@ -1,0 +1,62 @@
+# electron-builder ^24.x (versión pineada, DESARROLLO.md §3). Se corre desde la raíz del
+# monorepo con:  npx electron-builder --config apps/desktop/electron-builder.yml --win|--mac|--linux
+#
+# DECISIÓN: `directories.app: apps/desktop` porque ese es el paquete de Electron real
+# (package.json con "main"). `apps/game` y `packages/engine` viven fuera de esa carpeta (son
+# workspaces hermanos), así que se copian como `extraResources` en vez de `files` — main.js los
+# lee directo del filesystem empaquetado (ROOT_DIR = resourcesPath/app), no desde dentro del
+# asar, porque el protocolo `dumpster://` usa `net.fetch()` sobre rutas reales de disco.
+appId: com.dumpsterempire.game
+productName: Dumpster Empire
+copyright: Copyright © Dumpster Empire
+
+directories:
+  app: apps/desktop
+  output: dist
+
+files:
+  - "**/*"
+  - "!node_modules/electron-builder/**"
+
+# steamworks.js trae un binario nativo (.node): no puede vivir dentro del asar (Electron no
+# puede cargar addons nativos desde ahí), así que se desempaqueta.
+asarUnpack:
+  - "node_modules/steamworks.js/**"
+
+extraResources:
+  - from: "../game"
+    to: "app/apps/game"
+    filter:
+      - "**/*"
+      - "!e2e/**"
+      - "!e2e/.results/**"
+  - from: "../../packages/engine"
+    to: "app/packages/engine"
+    filter:
+      - "**/*"
+      - "!tests/**"
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  category: public.app-category.games
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: tar.gz
+      arch: [x64]
+  category: Game
+  # Steam Deck corre los juegos Linux nativos vía AppImage o Proton; este target Linux nativo
+  # es el que cubre Steam Deck (PLAN.md §1 / DESARROLLO.md §3).

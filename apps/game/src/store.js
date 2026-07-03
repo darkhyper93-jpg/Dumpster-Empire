@@ -27,7 +27,7 @@ import {
   applyOfflineProgress,
 } from '@dumpster/engine';
 
-const SAVE_KEY = 'dumpsterEmpireSave';
+export const SAVE_KEY = 'dumpsterEmpireSave';
 // AJUSTE: no calculamos offline por debajo de este piso para no mostrar un modal por
 // recargas de página instantáneas (F5) donde no pasó tiempo real relevante.
 const OFFLINE_MIN_SECONDS = 5;
@@ -38,6 +38,9 @@ const OFFLINE_MIN_SECONDS = 5;
  * @property {{ rarities: Array<Object>, containers: Object<string, Array<Object>> }} itemsData
  * @property {Array<Object>} allContainers
  * @property {Array<Object>} achievementsData
+ * @property {string | null} [initialSaveText] - guardado ya reconciliado con Steam Cloud, si
+ *   `apps/game/src/main.js` corre dentro de Electron (ver `window.dumpsterDesktop`). En modo
+ *   web se omite y se lee de `localStorage` como siempre.
  */
 
 /**
@@ -45,6 +48,10 @@ const OFFLINE_MIN_SECONDS = 5;
  */
 export function createStore(ctx) {
   const { data, itemsData, allContainers, achievementsData } = ctx;
+  // DECISIÓN (Agente 10): el store nunca importa `steam.js` ni sabe que Electron existe — solo
+  // reenvía a `globalThis.dumpsterDesktop`, el puente que expone `apps/desktop/preload.js` vía
+  // contextBridge. En modo web ese global no existe y todo se comporta como antes (localStorage).
+  const desktopBridge = typeof globalThis !== 'undefined' ? globalThis.dumpsterDesktop : undefined;
 
   let state = loadState();
   let pendingDig = null;
@@ -53,14 +60,19 @@ export function createStore(ctx) {
   const listeners = new Set();
 
   function loadState() {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = ctx.initialSaveText !== undefined ? ctx.initialSaveText : localStorage.getItem(SAVE_KEY);
     if (!raw) return freshState();
     const result = deserializeState(raw);
     return result.ok ? result.state : freshState();
   }
 
   function persist() {
-    localStorage.setItem(SAVE_KEY, serializeState(state));
+    const text = serializeState(state);
+    localStorage.setItem(SAVE_KEY, text);
+    // Fire-and-forget: además de localStorage, Electron guarda a archivo (userData) para que
+    // Steam Cloud lo tome (PLAN.md §6.3, tarea 4 del Agente 10). No bloquea ni puede corromper
+    // el estado en curso si falla (el store nunca espera esta promesa).
+    desktopBridge?.saveGame(text);
   }
 
   function notify() {
@@ -74,6 +86,8 @@ export function createStore(ctx) {
     });
     if (unlockedIds.length) {
       newAchievements.push(...unlockedIds.map((id) => achievementsData.find((a) => a.id === id)));
+      // Espeja cada logro del engine a un logro de Steam (misma API Name, ver steam.js).
+      for (const id of unlockedIds) desktopBridge?.setAchievement(id);
     }
   }
 

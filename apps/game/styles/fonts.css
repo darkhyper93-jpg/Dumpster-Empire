@@ -1,0 +1,36 @@
+/**
+ * Plus Jakarta Sans auto-hospedada (PLAN.md §5.3, riesgo señalado por el Agente 8 en
+ * HANDOFF.md): el build de Steam corre offline, así que no podemos depender del <link>
+ * de Google Fonts que traía la Fase 8. Los 4 pesos usados por tokens.css (400/500/700/800)
+ * se descargaron como estáticos (subconjunto "latin", cubre acentos/ñ del español) desde
+ * fonts.gstatic.com y quedaron en apps/game/assets/fonts/. Licencia: SIL Open Font License
+ * 1.1 (sin atribución obligatoria) — igual se acredita en Ajustes > Créditos.
+ */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/PlusJakartaSans-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/PlusJakartaSans-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../assets/fonts/PlusJakartaSans-700.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('../assets/fonts/PlusJakartaSans-800.woff2') format('woff2');
+}
