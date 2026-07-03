@@ -196,4 +196,45 @@ test.describe('Dumpster Empire — regresión escarbado de un solo click', () =>
 
     await expect(page.locator('#dig-active')).toBeVisible();
   });
+
+  // Problema 1 (PLAN_PAM3.md / task-2-brief.md): #app crecía con `min-height:100vh` en vez de
+  // clampearse al viewport, así que un panel con lista larga (Logros/Contenedores) desbordaba el
+  // documento entero y scrolleaba topbar+sidebar+tabbar junto con el contenido, en vez de
+  // scrollear solo `#tab-content` internamente.
+  const VIEWPORTS_SCROLL = [
+    { name: 'mobile-375', width: 375, height: 812 },
+    { name: 'steam-deck-1280x800', width: 1280, height: 800 },
+    { name: 'desktop-1440', width: 1440, height: 900 },
+  ];
+
+  for (const viewport of VIEWPORTS_SCROLL) {
+    test(`la página no scrollea (solo el panel interno) en ${viewport.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto('/apps/game/');
+      await expect(page.locator('#app')).toHaveAttribute('data-state', 'ready');
+
+      // Pantalla de inicio: sin scroll fantasma de página (advertencia explícita del brief:
+      // `.title-screen` usa min-height:100vh, verificar que #app clampeado no le suma scroll).
+      await expect(page.locator('#title-screen')).toBeVisible();
+      const titleScrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+      const viewportHeight = await page.evaluate(() => window.innerHeight);
+      expect(titleScrollHeight).toBeLessThanOrEqual(viewportHeight + 1);
+
+      await page.locator('#title-play-btn').click();
+
+      // Pestaña con lista larga: Logros tiene contenido suficiente para desbordar el panel.
+      await page.locator('[data-tab="logros"]').click();
+      await expect(page.locator('#tab-content')).toBeVisible();
+
+      const pageScrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+      const innerHeight = await page.evaluate(() => window.innerHeight);
+      expect(pageScrollHeight).toBeLessThanOrEqual(innerHeight + 1);
+
+      const panelOverflows = await page.evaluate(() => {
+        const el = document.querySelector('#tab-content');
+        return el.scrollHeight > el.clientHeight;
+      });
+      expect(panelOverflows).toBe(true);
+    });
+  }
 });

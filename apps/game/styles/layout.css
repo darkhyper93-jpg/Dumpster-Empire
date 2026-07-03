@@ -33,7 +33,9 @@ body {
 #app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   max-width: 720px;
   margin: 0 auto;
 }
@@ -150,6 +152,7 @@ body {
 /* Mesada de madera del taller detrás del área de escarbado (mockup: "Wooden Table Surface"). */
 #dig-area {
   position: relative;
+  flex-shrink: 0;
   padding: var(--space-3);
   border-radius: var(--radius-2xl);
   background-color: var(--wood-surface);
@@ -200,6 +203,8 @@ body {
   flex-wrap: wrap;
   gap: var(--space-2);
   padding: 0 var(--space-3) var(--space-3);
+  overflow-y: auto;
+  min-height: 0;
 }
 
 /* AJUSTE (Agente 5, PLAN.md §11.1/§11.9): `#quick-upgrades` fija `display:flex` por id, que
@@ -408,6 +413,7 @@ body {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-tactile);
     overflow-x: auto;
+    overflow-y: auto;
   }
 
   /* El <nav> de tabs es la fila superior del sidebar izquierdo (mockup: <aside>). */
@@ -447,9 +453,9 @@ body {
     flex-direction: column;
     flex-wrap: nowrap;
     padding: 0;
-    align-self: start;
-    position: sticky;
-    top: var(--space-3);
+    align-self: stretch;
+    overflow-y: auto;
+    max-height: 100%;
   }
 
   .quick-upgrade-btn {

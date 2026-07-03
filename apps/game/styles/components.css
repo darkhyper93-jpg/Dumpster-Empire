@@ -823,3 +823,32 @@ textarea {
   color: var(--fg-1);
 }
 
+/* Scrollbar "The Workshop": angosta, con thumb sobre track transparente, coherente con el
+   panel. Electron es Chromium: ::-webkit-scrollbar es el camino principal; scrollbar-width/
+   scrollbar-color quedan como fallback estándar (Firefox). */
+#tab-content,
+#quick-upgrades,
+#tabbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-surface-highest) transparent;
+}
+
+#tab-content::-webkit-scrollbar,
+#quick-upgrades::-webkit-scrollbar,
+#tabbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+#tab-content::-webkit-scrollbar-track,
+#quick-upgrades::-webkit-scrollbar-track,
+#tabbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#tab-content::-webkit-scrollbar-thumb,
+#quick-upgrades::-webkit-scrollbar-thumb,
+#tabbar::-webkit-scrollbar-thumb {
+  background: var(--bg-surface-highest);
+  border-radius: var(--radius-md);
+}
+
