@@ -32,7 +32,10 @@ function buildTreeLayout(nodes) {
   }
 
   const rootChildren = childrenOf.get(root.id) || [];
-  const branchOf = new Map([[root.id, Math.max(0, (rootChildren.length - 1) / 2)]]);
+  // DECISIÓN: redondeo — `grid-column: calc(var(--branch) + 1)` exige un entero; con cantidad
+  // par de hijos la mitad exacta daría x.5 (declaración inválida, el nodo caería a colocación
+  // automática), así que la raíz se apoya en la columna central más cercana.
+  const branchOf = new Map([[root.id, Math.round(Math.max(0, (rootChildren.length - 1) / 2))]]);
   const assignBranch = (id, branch) => {
     branchOf.set(id, branch);
     for (const childId of childrenOf.get(id) || []) assignBranch(childId, branch);

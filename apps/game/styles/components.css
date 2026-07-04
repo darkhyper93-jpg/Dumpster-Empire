@@ -159,10 +159,12 @@ button:hover:not(:disabled) {
   color: var(--fg-0);
 }
 
+/* AJUSTE (PUNTOS_A_MEJORAR_4 §3): `.prestige-tree` ya no participa de esta grilla genérica —
+   su layout real vive más abajo (lista mobile-first + grilla de ramas por @container) y tenerlo
+   acá era una regla muerta (pisada) que confundía. */
 .shop-grid,
 .automation-grid,
-.achievements-grid,
-.prestige-tree {
+.achievements-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-3);
@@ -719,7 +721,12 @@ textarea {
   gap: var(--space-2);
 }
 
-@media (min-width: 700px) {
+/* AJUSTE (PUNTOS_A_MEJORAR_4 §3): la grilla de ramas se activa por ancho del CONTENEDOR
+   (`#tab-content` es `container-type: inline-size`, ver layout.css), no del viewport. En el
+   sidebar desktop de 320px el árbol cae a la lista vertical de arriba (usa todo el ancho del
+   panel, sin fila fantasma ni clipping del nodo raíz); la grilla queda para cuando el panel
+   mismo es ancho (viewports de 700-1023px, donde #tab-content ocupa la pantalla). */
+@container (min-width: 700px) {
   /* AJUSTE (Agente 8): `repeat(5, 1fr)` no dejaba lugar a que las tarjetas mantuvieran su
      ancho de contenido mínimo dentro de la columna central del layout de escritorio (`minmax(0,
      1fr)` en `.game-shell`, ~700px de ancho útil en 1280x800) — la quinta rama se recortaba
@@ -743,7 +750,9 @@ textarea {
   text-align: center;
 }
 
-@media (min-width: 700px) {
+/* Mismo criterio que el bloque de la grilla: colocación por rama/profundidad solo cuando el
+   PANEL contenedor es ancho (PUNTOS_A_MEJORAR_4 §3). */
+@container (min-width: 700px) {
   .prestige-node {
     grid-column: calc(var(--branch) + 1);
     grid-row: calc(var(--depth) + 1);

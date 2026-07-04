@@ -28,18 +28,15 @@ const SAMPLE_THROTTLE_MS = 120;
 // un solo barrido en zigzag sobre el canvas ya cubría casi todo el umbral de revelado ("un solo
 // click" con forma de arrastre). Un pincel más chico exige más recorrido real por contenedor.
 const BASE_ERASE_RADIUS = 20;
-// El ritmo de escarbado (getDigRate del engine, 0.15-1) escala el radio y el alpha efectivos del
-// borrado: con poca Fuerza contra un contenedor resistente, cada pasada limpia menos superficie
-// y dos pasadas por el mismo punto no alcanzan a agotar el alpha del todo (destination-out con
-// alpha parcial reduce el alpha del destino multiplicativamente, no lo pone en 0 de una).
-const DIG_RATE_RADIUS_FLOOR = 0.45;
-const DIG_RATE_ALPHA_FLOOR = 0.35;
-// Higiene de input de la UI (no economía): exige que el jugador haya arrastrado al menos esta
-// distancia real (px de canvas) antes de poder disparar onThresholdReached. El umbral de
-// revelado en sí sigue viniendo 100% del engine (getRevealThreshold); esto solo evita que un
-// buffer vaciado por una causa externa (contexto GPU perdido, hover fantasma) se confunda con
-// un escarbado legítimo.
-const MIN_DRAG_DISTANCE = 400; // px de canvas ≈ dos tercios del ancho (CANVAS_WIDTH=600)
+// AJUSTE (PUNTOS_A_MEJORAR_4 §1): el ritmo de escarbado bajo (getDigRate del engine, 0.15-1)
+// ya no debilita el alpha del borrado — el destination-out con alpha parcial dejaba mugre
+// semi-transparente ("damero fantasma" con el objeto asomando abajo). La lentitud se expresa
+// SOLO con el radio del pincel; piso 0.45→0.35 para conservar el costo de escarbar contenedores
+// por encima de la Fuerza actual ahora que cada pasada limpia al 100%.
+const DIG_RATE_RADIUS_FLOOR = 0.35;
+// Pausa entre limpiar la capa entera y cerrar el escarbado: el jugador tiene que llegar a VER
+// cada objeto revelado con su nombre antes de que la vista vuelva al picker (PUNTOS_A_MEJORAR_4 §1).
+const REVEAL_HOLD_MS = 650;
 
 export class DigCanvas {
   /**
@@ -83,6 +80,7 @@ export class DigCanvas {
     this.lastSampleAt = 0;
     this._lastErasePos = null;
     this._dragDistance = 0;
+    this._revealTimer = null;
 
     this.input = attachDigInput(this.topCanvas, {
       onStart: (pos) => {
@@ -110,6 +108,7 @@ export class DigCanvas {
    * @param {number} [digRate] - viene de getDigRate() (Resistencia del contenedor vs. Fuerza), 1 = ritmo normal.
    */
   start(digResult, revealThreshold, areaMult, digRate = 1) {
+    this.cancelRevealHold();
     this.active = true;
     this.thresholdFired = false;
     this.touched = false;
@@ -132,12 +131,22 @@ export class DigCanvas {
   }
 
   stop() {
+    this.cancelRevealHold();
     this.active = false;
     this.idlePrompt.hidden = true;
     stopScratchSound();
     this.input.cancel();
     this.ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     this.ctxBottom.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  }
+
+  /** Cancela un "momento de revelado" pendiente (ver completeReveal): un escarbado nuevo o un
+   *  desmontaje no deben heredar el aviso diferido del anterior. */
+  cancelRevealHold() {
+    if (this._revealTimer) {
+      clearTimeout(this._revealTimer);
+      this._revealTimer = null;
+    }
   }
 
   rarityColorToken(categoria) {
@@ -268,9 +277,9 @@ export class DigCanvas {
    * @param {{x:number,y:number}} pos
    */
   erase(pos) {
-    if (!this.active) return;
+    if (!this.active || this.thresholdFired) return;
     // Compuerta de esfuerzo: acumula la distancia real recorrida en este arrastre (ver
-    // MIN_DRAG_DISTANCE arriba). `_lastErasePos` se resetea a null en start(), así que el primer
+    // plausibleClearedFraction). `_lastErasePos` se resetea a null en start(), así que el primer
     // erase() de cada gesto no suma distancia (no hay punto anterior con el que compararlo).
     if (this._lastErasePos) {
       const dx = pos.x - this._lastErasePos.x;
@@ -278,15 +287,7 @@ export class DigCanvas {
       this._dragDistance += Math.sqrt(dx * dx + dy * dy);
     }
     this._lastErasePos = pos;
-    // AJUSTE (agentes/rework-escarbado-y-landing-prompt.md): el ritmo de escarbado (digRate, 1 =
-    // normal) ya lo calcula el engine (economy.js getDigRate) combinando Resistencia del
-    // contenedor y Fuerza del jugador; acá se traduce a un pincel más chico Y más "débil" (alpha
-    // parcial) cuando el ritmo es bajo, para que escarbar un contenedor por encima de la Fuerza
-    // actual sea notoriamente más lento sin quedar nunca trabado del todo (digRate nunca baja de
-    // 0.15, ver economy.js).
-    const radiusScale = DIG_RATE_RADIUS_FLOOR + (1 - DIG_RATE_RADIUS_FLOOR) * this.digRate;
-    const alphaScale = DIG_RATE_ALPHA_FLOOR + (1 - DIG_RATE_ALPHA_FLOOR) * this.digRate;
-    const radius = BASE_ERASE_RADIUS * this.areaMult * radiusScale;
+    const radius = this.eraseRadius();
     const ctx = this.ctxTop;
     ctx.globalCompositeOperation = 'destination-out';
     // AJUSTE (Agente 4): `destination-out` quita alpha del destino proporcional al alpha de lo
@@ -294,33 +295,69 @@ export class DigCanvas {
     // zonas con alpha bajo, 0.05-0.18) para el dibujo visual de la suciedad; si `erase()` reusara
     // ese mismo `fillStyle` solo borraría una fracción de cada píxel en vez de revelarlo del todo
     // (encontrado con el smoke e2e: el progreso nunca superaba unos pocos puntos porcentuales).
-    // El área borrada necesita alpha 1 sin importar el color (el debilitamiento por digRate se
-    // aplica con `globalAlpha`, no reusando el patrón semitransparente).
+    // El área borrada necesita alpha 1 sin importar el color: todo píxel de la capa de suciedad
+    // queda opaco o borrado, nunca semi-transparente (PUNTOS_A_MEJORAR_4 §1).
     ctx.fillStyle = '#000';
-    ctx.globalAlpha = alphaScale;
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
 
     const now = performance.now();
     if (now - this.lastSampleAt <= SAMPLE_THROTTLE_MS) return;
     this.lastSampleAt = now;
     const fraction = this.sampleClearedFraction();
-    if (fraction >= this.revealThreshold && this._dragDistance < MIN_DRAG_DISTANCE) {
-      // Reparación de anomalía: la fracción revelada saltó sin que hubiera arrastre real
-      // suficiente (buffer vaciado por una causa externa — contexto GPU perdido, hover fantasma
-      // residual, etc.). Se repinta la capa de suciedad completa y se reporta progreso 0; el
-      // escarbado sigue "vivo" (no se marca thresholdFired) y exige arrastre real desde cero.
+    if (fraction >= this.revealThreshold && fraction > this.plausibleClearedFraction()) {
+      // Reparación de anomalía: la fracción revelada supera lo que el arrastre real de este
+      // escarbado pudo haber limpiado (buffer vaciado por una causa externa — contexto GPU
+      // perdido, hover fantasma residual, etc.). Se repinta la capa de suciedad completa y se
+      // reporta progreso 0; el escarbado sigue "vivo" (no se marca thresholdFired) y exige
+      // arrastre real desde cero.
       this.drawTopLayer();
+      this._dragDistance = 0;
+      this._lastErasePos = null;
       this.callbacks.onProgress(0);
       return;
     }
     this.callbacks.onProgress(fraction);
-    if (!this.thresholdFired && fraction >= this.revealThreshold && this._dragDistance >= MIN_DRAG_DISTANCE) {
+    if (fraction >= this.revealThreshold) {
       this.thresholdFired = true;
-      this.callbacks.onThresholdReached();
+      this.completeReveal();
     }
+  }
+
+  /** Radio efectivo del pincel: área del jugador (areaMult) × ritmo de escarbado (Resistencia
+   *  del contenedor vs Fuerza, ver getDigRate en el engine), expresado SOLO como tamaño. */
+  eraseRadius() {
+    const radiusScale = DIG_RATE_RADIUS_FLOOR + (1 - DIG_RATE_RADIUS_FLOOR) * this.digRate;
+    return BASE_ERASE_RADIUS * this.areaMult * radiusScale;
+  }
+
+  /**
+   * Fracción máxima del canvas que un arrastre real de largo `_dragDistance` con el pincel
+   * actual pudo haber limpiado: franja barrida (2·r·L) + huella inicial (πr²), con margen ×2
+   * por solapamiento del muestreo grueso y el antialias. Si la fracción muestreada supera esto,
+   * el buffer se vació por una causa externa, no por rascar. Reemplaza a la vieja distancia
+   * mínima fija (400px), que con pinceles grandes (areaMult alto) daba falsos positivos y
+   * repintaba la mugre sobre un escarbado honesto (PUNTOS_A_MEJORAR_4 §1).
+   * @returns {number}
+   */
+  plausibleClearedFraction() {
+    const radius = this.eraseRadius();
+    const maxCleared = (2 * radius * this._dragDistance + Math.PI * radius * radius) * 2;
+    return maxCleared / (CANVAS_WIDTH * CANVAS_HEIGHT);
+  }
+
+  /** Umbral alcanzado: limpia la capa de suciedad ENTERA (sin bandas ni parches a medias),
+   *  llena la barra y deja REVEAL_HOLD_MS de "momento de revelado" — el jugador ve cada objeto
+   *  con su nombre — antes de avisar al dueño (que despacha finishManualDig y desmonta). */
+  completeReveal() {
+    stopScratchSound();
+    this.ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    this.callbacks.onProgress(1);
+    this._revealTimer = setTimeout(() => {
+      this._revealTimer = null;
+      this.callbacks.onThresholdReached();
+    }, REVEAL_HOLD_MS);
   }
 
   sampleClearedFraction() {

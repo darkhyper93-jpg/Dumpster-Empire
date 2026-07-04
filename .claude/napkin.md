@@ -18,7 +18,23 @@
    enough for any field the UI will later interpolate.
 
 ## Domain Behavior Guardrails
-1. **[2026-07-04] Ids internos de data mostrados crudos al jugador (UI en inglés/kebab-case)**
+1. **[2026-07-04] Media query de viewport para paneles que viven en contenedores angostos**
+   `.prestige-tree` activaba su grilla de 782px con `@media (min-width: 700px)`, pero en desktop
+   su panel (`#tab-content`) es un sidebar de 320px → contenido clipeado + "hueco" fantasma.
+   Do instead: si un componente vive dentro de un panel cuyo ancho NO sigue al viewport (sidebar,
+   columna de grid), su breakpoint va por `@container` (el panel declara
+   `container-type: inline-size`), nunca por `@media`. Verificar midiendo el rect del panel.
+2. **[2026-07-04] `destination-out` con alpha parcial deja mugre semi-transparente**
+   Escalar la "lentitud" de escarbado con `globalAlpha < 1` sobre `destination-out` produce capas
+   fantasma (el objeto transluce y la textura queda como damero de transparencia); además el
+   muestreo por umbral de alpha clasifica mal esos píxeles. Do instead: el borrado del canvas de
+   escarbado es SIEMPRE alpha 1; la dificultad/ritmo se expresa solo con el radio del pincel (y
+   cualquier compuerta anti-anomalía se calcula proporcional al pincel, no con px fijos).
+3. **[2026-07-04] Plus Jakarta Sans bold a tamaño chico rompe la 'i' en Windows**
+   Con weight ≥600 y font-size ≤14.4px la rasterización fusiona el punto de la 'i' con el asta
+   ("PrestIgIo"). Do instead: para labels chicos usar weight ≤500 o font-size ≥15.2px; probar con
+   una matriz de render (screenshot con zoom), `text-rendering` NO lo arregla.
+4. **[2026-07-04] Ids internos de data mostrados crudos al jugador (UI en inglés/kebab-case)**
    `ShopView.js` interpolaba `c.categorias.join(', ')` y el jugador veía "Categorías: common" —
    los ids de `data/*.json` (`common`, `reusable`, `robotClasificador`…) NO son copy de UI; todos
    tienen un campo `name` de display en la propia data. Pasó 3 rondas de playtest sin que nadie

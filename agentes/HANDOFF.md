@@ -1995,3 +1995,48 @@ playtest del punto 6 confirma el atasco, reabrir **solo** el pase de balance (co
 
 **Como postre quedan:** todo lo de PLAN.md "posibles adiciones a futuro" (legendarios, eventos,
 clima, misiones, especializaciones, demo web) + el nit del tabbar mobile a media pantalla.
+
+---
+
+## Ronda 4 — fixes de PUNTOS_A_MEJORAR_4.md (rama `fix/pulido-ronda4`)
+
+Causas raíz **confirmadas por reproducción** (Playwright: screenshots + histograma de alpha del
+canvas + rects medidos), no por lectura de código:
+
+### Problema 1 — capa de suciedad "transparente", parches, nombres faltantes (DigCanvas.js)
+Tres defectos combinados:
+1. **Mugre fantasma:** `erase()` borraba con `destination-out` + `globalAlpha` parcial
+   (`0.35 + 0.65·digRate`). Con `resistencia > Fuerza` (digRate < 1) cada pasada dejaba la
+   suciedad **semi-transparente**: el objeto se veía a través y la textura de tiles de 8px
+   quedaba como "damero de transparencia". Fix: el borrado es SIEMPRE alpha 1; el ritmo bajo
+   solo achica el pincel (piso de radio 0.45→0.35 para conservar el costo).
+2. **Nada limpiaba la capa al completar:** el umbral (0.40-0.72) dejaba hasta 60% de mugre
+   (las bandas de arriba/abajo que el gesto no recorre) y la vista se desmontaba al instante —
+   nunca se veía el revelado completo ni los nombres. Fix: `completeReveal()` limpia la capa
+   ENTERA al cruzar el umbral, llena la barra y sostiene 650ms de "momento de revelado" antes
+   de `onThresholdReached` (cancelable en `start()`/`stop()`).
+3. **Falso positivo de la compuerta de esfuerzo (por esto "volvió" tras la ronda 3):**
+   `MIN_DRAG_DISTANCE=400px` fijo repintaba toda la mugre sobre un escarbado honesto cuando el
+   pincel era grande (areaMult alto alcanza el umbral con <400px). Fix:
+   `plausibleClearedFraction()` — anomalía solo si la fracción muestreada supera lo que el
+   arrastre real pudo limpiar (franja 2·r·L + huella πr², margen ×2).
+
+### Problema 2 — nav "PrestIgIo"/"ÍndIce" (layout.css)
+No era el string ni `text-transform` ni la carga de la fuente (las 4 caras woff2 cargan): es
+**rasterización** — Plus Jakarta Sans con weight ≥600 a ≤14.4px fusiona el punto de la 'i' con
+el asta en Windows. Matriz probada: 700/14.4 roto · 600/14.4 roto · **500/14.4 OK** ·
+700/≥15.2px OK · `text-rendering` no ayuda. Fix: `#tabbar button { font-weight: 500 }`.
+
+### Problema 3 — Prestigio estrecho + hueco (components.css/layout.css/PrestigeView.js)
+La grilla del árbol (5 columnas `minmax(150px,1fr)` = 782px) se activaba por media query de
+**viewport** (≥700px), pero en desktop `#tab-content` es el **sidebar de 320px**: el nodo raíz
+(columna 3) quedaba clipeado fuera del panel → fila 1 "vacía" = el hueco bajo "Hacer Prestigio",
+nodos de 150px = "apretado". Fix: `#tab-content { container-type: inline-size }` y los dos
+bloques pasan a `@container (min-width: 700px)` → en el sidebar cae a la lista vertical a ancho
+completo. Limpieza: `.prestige-tree` sacado de la grilla genérica muerta (~línea 165);
+`Math.round` en la rama de la raíz (grid-column exige entero con cantidad par de hijos).
+
+### Cobertura de regresión (`apps/game/e2e/ronda4-regression.spec.js`, 7 tests)
+Opacidad 100% inicial · sin mugre semi-transparente con digRate<1 (save sembrado, histograma de
+alpha) · limpieza total + hold al completar · árbol sin desborde del panel (1280 y 375) · weight
+500 del nav (1280 y 375). Suites completas verdes: `npm test` (112) + `npm run test:e2e` (17).

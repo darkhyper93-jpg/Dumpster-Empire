@@ -258,6 +258,11 @@ body {
   box-shadow: none;
   opacity: 0.7;
   white-space: normal;
+  /* AJUSTE (PUNTOS_A_MEJORAR_4 §2): Plus Jakarta Sans con weight >= 600 a <= 14.4px fusiona el
+     punto de la 'i' con el asta en Windows ("PrestIgIo", "ÍndIce"). Verificado por matriz de
+     render: 500 al mismo tamaño separa el punto; text-rendering no lo arregla. Pisa el 700
+     global de `button` (components.css). */
+  font-weight: 500;
   font-size: 0.85rem;
   line-height: 1.2;
   display: flex;
@@ -323,6 +328,10 @@ body {
   min-height: 0;
   padding: var(--space-3);
   overflow-y: auto;
+  /* AJUSTE (PUNTOS_A_MEJORAR_4 §3): los hijos (árbol de prestigio) deciden su layout por el
+     ancho REAL de este panel vía @container, no por el del viewport — en desktop este panel es
+     el sidebar de 320px y una media query de viewport le metía una grilla de ~780px adentro. */
+  container-type: inline-size;
 }
 
 #toast-container {
