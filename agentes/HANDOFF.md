@@ -1733,3 +1733,103 @@ economía).
 [x] §7 documentado como verificación Steam pendiente (no requiere fix).
 [x] `npm test` (112/112) y `npm run test:e2e` (2/2) verdes.
 ```
+
+---
+
+## Correctivo — Pulido ronda 3 (PLAN_PAM3.md) — rama `fix/pulido-ronda3`
+
+**Qué hice:** los 2 problemas del brief `agentes/exec-fixes-ronda3-prompt.md` / `PLAN_PAM3.md`,
+con TDD (tests de regresión escritos y confirmados en rojo antes de tocar el código). Solo UI
+(`apps/game/src/dig/*`, CSS); `packages/engine` no se tocó (verificado: diff vacío contra
+`packages/engine` en toda la rama).
+
+- **Problema 2 — escarbado de un solo click, intermitente.** Causa raíz: (a) `digInput.js` usaba
+  `mousedown/mousemove/mouseup` + `touchstart/touchmove/touchend/touchcancel` con el `mouseup` en
+  `window`; si ese evento se perdía (soltar afuera de la ventana, overlay de Steam con Shift+Tab,
+  alt-tab a mitad de arrastre) el flag `dragging` quedaba prendido para siempre, y un `mousemove`
+  posterior sin botón seguía borrando la capa de suciedad; (b) `DigCanvas.js` confiaba ciegamente
+  en el buffer del canvas sin ningún invariante que impidiera que un solo click completara el
+  escarbado si el buffer se vaciaba por una causa externa (pérdida de contexto GPU, hover
+  residual). Fix: `digInput.js` reescrito sobre **Pointer Events** (`pointerdown/pointermove/
+  pointerup/pointercancel/lostpointercapture`) con `setPointerCapture` (garantiza que el release
+  siempre llegue al canvas) y auto-curación en `onMove` (si `dragging` es true pero
+  `evt.buttons===0`, se trata como release perdido). Nuevo shape de retorno
+  `{ detach, cancel }` — `cancel()` resetea `dragging` sin disparar `onEnd()`, usado en
+  `start()`/`stop()` de `DigCanvas` para no heredar estado de un gesto anterior. `DigCanvas.js`
+  suma una compuerta de esfuerzo: `MIN_DRAG_DISTANCE = 400` (px de canvas, documentado como
+  higiene de input de la UI, **no economía** — el umbral de revelado sigue siendo 100% del engine
+  vía `getRevealThreshold`); si la fracción cruza el umbral sin arrastre real suficiente, se
+  repinta la capa y se reporta progreso 0 sin marcar `thresholdFired` (el escarbado sigue vivo).
+- **Problema 1 — scroll de página en vez de scroll por panel.** Causa raíz: `#app`
+  (`layout.css`) usaba `min-height: 100vh` en vez de clampearse al viewport, así que crecía con
+  el contenido y nunca forzaba que `#tab-content`/`#quick-upgrades` (que ya tenían
+  `flex:1; min-height:0; overflow-y:auto`) desbordaran internamente — el documento entero
+  scrolleaba (topbar + sidebar + tabbar juntos). Fix: `#app` pasa a `height: 100vh; height:
+  100dvh` (mobile: `#dig-area` con `flex-shrink:0`, `#quick-upgrades` con `overflow-y:auto;
+  min-height:0`; desktop: `#tab-content` suma `overflow-y:auto`, `#quick-upgrades` pierde
+  `position:sticky` y gana `overflow-y:auto; max-height:100%`) + scrollbar "The Workshop" nueva
+  en `components.css` (solo tokens: `--bg-surface-highest`, `--radius-md`).
+  - **Regresión encontrada y corregida en la propia revisión de esta tarea:** el primer intento
+    agregó también `overflow: hidden` a `#app` (tal como indicaba el brief original) para forzar
+    el clampeo. Pero `#toast-container`, `#tutorial-overlay`, `#offline-modal` y
+    `#category-modal` (`position:fixed; inset:0`) son hijos DIRECTOS de `#app`: eso los recortaba
+    a la caja de `#app` (`max-width:720px` centrado), y en viewports más anchos el backdrop del
+    modal no cubría las columnas laterales. Corregido quitando `overflow:hidden` por completo
+    (la cadena flexbox `min-height:0` ya alcanza sola para el scroll interno — confirmado por los
+    9 tests existentes) y dejando un comentario `AJUSTE` en `layout.css` explicando por qué no
+    debe reintroducirse sin conocer el trade-off. Se agregó un test permanente (1920×1080,
+    backdrop de `#category-modal` debe cubrir el viewport completo) para que la regresión no
+    vuelva a colarse.
+
+**Riesgos aceptados y documentados (no bloquean, quedan para criterio de balance):**
+- `MIN_DRAG_DISTANCE = 400` (px de canvas) es un valor nuevo sin test que cubra un arrastre
+  *legítimo pero corto* (radio de pincel chico por poca Fuerza/área) que no llegue a esa
+  distancia; el smoke test (zigzag de 10 filas) lo cubre de sobra, así que un valor demasiado
+  alto para partidas reales no se detectaría ahí. Alguien con criterio de balance de juego
+  debería confirmar que 400px no penaliza escarbados legítimos.
+- Un test de regresión (test 2, "hover sin botón" vía Pointer Events sintéticos) no reproduce el
+  bug contra el código sin arreglar por la razón correcta: el código viejo no escuchaba pointer
+  events en absoluto, así que el dispatch no tenía efecto y el test pasaba trivialmente. Se agregó
+  un test adicional con `MouseEvent` que sí reproduce fielmente el defecto (a) contra el código
+  actual (confirmado en rojo); el test de Pointer Events se mantuvo porque sigue siendo válido
+  para verificar el mecanismo específico del fix una vez migrado el input.
+
+**Archivos tocados:** `apps/game/src/dig/digInput.js`, `apps/game/src/dig/DigCanvas.js`,
+`apps/game/styles/layout.css`, `apps/game/styles/components.css`,
+`apps/game/e2e/dig-regression.spec.js` (nuevo, 8 tests).
+
+**Qué necesita saber el próximo agente:**
+- Corriendo `npx playwright test` con los 3 workers por defecto, el smoke test de drag real
+  (`escarbar el Tacho de Vereda... suma dinero`) puede fallar por contención de CPU entre workers
+  (timing-sensitive, throttle de muestreo de 120ms). Confirmado como flake y no regresión: pasa
+  10/10 con `--workers=1` y 6/6 en 3 corridas aisladas con `--repeat-each=3`. Si un run falla justo
+  ese test, reintentar antes de asumir que rompiste algo.
+- `digInput.js` ya no expone `detachInput` como función suelta: el shape de retorno es
+  `{ detach, cancel }`. Cualquier código que todavía llame `this.detachInput()` (no debería quedar
+  ninguno, grep confirmado) rompería.
+- `#app` **no debe volver a llevar `overflow: hidden`** sin releer el comentario `AJUSTE` en
+  `layout.css` — hay un test permanente (`dig-regression.spec.js`, backdrop 1920×1080) que lo
+  va a agarrar si se reintroduce y algún ancestro llega a ganar un `transform`/`filter`/`contain`
+  que cree un containing block para `position:fixed` (hoy no lo tiene ninguno, por eso el clipping
+  teórico no se reproduce empíricamente todavía — ver `.superpowers/sdd/task-2-report.md` para el
+  detalle completo de por qué).
+- La re-revisión automatizada del fix de modal-clipping se truncó por un rate limit de sesión de
+  un subagente ("session limit · resets 11:50pm America/Montevideo"); la verificación final de
+  esa tarea (lectura línea por línea del diff contra el reporte, re-corrida de la suite completa)
+  se hizo manualmente en su lugar — documentado en `.superpowers/sdd/progress.md`.
+
+**Estado del DoD:**
+```
+[x] Problema 2: Pointer Events + setPointerCapture + auto-curación + compuerta de esfuerzo
+    (MIN_DRAG_DISTANCE, higiene de UI no economía); packages/engine intacto.
+[x] Problema 1: #app clampeado al viewport, scroll interno de #tab-content/#quick-upgrades,
+    scrollbar con tokens; regresión de modal-clipping encontrada y corregida con test permanente.
+[x] TDD: tests de regresión escritos y confirmados en rojo antes del fix (evidencia en
+    .superpowers/sdd/task-1-report.md y task-2-report.md).
+[x] Smoke test no negociable (drag real completa y suma dinero) sigue verde.
+[x] Cero console.log, cero // TODO, cero emojis, cero hex sueltos (todo por tokens.css).
+[x] `npm test` (112/112) y `npx playwright test` (10/10 con --workers=1) verdes.
+[ ] Revisión visual manual de screenshots en los 3 viewports de referencia para AMBOS problemas
+    (Tarea 1 revisó mobile-375/desktop-1440 para Problema 1; falta revisión visual dedicada a
+    Problema 2 y a steam-deck-1280x800 para ambos — pendiente para el próximo agente o QA manual).
+```
