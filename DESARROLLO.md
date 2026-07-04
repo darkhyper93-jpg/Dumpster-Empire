@@ -102,7 +102,7 @@ del Steam Deck. En desktop, el mismo layout se centra con ancho máximo. No se d
 electron           ^43.x   (bump 2026-07: Electron 31 quedó EOL y con 17 advisories — npm audit)
 steamworks.js      ^0.4.x   (verificar compat con Electron 43 al reinstalar; N-API, suele ser estable)
 electron-builder   ^26.x    (bump 2026-07: cierra las vulns high de tar/app-builder-lib)
-vitest             ^2.x     (bump a 4.x diferido: dev-only, moderate; hacerlo aparte para no romper los 109 tests)
+vitest             ^4.x     (bump 2026-07, Agente 11: las advisories de la cadena vite/vitest escalaron a high/critical — dev-only pero npm audit ya no quedaba limpio; los 112 tests pasan sin cambios en vitest 4.1)
 node (dev)         >=20     (20 quedó EOL; dev corre en 22/24 — la app usa el Node embebido de Electron)
 ```
 

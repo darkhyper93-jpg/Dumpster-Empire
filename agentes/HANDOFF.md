@@ -27,7 +27,8 @@ qué necesita saber el próximo agente · estado del DoD.
 | 10 Steam | 10 | ✅ hecho (verificado: sintaxis, tests, e2e — ver bloque, `electron .` real pendiente de confirmar por el usuario) |
 | Correctivo — Escarbado real + landing | agentes/rework-escarbado-y-landing-prompt.md | ✅ hecho (ver bloque abajo) |
 | Correctivo — Pulido ronda 2 | PUNTOS_A_MEJORAR_2.md | ✅ hecho (ver bloque abajo) |
-| 11 Auditoría | 11 | ⬜ pendiente |
+| Correctivo — Pulido ronda 3 | PUNTOS_A_MEJORAR_3.md | ✅ hecho (ver bloque abajo) |
+| 11 Auditoría | 11 | ✅ hecho (ver bloque al final: veredicto + checklist manual para el usuario) |
 
 ---
 
@@ -1829,7 +1830,168 @@ con TDD (tests de regresión escritos y confirmados en rojo antes de tocar el c�
 [x] Smoke test no negociable (drag real completa y suma dinero) sigue verde.
 [x] Cero console.log, cero // TODO, cero emojis, cero hex sueltos (todo por tokens.css).
 [x] `npm test` (112/112) y `npx playwright test` (10/10 con --workers=1) verdes.
-[ ] Revisión visual manual de screenshots en los 3 viewports de referencia para AMBOS problemas
-    (Tarea 1 revisó mobile-375/desktop-1440 para Problema 1; falta revisión visual dedicada a
-    Problema 2 y a steam-deck-1280x800 para ambos — pendiente para el próximo agente o QA manual).
+[x] Revisión visual manual de screenshots en los 3 viewports de referencia para AMBOS problemas
+    (Tarea 1 revisó mobile-375/desktop-1440 para Problema 1; la revisión dedicada a Problema 2 y a
+    steam-deck-1280x800 la cerró el Agente 11 — ver su bloque abajo, sección "3 rondas").
 ```
+
+---
+
+## Agente 11 (Auditoría final + QA — capstone)
+
+**Rol cumplido:** no construí features; verifiqué intención, no solo existencia de código. Todo lo
+de abajo se probó en esta corrida (2026-07-04), no se heredó de handoffs anteriores.
+
+### 1. Higiene de git
+- `main == origin/main` (a9074bd), working tree limpio salvo `agentes/agente11-prompt.md` (la
+  reescritura del propio prompt de esta auditoría — se commitea junto con este bloque).
+- Todas las ramas locales de fase y de fix están **mergeadas en main** (`git branch --no-merged main`
+  vacío). Nada colgando. Borrar las ramas viejas es opcional/cosmético.
+
+### 2. Tests + dependencias
+- `npm test`: **112/112 verde** (8 archivos). `npx playwright test --workers=1`: **10/10 verde**
+  (smoke + regresiones de escarbado/scroll/modal).
+- `npm audit`: al arrancar reportaba **5 vulns (3 moderate, 1 high, 1 critical)** — TODAS en la
+  cadena dev-only vitest/vite/esbuild (la critical es el server UI de Vitest, que no se usa; nada
+  de esto llega al build de Electron). El bump de Electron 31→43 sí había cerrado lo suyo (cero
+  advisories de electron/electron-builder/tar).
+- **Fix aplicado:** bump `vitest ^2.x → ^4.1.9` (el bump que DESARROLLO.md §3 tenía diferido).
+  Los 112 tests pasan sin cambios. `npm audit` ahora: **0 vulnerabilidades**. DESARROLLO.md §3
+  actualizado.
+
+### 3. Barridos de código (todos ≈ 0)
+- `console.log`: 0. `// TODO`: 0 (los `TODO(usuario)` de `tools/steam/*.vdf` son placeholders
+  intencionales para el appId real). Emojis: 0. `document`/`window` en `packages/engine/src`: 0.
+- Colores fuera de `tokens.css`: solo las excepciones ya documentadas por los Agentes 4/8
+  (sombras negras, el alpha del ámbar del mockup, y los colores internos del canvas de
+  `DigCanvas.js`, que no puede usar `var()` — usa `resolveCssColor` para los de rareza).
+  Cero colores de marca/superficie nuevos sueltos.
+- Sinks `state → innerHTML` (re-barrido completo post-XSS, incluye `DigContainerPicker.js` que es
+  posterior a aquel fix): todas las interpolaciones pasan por `formatMoney`/`formatNumber`/
+  `Number()||0`/ternarios fijos; `Tutorial.js` indexa `STEPS[state.tutorialStep]` con
+  `tutorialStep` validado como `number` en `REQUIRED_FIELDS` de `save.js`. Sin sinks nuevos.
+
+### 4. Bugs encontrados y arreglados en esta auditoría
+- **`ShopView.js` mostraba ids crudos de categoría** ("Categorías: common") en vez de los nombres
+  de display que ya existen en `items.json` (`rarities[].name`, ej. "Basura Común"). Arreglado con
+  un lookup id→name (dato estático, no economía). Suite completa verde después del fix.
+
+### 5. Verificación de intención — PLAN §10
+**Jugabilidad**
+- [x] Abre servido estático sin errores de consola (e2e + 3 corridas visuales propias a
+  375/1280×800/1440).
+- [x] **Abre en Electron de verdad** — cosa que el Agente 10 no pudo ejecutar: corrí
+  `electron apps/desktop` real (binario Electron 43.0.0 ya instalado), proceso vivo 35s sin nada
+  en stderr, y el autoguardado escribió `%APPDATA%/@dumpster/desktop/save.json` con la partida
+  real del usuario (saveVersion 4 migrado, `lastSavedAt` fresco) vía el puente `dumpsterDesktop`.
+- [x] Cada stat mueve un número visible (tests dedicados de Fase 1 + resistencia wireada al canvas
+  desde el rework; verificado visualmente que el revelado es incremental).
+- [x] Loop completo: verificado headless hasta prestigio (sim de Fases 2/9); manual hasta donde el
+  entorno permite. El loop entero con las manos queda en el checklist manual (abajo).
+- [x] Ningún botón muerto por NaN/Infinity: toda compra del engine gatea `money < cost` antes de
+  restar (grep verificado), así que un costo desbordado a Infinity nunca se compra ni resta. El
+  `NaN` del script del Agente 9 aparece solo con su bot comprando 50 niveles/seg durante horas —
+  no encontré camino de UI que lo reproduzca.
+- **[🟡] Hitos de ritmo §3 — el único ítem no-verde del checklist.** Corrí `sim-pace.mjs` con 4
+  semillas: primera mejora / primer contenedor / Electrónica dentro o cerca de rango; primera
+  automatización 10-13.5min (ok) pero una semilla dio 31min; "todo desbloqueado" 35-40min;
+  **Prestigio ~3.5h (sobre el techo de 3h) y 2 de 4 semillas caen en el régimen atascado** que el
+  Agente 9 ya documentó (reinversión sin salto de tier). No es una regresión nueva — es el mismo
+  estado que el Agente 9 dejó por escrito con su recomendación. Sigue vigente: **el ritmo de
+  mitad-a-tardío necesita un playtest humano** y, si se confirma el atasco, una vuelta de balance
+  de constantes (solo `data/*.json`). No lo tapo: es la deuda abierta del V1.
+
+**Economía**
+- [x] Fórmulas §4 literales (tests de Fase 1 siguen verdes); K/M/B/T sin notación científica
+  (`format.js` + visual). Sin loops de dinero infinito conocidos (asserts de Fase 9: recompensas
+  de logros con techo, automatización nunca mejor que manual).
+
+**Guardado**
+- [x] Persiste al recargar (localStorage, e2e) y **en Electron real** (save.json escrito, la
+  partida previa del usuario cargó sin pérdida). Offline testeado (Vitest). Export/import quedó
+  interno (UI eliminada a pedido de §11.1; ida-y-vuelta cubierto por `save.test.js`).
+- [~] Steam Cloud/conflicto: lógica implementada y revisada (`saveFile.js`), pero ejercitarla
+  exige cliente de Steam + appId real → checklist manual.
+
+**UI/UX**
+- [x] Responsive 375 / 1280×800 / 1440 verificado con capturas propias (título, home de escarbado,
+  dig parcial, Contenedores, Prestigio, Logros, Índice) — sin texto desbordado; barra y hint de
+  trampa dentro de la tarjeta; scroll interno por panel con topbar/sidebar fijos (e2e dedicado).
+- [x] Feedback en interactivos (extrusión/hover/disabled con "te faltan $X"); cero emojis.
+- Nit cosmético (no bloquea): en mobile con la pestaña Escarbar activa, el tabbar queda a media
+  pantalla con espacio vacío debajo (el `#tab-content` oculto no empuja). Funcional igual.
+
+**Contenido**
+- [x] 8 rarezas con nombre/color/mult; 8 contenedores balanceados por fórmula; **55 ítems únicos
+  sin repetidos entre contenedores** (6-7 por pool); 27 logros todos con `cond` verificable en
+  engine y con `reward`; 12 nodos de prestigio todos con `requires`; 4 mejoras + 8
+  automatizaciones. Cero placeholders.
+
+**Código**
+- [x] Estructura del monorepo respetada; frontera engine↔UI intacta (cero DOM en engine, la UI no
+  reimplementa fórmulas).
+
+**Steam / empaquetado**
+- [~] `electron .` verificado real por esta auditoría (arriba). `electron-builder` configurado y
+  revisado; **el build real de instaladores y los logros/cloud contra Steam siguen pendientes del
+  usuario** (appId real, API Names a1..a27, VDF de SteamPipe) — no hay forma de cerrarlos sin el
+  cliente/panel de Steamworks.
+
+**Cierre**
+- [x] README: arranque en 3 pasos + build Steam. Nota final: abajo.
+
+### 6. Verificación §11 (scope V1.1) — todo implementado y visto funcionando
+Fixes UX (§11.1) ✅ · economía jugable (§11.2: Suerte recomendada visible en Contenedores,
+pérdida acotada por Suerte con asserts, resistencia wireada al canvas, trampas por tier) ✅ ·
+niveles 1-10 persistentes (§11.3) ✅ · ítems únicos (§11.4) ✅ · Índice con ocultas/%/precio/
+cantidad (§11.5, visto en captura con "???" y revelado real) ✅ · recompensas de logros visibles
+(§11.6) ✅ · árbol de prestigio con `requires` reales, 12 nodos renderizados con conectores y
+bloqueo (§11.7, captura) ✅ · pantalla de inicio → Jugar → escarbado (§11.8/9, captura) ✅.
+
+### 7. Verificación de las 3 rondas de PUNTOS_A_MEJORAR
+- **Ronda 1 (22 puntos):** re-verifiqué los críticos sobre el build actual: escarbado con esfuerzo
+  real (drag parcial NO completa; click suelto NO completa — probado en los 3 viewports), sonido
+  de rascado/hallazgo, Índice, niveles, recompensas de logros, "Hacer Prestigio", árbol simétrico,
+  ítems únicos, prompt solo en su pantalla. La tabla del agente correctivo sigue siendo exacta.
+- **Ronda 2 (7 puntos):** nombres de ítems SIEMPRE visibles al revelar (captura: "Lata aplastada",
+  "Corcho de botella"), Contenedores informativa sin botón de escarbar, lista en el sidebar
+  izquierdo bajo el menú, nav bien capitalizado + "Índice", slider de volumen persistente
+  (`volume` presente en el save real de Electron), barra/hint inset. §7 (Steam API) sigue
+  pendiente-usuario.
+- **Ronda 3 (2 problemas):** scroll por panel verde en e2e a los 3 viewports; un-solo-click
+  blindado por 4 tests de regresión + mi prueba manual. **Cerré el único checkbox pendiente** de
+  esa ronda (revisión visual dedicada al Problema 2 y a 1280×800): capturas tomadas y revisadas
+  en esta auditoría, revelado incremental confirmado a los 3 anchos.
+
+### 8. Checklist de verificación MANUAL para el usuario (`npm run desktop`)
+Lo que ningún agente puede cerrar desde CI/sandbox:
+1. **Loop completo con las manos:** Título → Jugar → escarbar (arrastrar de verdad; probá también
+   un click suelto y mover el mouse sobre el canvas tras alt-tab/overlay de Steam a mitad de
+   arrastre — nunca debe completar solo) → vender/mejorar → comprar contenedor → automatizar →
+   llegar a Prestigio → "Hacer Prestigio".
+2. **Ítems:** al revelar, SIEMPRE aparece el nombre bajo el círculo del ítem.
+3. **Scroll:** en Contenedores/Automatización/Logros/Prestigio/Índice scrollea la lista con su
+   barrita; topbar/menú/mejoras quedan fijos.
+4. **Guardado:** cerrá la ventana de Electron y reabrí — la partida sigue (ya verifiqué el
+   save.json una vez, pero confirmá el ciclo cerrar→abrir completo).
+5. **Steam real (necesita cliente de Steam abierto + appId real):** `[API loaded yes]` en la
+   consola; un logro nuevo dispara el logro en Steam; el save sube a Steam Cloud y baja en otra
+   máquina (el conflicto lo gana el `lastSavedAt` más nuevo).
+6. **Ritmo (la deuda abierta):** jugá 30-60 min de mitad de partida — si sentís que reinvertir en
+   el mismo contenedor deja de rendir y no hay salto posible de tier (el "régimen atascado" de la
+   simulación), hay que reabrir el balance de constantes (solo `data/*.json`, no fórmulas).
+7. **Responsive:** ventana angosta (~375px), 1280×800 y 1440px — sin texto cortado.
+8. **Restantes de release:** `LICENSE` con `<TITULAR>` real; appId + API Names a1..a27 + VDF de
+   SteamPipe; `npm run build:win`/`build:linux` y probar el AppImage en Steam Deck.
+
+### 9. Veredicto
+**Listo para entregar al playtest humano final, con una (1) deuda abierta declarada:** los hitos
+tardíos de ritmo (§3: "todo desbloqueado" y Prestigio) quedan fuera de rango (~3.5h vs 3h) y el
+sistema tiene un régimen de estancamiento reproducible en simulación (2 de 4 semillas). Todo lo
+demás — código, seguridad, tests, contenido, scope §11, las 3 rondas de feedback, Electron real,
+audit limpio — está verde y verificado por comportamiento, no por existencia de código. Si el
+playtest del punto 6 confirma el atasco, reabrir **solo** el pase de balance (constantes de
+`data/*.json`); si no, publicar según el punto 8.
+
+**Como postre quedan:** todo lo de PLAN.md "posibles adiciones a futuro" (legendarios, eventos,
+clima, misiones, especializaciones, demo web) + el nit del tabbar mobile a media pantalla.
