@@ -30,6 +30,8 @@ export const ShopView = {
       return;
     }
 
+    const rarityNames = new Map(itemsData.rarities.map((r) => [r.id, r.name]));
+
     const cards = allContainers.map((c) => {
       const unlocked = isContainerUnlocked(state, c, allContainers);
       if (!unlocked) {
@@ -54,7 +56,7 @@ export const ShopView = {
         `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
         `<h3>${c.name}</h3>` +
         `<p>Costo: ${costLabel}</p>` +
-        `<p>Categorías: ${c.categorias.join(', ')}</p>` +
+        `<p>Categorías: ${c.categorias.map((id) => rarityNames.get(id) || id).join(', ')}</p>` +
         `<p>Riesgo de trampa: ${Math.round(trapProb * 100)}%</p>` +
         `<p>Comprados: ${Number(state.ownedContainers[c.id]) || 0}</p>` +
         `<p class="shop-card-luck ${luckReached ? 'shop-card-luck--reached' : ''}">` +
