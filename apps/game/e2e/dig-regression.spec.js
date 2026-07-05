@@ -1,30 +1,21 @@
 /**
- * Regresión e2e (Playwright/Chromium) para Problema 2 (escarbado de un solo click,
- * intermitente): captura los dos defectos de origen antes del fix —
- * (a) `dragging` rancio en digInput.js cuando el release nunca llega, y
- * (b) DigCanvas confiando a ciegas en el buffer de la capa de suciedad — y confirma que
- * el arreglo (Pointer Events + compuerta de esfuerzo + reparación de anomalía) los cierra.
+ * Regresión e2e (Playwright/Chromium) del "escarbado de un solo click" (ronda 3) y del
+ * buffer de suciedad vaciado por causas externas. Desde la ronda 5 la garantía es
+ * estructural: el completado sale del modelo de revelado por-objeto (digRevealModel.js),
+ * nunca de leer píxeles — un buffer vaciado por fuera no registró trazos, así que no puede
+ * revelar ni completar nada. El `dragging` rancio de digInput.js (Pointer Events) se sigue
+ * cubriendo igual que en ronda 3.
  *
  * Corre junto a smoke.spec.js: `npx playwright test apps/game/e2e/dig-regression.spec.js apps/game/e2e/smoke.spec.js`.
  */
 
 import { test, expect } from '@playwright/test';
-
-/** Arranca el juego y entra al escarbado del Tacho de Vereda. Devuelve el locator del canvas top. */
-async function iniciarEscarbado(page) {
-  await page.goto('/apps/game/');
-  await expect(page.locator('#app')).toHaveAttribute('data-state', 'ready');
-  await page.locator('#title-play-btn').click();
-  await page.locator('[data-start-dig="tachoVereda"]').click();
-  await expect(page.locator('#dig-active')).toBeVisible();
-  const canvas = page.locator('.dig-canvas-top');
-  await expect(canvas).toBeVisible();
-  return canvas;
-}
+import { entrarAlJuego, iniciarEscarbado, puntoLejano } from './helpers/dig.js';
 
 test.describe('Dumpster Empire — regresión escarbado de un solo click', () => {
   test('capa pre-vaciada externamente + un click NO completa el escarbado', async ({ page }) => {
-    const canvas = await iniciarEscarbado(page);
+    await entrarAlJuego(page);
+    const canvas = await iniciarEscarbado(page, 'tachoVereda');
     const moneyBefore = await page.locator('#money').textContent();
 
     // Simula una capa de suciedad ya transparente por una causa externa (pérdida de contexto
@@ -36,20 +27,25 @@ test.describe('Dumpster Empire — regresión escarbado de un solo click', () =>
 
     const box = await canvas.boundingBox();
     if (!box) throw new Error('No se pudo medir el canvas de escarbado.');
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    // Click lejos de todos los objetos: el buffer vacío no aporta NADA al modelo de revelado
+    // (ronda 5) — sin trazos encima de los objetos no hay revelado ni completado posible.
+    const far = await puntoLejano(page, box);
+    await page.mouse.click(far.x, far.y);
 
-    // Sin arrastre real, el escarbado tiene que seguir activo (reparación de anomalía repinta
-    // la capa y exige distancia de arrastre real desde cero).
     await expect(page.locator('#dig-active')).toBeVisible();
     const moneyAfter = await page.locator('#money').textContent();
     expect(moneyAfter).toEqual(moneyBefore);
   });
 
   test('mover el puntero sin botón presionado NO escarba (dragging rancio)', async ({ page }) => {
-    const canvas = await iniciarEscarbado(page);
+    await entrarAlJuego(page);
+    const canvas = await iniciarEscarbado(page, 'tachoVereda');
     const moneyBefore = await page.locator('#money').textContent();
     const box = await canvas.boundingBox();
     if (!box) throw new Error('No se pudo medir el canvas de escarbado.');
+    // El pointerdown inicial (gesto legítimo) se hace lejos de los objetos para que su
+    // borrado puntual no pueda revelar nada por sí solo (posiciones aleatorias, ronda 5).
+    const far = await puntoLejano(page, box);
 
     // NOTA DE IMPLEMENTACIÓN: se despachan Pointer Events sintéticos (pointerdown/pointermove)
     // porque son los eventos que el `digInput.js` YA CORREGIDO escucha (Pointer Events unifican
@@ -90,7 +86,7 @@ test.describe('Dumpster Empire — regresión escarbado de un solo click', () =>
         for (let i = 3; i < before.length; i += 4) if (before[i] < 40) clearedBefore++;
         return clearedBefore;
       },
-      { x: box.width / 2, y: box.height / 2 }
+      { x: far.x - box.x, y: far.y - box.y }
     );
 
     const progressAfterZigzag = await page.evaluate(() => {
@@ -135,7 +131,8 @@ test.describe('Dumpster Empire — regresión escarbado de un solo click', () =>
     // test debe fallar contra el código sin arreglar (el zigzag sin botón sigue borrando y
     // completa el escarbado) y pasar una vez migrado a Pointer Events (ya no hay listeners de
     // mouse, así que estos eventos sintéticos no producen ningún efecto).
-    const canvas = await iniciarEscarbado(page);
+    await entrarAlJuego(page);
+    const canvas = await iniciarEscarbado(page, 'tachoVereda');
     const moneyBefore = await page.locator('#money').textContent();
     const box = await canvas.boundingBox();
     if (!box) throw new Error('No se pudo medir el canvas de escarbado.');
@@ -154,11 +151,9 @@ test.describe('Dumpster Empire — regresión escarbado de un solo click', () =>
           })
         );
         // Nunca se despacha 'mouseup': simula el release perdido. A partir de acá, todo
-        // 'mousemove' -incluso sin botón presionado (buttons: 0)- debería seguir siendo ignorado.
-        // El barrido se trocea con un `setTimeout` entre filas para dejar pasar el throttle de
-        // muestreo del canvas (120ms, ver SAMPLE_THROTTLE_MS en DigCanvas.js) — igual que hace el
-        // smoke test con el drag real — porque un burst 100% síncrono nunca deja que
-        // `sampleClearedFraction()` se vuelva a evaluar.
+        // 'mousemove' -incluso sin botón presionado (buttons: 0)- debería seguir siendo ignorado
+        // (digInput.js solo escucha Pointer Events). El barrido se trocea con un `setTimeout`
+        // entre filas para darle al event loop la chance de procesar cualquier efecto diferido.
         const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
         const cols = 20;
         const rows = 10;
@@ -188,11 +183,15 @@ test.describe('Dumpster Empire — regresión escarbado de un solo click', () =>
   });
 
   test('un solo click sobre la capa fresca no completa el escarbado', async ({ page }) => {
-    const canvas = await iniciarEscarbado(page);
+    await entrarAlJuego(page);
+    const canvas = await iniciarEscarbado(page, 'tachoVereda');
     const box = await canvas.boundingBox();
     if (!box) throw new Error('No se pudo medir el canvas de escarbado.');
 
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    // Con revelado por-objeto un click no puede completar salvo que caiga justo sobre el
+    // único objeto de una trampa: se clickea lejos de todo para que el test sea determinista.
+    const far = await puntoLejano(page, box);
+    await page.mouse.click(far.x, far.y);
 
     await expect(page.locator('#dig-active')).toBeVisible();
   });

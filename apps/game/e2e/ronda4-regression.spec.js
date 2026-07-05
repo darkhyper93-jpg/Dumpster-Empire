@@ -3,9 +3,9 @@
  *
  * P1 — canvas de escarbado: la capa de suciedad tiene que ser 100% opaca antes de rascar
  *   (nunca se ve el objeto), el borrado nunca deja mugre semi-transparente ("damero fantasma",
- *   causado por destination-out con globalAlpha parcial cuando digRate < 1), y al cruzar el
- *   umbral la capa se limpia ENTERA (sin bandas arriba/abajo) con un "momento de revelado"
- *   antes de volver al picker.
+ *   causado por destination-out con globalAlpha parcial cuando digRate < 1), y al completar
+ *   (ronda 5: todos los objetos revelados) la capa se limpia ENTERA (sin bandas arriba/abajo)
+ *   con un "momento de revelado" antes de volver al picker.
  * P2 — nav: guard estructural del fix tipográfico (Plus Jakarta Sans con weight >= 600 a
  *   <= 14.4px fusiona el punto de la 'i' en Windows; el nav queda en 500).
  * P3 — árbol de prestigio: su grilla se decide por el ancho del PANEL (@container), así que
@@ -17,6 +17,7 @@
 import { test, expect } from '@playwright/test';
 import { freshState } from '../../../packages/engine/src/state.js';
 import { serializeState } from '../../../packages/engine/src/save.js';
+import { entrarAlJuego, iniciarEscarbadoSinTrampa, rascarObjeto } from './helpers/dig.js';
 
 /** Cuenta píxeles del top canvas por franja de alpha: opacos, intermedios y borrados. */
 async function alphaHistogram(page) {
@@ -70,13 +71,12 @@ test.describe('Dumpster Empire — regresión ronda 4', () => {
 
     const box = await page.locator('.dig-canvas-top').boundingBox();
     if (!box) throw new Error('No se pudo medir el canvas de escarbado.');
-    // Tres pasadas horizontales reales (lejos del umbral de revelado: ~25% de superficie).
+    // Tres pasadas horizontales reales: borrado suficiente para medir, sin apuntar a objetos.
     await page.mouse.move(box.x + 20, box.y + box.height * 0.3);
     await page.mouse.down();
     for (const yFrac of [0.3, 0.5, 0.7]) {
       await page.mouse.move(box.x + 20, box.y + box.height * yFrac, { steps: 3 });
       await page.mouse.move(box.x + box.width - 20, box.y + box.height * yFrac, { steps: 25 });
-      await page.waitForTimeout(150);
     }
     await page.mouse.up();
 
@@ -90,42 +90,44 @@ test.describe('Dumpster Empire — regresión ronda 4', () => {
     expect(after.semi).toBeLessThan(8000);
   });
 
-  test('P1: al cruzar el umbral la capa se limpia entera (sin parches) y se ve el revelado', async ({ page }) => {
-    await iniciarEscarbado(page, 'tachoVereda');
-    const box = await page.locator('.dig-canvas-top').boundingBox();
+  test('P1: al completar el último objeto la capa se limpia entera (sin parches) y se ve el revelado', async ({ page }) => {
+    await entrarAlJuego(page);
+    // Ronda 5: se completa al destapar TODOS los objetos — se rasca encima de cada posición
+    // (aleatorias, expuestas por el hook de debug) y recién el último revela el 100%.
+    const { canvas, positions } = await iniciarEscarbadoSinTrampa(page, 'tachoVereda');
+    const box = await canvas.boundingBox();
     if (!box) throw new Error('No se pudo medir el canvas de escarbado.');
 
-    // Zigzag del smoke test (respeta SAMPLE_THROTTLE_MS=120), pero con polling fino (30ms) del
-    // 100% de la barra: hay que detectar el instante en que completeReveal limpió la capa y
-    // arrancó el hold ANTES de que sus 650ms venzan, o el assert del "momento de revelado"
-    // llegaría tarde por diseño del propio test.
-    const rows = 10;
-    const fill = page.locator('#dig-progress-fill');
-    let completed = false;
-    await page.mouse.move(box.x + 1, box.y + 1);
-    await page.mouse.down();
-    for (let row = 0; row <= rows && !completed; row++) {
-      const y = box.y + (box.height * row) / rows;
-      const leftToRight = row % 2 === 0;
-      await page.mouse.move(leftToRight ? box.x : box.x + box.width, y, { steps: 3 });
-      await page.mouse.move(leftToRight ? box.x + box.width : box.x, y, { steps: 20 });
-      for (let tick = 0; tick < 5 && !completed; tick++) {
-        await page.waitForTimeout(30);
-        completed = (await fill.evaluate((el) => el.style.width)) === '100%';
-      }
+    for (const pos of positions.slice(0, -1)) {
+      await rascarObjeto(page, box, pos);
     }
-    await page.mouse.up();
-    expect(completed).toBe(true);
-    // Momento de revelado, medido en un solo roundtrip para ganarle al hold (650ms): el panel
-    // sigue montado y NO queda ni un píxel de suciedad (ni bandas arriba/abajo ni parches).
-    const revealed = await page.evaluate(() => {
-      const active = !document.querySelector('#dig-active').hidden;
-      const el = document.querySelector('.dig-canvas-top');
-      const { data } = el.getContext('2d').getImageData(0, 0, el.width, el.height);
-      let dirty = 0;
-      for (let i = 3; i < data.length; i += 4) if (data[i] >= 40) dirty++;
-      return { active, dirty };
+    // El assert del "momento de revelado" tiene que ganarle al hold (650ms) que arranca al
+    // revelar el último objeto. Un roundtrip del test puede llegar tarde con la máquina
+    // cargada, así que la foto la saca la propia página: un rAF que espera la barra al 100%
+    // y en ese mismo frame mide si el panel sigue montado y cuánta suciedad queda.
+    await page.evaluate(() => {
+      window.__revealSnap = null;
+      const fill = document.querySelector('#dig-progress-fill');
+      const tick = () => {
+        if (fill.style.width !== '100%') {
+          requestAnimationFrame(tick);
+          return;
+        }
+        const active = !document.querySelector('#dig-active').hidden;
+        const el = document.querySelector('.dig-canvas-top');
+        const { data } = el.getContext('2d').getImageData(0, 0, el.width, el.height);
+        let dirty = 0;
+        for (let i = 3; i < data.length; i += 4) if (data[i] >= 40) dirty++;
+        window.__revealSnap = { active, dirty };
+      };
+      requestAnimationFrame(tick);
     });
+    await rascarObjeto(page, box, positions[positions.length - 1]);
+
+    // Momento de revelado: el panel sigue montado y NO queda ni un píxel de suciedad
+    // (ni bandas arriba/abajo ni parches a medias).
+    await page.waitForFunction(() => window.__revealSnap !== null);
+    const revealed = await page.evaluate(() => window.__revealSnap);
     expect(revealed.active).toBe(true);
     expect(revealed.dirty).toBe(0);
     // Y al terminar el hold, el flujo sigue solo hacia el picker.

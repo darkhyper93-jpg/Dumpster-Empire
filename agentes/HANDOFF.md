@@ -2040,3 +2040,72 @@ completo. Limpieza: `.prestige-tree` sacado de la grilla genérica muerta (~lín
 Opacidad 100% inicial · sin mugre semi-transparente con digRate<1 (save sembrado, histograma de
 alpha) · limpieza total + hold al completar · árbol sin desborde del panel (1280 y 375) · weight
 500 del nav (1280 y 375). Suites completas verdes: `npm test` (112) + `npm run test:e2e` (17).
+
+---
+
+## Ronda 5 — mecánica de escarbado REHECHA a revelado por-objeto (rama `fix/rework-escarbado-ronda5`)
+
+**Decisión: REHACER, no parchar** (lo que el brief recomendaba). Tras 4 rondas de compuertas
+sobre el modelo "completar por % de área leída del canvas" (umbral por área, distancia mínima,
+reparación de anomalía), la fuente de verdad pasa a un **modelo puro en JS**:
+`apps/game/src/dig/digRevealModel.js` (posiciones aleatorias sin solape + trazos del pincel →
+cobertura por huella de objeto). El canvas (`DigCanvas.js`) es presentación: pinta lo que dice el
+modelo y puede repintarse entero desde él (`repaintFromModel`, enganchado a `focus`/
+`visibilitychange`). El completado **nunca** lee píxeles (`getImageData` eliminado del runtime):
+se completa **solo cuando todos los objetos del contenedor están revelados** (PUNTOS_A_MEJORAR_5
+§3), la barra mide `revelados/total`, la trampa es el único "objeto" de su dig, y el esfuerzo
+sigue escalando igual (pincel = `BASE_ERASE_RADIUS × areaMult × (0.35 + 0.65·digRate)`).
+Se eliminaron `revealThreshold` (la UI ya no consume `getRevealThreshold`; la fórmula sigue en
+`economy.js` con sus tests — el engine NO se tocó), `sampleClearedFraction`,
+`plausibleClearedFraction`, la compuerta de distancia y la reparación de anomalía.
+
+### Problema 1 — objetos visibles ANTES de rascar (idle) — causa raíz
+La firma del síntoma lo prueba: la "arena que aparece recién al primer click" era la **reparación
+de anomalía** del código viejo (`erase()`: fracción ≈1 > plausible → `drawTopLayer()`), o sea la
+capa top estaba **realmente vacía en idle** en el build de escritorio y la compuerta la repintaba
+tarde, recién al interactuar. El disparador exacto del vaciado (descarte del backing store del
+canvas por el compositor de Chromium/Electron, la misma clase de causa que motivó la compuerta en
+ronda 3) **no se logró reproducir bajo instrumentación** (minimizar/restaurar 1.2s con Playwright
+`_electron` no lo dispara). Da igual por diseño: con el modelo como fuente de verdad, un buffer
+vaciado no puede autocompletar ni destapar nada, y `repaintFromModel` repinta la suciedad al
+recuperar foco/visibilidad antes de que el jugador vea nada.
+
+### Problema 2 — objetos sin nombre — DOS causas raíz
+1. **Geometría, no dibujado:** el nombre vive a +44px del centro (fuera del círculo de r28): el
+   revelado parcial por píxeles podía destapar el círculo dejando la franja del texto bajo la
+   suciedad. Fix estructural: al llegar a la cobertura (`REVEAL_COVERAGE=0.6`), `punchOutEntry`
+   destapa la huella COMPLETA (círculo + rect de etiqueta) — un objeto revelado muestra su nombre
+   sí o sí.
+2. **Hallazgo colateral (latente desde el origen): TODOS los íconos rasterizados estaban rotos.**
+   El SVG del data-URL de `getIconImage` no tenía `xmlns` → como documento standalone es inválido
+   → `error` silencioso (`naturalWidth 0`), el `load` del redibujo async jamás llegaba (el
+   `digGeneration` de ronda 2 era inerte) y los círculos se dibujaban sin ícono. En ronda 5 el
+   ícono cacheado (ya `complete` pero broken) se re-pedía al revelar y `drawImage` lanzaba
+   `InvalidStateError`, cortando el gesto entero. Fixes: `xmlns` en `iconMarkup` (icons.js),
+   guard `complete && naturalWidth > 0` en `drawEntry`, y `try/catch` en el `setPointerCapture`
+   de `digInput.js` (lanza con pointerId inactivo y dejaba `dragging` armado sin `onStart`).
+
+### Problema 3 — cambio de mecánica
+Implementado como pide el brief (ver arriba). Decisiones de diseño: **posiciones aleatorias por
+escarbado** (aprobado por el usuario en el plan; RNG de presentación — el loot ya viene decidido
+por el engine), `REVEAL_COVERAGE=0.6` (rasca-y-gana sin limpieza pixel-perfect), pop de
+sonido+partícula por objeto revelado (`spawnFindPop` ahora acepta posición), botón Abandonar
+visible durante todo el dig (la ventana 0.03-0.97 nunca se daba con 1 objeto/trampa), y hook de
+solo lectura `window.__digDebug` para que los e2e encuentren las posiciones aleatorias.
+
+### Nota de jugabilidad (encontrada por e2e)
+El botón "Saltar tutorial" es el único trozo del overlay con `pointer-events` y puede pisar el
+borde superior del canvas: un `pointerdown` que nace SOBRE el botón no arranca el gesto. Impacto
+real mínimo (arrancando el drag en cualquier otro lado, `setPointerCapture` sigue el gesto por
+debajo del botón); los e2e descartan el tutorial antes de escarbar.
+
+### Cobertura
+- Vitest: +16 tests del modelo (`apps/game/tests/digRevealModel.test.js`, TDD; `vitest.config.js`
+  ahora incluye `apps/*/tests`) — posiciones sin solape/deterministas con RNG inyectado, cobertura
+  parcial no revela, completa solo con todos, trampa, regresión "un click". Total `npm test`: 128.
+- Playwright: `ronda5-regression.spec.js` (idle 100% opaco incluso con hover, etiqueta destapada
+  con el nombre al revelar, completa solo con el último objeto + barra discreta, rascar fuera de
+  los objetos nunca completa por área) + `smoke`/`dig-regression`/`ronda4` adaptados al gesto
+  por-objeto vía `e2e/helpers/dig.js`. Total `npm run test:e2e`: 21 (corridos ×4 sin flakes).
+- Electron real (Playwright `_electron` sobre `apps/desktop`): idle opaco, revelado persistido
+  tras minimizar/restaurar, dos escarbados de punta a punta con dinero, 1280×800 y 1440×900.

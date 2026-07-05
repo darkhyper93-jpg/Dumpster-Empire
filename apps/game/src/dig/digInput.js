@@ -35,7 +35,16 @@ export function attachDigInput(canvas, handlers) {
   function onDown(evt) {
     if (!evt.isPrimary || evt.button !== 0) return;
     dragging = true;
-    canvas.setPointerCapture(evt.pointerId);
+    // AJUSTE (ronda 5): setPointerCapture lanza NotFoundError si el pointerId no está activo
+    // (eventos sintéticos, punteros retirados a mitad de gesto). Antes la excepción abortaba
+    // onDown DESPUÉS de armar `dragging` y ANTES de onStart — gesto fantasma sin borrado. La
+    // captura es una mejora (release garantizado), no un requisito: la autocuración de onMove
+    // ya cubre el release perdido.
+    try {
+      canvas.setPointerCapture(evt.pointerId);
+    } catch {
+      // Sin captura: el gesto sigue; un release perdido lo cierra la autocuración de onMove.
+    }
     handlers.onStart(toCanvasPos(evt));
     evt.preventDefault();
   }

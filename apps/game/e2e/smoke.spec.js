@@ -8,6 +8,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { entrarAlJuego, iniciarEscarbadoSinTrampa, rascarObjeto } from './helpers/dig.js';
 
 const VIEWPORTS = [
   { name: 'mobile-375', width: 375, height: 812 },
@@ -42,41 +43,23 @@ test.describe('Dumpster Empire — smoke', () => {
   });
 
   test('escarbar el Tacho de Vereda revela con un pointer drag real y suma dinero', async ({ page }) => {
-    await page.goto('/apps/game/');
-    await expect(page.locator('#app')).toHaveAttribute('data-state', 'ready');
-    await page.locator('#title-play-btn').click();
+    await entrarAlJuego(page);
 
     const moneyBefore = await page.locator('#money').textContent();
     expect(moneyBefore).toContain('$0');
 
-    await page.locator('[data-start-dig="tachoVereda"]').click();
-    await expect(page.locator('#dig-active')).toBeVisible();
-
-    const canvas = page.locator('.dig-canvas-top');
-    await expect(canvas).toBeVisible();
+    // Ronda 5: el escarbado se completa SOLO al destapar todos los objetos (revelado
+    // por-objeto, posiciones aleatorias). El gesto rasca encima de cada uno, leyendo las
+    // posiciones del hook de debug del canvas.
+    const { canvas, positions } = await iniciarEscarbadoSinTrampa(page, 'tachoVereda');
     const box = await canvas.boundingBox();
     if (!box) throw new Error('No se pudo medir el canvas de escarbado.');
-
-    // Barrido en zigzag sobre todo el canvas: suficiente para superar el umbral de revelado
-    // por defecto (60%, PLAN.md §2.2) sin depender de un valor exacto de la Fuerza del jugador.
-    const rows = 10;
-    await page.mouse.move(box.x + 1, box.y + 1);
-    await page.mouse.down();
-    for (let row = 0; row <= rows; row++) {
-      const y = box.y + (box.height * row) / rows;
-      const leftToRight = row % 2 === 0;
-      const xFrom = leftToRight ? box.x : box.x + box.width;
-      const xTo = leftToRight ? box.x + box.width : box.x;
-      await page.mouse.move(xFrom, y, { steps: 3 });
-      await page.mouse.move(xTo, y, { steps: 20 });
-      // Deja pasar el throttle de muestreo del canvas (120ms) para que el progreso se vaya
-      // registrando en vez de acumularse todo en una sola muestra al final.
-      await page.waitForTimeout(150);
+    for (const pos of positions) {
+      await rascarObjeto(page, box, pos);
     }
-    await page.mouse.up();
 
-    // El engine decide cuándo se completa (getRevealThreshold); la UI vuelve sola al estado
-    // vacío al llegar al umbral, sin que el test dispare `finishManualDig` a mano.
+    // El modelo de revelado decide cuándo se completa (todos los objetos destapados); la UI
+    // vuelve sola al estado vacío tras el momento de revelado, sin `finishManualDig` a mano.
     await expect(page.locator('#dig-empty')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#dig-active')).toBeHidden();
 
