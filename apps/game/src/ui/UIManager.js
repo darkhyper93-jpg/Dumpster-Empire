@@ -73,7 +73,8 @@ export class UIManager {
       this.digCanvasHost,
       {
         onProgress: (frac) => this.updateDigProgress(frac),
-        onThresholdReached: () => this.handleDigComplete(),
+        onComplete: () => this.handleDigComplete(),
+        onObjectRevealed: (entry, posPct) => this.playObjectRevealFeedback(entry, posPct),
       },
       store.ctx.itemsData.rarities
     );
@@ -120,6 +121,22 @@ export class UIManager {
     if (result) this.playDigFeedback(result);
   }
 
+  /**
+   * Juice por-objeto (ronda 5): pop de sonido + destello sobre la posición del objeto recién
+   * destapado. La trampa no tiene pop propio — su feedback (thud + shake) llega al completarse
+   * el escarbado vía playDigFeedback, como siempre.
+   * @param {{name:string, categoria?:string, isTrap:boolean}} entry
+   * @param {{xPct:number, yPct:number}} posPct
+   */
+  playObjectRevealFeedback(entry, posPct) {
+    if (entry.isTrap) return;
+    const { itemsData } = this.store.ctx;
+    const rarityIndex = Math.max(0, itemsData.rarities.findIndex((r) => r.id === entry.categoria));
+    const colorToken = rarityIndex > 0 ? itemsData.rarities[rarityIndex].colorToken : '--amber';
+    playFindPop(rarityIndex);
+    spawnFindPop(this.digCanvasHost, colorToken, rarityIndex, posPct);
+  }
+
   /** @param {import('@dumpster/engine').DigResult} result */
   playDigFeedback(result) {
     const { itemsData } = this.store.ctx;
@@ -144,7 +161,10 @@ export class UIManager {
 
   updateDigProgress(fraction) {
     this.digProgressFill.style.width = `${Math.round(fraction * 100)}%`;
-    this.digAbandonBtn.hidden = !(fraction > 0.03 && fraction < 0.97);
+    // AJUSTE (ronda 5): con progreso por-objeto (revelados/total) la vieja ventana 0.03-0.97
+    // nunca se daba en contenedores de 1 objeto (trampa). Abandonar está disponible durante
+    // todo el escarbado (el costo ya se pagó al iniciarlo) y se oculta recién al completar.
+    this.digAbandonBtn.hidden = fraction >= 1;
   }
 
   /** @param {import('@dumpster/engine').GameState} state - solo usado por el rAF del loop */
@@ -193,7 +213,7 @@ export class UIManager {
       this.digTrapHint.textContent = `Riesgo de trampa: ${trapPct}%${rateHint}`;
       if (this.mountedDig !== pending) {
         this.mountedDig = pending;
-        this.digCanvas.start(pending.result, pending.revealThreshold, pending.areaMult, pending.digRate);
+        this.digCanvas.start(pending.result, pending.areaMult, pending.digRate);
         this.updateDigProgress(0);
       }
     } else {

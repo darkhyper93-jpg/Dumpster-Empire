@@ -21,17 +21,24 @@ export function triggerRarityGlow(hostEl, colorToken, intensity = 0.5) {
 
 /**
  * Pop + partícula de color al revelar un objeto: un pequeño destello que nace del centro
- * de la tarjeta y se desvanece. Rareza alta = destello más grande/lento.
+ * de la tarjeta (o de la posición indicada) y se desvanece. Rareza alta = destello más
+ * grande/lento.
  * @param {HTMLElement} hostEl
  * @param {string} colorToken
  * @param {number} rarityIndex - 0 (común) a 7 (futurista).
+ * @param {{xPct:number, yPct:number}} [posPct] - posición del destello en % del host (ronda 5:
+ *   el pop nace sobre el objeto recién destapado, no siempre en el centro de la tarjeta).
  */
-export function spawnFindPop(hostEl, colorToken, rarityIndex = 0) {
+export function spawnFindPop(hostEl, colorToken, rarityIndex = 0, posPct = null) {
   if (!hostEl) return;
   const pop = document.createElement('span');
   pop.className = 'find-pop';
   pop.style.setProperty('--pop-color', `var(${colorToken})`);
   pop.style.setProperty('--pop-scale', String(1 + rarityIndex * 0.12));
+  if (posPct) {
+    pop.style.left = `${posPct.xPct}%`;
+    pop.style.top = `${posPct.yPct}%`;
+  }
   hostEl.appendChild(pop);
   pop.addEventListener('animationend', () => pop.remove(), { once: true });
 }

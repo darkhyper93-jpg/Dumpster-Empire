@@ -218,8 +218,12 @@ export function iconMarkup(key, opts = {}) {
   const shapeId = ICON_MAP[key] || 'artifact';
   const inner = SHAPES[shapeId] || SHAPES.artifact;
   const style = color ? ` style="color:${color}"` : '';
+  // AJUSTE (ronda 5): `xmlns` es obligatorio cuando el SVG se carga como documento standalone
+  // (el data URL de getIconImage dentro de un <img>); sin él, TODOS los íconos rasterizados
+  // del canvas fallaban en silencio ('error', naturalWidth 0) desde el origen del proyecto.
+  // En innerHTML (parser HTML) el atributo es inocuo.
   return (
-    `<svg class="icon${className ? ` ${className}` : ''}" data-icon="${key}" width="${size}" height="${size}" ` +
+    `<svg xmlns="http://www.w3.org/2000/svg" class="icon${className ? ` ${className}` : ''}" data-icon="${key}" width="${size}" height="${size}" ` +
     `viewBox="${VIEWBOX}" fill="none" stroke="currentColor" stroke-width="1.6"${style} ` +
     `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`
   );

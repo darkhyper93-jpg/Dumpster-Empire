@@ -6,7 +6,6 @@
 
 import {
   freshState,
-  getRevealThreshold,
   getAreaMult,
   getDigRate,
   getEffectiveTrapProbability,
@@ -124,15 +123,16 @@ export function createStore(ctx) {
       const result = engineBuyContainer(state, container, data);
       if (!result.ok) return result;
       const digResult = rollContainerResult(state, container, false, itemsData, data);
+      // DECISIÓN (ronda 5): el escarbado manual ya no usa getRevealThreshold — se completa al
+      // destapar TODOS los objetos (ver digRevealModel.js), no por % de área. La fórmula sigue
+      // en el engine (contrato de PLAN.md §4, usada por sus tests); la UI dejó de consumirla.
       pendingDig = {
         container,
         result: digResult,
-        revealThreshold: getRevealThreshold(state, data),
         areaMult: getAreaMult(state, data),
         // AJUSTE (agentes/rework-escarbado-y-landing-prompt.md): el ritmo de escarbado (Resistencia
         // del contenedor vs. Fuerza del jugador, ya calculado por el engine para automatización/
-        // offline) ahora también viaja al canvas manual — antes DigCanvas solo recibía
-        // revealThreshold/areaMult y la resistencia del contenedor no afectaba el gesto a mano.
+        // offline) también viaja al canvas manual — la resistencia achica el pincel del gesto.
         digRate: getDigRate(state, container, data),
         trapProb: getEffectiveTrapProbability(state, container, false, data),
       };
