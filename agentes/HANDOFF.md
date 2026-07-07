@@ -2214,3 +2214,34 @@ contenedor se siente distinto. Desapareció `DIG_RATE_RADIUS_FLOOR`.
 recomendada no colapsa a 0 con partida avanzada sembrada; un toque limpia >1.5x más en tacho
 que en depósito y nunca >4% del canvas — ambos fallaban con las fórmulas viejas) · smoke
 Electron no destructivo (backup + restore del save real) verde.
+
+---
+
+## Ronda 8 — requerimientos de Suerte más altos por contenedor (rama `fix/balance-ronda8-suerte`)
+
+Pedido: "hay que aumentar los requerimientos de suerte de cada contenedor". Rebalanceo 100% por
+datos (CLAUDE.md: constantes de datos, nunca fórmulas).
+
+### Qué cambió
+- `apps/game/src/data/items.json`: bajan los `valorBase` de los pools de los 7 contenedores
+  pagos (factores 0.63–0.94 por pool; el tacho gratis no se toca). Recomendadas resultantes:
+  **0 / 6 / 16 / 32 / 56 / 86 / 126 / 176** (antes 0/2/9/20/35/56/81/122). Targets pares a
+  propósito: la Suerte del jugador siempre sube de a 2 (`perNivel: 2`).
+- `agentes/scripts/calibrate-luck-ronda8.mjs` (nuevo): calibrador que usa el engine como
+  oráculo — bisección del factor de escala f por pool hasta que `getRecommendedLuck` devuelve
+  el target exacto, redondeo a 3 cifras significativas (granularidad mínima 0.1) y verificación
+  final; si no coincide, no escribe. Reutilizable para futuros ajustes cambiando `TARGETS`.
+- `packages/engine/tests/fase9-balance.test.js`: nuevo describe "Ronda 8" que fija los 8
+  targets EXACTOS con `toEqual` (escrito RED primero, GREEN tras calibrar).
+
+### Por qué así
+- La recomendada es un valor derivado (EV≥0 con jugador neutro, ronda 7): la única perilla de
+  datos que la mueve sin tocar precios/trampas es el valor de los pools.
+- Oráculo en vez de fórmula re-derivada: la EV interna de `getRecommendedLuck` (con factor
+  `(1 − trapProb)` sobre el bruto e iteración de a 1 punto de Suerte) difiere de la EV
+  aproximada de los tests de fase 9; calibrar contra el engine real evita el corrimiento de
+  1–5 puntos que daba calcular k a mano.
+
+### Verificación
+`npm test`: 139 verdes (1 nuevo) · `npm run test:e2e`: 25 verdes (sin cambios de specs) ·
+manual en `npm run dev`: recomendadas nuevas visibles en Tienda, tacho intacto.

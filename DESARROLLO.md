@@ -505,6 +505,12 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   `clamp(Fuerza/resistencia, 0.3, 1.5)` (bonus real por sobre-Fuerza) y el radio del pincel a
   `base × √área × ritmo` con tope 1.5× el objeto (el Área lineal a nivel ~47 trivializaba el
   gesto en todos los contenedores por igual). PLAN.md §4.6/§11.2 actualizados.
+- **Ronda 8 — requerimientos de Suerte más altos por contenedor**: las recomendadas pasan de
+  0/2/9/20/35/56/81/122 a **0/6/16/32/56/86/126/176** (pares: la Suerte sube de a 2) bajando
+  SOLO los `valorBase` de `items.json` (fórmulas, precios y trampas intactos). Calibrado con
+  `agentes/scripts/calibrate-luck-ronda8.mjs`, que usa `getRecommendedLuck` del engine como
+  oráculo (bisección del factor de escala por pool); targets exactos guardados por test en
+  `fase9-balance.test.js`.
 
 ---
 
