@@ -18,23 +18,45 @@
    enough for any field the UI will later interpolate.
 
 ## Domain Behavior Guardrails
-1. **[2026-07-04] Media query de viewport para paneles que viven en contenedores angostos**
+1. **[2026-07-07] El completado de un canvas interactivo NUNCA se deriva de leer sus píxeles**
+   Cuatro rondas de bugs del escarbado (umbral por % de área + compuerta de distancia +
+   reparación de anomalía) venían de tratar el buffer del canvas como estado: un backing store
+   descartado por el compositor (Electron) autocompletaba o destapaba solo, y cada parche agregó
+   otra compuerta frágil. Do instead: el estado vive en un modelo puro en JS
+   (`apps/game/src/dig/digRevealModel.js`); el canvas solo PINTA lo que dice el modelo y se
+   repinta entero desde él en `focus`/`visibilitychange`. `getImageData` queda solo para asserts
+   de tests, jamás para lógica de juego.
+2. **[2026-07-07] Un SVG en data-URL de `<img>` exige `xmlns` (falla en silencio sin él)**
+   `getIconImage` generaba SVGs sin `xmlns`: válidos vía innerHTML (parser HTML) pero rotos como
+   documento standalone — `error` silencioso, `naturalWidth 0`, y `img.complete === true` aunque
+   esté rota (`drawImage` lanza InvalidStateError). Estuvo latente desde el origen del proyecto.
+   Do instead: todo `iconMarkup`/SVG que pueda terminar en un data-URL lleva
+   `xmlns="http://www.w3.org/2000/svg"`; antes de `drawImage`, chequear
+   `img.complete && img.naturalWidth > 0`, nunca `complete` solo.
+3. **[2026-07-07] Marca "bind-once" genérica sobre un contenedor COMPARTIDO roba el listener**
+   Las vistas de `#tab-content` (Índice/Automatización/Prestigio) usaban todas
+   `if (!container.dataset.boundClick)` sobre el MISMO elemento: la primera vista visitada
+   marcaba y las demás nunca bindeaban su delegación (los tabs del Índice no respondían; el bug
+   dependía del orden de navegación del jugador, invisible para tests que visitan una sola vista).
+   Do instead: si varias vistas comparten el host, la marca de bind lleva el nombre de la vista
+   (`boundClickIndex`, …). Al revisar una vista nueva: grep de `boundClick` y verificar que el
+   host no sea compartido; el e2e debe navegar Automatización→Índice y el orden inverso.
+4. **[2026-07-04] Media query de viewport para paneles que viven en contenedores angostos**
    `.prestige-tree` activaba su grilla de 782px con `@media (min-width: 700px)`, pero en desktop
    su panel (`#tab-content`) es un sidebar de 320px → contenido clipeado + "hueco" fantasma.
    Do instead: si un componente vive dentro de un panel cuyo ancho NO sigue al viewport (sidebar,
    columna de grid), su breakpoint va por `@container` (el panel declara
    `container-type: inline-size`), nunca por `@media`. Verificar midiendo el rect del panel.
-2. **[2026-07-04] `destination-out` con alpha parcial deja mugre semi-transparente**
+5. **[2026-07-04] `destination-out` con alpha parcial deja mugre semi-transparente**
    Escalar la "lentitud" de escarbado con `globalAlpha < 1` sobre `destination-out` produce capas
    fantasma (el objeto transluce y la textura queda como damero de transparencia); además el
    muestreo por umbral de alpha clasifica mal esos píxeles. Do instead: el borrado del canvas de
-   escarbado es SIEMPRE alpha 1; la dificultad/ritmo se expresa solo con el radio del pincel (y
-   cualquier compuerta anti-anomalía se calcula proporcional al pincel, no con px fijos).
-3. **[2026-07-04] Plus Jakarta Sans bold a tamaño chico rompe la 'i' en Windows**
+   escarbado es SIEMPRE alpha 1; la dificultad/ritmo se expresa solo con el radio del pincel.
+6. **[2026-07-04] Plus Jakarta Sans bold a tamaño chico rompe la 'i' en Windows**
    Con weight ≥600 y font-size ≤14.4px la rasterización fusiona el punto de la 'i' con el asta
    ("PrestIgIo"). Do instead: para labels chicos usar weight ≤500 o font-size ≥15.2px; probar con
    una matriz de render (screenshot con zoom), `text-rendering` NO lo arregla.
-4. **[2026-07-04] Ids internos de data mostrados crudos al jugador (UI en inglés/kebab-case)**
+7. **[2026-07-04] Ids internos de data mostrados crudos al jugador (UI en inglés/kebab-case)**
    `ShopView.js` interpolaba `c.categorias.join(', ')` y el jugador veía "Categorías: common" —
    los ids de `data/*.json` (`common`, `reusable`, `robotClasificador`…) NO son copy de UI; todos
    tienen un campo `name` de display en la propia data. Pasó 3 rondas de playtest sin que nadie
@@ -42,7 +64,7 @@
    Do instead: toda vez que una vista interpole un id de data (categoría, contenedor, upgrade,
    nodo), resolverlo contra su entrada de data y mostrar `.name`; el id solo va en atributos
    (`data-*`). Al revisar una vista nueva, grep rápido de `\.join\(|\.id}` en el template.
-2. **[2026-07-02] `state`-derived values interpolated into `innerHTML` via `|| 0` are an XSS vector**
+8. **[2026-07-02] `state`-derived values interpolated into `innerHTML` via `|| 0` are an XSS vector**
    `const x = state.someMap[id] || 0;` followed by `` `${x}` `` inside an `innerHTML` template does
    NOT coerce to a number — `|| 0` only replaces falsy values, so a non-empty malicious string
    survives and gets injected raw (found live in `CollectionView.js`, `PrestigeView.js`,

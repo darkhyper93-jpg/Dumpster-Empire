@@ -92,43 +92,43 @@
       {
         "icon": "newspaper-old",
         "name": "Periódico viejo",
-        "valorBase": 2.2,
+        "valorBase": 2,
         "categoria": "common"
       },
       {
         "icon": "shoe-odd",
         "name": "Zapato sin par",
-        "valorBase": 4.4,
+        "valorBase": 4,
         "categoria": "common"
       },
       {
         "icon": "bottle-plastic",
         "name": "Botella plástica",
-        "valorBase": 2.2,
+        "valorBase": 2,
         "categoria": "common"
       },
       {
         "icon": "chair-broken",
         "name": "Silla rota",
-        "valorBase": 11,
+        "valorBase": 9,
         "categoria": "reusable"
       },
       {
         "icon": "lamp-old",
         "name": "Lámpara vieja",
-        "valorBase": 8.8,
+        "valorBase": 7,
         "categoria": "reusable"
       },
       {
         "icon": "suitcase-worn",
         "name": "Maleta gastada",
-        "valorBase": 11,
+        "valorBase": 9,
         "categoria": "reusable"
       },
       {
         "icon": "mirror-cracked",
         "name": "Espejo trizado",
-        "valorBase": 8.8,
+        "valorBase": 7,
         "categoria": "reusable"
       }
     ],
@@ -136,43 +136,43 @@
       {
         "icon": "bike-rusty",
         "name": "Bicicleta oxidada",
-        "valorBase": 17.6,
+        "valorBase": 16,
         "categoria": "reusable"
       },
       {
         "icon": "radio-antique",
         "name": "Radio antigua",
-        "valorBase": 13.2,
+        "valorBase": 12,
         "categoria": "reusable"
       },
       {
         "icon": "fan-old",
         "name": "Ventilador viejo",
-        "valorBase": 13.2,
+        "valorBase": 12,
         "categoria": "reusable"
       },
       {
         "icon": "copper-cable",
         "name": "Cable de cobre",
-        "valorBase": 13.2,
+        "valorBase": 12,
         "categoria": "electronics"
       },
       {
         "icon": "motherboard",
         "name": "Placa madre",
-        "valorBase": 19.8,
+        "valorBase": 18,
         "categoria": "electronics"
       },
       {
         "icon": "phone-old",
         "name": "Teléfono viejo",
-        "valorBase": 22,
+        "valorBase": 20,
         "categoria": "electronics"
       },
       {
         "icon": "console-broken",
         "name": "Consola rota",
-        "valorBase": 26.4,
+        "valorBase": 24,
         "categoria": "electronics"
       }
     ],
@@ -180,43 +180,43 @@
       {
         "icon": "camera-analog",
         "name": "Cámara analógica",
-        "valorBase": 11.8,
+        "valorBase": 45,
         "categoria": "electronics"
       },
       {
         "icon": "tv-crt",
         "name": "Televisor CRT",
-        "valorBase": 14.9,
+        "valorBase": 57,
         "categoria": "electronics"
       },
       {
         "icon": "floppy-disk",
         "name": "Disquete raro",
-        "valorBase": 10.8,
+        "valorBase": 41,
         "categoria": "electronics"
       },
       {
         "icon": "pocket-watch",
         "name": "Reloj de bolsillo",
-        "valorBase": 19.2,
+        "valorBase": 73,
         "categoria": "antiques"
       },
       {
         "icon": "porcelain-vase",
         "name": "Jarrón de porcelana",
-        "valorBase": 21.3,
+        "valorBase": 81,
         "categoria": "antiques"
       },
       {
         "icon": "coin-old",
         "name": "Moneda vieja",
-        "valorBase": 12.8,
+        "valorBase": 49,
         "categoria": "antiques"
       },
       {
         "icon": "candelabrum",
         "name": "Candelabro",
-        "valorBase": 18.1,
+        "valorBase": 69,
         "categoria": "antiques"
       }
     ],
@@ -224,43 +224,43 @@
       {
         "icon": "antique-book",
         "name": "Libro antiguo",
-        "valorBase": 16,
+        "valorBase": 99,
         "categoria": "antiques"
       },
       {
         "icon": "typewriter",
         "name": "Máquina de escribir",
-        "valorBase": 23.7,
+        "valorBase": 146,
         "categoria": "antiques"
       },
       {
         "icon": "ivory-figurine",
         "name": "Estatuilla de marfil",
-        "valorBase": 20.3,
+        "valorBase": 125,
         "categoria": "antiques"
       },
       {
         "icon": "war-helmet",
         "name": "Casco de guerra",
-        "valorBase": 32.2,
+        "valorBase": 199,
         "categoria": "historic"
       },
       {
         "icon": "map-antique",
         "name": "Mapa antiguo",
-        "valorBase": 26.8,
+        "valorBase": 165,
         "categoria": "historic"
       },
       {
         "icon": "military-medal",
         "name": "Medalla militar",
-        "valorBase": 30,
+        "valorBase": 185,
         "categoria": "historic"
       },
       {
         "icon": "uniform-historic",
         "name": "Uniforme histórico",
-        "valorBase": 23.7,
+        "valorBase": 146,
         "categoria": "historic"
       }
     ],
@@ -268,43 +268,43 @@
       {
         "icon": "dagger-ceremonial",
         "name": "Daga ceremonial",
-        "valorBase": 37.3,
+        "valorBase": 380,
         "categoria": "historic"
       },
       {
         "icon": "photo-historic",
         "name": "Fotografía histórica",
-        "valorBase": 19.2,
+        "valorBase": 196,
         "categoria": "historic"
       },
       {
         "icon": "regiment-flag",
         "name": "Bandera de regimiento",
-        "valorBase": 27.7,
+        "valorBase": 282,
         "categoria": "historic"
       },
       {
         "icon": "oil-painting",
         "name": "Cuadro al óleo",
-        "valorBase": 58.9,
+        "valorBase": 601,
         "categoria": "art"
       },
       {
         "icon": "bronze-sculpture",
         "name": "Escultura de bronce",
-        "valorBase": 69.6,
+        "valorBase": 710,
         "categoria": "art"
       },
       {
         "icon": "engraving-original",
         "name": "Grabado original",
-        "valorBase": 42.9,
+        "valorBase": 437,
         "categoria": "art"
       },
       {
         "icon": "tapestry-antique",
         "name": "Tapiz antiguo",
-        "valorBase": 37.3,
+        "valorBase": 380,
         "categoria": "art"
       }
     ],
@@ -312,43 +312,43 @@
       {
         "icon": "vase-decorative",
         "name": "Vasija decorativa",
-        "valorBase": 48.1,
+        "valorBase": 738,
         "categoria": "art"
       },
       {
         "icon": "sketch-master",
         "name": "Boceto de maestro",
-        "valorBase": 32.2,
+        "valorBase": 494,
         "categoria": "art"
       },
       {
         "icon": "ritual-mask",
         "name": "Máscara ritual",
-        "valorBase": 53.6,
+        "valorBase": 822,
         "categoria": "art"
       },
       {
         "icon": "crown-lost",
         "name": "Corona perdida",
-        "valorBase": 139,
+        "valorBase": 2130,
         "categoria": "relics"
       },
       {
         "icon": "amulet-sacred",
         "name": "Amuleto sagrado",
-        "valorBase": 107,
+        "valorBase": 1640,
         "categoria": "relics"
       },
       {
         "icon": "scroll-arcane",
         "name": "Pergamino arcano",
-        "valorBase": 85.7,
+        "valorBase": 1310,
         "categoria": "relics"
       },
       {
         "icon": "scepter-royal",
         "name": "Cetro real",
-        "valorBase": 149.8,
+        "valorBase": 2300,
         "categoria": "relics"
       }
     ],
@@ -356,43 +356,43 @@
       {
         "icon": "idol-jade",
         "name": "Ídolo de jade",
-        "valorBase": 101.6,
+        "valorBase": 1240,
         "categoria": "relics"
       },
       {
         "icon": "relic-sealed",
         "name": "Reliquia sellada",
-        "valorBase": 117.7,
+        "valorBase": 1440,
         "categoria": "relics"
       },
       {
         "icon": "legendary-sword",
         "name": "Espada legendaria",
-        "valorBase": 160.4,
+        "valorBase": 1960,
         "categoria": "relics"
       },
       {
         "icon": "fusion-core",
         "name": "Núcleo de fusión",
-        "valorBase": 320.9,
+        "valorBase": 3920,
         "categoria": "future"
       },
       {
         "icon": "quantum-chip",
         "name": "Chip cuántico",
-        "valorBase": 267.4,
+        "valorBase": 3270,
         "categoria": "future"
       },
       {
         "icon": "neural-implant",
         "name": "Implante neural",
-        "valorBase": 299.4,
+        "valorBase": 3660,
         "categoria": "future"
       },
       {
         "icon": "stellar-fragment",
         "name": "Fragmento estelar",
-        "valorBase": 427.9,
+        "valorBase": 5230,
         "categoria": "future"
       }
     ]

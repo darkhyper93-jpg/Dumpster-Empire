@@ -492,6 +492,11 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   reemplaza la estructura de PLAN.md §6.2 conservando su espíritu de simplicidad.
 - **Buildless con import maps**: respeta "JS vanilla puro" y permite un `packages/engine` real.
 - **Mobile-first se conserva** y se reinterpreta como ventaja para Steam Deck.
+- **Precio de contenedores fijo, tiers ×10–×15 (ronda 6)**: se eliminó el `1.08^n` de PLAN.md
+  §4.2 (comprar contenedores es el loop principal; encarecer la repetición castigaba el loop) y
+  la progresión pasa a los saltos de `costoInicial` entre tiers (0/25/300/4K/50K/700K/10M/150M).
+  Con el costo pesando de verdad en el valor esperado, la Suerte recomendada de cada tier deja
+  de ser 0 (rebalanceo de `items.json` en la misma ronda). PLAN.md §2.6/§4.2 actualizados.
 
 ---
 

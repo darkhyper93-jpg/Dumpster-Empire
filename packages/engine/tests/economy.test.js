@@ -43,15 +43,18 @@ describe('§4.1 costo de mejoras repetibles', () => {
   });
 });
 
-describe('§4.2 costo de contenedores adicionales', () => {
+describe('§4.2 costo de contenedores: precio FIJO (ronda 6, sin crecimiento por compra)', () => {
   for (const container of containers) {
-    it(`${container.id}: primeras 10 unidades siguen costoInicial * 1.08^cantidad`, () => {
-      for (let cantidad = 0; cantidad < 10; cantidad++) {
-        const expected = Math.ceil(container.costoInicial * Math.pow(1.08, cantidad));
-        expect(containerCost(container.costoInicial, cantidad)).toBe(expected);
+    it(`${container.id}: la unidad 0 y la unidad 200 cuestan lo mismo (costoInicial)`, () => {
+      for (const cantidad of [0, 1, 10, 200]) {
+        expect(containerCost(container.costoInicial, cantidad)).toBe(Math.ceil(container.costoInicial));
       }
     });
   }
+
+  it('los 8 contenedores tienen los precios fijos de PLAN.md §2.6 (tiers ×10–×15)', () => {
+    expect(containers.map((c) => c.costoInicial)).toEqual([0, 25, 300, 4000, 50000, 700000, 10000000, 150000000]);
+  });
 });
 
 describe('§4.3 llaves de Ciudad al prestigiar', () => {
