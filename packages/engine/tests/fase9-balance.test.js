@@ -72,6 +72,18 @@ describe('Ronda 6 — la Suerte recomendada es real (no 0) y crece por tier', ()
   });
 });
 
+// Ronda 8: los requerimientos de Suerte subieron (~×1.5–×3 por tier) recalibrando SOLO los
+// valorBase de items.json (fórmulas y containers.json intactos) con el script
+// agentes/scripts/calibrate-luck-ronda8.mjs. Este test fija los targets EXACTOS: si un
+// rebalanceo futuro de data los mueve, tiene que verse acá a propósito.
+describe('Ronda 8 — requerimientos de Suerte por contenedor (targets exactos)', () => {
+  it('la Suerte recomendada de los 8 contenedores es exactamente la tabla de la ronda 8', () => {
+    const state = freshState();
+    const recommended = containers.map((c) => getRecommendedLuck(state, c, items, data));
+    expect(recommended).toEqual([0, 6, 16, 32, 56, 86, 126, 176]);
+  });
+});
+
 describe('PLAN.md §11.2 — la pérdida esperada baja a medida que sube la Suerte', () => {
   for (const container of containers) {
     it(`${container.id}: pérdida esperada (probTrampa * penalización) es menor a Suerte alta que a Suerte 0`, () => {
