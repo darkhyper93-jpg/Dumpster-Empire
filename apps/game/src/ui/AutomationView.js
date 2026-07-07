@@ -16,8 +16,10 @@ export const AutomationView = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
-    if (!container.dataset.boundClick) {
-      container.dataset.boundClick = 'true';
+    // AJUSTE (ronda 6): marca propia (ver CollectionView) — la marca genérica compartida en
+    // #tab-content dejaba sin listener a las vistas visitadas después de la primera.
+    if (!container.dataset.boundClickAutomation) {
+      container.dataset.boundClickAutomation = 'true';
       container.addEventListener('click', (evt) => {
         const buyBtn = evt.target.closest('[data-action="buy-automation"]');
         if (buyBtn && !buyBtn.disabled) {

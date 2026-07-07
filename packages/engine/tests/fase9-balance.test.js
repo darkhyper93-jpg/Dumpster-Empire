@@ -47,6 +47,31 @@ describe('PLAN.md §11.2 — con la Suerte recomendada, el contenedor es rentabl
   }
 });
 
+// Ronda 6: con precio fijo y tiers ×10–×15, la Suerte recomendada dejó de ser 0 para todo
+// contenedor pago — "un contenedor recién comprado debe ser una ruina segura" (PLAN.md §11.2)
+// hasta juntar la Suerte del tier. Guarda el rebalanceo de items.json contra regresiones de data.
+describe('Ronda 6 — la Suerte recomendada es real (no 0) y crece por tier', () => {
+  const state = freshState();
+  const recommended = containers.map((c) => getRecommendedLuck(state, c, items, data));
+
+  for (let i = 0; i < containers.length; i++) {
+    const container = containers[i];
+    if (container.costoInicial === 0) continue;
+    it(`${container.id}: recomendada > 0, alcanzable (< 200) y en pérdida a Suerte 0`, () => {
+      expect(recommended[i]).toBeGreaterThan(0);
+      expect(recommended[i]).toBeLessThan(200);
+      expect(expectedNetValueAtLuck(container, 0)).toBeLessThan(0);
+    });
+  }
+
+  it('la recomendada crece estrictamente de tier en tier (entre contenedores pagos)', () => {
+    const paid = recommended.filter((_, i) => containers[i].costoInicial > 0);
+    for (let i = 1; i < paid.length; i++) {
+      expect(paid[i]).toBeGreaterThan(paid[i - 1]);
+    }
+  });
+});
+
 describe('PLAN.md §11.2 — la pérdida esperada baja a medida que sube la Suerte', () => {
   for (const container of containers) {
     it(`${container.id}: pérdida esperada (probTrampa * penalización) es menor a Suerte alta que a Suerte 0`, () => {

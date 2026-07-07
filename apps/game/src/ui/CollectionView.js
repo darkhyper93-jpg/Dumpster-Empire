@@ -20,8 +20,12 @@ export const CollectionView = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
-    if (!container.dataset.boundClick) {
-      container.dataset.boundClick = 'true';
+    // AJUSTE (ronda 6): marca propia de esta vista, NO la genérica `boundClick` — las tres
+    // vistas de #tab-content (Índice/Automatización/Prestigio) comparten el mismo elemento y
+    // con una marca única la primera visitada "robaba" el bind: las otras quedaban sin listener
+    // (bug reportado: los tabs del Índice no respondían).
+    if (!container.dataset.boundClickIndex) {
+      container.dataset.boundClickIndex = 'true';
       container.addEventListener('click', (evt) => {
         const btn = evt.target.closest('[data-select-container]');
         if (!btn) return;

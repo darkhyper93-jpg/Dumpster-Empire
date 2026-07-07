@@ -2109,3 +2109,57 @@ debajo del botón); los e2e descartan el tutorial antes de escarbar.
   por-objeto vía `e2e/helpers/dig.js`. Total `npm run test:e2e`: 21 (corridos ×4 sin flakes).
 - Electron real (Playwright `_electron` sobre `apps/desktop`): idle opaco, revelado persistido
   tras minimizar/restaurar, dos escarbados de punta a punta con dinero, 1280×800 y 1440×900.
+
+---
+
+## Ronda 6 — precio fijo de contenedores, Suerte recomendada real y bug del Índice (rama `fix/balance-precios-indice`)
+
+Tres pedidos de playtest (ReporteDeEstado.md). Aprobado por el usuario: tiers ×10–×15 y
+rebalanceo por datos (no por fórmula de la recomendada).
+
+### 1. Bug del Índice — causa raíz: marca "bind-once" compartida
+`AutomationView`, `CollectionView` y `PrestigeView` comparten `#tab-content` y las tres usaban
+la MISMA marca `dataset.boundClick` para bindear su listener delegado una sola vez: la primera
+vista visitada la robaba y las demás quedaban **sin listener** (los tabs del Índice no
+respondían; Automatización/Prestigio tenían el mismo bug latente según el orden de navegación —
+por eso ningún test lo veía: visitaban una sola vista por page). Fix: marca única por vista
+(`boundClickIndex`/`boundClickAutomation`/`boundClickPrestige`). Regresión:
+`apps/game/e2e/ronda6-regression.spec.js` cubre los DOS órdenes (Automatización→Índice alterna
+contenedores; Índice→Automatización compra con save sembrado). Reproducido RED antes del fix.
+
+### 2. Precio de contenedores FIJO + tiers ×10–×15 (cambio de contrato)
+PLAN.md §4.2 actualizado PRIMERO (CLAUDE.md: la economía es contrato literal): se eliminó
+`costoInicial × 1.08^cantidadYaComprada` → `costo = costoInicial`, porque comprar contenedores
+ES el loop principal y encarecer la repetición castigaba la acción central; la progresión pasa
+a los saltos entre tiers. `containers.json`: 0 / 25 / 300 / 4K / 50K / 700K / 10M / 150M
+(antes 0/15/150/1.2K/9K/60K/400K/2.5M). PLAN.md §2.6 (tabla) y DESARROLLO.md §10 anotados.
+Engine: `containerCost()` (economy.js) ignora `cantidadYaComprada` por diseño (firma
+conservada). Tests de §4.2 reescritos: precio fijo unidad 0 == unidad 200 + la tabla de precios.
+
+### 3. Suerte recomendada real (rebalanceo de items.json, fórmula intacta)
+Antes TODO contenedor daba "recomendada: 0 (alcanzada)": con los precios viejos el EV ya era
+positivo a Suerte 0. Con el precio nuevo pesando en `expectedNetValueAtLuck`, se recalibraron
+los `valorBase` de los pools (49 ítems, solo ese campo) con un script contra el engine real
+(k = (pérdidaTrampa + costo) / bruto(targetLuck) por contenedor, redondeo a 3 cifras):
+recomendadas resultantes **0 (tacho gratis), 2, 9, 19, 35, 55, 79, 119** — crecientes, EV<0 a
+Suerte 0 en todo tier pago ("ruina segura al comprarlo recién", PLAN.md §11.2 por fin se
+cumple) y EV≥0 recién a la recomendada. Guardado por `fase9-balance.test.js` nuevo bloque:
+recomendada >0, <200 y estrictamente creciente entre tiers pagos.
+**Nota de ritmo:** los tiers 2-3 bajaron ~10-20% su valor de ítem (k 0.81/0.91) — el hito
+"Robot Clasificador en 8-15min" (PLAN.md §3) puede haberse corrido un poco; si el playtest lo
+siente lento, ajustar `cost` de automations.json, no las fórmulas.
+
+### Semántica de "(alcanzada)" en partidas avanzadas
+`getRecommendedLuck(state, …)` usa los multiplicadores ACTUALES del jugador (sellMult,
+prestigio): en una partida avanzada puede volver a dar 0 — correcto: "para vos ya es rentable
+desde 0". En partida fresca muestra los valores de arriba (verificado en Electron con save
+fresco sembrado y restauración de la partida real del jugador — el smoke de escritorio hace
+backup de `userData/save.json` + localStorage y elige el save por `lastSavedAt`, ver
+`apps/game/src/main.js`).
+
+### Cobertura
+`npm test`: 137 (9 nuevos entre §4.2 fijo y recomendada creciente) · `npm run test:e2e`: 23
+(2 nuevos de ronda 6) · smoke Electron real: $25 fijo en dos compras consecutivas, recomendada
+2 "(tenés 0)" en Contenedores, Índice alternando tras visitar Automatización.
+También en esta rama: notas napkin pendientes de ronda 5 (canvas nunca es fuente de verdad,
+`xmlns` en SVG data-URL) + nota nueva del bind-once compartido.

@@ -121,18 +121,19 @@ Cada categoría tiene **6 a 8 objetos individuales** con nombre propio, ícono y
 
 Cada contenedor es la unidad de compra-y-escarbado, con su propio costo, tiempo, distribución de probabilidad y riesgo. Como mínimo, implementar estos 8, en orden de desbloqueo:
 
-| Contenedor | Costo inicial | Categorías posibles | Prob. de trampa | Nota de diseño |
+| Contenedor | Costo (fijo) | Categorías posibles | Prob. de trampa | Nota de diseño |
 |---|---|---|---|---|
 | Tacho de vereda | $0 (gratis, tutorial) | Solo Basura común | 5% | Punto de entrada, siempre disponible |
-| Contenedor de barrio | $15 | Basura común, Reutilizables | 8% | Primera compra real |
-| Container industrial | $150 | Reutilizables, Electrónica | 15% | Introduce riesgo medio |
-| Depósito abandonado | $1.200 | Electrónica, Antigüedades | 20% | Requiere Suerte mínima para abrir rentable |
-| Mudanza de mansión | $9.000 | Antigüedades, Histórico | 12% | Pagos altos, trampa cara si falla |
-| Galería en liquidación | $60.000 | Histórico, Arte | 18% | Introduce el recurso de Fragmentos de Arte |
-| Bóveda perdida | $400.000 | Arte, Reliquias | 25% | Alto riesgo/alta recompensa, ideal para pre-prestigio |
-| Contenedor extradimensional | Solo post-Prestigio | Reliquias, Tecnología futurista | 30% | Desbloqueado por Llaves de Ciudad |
+| Contenedor de barrio | $25 | Basura común, Reutilizables | 8% | Primera compra real |
+| Container industrial | $300 | Reutilizables, Electrónica | 15% | Introduce riesgo medio |
+| Depósito abandonado | $4.000 | Electrónica, Antigüedades | 20% | Requiere Suerte mínima para abrir rentable |
+| Mudanza de mansión | $50.000 | Antigüedades, Histórico | 12% | Pagos altos, trampa cara si falla |
+| Galería en liquidación | $700.000 | Histórico, Arte | 18% | Introduce el recurso de Fragmentos de Arte |
+| Bóveda perdida | $10.000.000 | Arte, Reliquias | 25% | Alto riesgo/alta recompensa, ideal para pre-prestigio |
+| Contenedor extradimensional | $150.000.000, solo post-Prestigio | Reliquias, Tecnología futurista | 30% | Desbloqueado por Llaves de Ciudad |
 
-Fórmula de costo de cada compra adicional del mismo contenedor (ver fórmulas exactas en sección 4).
+El precio de cada contenedor es fijo (no crece con la cantidad comprada, ver sección 4.2);
+la progresión la marcan los saltos ×10–×15 entre tiers (ronda 6 de playtest).
 
 ### 2.7 Automatización
 
@@ -195,10 +196,14 @@ costo(nivel) = costoBase * (factorCrecimiento ^ nivel)
 ### 4.2 Costo de contenedores adicionales del mismo tipo
 
 ```
-costo(cantidadYaComprada) = costoInicial * (1.08 ^ cantidadYaComprada)
+costo = costoInicial   (precio fijo: no crece con la cantidad ya comprada)
 ```
 
-(Crecimiento más suave que las mejoras porque el jugador necesita comprar contenedores repetidamente como parte del loop principal, no como una decisión puntual.)
+(Cambiado en la ronda 6 de playtest: antes crecía `1.08 ^ cantidadYaComprada`. Comprar
+contenedores ES el loop principal — encarecer cada compra castigaba justamente la acción
+que el juego pide repetir, y el freno de progresión ya lo ponen los saltos de precio entre
+tiers, ×10–×15 entre contenedor y contenedor. La sensación de meta de ahorro vive en el
+salto al próximo tier, no en encarecer el tier actual.)
 
 ### 4.3 Fórmula de Llaves de Ciudad al prestigiar
 

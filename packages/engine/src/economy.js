@@ -22,14 +22,18 @@ export function upgradeCost(costoBase, factorCrecimiento, nivel) {
 }
 
 /**
- * §4.2 — Costo de la próxima unidad de un contenedor ya comprado `cantidadYaComprada` veces.
- * costo(cantidadYaComprada) = costoInicial * (1.08 ^ cantidadYaComprada)
+ * §4.2 — Costo de un contenedor: PRECIO FIJO, no crece con la cantidad ya comprada.
+ * AJUSTE (ronda 6 de playtest, PLAN.md §4.2 actualizado): antes era costoInicial * 1.08^n.
+ * Comprar contenedores es el loop principal — encarecer la repetición castigaba la acción
+ * central; la progresión ahora la marcan los saltos ×10–×15 de costoInicial entre tiers.
+ * `cantidadYaComprada` se conserva en la firma (los llamadores ya la pasan y documenta que
+ * el precio es deliberadamente independiente de ella).
  * @param {number} costoInicial
- * @param {number} cantidadYaComprada
+ * @param {number} cantidadYaComprada - ignorada por diseño desde la ronda 6
  * @returns {number}
  */
 export function containerCost(costoInicial, cantidadYaComprada) {
-  return Math.ceil(costoInicial * Math.pow(1.08, cantidadYaComprada));
+  return Math.ceil(costoInicial);
 }
 
 /**

@@ -63,8 +63,10 @@ export const PrestigeView = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
-    if (!container.dataset.boundClick) {
-      container.dataset.boundClick = 'true';
+    // AJUSTE (ronda 6): marca propia (ver CollectionView) — la marca genérica compartida en
+    // #tab-content dejaba sin listener a las vistas visitadas después de la primera.
+    if (!container.dataset.boundClickPrestige) {
+      container.dataset.boundClickPrestige = 'true';
       container.addEventListener('click', (evt) => {
         const nodeBtn = evt.target.closest('[data-action="buy-node"]');
         if (nodeBtn && !nodeBtn.disabled) {
