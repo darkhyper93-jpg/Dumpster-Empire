@@ -36,10 +36,12 @@ const CANVAS_HEIGHT = 330;
 // chico exige recorrido real por contenedor. Con el revelado por-objeto sigue siendo el
 // costo del gesto: menos radio = más pasadas para cubrir la huella de cada objeto.
 const BASE_ERASE_RADIUS = 20;
-// AJUSTE (PUNTOS_A_MEJORAR_4 §1): el ritmo de escarbado bajo (getDigRate del engine, 0.15-1)
-// no debilita el alpha del borrado — destination-out con alpha parcial deja mugre
-// semi-transparente. La lentitud se expresa SOLO con el radio del pincel.
-const DIG_RATE_RADIUS_FLOOR = 0.35;
+// AJUSTE (PUNTOS_A_MEJORAR_4 §1): el ritmo de escarbado (getDigRate del engine) no debilita
+// el alpha del borrado — destination-out con alpha parcial deja mugre semi-transparente.
+// La lentitud/rapidez se expresa SOLO con el radio del pincel.
+// AJUSTE (ronda 7, PLAN.md §11.2): tope duro del radio relativo al objeto — ningún build
+// (Área alta) convierte el escarbado en un toque único; ver eraseRadius().
+const ERASE_RADIUS_MAX_VS_OBJECT = 1.5;
 // Pausa entre limpiar la capa entera y cerrar el escarbado: el jugador tiene que llegar a VER
 // cada objeto revelado con su nombre antes de que la vista vuelva al picker (PUNTOS_A_MEJORAR_4 §1).
 const REVEAL_HOLD_MS = 650;
@@ -421,11 +423,19 @@ export class DigCanvas {
     });
   }
 
-  /** Radio efectivo del pincel: área del jugador (areaMult) × ritmo de escarbado (Resistencia
-   *  del contenedor vs Fuerza, ver getDigRate en el engine), expresado SOLO como tamaño. */
+  /**
+   * Radio efectivo del pincel (ronda 7, PLAN.md §11.2):
+   *   radio = base × √áreaMult × ritmo,  con tope 1.5× el radio del objeto.
+   * — √área: el Área lineal a nivel alto (ej. mult 3.35) daba pinceles de 2× el objeto y
+   *   trivializaba TODOS los contenedores por igual; con raíz sigue creciendo pero sin explotar.
+   * — ritmo: clamp(Fuerza/resistencia, 0.3, 1.5) ya calculado por el engine — cada contenedor
+   *   se siente distinto según tu Fuerza (sobre-Fuerza rasca más grande, quedarse corto mucho
+   *   más chico).
+   * — tope: nunca más de 1.5× el objeto, así el gesto siempre exige recorrer el canvas.
+   */
   eraseRadius() {
-    const radiusScale = DIG_RATE_RADIUS_FLOOR + (1 - DIG_RATE_RADIUS_FLOOR) * this.digRate;
-    return BASE_ERASE_RADIUS * this.areaMult * radiusScale;
+    const radius = BASE_ERASE_RADIUS * Math.sqrt(this.areaMult) * this.digRate;
+    return Math.min(radius, OBJECT_RADIUS * ERASE_RADIUS_MAX_VS_OBJECT);
   }
 
   /** Todos los objetos revelados: limpia la capa de suciedad ENTERA (sin parches a medias),

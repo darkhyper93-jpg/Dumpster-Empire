@@ -88,12 +88,12 @@ describe('§4.3 llaves de Ciudad al prestigiar', () => {
 });
 
 describe('§4.6 probabilidad de trampa', () => {
-  it('nunca baja de 0.01 sin importar la suerte', () => {
-    expect(trapProbability(0.05, 1000)).toBe(0.01);
-    expect(trapProbability(0.3, 10000)).toBe(0.01);
+  it('nunca baja de 0.03 sin importar la suerte (piso subido en ronda 7)', () => {
+    expect(trapProbability(0.05, 1000)).toBe(0.03);
+    expect(trapProbability(0.3, 10000)).toBe(0.03);
   });
 
-  it('literal: max(0.01, base - suerte*0.002)', () => {
+  it('literal: max(0.03, base - suerte*0.002)', () => {
     expect(trapProbability(0.2, 10)).toBeCloseTo(0.18, 10);
     expect(trapProbability(0.3, 50)).toBeCloseTo(0.2, 10);
   });
@@ -119,7 +119,7 @@ describe('rediseño de stats (PLAN.md §2.3): cada stat mueve un número distint
     expect(depthAfter).toBeGreaterThan(depthBefore);
   });
 
-  it('el ritmo de escarbado (getDigRate) sube hacia 1 a medida que sube la Fuerza, contra un contenedor de alta resistencia (agentes/rework-escarbado-y-landing-prompt.md)', () => {
+  it('el ritmo (getDigRate) es clamp(Fuerza/resistencia, 0.3, 1.5): sube con la Fuerza y premia la sobre-Fuerza (ronda 7)', () => {
     const highResistance = containers.reduce((max, c) => (c.resistencia > max.resistencia ? c : max));
     const low = freshState();
     const mid = freshState();
@@ -131,7 +131,12 @@ describe('rediseño de stats (PLAN.md §2.3): cada stat mueve un número distint
     const rateHigh = getDigRate(high, highResistance, data);
     expect(rateLow).toBeLessThan(rateMid);
     expect(rateMid).toBeLessThanOrEqual(rateHigh);
-    expect(rateHigh).toBeLessThanOrEqual(1);
+    expect(rateHigh).toBeLessThanOrEqual(1.5);
+
+    // Sobre-Fuerza contra el contenedor más blando: bonus real por encima de 1, con tope 1.5.
+    const softest = containers.reduce((min, c) => (c.resistencia < min.resistencia ? c : min));
+    expect(getDigRate(mid, softest, data)).toBeGreaterThan(1);
+    expect(getDigRate(high, softest, data)).toBe(1.5);
   });
 
   it('Área es independiente de Fuerza (no quedan redundantes)', () => {
