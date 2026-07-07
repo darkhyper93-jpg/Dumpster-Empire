@@ -2163,3 +2163,54 @@ backup de `userData/save.json` + localStorage y elige el save por `lastSavedAt`,
 2 "(tenés 0)" en Contenedores, Índice alternando tras visitar Automatización.
 También en esta rama: notas napkin pendientes de ronda 5 (canvas nunca es fuente de verdad,
 `xmlns` en SVG data-URL) + nota nueva del bind-once compartido.
+
+---
+
+## Ronda 7 — riesgo y gesto que se sienten en partidas avanzadas (rama `fix/balance-ronda7`)
+
+Reporte del playtest post-merge de ronda 6 (partida real: Suerte 36, Fuerza 1.44, Área 3.35,
+contenedores nivel 2-7): "recomendada 0 (alcanzada) en todos", "rasco todos los contenedores
+igual", "siempre gano". Diagnóstico corrido contra el save real del jugador
+(`userData/save.json`, solo lectura). Decisiones aprobadas por el usuario antes de ejecutar.
+
+### 1. Suerte recomendada = meta FIJA por contenedor (PLAN.md §11.2)
+Causa raíz del "0 (alcanzada)": `getRecommendedLuck` usaba el estado ACTUAL del jugador — los
+niveles de contenedor (+15pp de categoría rara en el tacho), `depthValueMult` 1.22 (Fuerza) y
+`sellMult` hacían EV>=0 a Suerte 0 en toda la primera mitad del catálogo. Ahora calcula contra
+un **jugador neutro** (`freshState()` interno; la firma conserva `state`): 0 (tacho gratis) /
+2 / 9 / 20 / 35 / 55 / 79 / 119, iguales en partida fresca y avanzada. Test en
+fase6-mecanicas: partida avanzada y fresca ven el mismo número.
+
+### 2. Trampas: monto FIJO por tier + piso de probabilidad 3% (PLAN.md §4.6)
+Pedido literal del usuario: "monto fijo por tier, que saque una cantidad decente, para que
+tengas que subir Suerte para reducir el % de trampa antes de avanzar de contenedor". Se
+eliminó el dampening por Suerte del monto (llegaba a x0.4: en late-game perder era
+irrelevante): `penaTrampa = max(1, costoInicial * trapPenaltyMult)` — depósito $2.600,
+mansión $40.000. El piso de probabilidad sube de 1% a **3%** (`TRAP_PROBABILITY_FLOOR`,
+aplicado en `trapProbability`, `getEffectiveTrapProbability` y el EV interno de la
+recomendada): perder siempre es posible; la Suerte reduce cuántas veces caés, no cuánto
+duele. La recalibración de items de ronda 6 sobrevivió sin cambios (recomendadas solo se
+movieron 19→20 en depósito).
+
+### 3. Gesto: `ritmo = clamp(Fuerza/resistencia, 0.3, 1.5)` y radio `base × √área × ritmo` con tope
+Causa raíz del "rasco todo igual": (a) `getDigRate` topeaba en 1 — con Fuerza 1.44 el tacho
+(1.0), barrio (1.15) e industrial (1.4) daban ritmo 1 idéntico; (b) el **Área nivel 47**
+(mult 3.35 lineal) daba pinceles de 52-67px contra objetos de 28px: un toque revelaba
+cualquier cosa en cualquier contenedor. Fix (PLAN.md §11.2): el engine devuelve
+`clamp(Fuerza/resistencia, 0.3, 1.5)` — la sobre-Fuerza premia hasta +50% (también acelera
+la automatización vía `getEffectiveDigTime`, coherente) — y el canvas usa
+`radio = 20 × √áreaMult × ritmo` con **tope 1.5× el radio del objeto (42px)**. Con el build
+real del jugador: tacho 42px (tope) · industrial 38 · depósito 29 · mansión 24 — cada
+contenedor se siente distinto. Desapareció `DIG_RATE_RADIUS_FLOOR`.
+
+### Verificado además (sin cambios, por si vuelve a reportarse)
+- La Suerte SÍ aplica: +1%/punto al valor, -0.2pp/punto de trampa, +0.15pp/punto hacia la
+  categoría rara (tope 20pp). La Fuerza SÍ aplica: depth mult, ritmo, y ahora el radio.
+- El costo de la mejora de Suerte ($77 a nivel 18) es la curva de siempre (10 x 1.12^n), no
+  se tocó en rondas 6-7.
+
+### Cobertura
+`npm test`: 138 · `npm run test:e2e`: 25 (2 nuevos en `ronda7-regression.spec.js`: la
+recomendada no colapsa a 0 con partida avanzada sembrada; un toque limpia >1.5x más en tacho
+que en depósito y nunca >4% del canvas — ambos fallaban con las fórmulas viejas) · smoke
+Electron no destructivo (backup + restore del save real) verde.

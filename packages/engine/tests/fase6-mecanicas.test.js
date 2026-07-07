@@ -112,22 +112,22 @@ describe('PLAN.md §11.2 — resistencia / Fuerza mínima', () => {
     expect(getEffectiveDigTime(state, hardContainer, data)).toBeGreaterThan(hardContainer.digTime);
   });
 
-  it('con Fuerza suficiente, el ritmo es normal (1) y el tiempo efectivo iguala al base', () => {
+  it('con Fuerza sobrada, el ritmo llega al tope 1.5 y el tiempo efectivo baja hasta digTime/1.5 (ronda 7)', () => {
     const state = freshState();
     state.upgradeLevels.digPower = 200; // fuerza muy alta, cubre cualquier resistencia definida
     const hardContainer = containers.find((c) => c.id === 'bovedaPerdida');
-    expect(getDigRate(state, hardContainer, data)).toBe(1);
-    expect(getEffectiveDigTime(state, hardContainer, data)).toBeCloseTo(hardContainer.digTime, 10);
+    expect(getDigRate(state, hardContainer, data)).toBe(1.5);
+    expect(getEffectiveDigTime(state, hardContainer, data)).toBeCloseTo(hardContainer.digTime / 1.5, 10);
   });
 
-  it('el ritmo nunca baja de un piso de 15%', () => {
+  it('el ritmo nunca baja de un piso de 30% (ronda 7)', () => {
     const state = freshState();
     const extremeContainer = { ...containers.find((c) => c.id === 'containerExtradimensional'), resistencia: 10000 };
-    expect(getDigRate(state, extremeContainer, data)).toBeGreaterThanOrEqual(0.15);
+    expect(getDigRate(state, extremeContainer, data)).toBe(0.3);
   });
 });
 
-describe('PLAN.md §11.2/§4.6 — trampas más caras por tier, suavizadas por Suerte', () => {
+describe('PLAN.md §11.2/§4.6 — trampas de monto FIJO por tier (ronda 7)', () => {
   it('un contenedor de tier alto castiga más que uno de tier bajo con la misma Suerte', () => {
     const state = freshState();
     const low = containers.find((c) => c.id === 'contenedorBarrio');
@@ -135,15 +135,17 @@ describe('PLAN.md §11.2/§4.6 — trampas más caras por tier, suavizadas por S
     expect(getTrapPenalty(state, high, data)).toBeGreaterThan(getTrapPenalty(state, low, data));
   });
 
-  it('la penalización baja a medida que sube la Suerte del jugador', () => {
+  it('el monto NO cambia con la Suerte: es costoInicial × trapPenaltyMult, fijo (la Suerte reduce la probabilidad, no el dolor)', () => {
     const container = containers.find((c) => c.id === 'bovedaPerdida');
     const lowLuck = freshState();
     const highLuck = freshState();
     highLuck.upgradeLevels.luck = 100;
-    expect(getTrapPenalty(highLuck, container, data)).toBeLessThan(getTrapPenalty(lowLuck, container, data));
+    const expected = Math.max(1, container.costoInicial * container.trapPenaltyMult);
+    expect(getTrapPenalty(lowLuck, container, data)).toBe(expected);
+    expect(getTrapPenalty(highLuck, container, data)).toBe(expected);
   });
 
-  it('nunca baja de 1 (piso mínimo, ni con Suerte extrema)', () => {
+  it('nunca baja de 1 (piso mínimo, incluso en el contenedor gratis)', () => {
     const container = containers.find((c) => c.id === 'tachoVereda');
     const state = freshState();
     state.upgradeLevels.luck = 100000;
@@ -176,6 +178,25 @@ describe('PLAN.md §11.2 — Suerte recomendada por contenedor', () => {
     const easy = containers.find((c) => c.id === 'tachoVereda');
     const hard = containers.find((c) => c.id === 'bovedaPerdida');
     expect(getRecommendedLuck(state, hard, items, data)).toBeGreaterThanOrEqual(getRecommendedLuck(state, easy, items, data));
+  });
+
+  // Ronda 7: la recomendada es una META FIJA por contenedor, calculada contra un jugador
+  // neutro. Antes usaba los multiplicadores actuales (niveles de contenedor, Fuerza, venta):
+  // en una partida avanzada TODO colapsaba a "0 (alcanzada)" y el número dejaba de guiar.
+  it('es independiente del estado del jugador: partida avanzada y partida fresca ven el mismo número', () => {
+    const fresh = freshState();
+    const advanced = freshState();
+    advanced.upgradeLevels = { luck: 30, digPower: 20, area: 47, capacity: 3 };
+    advanced.ownedContainers = { tachoVereda: 85, contenedorBarrio: 30, containerIndustrial: 15 };
+    advanced.containerLevels = { tachoVereda: 7, contenedorBarrio: 4, containerIndustrial: 3 };
+    advanced.automationOwned = { guantes: true };
+    advanced.prestigeCount = 1;
+    advanced.prestigeTreeLevels = {};
+    for (const container of containers) {
+      expect(getRecommendedLuck(advanced, container, items, data)).toBe(
+        getRecommendedLuck(fresh, container, items, data)
+      );
+    }
   });
 });
 

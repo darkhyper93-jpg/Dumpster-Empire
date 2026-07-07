@@ -497,6 +497,14 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   la progresión pasa a los saltos de `costoInicial` entre tiers (0/25/300/4K/50K/700K/10M/150M).
   Con el costo pesando de verdad en el valor esperado, la Suerte recomendada de cada tier deja
   de ser 0 (rebalanceo de `items.json` en la misma ronda). PLAN.md §2.6/§4.2 actualizados.
+- **Ronda 7 — riesgo y gesto que se sienten en partidas avanzadas**: (a) la Suerte recomendada
+  se calcula contra un **jugador neutro** (meta fija por contenedor; con el estado real
+  colapsaba a "0 (alcanzada)" apenas subían los niveles de contenedor/Fuerza); (b) la pena de
+  trampa es **fija por tier** (sin dampening por Suerte) y el piso de probabilidad sube de 1% a
+  **3%** — la Suerte reduce cuántas veces caés, no cuánto duele; (c) el ritmo del engine pasa a
+  `clamp(Fuerza/resistencia, 0.3, 1.5)` (bonus real por sobre-Fuerza) y el radio del pincel a
+  `base × √área × ritmo` con tope 1.5× el objeto (el Área lineal a nivel ~47 trivializaba el
+  gesto en todos los contenedores por igual). PLAN.md §4.6/§11.2 actualizados.
 
 ---
 

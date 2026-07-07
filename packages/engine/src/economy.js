@@ -4,6 +4,7 @@
  */
 
 import { categoryWeights } from './rng.js';
+import { freshState } from './state.js';
 
 /**
  * @typedef {import('./state.js').GameState} GameState
@@ -91,15 +92,19 @@ export function offlineEarnings({ gananciaAutomaticaPorSegundo, segundosAusente,
   };
 }
 
+// AJUSTE (ronda 7, PLAN.md §4.6): piso de trampa 1% → 3%. Con el monto de trampa ahora fijo
+// por tier, el piso es lo único que garantiza que perder siga siendo posible en late-game.
+const TRAP_PROBABILITY_FLOOR = 0.03;
+
 /**
- * §4.6 — Probabilidad de trampa, literal. Nunca baja de 1%.
- * probTrampaEfectiva = max(0.01, probTrampaBaseDelContenedor - suerte*0.002)
+ * §4.6 — Probabilidad de trampa, literal. Nunca baja del piso del 3%.
+ * probTrampaEfectiva = max(0.03, probTrampaBaseDelContenedor - suerte*0.002)
  * @param {number} probTrampaBaseDelContenedor
  * @param {number} suerte
  * @returns {number}
  */
 export function trapProbability(probTrampaBaseDelContenedor, suerte) {
-  return Math.max(0.01, probTrampaBaseDelContenedor - suerte * 0.002);
+  return Math.max(TRAP_PROBABILITY_FLOOR, probTrampaBaseDelContenedor - suerte * 0.002);
 }
 
 // ---------------------------------------------------------------------------
@@ -363,7 +368,7 @@ export function getEffectiveTrapProbability(state, container, isAuto, data) {
       if (state.automationOwned[automationId]) prob *= effect.mult;
     }
   }
-  return Math.max(0.01, prob);
+  return Math.max(TRAP_PROBABILITY_FLOOR, prob);
 }
 
 /**
@@ -473,11 +478,13 @@ export function registerContainerDig(state, container) {
  */
 export function getDigRate(state, container, data) {
   const digPowerMult = getDigPowerMult(state, data);
-  const required = container.resistencia;
-  if (digPowerMult >= required) return 1;
-  // AJUSTE: piso de 15% de ritmo normal — nunca queda completamente trabado, pero con poca
-  // Fuerza contra un contenedor de alta resistencia el escarbado es notoriamente más lento.
-  return Math.max(0.15, digPowerMult / required);
+  // AJUSTE (ronda 7, PLAN.md §11.2): ritmo = clamp(Fuerza/resistencia, 0.3, 1.5). Antes el
+  // ritmo se topeaba en 1 (la sobre-Fuerza no daba nada) y el piso era 0.15: en la práctica
+  // todos los contenedores ya dominados se sentían idénticos. Ahora superar la resistencia
+  // premia hasta +50% y quedarse corto castiga hasta 0.3 — la Fuerza contra la resistencia
+  // de CADA contenedor se siente en el gesto (radio del pincel) y en la automatización
+  // (getEffectiveDigTime).
+  return Math.min(1.5, Math.max(0.3, digPowerMult / container.resistencia));
 }
 
 /**
@@ -492,26 +499,27 @@ export function getEffectiveDigTime(state, container, data) {
 }
 
 // ---------------------------------------------------------------------------
-// Trampas más caras por tier (PLAN.md §11.2, extiende §4.6). El castigo escala con el costo
-// inicial del contenedor (proxy de su tier) y se suaviza con la Suerte, con un piso del 40% de
-// la pérdida base para que el riesgo nunca desaparezca del todo.
+// Trampas más caras por tier (PLAN.md §11.2/§4.6). AJUSTE (ronda 7): el castigo es FIJO por
+// tier (costoInicial × trapPenaltyMult) y ya NO se suaviza con la Suerte — el rol de la Suerte
+// es reducir la PROBABILIDAD de caer (hasta el piso del 3%), no cuánto duele. Antes el
+// dampening (hasta ×0.4) hacía que en late-game perder fuera irrelevante.
 // ---------------------------------------------------------------------------
 
-function trapPenaltyAtLuck(container, luck) {
-  const basePenalty = Math.max(1, container.costoInicial * container.trapPenaltyMult);
-  const luckDampening = Math.max(0.4, 1 - luck * 0.004);
-  return Math.max(1, basePenalty * luckDampening);
+function fixedTrapPenalty(container) {
+  return Math.max(1, container.costoInicial * container.trapPenaltyMult);
 }
 
 /**
- * Penalización de dinero al caer en trampa en un contenedor, con la Suerte actual del jugador.
+ * Penalización de dinero al caer en trampa en un contenedor: monto fijo por tier.
+ * La firma conserva state/data para no romper llamadores y por si un nodo de prestigio
+ * futuro la modifica; hoy solo depende del contenedor (ronda 7).
  * @param {GameState} state
  * @param {Object} container
  * @param {EngineData} data
  * @returns {number}
  */
 export function getTrapPenalty(state, container, data) {
-  return trapPenaltyAtLuck(container, getLuck(state, data));
+  return fixedTrapPenalty(container);
 }
 
 // ---------------------------------------------------------------------------
@@ -547,9 +555,9 @@ function expectedNetValueAtLuck(state, container, itemsData, data, luck) {
   for (const { nodeId, effect } of prestigeEffectsOfType(data, 'trapPercentReductionPerNivel')) {
     trapProb -= prestigeLevel(state, nodeId) * effect.percentPerNivel;
   }
-  trapProb = Math.max(0.01, trapProb);
+  trapProb = Math.max(TRAP_PROBABILITY_FLOOR, trapProb);
   const grossExpected = container.slots * expectedPerSlot * (1 - trapProb);
-  const expectedTrapLoss = trapProb * trapPenaltyAtLuck(container, luck);
+  const expectedTrapLoss = trapProb * fixedTrapPenalty(container);
   const cost = getContainerCost(state, container, data);
   return grossExpected - expectedTrapLoss - cost;
 }
@@ -557,7 +565,12 @@ function expectedNetValueAtLuck(state, container, itemsData, data, luck) {
 /**
  * Nivel de Suerte recomendado: el mínimo entero a partir del cual comprar y escarbar este
  * contenedor tiene valor esperado positivo (ganancia esperada >= costo + pérdida esperada de trampa).
- * @param {GameState} state
+ *
+ * AJUSTE (ronda 7, PLAN.md §11.2): se calcula contra un JUGADOR NEUTRO (sin mejoras, sin
+ * automatización/prestigio, contenedor a nivel 0): es la meta fija de progresión del contenedor.
+ * Antes usaba los multiplicadores actuales del jugador y en partidas avanzadas colapsaba a
+ * "0 (alcanzada)" para todo. La firma conserva `state` para no romper llamadores.
+ * @param {GameState} state - ignorado por diseño desde la ronda 7 (meta fija por contenedor)
  * @param {Object} container
  * @param {{ containers: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
  * @param {EngineData} data
@@ -565,8 +578,9 @@ function expectedNetValueAtLuck(state, container, itemsData, data, luck) {
  */
 export function getRecommendedLuck(state, container, itemsData, data) {
   const MAX_LUCK_SEARCH = 500;
+  const neutral = freshState();
   for (let luck = 0; luck <= MAX_LUCK_SEARCH; luck++) {
-    if (expectedNetValueAtLuck(state, container, itemsData, data, luck) >= 0) return luck;
+    if (expectedNetValueAtLuck(neutral, container, itemsData, data, luck) >= 0) return luck;
   }
   return MAX_LUCK_SEARCH;
 }

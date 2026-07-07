@@ -231,13 +231,20 @@ gananciaOffline = gananciaAutomaticaPorSegundo * segundosAusente * factorOffline
 - Tope duro: el offline nunca calcula más de **8 horas** de ausencia (a partir de ahí, no sigue acumulando) salvo que se compre la mejora de prestigio que extiende este tope.
 - Al volver, mostrar un resumen modal: "Mientras no estabas, tus robots encontraron: [resumen de objetos y dinero]".
 
-### 4.6 Probabilidad de trampa
+### 4.6 Trampas: probabilidad y castigo
 
 ```
-probTrampaEfectiva = max(0.01, probTrampaBaseDelContenedor - (suerte * 0.002))
+probTrampaEfectiva = max(0.03, probTrampaBaseDelContenedor - (suerte * 0.002))
+penaTrampa = max(1, costoInicial * trapPenaltyMult)   (monto FIJO por tier)
 ```
 
-Nunca debe llegar a 0% (siempre debe quedar un mínimo de riesgo, 1%, para que el riesgo nunca desaparezca del todo — esto es deliberado, mantiene tensión incluso en late-game).
+Nunca debe llegar a 0% (piso del **3%**, subido de 1% en la ronda 7: el riesgo nunca desaparece,
+ni en late-game). El **monto** del castigo es fijo por tier (costo del contenedor × su
+`trapPenaltyMult` de data) y **no se suaviza con la Suerte** — la Suerte reduce la *probabilidad*
+de la trampa, no cuánto duele: el rol de la Suerte es que caigas menos veces, y cada caída tiene
+que sacar una cantidad decente de dinero para que suba la presión de mejorar la Suerte antes de
+avanzar al siguiente contenedor (decisión de la ronda 7; antes el monto también bajaba hasta ×0.4
+con la Suerte y en late-game perder era irrelevante).
 
 ---
 
@@ -498,13 +505,21 @@ Trabajá de forma continua hasta entregar el proyecto completo y auditado contra
   pero acotado.
 - **Suerte recomendada por contenedor:** cada contenedor muestra, al lado, un **nivel de Suerte
   recomendado** a partir del cual conviene comprarlo (punto de rentabilidad esperada positiva). Es
-  un dato derivado de la economía (lo calcula el engine), visible en la Tienda.
+  un dato derivado de la economía (lo calcula el engine), visible en la Tienda. **Se calcula contra
+  un jugador neutro** (sin mejoras, contenedor a nivel 0): es una meta FIJA de progresión por
+  contenedor y no baja a 0 a medida que la partida avanza (ronda 7; antes usaba los
+  multiplicadores actuales del jugador y en partidas avanzadas colapsaba a "0 (alcanzada)").
 - **Resistencia por contenedor (extiende §2.3 Fuerza):** cada contenedor tiene una **resistencia**;
   escarbarlo requiere una **Fuerza mínima** para hacerlo a ritmo normal — con menos Fuerza se puede
-  igual, pero es mucho más lento. A mejor contenedor, más resistencia. Hoy se escarba demasiado
-  fácil incluso con Fuerza 1: eso se corrige (el escarbado debe costar esfuerzo y escalar con el tier).
+  igual, pero es mucho más lento. A mejor contenedor, más resistencia. El ritmo del engine es
+  `ritmo = clamp(Fuerza / resistencia, 0.3, 1.5)` (ronda 7: si tu Fuerza supera la resistencia
+  escarbás MÁS grande que lo normal, hasta +50%; si no llega, mucho más chico). En el gesto, el
+  radio del pincel es `radioBase × √multÁrea × ritmo`, con tope duro de **1.5× el radio del
+  objeto**: el Área crece con raíz (no lineal — a nivel alto trivializaba todo contenedor por
+  igual) y ningún build convierte el escarbado en un toque único.
 - **Trampas más caras (extiende §4.6):** el castigo de trampa debe **sacar más plata** y escalar con
-  el tier del contenedor, para que el riesgo importe de verdad (siempre suavizado por la Suerte, §4.6).
+  el tier del contenedor, para que el riesgo importe de verdad. El monto es fijo por tier; la
+  Suerte solo reduce la probabilidad (ver §4.6, ronda 7).
 
 ### 11.3 Niveles de contenedor (NUEVO — extiende §2.6)
 
