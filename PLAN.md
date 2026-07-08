@@ -527,6 +527,16 @@ Trabajá de forma continua hasta entregar el proyecto completo y auditado contra
   (por cantidad de escarbados o de progreso acumulado en ese contenedor).
 - A mayor nivel, **mejoran las probabilidades de ítems de mejor rareza** dentro de ese contenedor.
 - El nivel es **persistente** (parte del save) y por contenedor.
+- Cada nivel suma además un **multiplicador de valor** a los ítems de ese contenedor:
+  `multNivel = 1 + (nivel − 1) × levelValueMultPerLevel` (constante de datos por contenedor en
+  `containers.json`; 0.05 en V1 ⇒ ×1.00 a nivel 1, ×1.45 a nivel 10). Aplica al valor real de
+  cada escarbado, a la automatización y al offline. NO aplica al cálculo de la Suerte
+  recomendada (§11.2 la evalúa contra un jugador neutro a nivel 1), así que las metas de
+  Suerte por contenedor no cambian.
+- El nivel es **visible**: la tarjeta de la Tienda muestra nivel actual, bonus de valor y
+  escarbados restantes para el siguiente nivel; el selector de escarbado muestra un badge
+  "Nv. X"; al subir de nivel por escarbado manual se notifica con un toast (los level-ups de
+  la automatización no notifican, para no spamear).
 - Fórmula de subida y curva de mejora de odds: se definen en el engine y se calibran en el pase de
   balance (§3). Documentar las constantes en `data/containers.json`.
 

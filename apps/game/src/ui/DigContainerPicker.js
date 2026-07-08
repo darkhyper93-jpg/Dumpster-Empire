@@ -7,7 +7,7 @@
  * es "elegí y escarbá ya", no explorar el catálogo completo.
  */
 
-import { formatMoney, getContainerCost, isContainerUnlocked } from '@dumpster/engine';
+import { formatMoney, getContainerCost, isContainerUnlocked, getContainerLevel } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 
 export const DigContainerPicker = {
@@ -43,6 +43,7 @@ export const DigContainerPicker = {
         `<span class="dig-picker-card-icon">${iconMarkup(c.icon, { size: 26 })}</span>` +
         `<span class="dig-picker-card-name">${c.name}</span>` +
         `<span class="dig-picker-card-cost">${label}</span>` +
+        `<span class="dig-picker-card-level">Nv. ${getContainerLevel(state, c.id)}</span>` +
         `</button>`
       );
     });

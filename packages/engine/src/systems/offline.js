@@ -12,6 +12,7 @@ import {
   getOfflineFactor,
   getOfflineCapSeconds,
   getLevelRarityShift,
+  getLevelValueMult,
   getEffectiveDigTime,
   itemSaleValue,
   offlineEarnings,
@@ -24,14 +25,16 @@ function averageItemValue(state, container, categoria, itemsData, data, luck) {
   // PLAN.md §11.4: el pool de ítems es propio del contenedor, no una categoría global compartida.
   const pool = itemsData.containers[container.id].filter((item) => item.categoria === categoria);
   const avgBase = pool.reduce((sum, item) => sum + item.valorBase, 0) / pool.length;
-  return itemSaleValue({
-    valorBaseObjeto: avgBase,
-    multiplicadorRareza: rarity.mult,
-    suerte: luck,
-    fluctuacionMercado: state.marketFluctuation,
-    sellMult: getSellMult(state, categoria, data),
-    depthValueMult: getDepthValueMult(state, data),
-  });
+  return (
+    itemSaleValue({
+      valorBaseObjeto: avgBase,
+      multiplicadorRareza: rarity.mult,
+      suerte: luck,
+      fluctuacionMercado: state.marketFluctuation,
+      sellMult: getSellMult(state, categoria, data),
+      depthValueMult: getDepthValueMult(state, data),
+    }) * getLevelValueMult(state, container)
+  );
 }
 
 /**

@@ -16,6 +16,14 @@
    numeric maps must be `Number.isFinite` per value, boolean maps `typeof === 'boolean'`, arrays
    must have their element shape checked, not just `Array.isArray`. Top-level `typeof` alone is not
    enough for any field the UI will later interpolate.
+2. **[2026-07-08] Assertar `.toast` sin filtrar es un strict-mode violation latente (solo en CI)**
+   El primer escarbado de una partida sembrada dispara además toasts de logros ("Primeros
+   Pasos", "Primer Objeto"): hasta 3 `.toast` conviven. Local pasa por timing (los de logros ya
+   expiraron); el runner de CI, más lento, falla siempre — el bug apareció recién en el PR de
+   ronda 9. Do instead: toda assertion sobre toasts usa
+   `page.locator('.toast').filter({ hasText: ... })`, nunca `.toast` pelado; y cualquier
+   strict-mode violation vista en un script de verificación manual se traslada al spec en el
+   momento (en ronda 9 lo vi en el drive manual y no lo apliqué al e2e).
 
 ## Domain Behavior Guardrails
 1. **[2026-07-07] El completado de un canvas interactivo NUNCA se deriva de leer sus píxeles**

@@ -511,6 +511,16 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   `agentes/scripts/calibrate-luck-ronda8.mjs`, que usa `getRecommendedLuck` del engine como
   oráculo (bisección del factor de escala por pool); targets exactos guardados por test en
   `fase9-balance.test.js`.
+- **Ronda 9 — niveles de contenedor con valor y visibles**: los niveles (§11.3) existían pero
+  eran invisibles y solo movían rarezas. Ahora cada nivel multiplica el valor de los ítems del
+  contenedor: `multNivel = 1 + (nivel − 1) × levelValueMultPerLevel` (0.05 en data ⇒ tope
+  ×1.45 a nivel 10), aplicado en roll real, automatización y offline. La Suerte recomendada NO
+  cambia (meta neutra a nivel 1, guard de ronda 8 intacto). UI: nivel+bonus+progreso en la
+  Tienda, badge "Nv. X" en el picker, toast al subir por escarbado manual (la automatización
+  no notifica). PLAN.md §11.3 actualizado ANTES de implementar. De paso, fix de UX de la
+  Automatización: el explainer nombraba mal la mecánica (nada se encola a mano; el Robot
+  Clasificador compra y procesa solo) y el panel de estado ahora es consciente del estado —
+  sin robot muestra un callout con el paso a seguir en vez de una cola muerta "0/2".
 
 ---
 

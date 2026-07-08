@@ -117,8 +117,13 @@ export class UIManager {
   handleDigComplete() {
     const pending = this.store.getPendingDig();
     const result = pending ? pending.result : null;
-    this.store.actions.finishManualDig();
+    const res = this.store.actions.finishManualDig();
     if (result) this.playDigFeedback(result);
+    if (res && res.ok && res.levelUp) {
+      this.toast.push(
+        `${res.levelUp.containerName} subió a nivel ${res.levelUp.level}: +${res.levelUp.bonusPct}% de valor`
+      );
+    }
   }
 
   /**

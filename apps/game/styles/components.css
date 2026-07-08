@@ -253,6 +253,17 @@ button:hover:not(:disabled) {
   font-size: 0.85rem;
 }
 
+/* Aviso de cola inactiva sin Robot Clasificador (parte C, ronda 9): caja destacada con el
+   acento ámbar para que se lea como EL paso a seguir, no como texto decorativo. */
+.automation-callout {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--amber);
+  border-radius: var(--radius-lg);
+  background: var(--bg-1);
+  color: var(--fg-0);
+}
+
 .shop-card--locked,
 .achievement-card--locked {
   opacity: 0.7;
@@ -272,6 +283,12 @@ button:hover:not(:disabled) {
 }
 
 .shop-card-luck {
+  font-size: 0.85rem;
+  color: var(--fg-1);
+}
+
+/* Nivel del contenedor en la tarjeta de la Tienda (PLAN.md §11.3, ronda 9). */
+.shop-card-level {
   font-size: 0.85rem;
   color: var(--fg-1);
 }
@@ -321,6 +338,15 @@ button:hover:not(:disabled) {
 
 .dig-picker-card:disabled {
   opacity: 0.6;
+}
+
+/* Badge de nivel del contenedor en el picker (PLAN.md §11.3, ronda 9). */
+.dig-picker-card-level {
+  font-size: 0.7rem;
+  color: var(--amber);
+  border: 1px solid var(--amber);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
 }
 
 .shop-card-luck--reached {

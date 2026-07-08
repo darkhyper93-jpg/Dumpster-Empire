@@ -11,6 +11,7 @@ import {
   getDepthValueMult,
   getFragmentMult,
   getLevelRarityShift,
+  getLevelValueMult,
   getTrapPenalty,
   registerContainerDig,
   itemSaleValue,
@@ -84,6 +85,8 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
   const depthValueMult = getDepthValueMult(state, data);
   // PLAN.md §11.3: a mayor nivel del contenedor, más probabilidad de la categoría rara propia.
   const levelShift = getLevelRarityShift(state, container);
+  // PLAN.md §11.3 (ronda 9): a mayor nivel del contenedor, más valen sus ítems.
+  const levelValueMult = getLevelValueMult(state, container);
   const containerPool = itemsData.containers[container.id];
   const items = [];
   for (let i = 0; i < container.slots; i++) {
@@ -93,14 +96,15 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
     const pool = containerPool.filter((item) => item.categoria === categoria);
     const pick = rollItem(pool, random);
     const variance = rollItemVariance(random);
-    const value = itemSaleValue({
-      valorBaseObjeto: pick.valorBase * variance,
-      multiplicadorRareza: rarity.mult,
-      suerte: luck,
-      fluctuacionMercado: state.marketFluctuation,
-      sellMult: getSellMult(state, categoria, data),
-      depthValueMult,
-    });
+    const value =
+      itemSaleValue({
+        valorBaseObjeto: pick.valorBase * variance,
+        multiplicadorRareza: rarity.mult,
+        suerte: luck,
+        fluctuacionMercado: state.marketFluctuation,
+        sellMult: getSellMult(state, categoria, data),
+        depthValueMult,
+      }) * levelValueMult;
     items.push({ icon: pick.icon, name: pick.name, categoria, value });
   }
   const moneyDelta = items.reduce((sum, item) => sum + item.value, 0);

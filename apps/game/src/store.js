@@ -17,6 +17,8 @@ import {
   buyContainer as engineBuyContainer,
   rollContainerResult,
   applyContainerResult,
+  getContainerLevel,
+  getLevelValueMult,
   buyUpgrade as engineBuyUpgrade,
   buyAutomation as engineBuyAutomation,
   automationTick,
@@ -145,13 +147,27 @@ export function createStore(ctx) {
     finishManualDig() {
       if (!pendingDig) return { ok: false, error: 'No hay escarbado en curso.' };
       const { container, result } = pendingDig;
+      const levelBefore = getContainerLevel(state, container.id);
       applyContainerResult(state, container, result, false, data);
+      const levelAfter = getContainerLevel(state, container.id);
       if (state.tutorialStep === 0) state.tutorialStep = 1;
       pendingDig = null;
       runAchievements();
       persist();
       notify();
-      return { ok: true };
+      return {
+        ok: true,
+        // PLAN.md §11.3 (ronda 9): solo el escarbado manual notifica el level-up (la
+        // automatización sube niveles en silencio para no spamear toasts).
+        levelUp:
+          levelAfter > levelBefore
+            ? {
+                containerName: container.name,
+                level: levelAfter,
+                bonusPct: Math.round((getLevelValueMult(state, container) - 1) * 100),
+              }
+            : null,
+      };
     },
 
     abandonManualDig() {
