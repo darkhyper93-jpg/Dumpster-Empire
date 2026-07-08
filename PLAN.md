@@ -135,6 +135,14 @@ Cada contenedor es la unidad de compra-y-escarbado, con su propio costo, tiempo,
 El precio de cada contenedor es fijo (no crece con la cantidad comprada, ver sección 4.2);
 la progresión la marcan los saltos ×10–×15 entre tiers (ronda 6 de playtest).
 
+- **Contenedores de prestigio (ronda 11)**: además del Extradimensional (prestigio 1), hay 4
+  contenedores late-game gateados por `requiresPrestigeCount` 2/3/4/5 — Convoy Fantasma,
+  Cripta del Coleccionista, Estación Orbital Caída y Vertedero de los Dioses — cada uno con su
+  pool propio de 7 ítems (§11.4). Son el motor económico que hace cada corrida más profunda:
+  el árbol de prestigio completo (1.523 llaves) se termina en ~5-6 prestigios. Aparecen en la
+  Tienda (bloqueados dicen con qué prestigio se desbloquean), en el selector de escarbado y en
+  el Índice al desbloquearse, como cualquier otro.
+
 ### 2.7 Automatización
 
 Progresión de herramientas, calcada de la curva manual→automático del juego de referencia:

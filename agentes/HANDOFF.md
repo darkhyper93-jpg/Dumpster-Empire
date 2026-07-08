@@ -2330,3 +2330,70 @@ roadmap no había proyectado al escribir esos números:
 33 verdes (30 previos + 3 nuevos). Manual con Playwright (375px y 1440px): las 3 metas se ven
 sin desbordar, "(alcanzada)" cambia de color como Suerte, sin overflow horizontal. Sin bump de
 saveVersion (ninguna clave nueva persistente).
+
+---
+
+## Ronda 11 — contenedores de prestigio (rama `feat/prestigio-contenedores-ronda11`)
+
+### Qué cambió
+- PLAN.md §2.6: se agregó el contrato de los 4 contenedores de prestigio (Convoy Fantasma,
+  Cripta del Coleccionista, Estación Orbital Caída, Vertedero de los Dioses) ANTES de implementar.
+- `containers.json`: 4 bloques nuevos al final del array (ahora 12 contenedores), gateados por
+  `requiresPrestigeCount` 2/3/4/5. El orden del array ES la progresión (`isContainerUnlocked`
+  también exige el contenedor anterior comprado), así que van al final en ese orden exacto.
+- `items.json`: 4 pools nuevos (28 ítems) bajo `containers.convoyFantasma` /
+  `criptaColeccionista` / `estacionOrbital` / `vertederoDivino`, calibrados con
+  `agentes/scripts/calibrate-luck-ronda11.mjs` (copia del script de ronda 10, mismo método de
+  bisección contra el engine como oráculo). Los pools de los 8 contenedores viejos NO se tocaron.
+- `icons.js`: 3 shapes nuevas (`crypt`, `satellite`, `temple`; `convoy-ghost` reusa `truck`) y
+  los mappings de las 4 claves de contenedor + las 28 claves de ítem nuevas, todas reusando
+  shapes existentes (`document`, `lamp`, `watch`, `crate`, `coin`, `box`, `amulet`, `painting`,
+  `statue`, `helmet`, `vase`, `crystal`, `shield`, `fist`, `radar`, `chip`, `implant`, `gear`,
+  `bottle`, `cable`) — ningún shape necesitó inventarse aparte de los 3 de contenedor.
+- UI (`ShopView.js`): la tarjeta bloqueada distingue "Se desbloquea con el Prestigio N" de
+  "Bloqueado. Comprá el contenedor anterior primero." leyendo `c.requiresPrestigeCount` vs
+  `state.prestigeCount` (dato de la data, no cálculo de economía). `DigContainerPicker.js` y
+  `CollectionView.js` no necesitaron cambios: ya iteran `allContainers` filtrando por
+  `isContainerUnlocked` (picker) o listando todos genéricamente (Índice), verificado jugando con
+  un seed de prestigio 2 (el Convoy aparece en ambos recién al desbloquearse).
+- Tests nuevos: `packages/engine/tests/ronda11-prestigio.test.js` (5, RED primero) y
+  `apps/game/e2e/ronda11-regression.spec.js` (3: razón de bloqueo en la Tienda, desbloqueo real
+  por prestigio + Suerte recomendada visible, presencia en el Índice).
+
+### Desvíos del roadmap (resueltos antes de seguir)
+El roadmap solo anticipaba que la calibración usara el mismo rango del script de ronda 10. En la
+práctica hicieron falta dos ajustes al script porque los costoInicial de estos tiers (5e9 a 2e13)
+son órdenes de magnitud más grandes que los de ronda 10:
+- El rango de búsqueda del factor de escala (`minScaleFor`) subió de `hi = 100` a `hi = 1e8`: con
+  100 el factor no alcanzaba a compensar contenedores de $80.000M+ (la calibración de
+  `estacionOrbital`/`vertederoDivino` fallaba "NO COINCIDE" pegada al techo del rango).
+- El redondeo de `valorBase` pasó de 3 a 4 cifras significativas: a la escala de estos ítems
+  (valores en el orden de millones tras escalar), redondear a 3 cifras significativas podía
+  hacer que `rec` saltara de target+1 a target-1 sin pasar por el target exacto (pasó con
+  `estacionOrbital`, target 500: el punto medio geométrico de la bisección daba 499 o 501 según
+  redondeo). Con 4 cifras significativas los 4 targets calibraron exactos. El dinero en pantalla
+  igual se formatea K/M/B/T, así que la cifra de más no afecta legibilidad real.
+- 5 tests pre-existentes rompieron por asumir 8 contenedores en vez de "los 12, pero la tabla
+  vieja son los primeros 8" — no estaba en el roadmap porque ronda 10 no había agregado
+  contenedores nuevos, así que nadie lo había pisado todavía:
+  - `ronda10-dificultad.test.js` y el último test de `ronda9-niveles.test.js`: mapeaban
+    `getRecommendedLuck`/`getRecommendedDigPower`/`getRecommendedArea` sobre `containers`
+    completo esperando arrays de longitud 8. Se cambiaron a `containers.slice(0, 8)` — siguen
+    guardando exactamente lo mismo (la tabla de ronda 10 no debe regresionar), simplemente ya no
+    fallan porque ahora hay más contenedores después.
+  - `economy.test.js`: el guard de precios fijos ("8 contenedores") se extendió a los 12 valores
+    de `costoInicial`. El guard de `getDigRate` con Fuerza "sobrada" (pensado para superar la
+    resistencia máxima) subió sus niveles hardcodeados de 50/320 a 220/1200 porque la resistencia
+    máxima subió de 8.7 a 29 (`vertederoDivino`).
+  - `fase9-balance.test.js`: el guard "12 metas de Suerte exactas" se extendió a los 12 valores;
+    el tope "alcanzable" de la Suerte recomendada subió de 350 a 650 (vertederoDivino recomienda
+    580 a propósito); el tope "probabilidad de trampa nunca supera X%" subió de 35% a 40%
+    (vertederoDivino usa 38% a propósito, el contenedor de mayor riesgo del juego).
+
+### Verificación
+`npm test`: 169 verdes (148 previos + 5 nuevos, contando los 5 guards ajustados). `npm run
+test:e2e`: 36 verdes (33 previos + 3 nuevos). Manual con Playwright (375px y 1440px): el Convoy
+Fantasma aparece con su ícono propio (camión) en el picker de Escarbar y en la Tienda con la
+razón de bloqueo correcta antes del Prestigio 2; sin overflow horizontal en ninguno de los dos
+anchos. Sin bump de `saveVersion` (ninguna clave nueva persistente: `requiresPrestigeCount` y
+`prestigeCount` ya existían desde el Contenedor Extradimensional).

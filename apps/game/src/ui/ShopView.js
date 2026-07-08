@@ -43,11 +43,16 @@ export const ShopView = {
     const cards = allContainers.map((c) => {
       const unlocked = isContainerUnlocked(state, c, allContainers);
       if (!unlocked) {
+        // PLAN.md §2.6 (ronda 11): la razón del bloqueo importa — prestigio vs. progresión.
+        const needsPrestige = c.requiresPrestigeCount && state.prestigeCount < c.requiresPrestigeCount;
+        const reason = needsPrestige
+          ? `Se desbloquea con el Prestigio ${c.requiresPrestigeCount}.`
+          : 'Bloqueado. Comprá el contenedor anterior primero.';
         return (
           `<article class="shop-card shop-card--locked">` +
           `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
           `<h3>${c.name}</h3>` +
-          `<p>Bloqueado. Comprá el contenedor anterior primero.</p>` +
+          `<p>${reason}</p>` +
           `</article>`
         );
       }

@@ -64,7 +64,9 @@ describe('Ronda 9 — multiplicador de valor por nivel (PLAN.md §11.3)', () => 
   it('la Suerte recomendada NO cambia aunque todos los contenedores estén a nivel máximo (meta neutra de rondas 7/8/10 intacta)', () => {
     const advanced = freshState();
     for (const c of containers) advanced.containerLevels[c.id] = CONTAINER_LEVEL_MAX;
-    const rec = containers.map((c) => getRecommendedLuck(advanced, c, items, data));
+    // AJUSTE (ronda 11): guard sobre los 8 contenedores originales — los 4 nuevos de prestigio
+    // (agregados al final de containers.json) tienen sus propias metas calibradas en ronda 11.
+    const rec = containers.slice(0, 8).map((c) => getRecommendedLuck(advanced, c, items, data));
     expect(rec).toEqual([0, 8, 20, 40, 72, 120, 190, 290]);
   });
 });

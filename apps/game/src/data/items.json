@@ -395,6 +395,182 @@
         "valorBase": 2710,
         "categoria": "future"
       }
+    ],
+    "convoyFantasma": [
+      {
+        "icon": "cargo-manifest",
+        "name": "Manifiesto de carga",
+        "valorBase": 138200,
+        "categoria": "historic"
+      },
+      {
+        "icon": "ghost-lantern",
+        "name": "Farol del convoy",
+        "valorBase": 190000,
+        "categoria": "historic"
+      },
+      {
+        "icon": "route-compass",
+        "name": "Brújula de ruta",
+        "valorBase": 259200,
+        "categoria": "historic"
+      },
+      {
+        "icon": "sealed-strongbox",
+        "name": "Caja fuerte sellada",
+        "valorBase": 164100,
+        "categoria": "relics"
+      },
+      {
+        "icon": "captain-ring",
+        "name": "Anillo del capitán",
+        "valorBase": 216000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "cursed-cargo",
+        "name": "Carga maldita",
+        "valorBase": 276400,
+        "categoria": "relics"
+      },
+      {
+        "icon": "phantom-bell",
+        "name": "Campana fantasma",
+        "valorBase": 362800,
+        "categoria": "relics"
+      }
+    ],
+    "criptaColeccionista": [
+      {
+        "icon": "framed-forgery",
+        "name": "Falsificación enmarcada",
+        "valorBase": 1673000,
+        "categoria": "art"
+      },
+      {
+        "icon": "marble-bust",
+        "name": "Busto de mármol",
+        "valorBase": 2231000,
+        "categoria": "art"
+      },
+      {
+        "icon": "lost-masterpiece",
+        "name": "Obra maestra perdida",
+        "valorBase": 3161000,
+        "categoria": "art"
+      },
+      {
+        "icon": "burial-mask",
+        "name": "Máscara funeraria",
+        "valorBase": 1859000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "grail-replica",
+        "name": "Réplica del grial",
+        "valorBase": 2510000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "saint-reliquary",
+        "name": "Relicario del santo",
+        "valorBase": 3347000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "collector-heart",
+        "name": "El corazón del coleccionista",
+        "valorBase": 4463000,
+        "categoria": "relics"
+      }
+    ],
+    "estacionOrbital": [
+      {
+        "icon": "heat-shield",
+        "name": "Escudo térmico",
+        "valorBase": 4764000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "zero-g-tool",
+        "name": "Herramienta de gravedad cero",
+        "valorBase": 6519000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "cosmonaut-log",
+        "name": "Bitácora del cosmonauta",
+        "valorBase": 8776000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "orbital-gyro",
+        "name": "Giroscopio orbital",
+        "valorBase": 5266000,
+        "categoria": "future"
+      },
+      {
+        "icon": "plasma-cell",
+        "name": "Celda de plasma",
+        "valorBase": 7021000,
+        "categoria": "future"
+      },
+      {
+        "icon": "ai-core-salvaged",
+        "name": "Núcleo de IA rescatado",
+        "valorBase": 9528000,
+        "categoria": "future"
+      },
+      {
+        "icon": "station-heart",
+        "name": "Reactor de la estación",
+        "valorBase": 12540000,
+        "categoria": "future"
+      }
+    ],
+    "vertederoDivino": [
+      {
+        "icon": "titan-bolt",
+        "name": "Tornillo de titán",
+        "valorBase": 35050000,
+        "categoria": "future"
+      },
+      {
+        "icon": "chrono-shard",
+        "name": "Esquirla de cronos",
+        "valorBase": 44790000,
+        "categoria": "future"
+      },
+      {
+        "icon": "ambrosia-flask",
+        "name": "Frasco de ambrosía",
+        "valorBase": 56470000,
+        "categoria": "future"
+      },
+      {
+        "icon": "olympus-circuit",
+        "name": "Circuito del olimpo",
+        "valorBase": 70100000,
+        "categoria": "future"
+      },
+      {
+        "icon": "godling-idol",
+        "name": "Ídolo de un dios menor",
+        "valorBase": 85680000,
+        "categoria": "future"
+      },
+      {
+        "icon": "thunder-coil",
+        "name": "Bobina del trueno",
+        "valorBase": 105200000,
+        "categoria": "future"
+      },
+      {
+        "icon": "creation-seed",
+        "name": "Semilla de creación",
+        "valorBase": 132400000,
+        "categoria": "future"
+      }
     ]
   }
 }
