@@ -553,6 +553,27 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   y 1200) para seguir superando la nueva resistencia máxima (29, antes 8.7), y el tope de
   "probabilidad de trampa nunca supera X%" de `fase9-balance.test.js` subió de 35% a 40%
   (vertederoDivino, el de mayor riesgo, usa 38% a propósito).
+- **Ronda 12 — celebraciones centradas**: `CelebrationModal` (nuevo) reemplaza al toast de
+  logros y al `CategoryUnlockModal` (borrado, absorbido — los logros a14-a19 se celebran como
+  cualquier logro). Overlay `#celebration-modal` con backdrop, cerrado SOLO con la cruz (sin
+  auto-cierre ni click en backdrop), cola FIFO si caen varias a la vez. Tres disparadores: logro
+  desbloqueado (con recompensa formateada), contenedor nuevo desbloqueado, hallazgo jackpot del
+  escarbado manual. `isJackpot` se calcula en `rollContainerResult` (engine): ítem de la
+  categoría más rara del contenedor (última de `categorias`) con varianza ≥
+  `JACKPOT_VARIANCE_MIN` (1.10 de un rango 0.85-1.15); la automatización nunca celebra jackpots.
+  El store detecta desbloqueos de contenedor comparando el set de `isContainerUnlocked` contra
+  un baseline (`detectContainerUnlocks`), llamado tras cualquier acción que pueda desbloquear uno
+  (comprar/empezar dig, comprar automatización, prestigiar, tick de automatización) — el baseline
+  arranca del estado actual al cargar, así que recargar la página nunca re-celebra (sin bump de
+  `saveVersion`). Sonidos nuevos 100% WebAudio (`playContainerFanfare`, `playJackpot`).
+  De paso: el test del engine (`ronda12-jackpot.test.js`) tuvo que ajustar el generador de
+  `random` inyectado — `rollCategory` elige la categoría rara con random BAJO (no alto, al
+  revés de la asunción inicial), y `freshState()` consume el primer `random()` en
+  `refreshMarketFluctuation` (`marketFluctuationAt: 0`) antes de llegar a `rollIsTrap`. Y varios
+  e2e pre-existentes que digueaban el tacho como primera acción rompieron porque comprarlo por
+  primera vez desbloquea el Contenedor de Barrio y el modal nuevo bloquea el pointer del canvas
+  debajo — se agregó `cerrarCelebraciones()` a los helpers compartidos (`entrarAlJuego`,
+  `iniciarEscarbado`) para que los specs de mecánica (no de celebraciones) no queden bloqueados.
 
 ---
 

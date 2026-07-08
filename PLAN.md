@@ -287,6 +287,17 @@ En mobile: la barra de pestañas inferior se vuelve barra de íconos fijos (esti
 - Contador de dinero: nunca debe saltar de golpe; animar el conteo numérico (tween) en 300-500ms.
 - Botones de compra: deshabilitados (grises, opacidad 50%) cuando no alcanza el dinero, con tooltip mostrando cuánto falta.
 - Al desbloquear una categoría nueva de objeto: modal corto y celebratorio, no bloqueante (auto-cierra en 3s o con tap).
+- **Celebraciones (ronda 12)**: un modal centrado sobre TODO (backdrop gris semitransparente
+  que atenúa el juego) celebra tres momentos: logro desbloqueado (ícono + nombre + recompensa),
+  contenedor nuevo desbloqueado y hallazgo excepcional ("jackpot"). Se cierra SOLO con la cruz
+  arriba a la derecha (sin auto-cierre, sin click en el backdrop); si caen varias celebraciones
+  se encolan y se muestran una tras otra. El juego sigue corriendo detrás y el progreso nunca
+  se pierde. Cada tipo tiene su sonido (WebAudio, sin archivos). Este modal reemplaza al toast
+  de logros y al modal de categoría nueva.
+- **Jackpot (definición literal)**: un ítem del escarbado MANUAL es jackpot si su categoría es
+  la ÚLTIMA del array `categorias` del contenedor (la más rara) Y su varianza de valor cayó en
+  el tope del rango (≥ 1.10 de un rango 0.85-1.15, constante `JACKPOT_VARIANCE_MIN`). La
+  automatización no celebra jackpots (anti-spam).
 
 ### 5.3 Identidad visual: "The Workshop" (mockup canónico)
 

@@ -108,6 +108,22 @@ export function playCelebration() {
   playTone({ freq: 440, freqEnd: 660, duration: 0.25, type: 'sine', gain: 0.14 });
 }
 
+/** Fanfarria de 3 notas ascendentes (arpegio mayor) para contenedor nuevo desbloqueado. */
+export function playContainerFanfare() {
+  if (!enabled) return;
+  [440, 554, 659].forEach((freq, i) => {
+    setTimeout(() => playTone({ freq, duration: 0.22, type: 'triangle', gain: 0.14 }), i * 110);
+  });
+}
+
+/** "Sparkle" agudo y rápido para un hallazgo jackpot. */
+export function playJackpot() {
+  if (!enabled) return;
+  [880, 1175, 1568, 2093].forEach((freq, i) => {
+    setTimeout(() => playTone({ freq, duration: 0.16, type: 'sine', gain: 0.11 }), i * 70);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Sonido de rascado continuo (agentes/rework-escarbado-y-landing-prompt.md, PUNTOS_A_MEJORAR.md:
 // "no hay ruido mientras escarbás"). Ruido blanco pasado por un filtro pasa-banda angosto (recrea

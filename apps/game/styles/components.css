@@ -623,8 +623,7 @@ textarea {
 .shop-card-icon,
 .automation-card-icon,
 .achievement-card-icon,
-.prestige-node-icon,
-.category-modal-icon {
+.prestige-node-icon {
   color: var(--amber);
 }
 
@@ -690,7 +689,7 @@ textarea {
   filter: grayscale(1);
 }
 
-/* --- Modales no bloqueantes (offline + celebración de categoría) --- */
+/* --- Modales no bloqueantes (offline + celebraciones) --- */
 
 .modal-overlay {
   position: fixed;
@@ -731,6 +730,42 @@ textarea {
   display: flex;
   justify-content: center;
   gap: var(--space-2);
+}
+
+/* Celebraciones (PLAN.md §5.2, ronda 12): tarjeta centrada con cruz de cierre obligatoria. */
+.celebration-card {
+  position: relative;
+  text-align: center;
+  padding: var(--space-4);
+}
+
+.celebration-close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--fg-1);
+}
+
+.celebration-icon {
+  display: inline-flex;
+  color: var(--amber);
+}
+
+.celebration-name {
+  font-family: var(--font-display);
+  color: var(--fg-0);
+}
+
+.celebration-reward {
+  color: var(--amber);
+  font-weight: 600;
 }
 
 /* --- Árbol de prestigio: nodos conectados por rama temática (PrestigeView.js) --- */

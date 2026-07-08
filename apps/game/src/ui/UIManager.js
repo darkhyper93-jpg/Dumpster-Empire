@@ -19,7 +19,7 @@ import { SettingsView } from './SettingsView.js';
 import { Toast } from './Toast.js';
 import { Tutorial } from './Tutorial.js';
 import { OfflineModal } from './OfflineModal.js';
-import { CategoryUnlockModal } from './CategoryUnlockModal.js';
+import { CelebrationModal } from './CelebrationModal.js';
 import { iconMarkup } from '../icons/icons.js';
 import { setEnabled as setSoundEnabled, setVolume as setMasterVolume, playFindPop, playTrapThud } from '../fx/audio.js';
 import { spawnFindPop, triggerRarityGlow, triggerTrapShake } from '../fx/particles.js';
@@ -32,11 +32,6 @@ const TAB_VIEWS = {
   index: CollectionView,
   ajustes: SettingsView,
 };
-
-// Logros "primer objeto de la categoría" (achievements.json a14-a19): encontrar el primer
-// objeto de una categoría nueva es, en los hechos, desbloquearla (el engine no emite un
-// evento dedicado de "categoría desbloqueada" — ver CategoryUnlockModal.js).
-const CATEGORY_UNLOCK_ACHIEVEMENT_IDS = new Set(['a14', 'a15', 'a16', 'a17', 'a18', 'a19']);
 
 export class UIManager {
   /**
@@ -65,7 +60,7 @@ export class UIManager {
     this.tabbarEl = root.querySelector('#tabbar');
     this.tabContentEl = root.querySelector('#tab-content');
     this.offlineModalEl = root.querySelector('#offline-modal');
-    this.categoryModalEl = root.querySelector('#category-modal');
+    this.celebrationModalEl = root.querySelector('#celebration-modal');
 
     this.toast = new Toast(root.querySelector('#toast-container'));
     this.tutorial = new Tutorial(root.querySelector('#tutorial-overlay'), store);
@@ -123,6 +118,11 @@ export class UIManager {
       this.toast.push(
         `${res.levelUp.containerName} subió a nivel ${res.levelUp.level}: +${res.levelUp.bonusPct}% de valor`
       );
+    }
+    if (result && !result.isTrap) {
+      for (const item of result.items.filter((i) => i.isJackpot)) {
+        CelebrationModal.push(this.celebrationModalEl, { type: 'jackpot', item });
+      }
     }
   }
 
@@ -197,11 +197,10 @@ export class UIManager {
     }
 
     for (const achievement of this.store.consumeNewAchievements()) {
-      if (CATEGORY_UNLOCK_ACHIEVEMENT_IDS.has(achievement.id)) {
-        CategoryUnlockModal.show(this.categoryModalEl, achievement);
-      } else {
-        this.toast.push(`Logro desbloqueado: ${achievement.name}`);
-      }
+      CelebrationModal.push(this.celebrationModalEl, { type: 'achievement', achievement });
+    }
+    for (const container of this.store.consumeNewContainerUnlocks()) {
+      CelebrationModal.push(this.celebrationModalEl, { type: 'containerUnlock', container });
     }
   }
 

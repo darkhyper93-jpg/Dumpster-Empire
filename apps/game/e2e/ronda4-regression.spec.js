@@ -17,7 +17,7 @@
 import { test, expect } from '@playwright/test';
 import { freshState } from '../../../packages/engine/src/state.js';
 import { serializeState } from '../../../packages/engine/src/save.js';
-import { entrarAlJuego, iniciarEscarbadoSinTrampa, rascarObjeto } from './helpers/dig.js';
+import { entrarAlJuego, iniciarEscarbadoSinTrampa, rascarObjeto, cerrarCelebraciones } from './helpers/dig.js';
 
 /** Cuenta píxeles del top canvas por franja de alpha: opacos, intermedios y borrados. */
 async function alphaHistogram(page) {
@@ -44,6 +44,9 @@ async function iniciarEscarbado(page, containerId) {
   await page.locator('#title-play-btn').click();
   await page.locator(`[data-start-dig="${containerId}"]`).click();
   await expect(page.locator('#dig-active')).toBeVisible();
+  // Comprar el contenedor (ronda 12) puede desbloquear el siguiente y encolar su celebración
+  // ya al arrancar — se cierra antes de tocar el canvas.
+  await cerrarCelebraciones(page);
   await expect(page.locator('.dig-canvas-top')).toBeVisible();
 }
 

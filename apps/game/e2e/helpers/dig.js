@@ -12,6 +12,19 @@ import { expect } from '@playwright/test';
 export const DIG_W = 600;
 export const DIG_H = 330;
 
+/**
+ * Cierra cualquier celebración encolada (ronda 12: logro/contenedor nuevo/jackpot) que esté
+ * tapando la pantalla. Los specs de mecánica no prueban el modal en sí (eso es
+ * ronda12-regression.spec.js) — acá solo se la saca de encima para no bloquear los gestos de
+ * puntero del resto de los tests con su backdrop.
+ */
+export async function cerrarCelebraciones(page) {
+  const closeBtn = page.locator('[data-action="close-celebration"]');
+  while (await closeBtn.isVisible().catch(() => false)) {
+    await closeBtn.click();
+  }
+}
+
 /** Entra al juego desde la pantalla de título y descarta el tutorial. */
 export async function entrarAlJuego(page) {
   await page.goto('/apps/game/');
@@ -25,12 +38,19 @@ export async function entrarAlJuego(page) {
     await skip.click();
     await expect(skip).toBeHidden();
   }
+  // Un save sembrado puede satisfacer condiciones de logro que todavía no estaban marcadas
+  // (ronda 12): al cargar, `runAchievements()` las desbloquea todas de una y encola sus
+  // celebraciones ANTES de que el test haga nada.
+  await cerrarCelebraciones(page);
 }
 
 /** Arranca el escarbado del contenedor pedido. Devuelve el locator del canvas top. */
 export async function iniciarEscarbado(page, containerId) {
   await page.locator(`[data-start-dig="${containerId}"]`).click();
   await expect(page.locator('#dig-active')).toBeVisible();
+  // Comprar el contenedor (ronda 12) puede desbloquear el siguiente en la cadena y encolar su
+  // celebración de "¡Contenedor nuevo!" ya al arrancar — se cierra antes de tocar el canvas.
+  await cerrarCelebraciones(page);
   const canvas = page.locator('.dig-canvas-top');
   await expect(canvas).toBeVisible();
   return canvas;

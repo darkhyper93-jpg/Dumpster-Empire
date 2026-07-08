@@ -83,6 +83,7 @@ const SHAPES = {
   crypt: '<path d="M6 21V10l6-6 6 6v11"/><line x1="4" y1="21" x2="20" y2="21"/><rect x="10" y="14" width="4" height="7"/><line x1="12" y1="6" x2="12" y2="10"/><line x1="10" y1="8" x2="14" y2="8"/>',
   satellite: '<rect x="9" y="9" width="6" height="6" rx="1" transform="rotate(45 12 12)"/><rect x="2" y="10" width="5" height="4" rx="0.5"/><rect x="17" y="10" width="5" height="4" rx="0.5"/><path d="M14 8l4-4"/><circle cx="18.5" cy="3.5" r="1.2"/>',
   temple: '<path d="M4 9l8-5 8 5"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="6" y1="9" x2="6" y2="18"/><line x1="10" y1="9" x2="10" y2="18"/><line x1="14" y1="9" x2="14" y2="18"/><line x1="18" y1="9" x2="18" y2="18"/><line x1="4" y1="18" x2="20" y2="18"/><line x1="3" y1="21" x2="21" y2="21"/>',
+  closeX: '<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
 };
 
 /** Mapea cada clave `icon` de la data (items/containers/upgrades/automations/prestigeTree/achievements) a una forma. */
@@ -213,6 +214,7 @@ const ICON_MAP = {
   'tab-prestigio': 'crown',
   'tab-index': 'clipboard',
   locked: 'shield',
+  'close-x': 'closeX',
 
   // Items — contenedores de prestigio (ronda 11)
   'cargo-manifest': 'document',

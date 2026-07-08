@@ -239,7 +239,7 @@ test.describe('Dumpster Empire — regresión escarbado de un solo click', () =>
 
   // Regresión (task-2-report.md): el fix del scroll interno de arriba en algún momento agregó
   // `overflow: hidden` a `#app` para forzar el clampeo. `#toast-container`, `#tutorial-overlay`,
-  // `#offline-modal` y `#category-modal` son hijos DIRECTOS de `#app` con `position: fixed;
+  // `#offline-modal` y `#celebration-modal` son hijos DIRECTOS de `#app` con `position: fixed;
   // inset: 0` (components.css .modal-overlay): un `overflow: hidden` en `#app` los recorta a la
   // caja de `#app` (max-width: 720px/var(--container-max) centrada), así que en viewports más
   // anchos que ese máximo el backdrop del modal no cubre los costados. Se prueba a 1920x1080
@@ -252,7 +252,7 @@ test.describe('Dumpster Empire — regresión escarbado de un solo click', () =>
     await page.locator('#title-play-btn').click();
 
     const rect = await page.evaluate(() => {
-      const modal = document.querySelector('#category-modal');
+      const modal = document.querySelector('#celebration-modal');
       modal.hidden = false;
       const r = modal.getBoundingClientRect();
       return { top: r.top, left: r.left, width: r.width, height: r.height };

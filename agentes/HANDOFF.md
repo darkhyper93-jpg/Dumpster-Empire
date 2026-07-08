@@ -2397,3 +2397,73 @@ Fantasma aparece con su ícono propio (camión) en el picker de Escarbar y en la
 razón de bloqueo correcta antes del Prestigio 2; sin overflow horizontal en ninguno de los dos
 anchos. Sin bump de `saveVersion` (ninguna clave nueva persistente: `requiresPrestigeCount` y
 `prestigeCount` ya existían desde el Contenedor Extradimensional).
+
+## Ronda 12 — celebraciones (rama `feat/celebraciones-ronda12`)
+
+### Qué cambió
+- PLAN.md §5.2: se agregó el contrato de celebraciones (modal centrado, backdrop, cierre solo
+  con la cruz, cola, tres disparadores) y la definición literal de jackpot ANTES de implementar.
+- Engine (`packages/engine/src/systems/containers.js`): `isJackpot` en cada ítem de
+  `rollContainerResult` — categoría más rara del contenedor (última de `categorias`) con
+  `variance >= JACKPOT_VARIANCE_MIN` (1.10, rango 0.85-1.15). `DigResult.items[].isJackpot`
+  documentado en el `@typedef`.
+- Store (`apps/game/src/store.js`): `newContainerUnlocks` + `detectContainerUnlocks()` (compara
+  el set de `isContainerUnlocked` contra un baseline `knownUnlocked`, inicializado al estado
+  actual al cargar — recargar la página nunca re-celebra, sin bump de `saveVersion`). Llamado en
+  `startManualDig` (tras `engineBuyContainer`), `finishManualDig`, `buyAutomation`, `doPrestige` y
+  `tickAutomation`. `consumeNewContainerUnlocks()` nuevo, mismo patrón que
+  `consumeNewAchievements()`.
+- UI: `CelebrationModal.js` (nuevo) reemplaza a `CategoryUnlockModal.js` (borrado) y al toast de
+  logros. Cola FIFO (`push`/`showNext`), cierra SOLO con `[data-action="close-celebration"]`
+  (sin auto-cierre, sin click en backdrop). `UIManager.render()` encola logros y desbloqueos de
+  contenedor; `handleDigComplete()` encola jackpots del resultado manual (la automatización no
+  celebra jackpots, ver `applyContainerResult`/`isAuto`). Mount `#category-modal` renombrado a
+  `#celebration-modal` en `index.html`. Sonidos nuevos en `fx/audio.js`:
+  `playContainerFanfare` (arpegio de 3 notas) y `playJackpot` (sparkle de 4 notas), ambos
+  WebAudio puro. Ícono `close-x`/`closeX` nuevo en `icons.js`. CSS: `.celebration-card`,
+  `.celebration-close` (44px táctil), `.celebration-icon`, `.celebration-name`,
+  `.celebration-reward` en `components.css` (tokens existentes, sin hardcodear).
+- Tests nuevos: `packages/engine/tests/ronda12-jackpot.test.js` (1, RED primero) y
+  `apps/game/e2e/ronda12-regression.spec.js` (4: logro con recompensa y cierre solo con cruz +
+  cola, sin toast de logro, contenedor nuevo celebra con el dig de fondo activo, progreso intacto
+  al cerrar).
+
+### Desvíos del roadmap (resueltos antes de seguir)
+- **Test del engine, dirección de `rollCategory` invertida**: el roadmap asumía que
+  `random = () => 0.99` producía la categoría rara ("alta del weight"). En realidad
+  `rollCategory` (rng.js:39) elige la categoría rara cuando `random()*100 < pHigh`, es decir con
+  random **bajo**, no alto — un `0.99` constante siempre da la categoría común y el jackpot nunca
+  dispara. Además `freshState()` tiene `marketFluctuationAt: 0`, así que la primerísima llamada a
+  `random()` la consume `refreshMarketFluctuation`, no `rollIsTrap` (desfasa la secuencia un
+  lugar). El test quedó con un generador por posición de llamada (fluctuación → sin trampa →
+  categoría rara → variance al tope) documentado inline con `// AJUSTE (ronda 12):`.
+- **E2e pre-existentes rotos por el bloqueo de pointer events del modal**: el roadmap solo
+  anticipó adaptar specs que mencionaran `category-modal`/"Logro desbloqueado" textualmente. En
+  la práctica, CUALQUIER spec que dig ueara el tacho como primera acción (la inmensa mayoría)
+  rompió: comprar el tacho por primera vez desbloquea el Contenedor de Barrio, la celebración
+  aparece de inmediato y su overlay (`position:fixed; inset:0`) intercepta los gestos de puntero
+  sobre el canvas de escarbado debajo — un cambio de comportamiento intencional (roadmap §0), no
+  un bug. Afectó `dig-regression.spec.js` (rename de `#category-modal`), `ronda4-`, `ronda5-`,
+  `ronda9-`, `ronda10-regression.spec.js` y `smoke.spec.js`. Se agregó `cerrarCelebraciones(page)`
+  a `apps/game/e2e/helpers/dig.js` y se la llama dentro de los helpers compartidos
+  `entrarAlJuego` (celebra logros atrasados que un save sembrado ya cumplía) e `iniciarEscarbado`
+  (celebra el desbloqueo del contenedor siguiente) — los specs de mecánica no prueban el modal en
+  sí, solo lo sacan de encima. `ronda11-regression.spec.js` (tests 2 y 3) también rompía por el
+  mismo motivo: `prestigioDosSave()` siembra un estado que ya cumple varios logros no marcados
+  (`allContainersOwned`, `prestigeCountAtLeast`, etc.) y `runAchievements()` los desbloqueaba
+  todos de una al cargar la página, antes de que el test hiciera nada — el fix de
+  `entrarAlJuego` lo cubre igual, sin tocar el spec.
+- `ronda12-regression.spec.js` propio: con el RNG real (no seedeable desde la página, a
+  diferencia del engine) el primer escarbado del tacho puede sumar un jackpot encolado además de
+  los 2 logros garantizados (categoría única del tacho, ~1/6 por objeto) — el test 1 cierra
+  celebraciones en loop contando cuántas fueron logro (≥2) en vez de asumir exactamente 2. El
+  test de dinero estable espera 600ms tras completar el dig (el contador tweenea 300-500ms,
+  PLAN.md §5.2) antes de capturar el valor "estable" a comparar.
+
+### Verificación
+`npm test`: 170 verdes (169 previos + 1 nuevo). `npm run test:e2e`: 40 verdes (36 previos + 4
+nuevos). Manual con Playwright (375px y 1440px): comprar el barrio dispara "¡Contenedor nuevo!"
+centrado con backdrop, cruz de 52×44px (táctil), cierre deja el escarbado de fondo activo y
+rascable, sin overflow en ninguno de los dos anchos. Cero emojis (grep de rangos Unicode sobre
+los archivos tocados), cero `console.log`/`// TODO` nuevos. Sin bump de `saveVersion` (el
+baseline de desbloqueos se deriva del estado existente, no persiste nada nuevo).

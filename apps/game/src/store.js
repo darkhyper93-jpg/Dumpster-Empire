@@ -59,6 +59,23 @@ export function createStore(ctx) {
   let pendingDig = null;
   let offlineSummary = null;
   let newAchievements = [];
+  let newContainerUnlocks = [];
+  /** Ids desbloqueados según el estado actual (baseline para detectar novedades). */
+  const unlockedIdsNow = () =>
+    new Set(allContainers.filter((c) => isContainerUnlocked(state, c, allContainers)).map((c) => c.id));
+  let knownUnlocked = unlockedIdsNow();
+
+  // PLAN.md §5.2 (ronda 12): cualquier acción que pueda desbloquear un contenedor (comprar el
+  // anterior, comprar redDrones, prestigiar) pasa por acá; la diferencia se celebra en la UI.
+  function detectContainerUnlocks() {
+    const current = unlockedIdsNow();
+    for (const id of current) {
+      if (!knownUnlocked.has(id)) {
+        newContainerUnlocks.push(allContainers.find((c) => c.id === id));
+      }
+    }
+    knownUnlocked = current;
+  }
   const listeners = new Set();
 
   function loadState() {
@@ -124,6 +141,7 @@ export function createStore(ctx) {
       }
       const result = engineBuyContainer(state, container, data);
       if (!result.ok) return result;
+      detectContainerUnlocks(); // comprar el anterior puede desbloquear el siguiente.
       const digResult = rollContainerResult(state, container, false, itemsData, data);
       // DECISIÓN (ronda 5): el escarbado manual ya no usa getRevealThreshold — se completa al
       // destapar TODOS los objetos (ver digRevealModel.js), no por % de área. La fórmula sigue
@@ -153,6 +171,7 @@ export function createStore(ctx) {
       if (state.tutorialStep === 0) state.tutorialStep = 1;
       pendingDig = null;
       runAchievements();
+      detectContainerUnlocks();
       persist();
       notify();
       return {
@@ -183,6 +202,7 @@ export function createStore(ctx) {
       const result = engineBuyAutomation(state, automation);
       if (result.ok) {
         runAchievements();
+        detectContainerUnlocks();
         persist();
         notify();
       }
@@ -205,6 +225,7 @@ export function createStore(ctx) {
       if (result.ok) {
         pendingDig = null;
         runAchievements();
+        detectContainerUnlocks();
         persist();
         notify();
       }
@@ -266,6 +287,7 @@ export function createStore(ctx) {
       if (!hasAutoDig(state, data)) return;
       automationTick(state, dtSeconds, allContainers, itemsData, data);
       runAchievements();
+      detectContainerUnlocks();
       notify();
     },
   };
@@ -287,6 +309,11 @@ export function createStore(ctx) {
     consumeNewAchievements() {
       const list = newAchievements;
       newAchievements = [];
+      return list;
+    },
+    consumeNewContainerUnlocks() {
+      const list = newContainerUnlocks;
+      newContainerUnlocks = [];
       return list;
     },
     actions,
