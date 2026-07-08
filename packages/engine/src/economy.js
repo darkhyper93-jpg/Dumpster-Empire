@@ -411,12 +411,16 @@ export const CONTAINER_LEVEL_MAX = 10;
 
 /**
  * Nivel actual (1-10) de un contenedor. 1 si todavía no se registró ningún escarbado.
+ * Clampeado a entero en [1, CONTAINER_LEVEL_MAX]: el save es input externo (import/localStorage)
+ * y su validación garantiza "número finito" pero no rango — sin el clamp, un nivel manipulado
+ * (negativo, gigante o fraccionario) envenena getLevelValueMult/getLevelRarityShift y la UI.
  * @param {GameState} state
  * @param {string} containerId
  * @returns {number}
  */
 export function getContainerLevel(state, containerId) {
-  return state.containerLevels[containerId] || 1;
+  const raw = Math.floor(Number(state.containerLevels[containerId]) || 1);
+  return Math.min(CONTAINER_LEVEL_MAX, Math.max(1, raw));
 }
 
 /**

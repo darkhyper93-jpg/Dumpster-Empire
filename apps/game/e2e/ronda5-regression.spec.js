@@ -139,7 +139,9 @@ test.describe('Dumpster Empire — regresión ronda 5 (revelado por-objeto)', ()
     await rascarObjeto(page, box, positions[total - 1]);
     expect(await fill.evaluate((el) => el.style.width)).toBe('100%');
     await expect(page.locator('#dig-empty')).toBeVisible({ timeout: 5000 });
-    expect(await page.locator('#money').textContent()).not.toEqual(moneyBefore);
+    // Con polling: el contador tweenea ~400ms por rAF y en CI puede seguir mostrando el valor
+    // viejo en el instante de una lectura one-shot (misma causa que el flake del smoke).
+    await expect(page.locator('#money')).not.toHaveText(moneyBefore, { timeout: 5000 });
   });
 
   test('3 (trampa implícita): rascar fuera de los objetos nunca completa por área', async ({ page }) => {

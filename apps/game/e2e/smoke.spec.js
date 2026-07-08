@@ -63,7 +63,8 @@ test.describe('Dumpster Empire — smoke', () => {
     await expect(page.locator('#dig-empty')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#dig-active')).toBeHidden();
 
-    const moneyAfter = await page.locator('#money').textContent();
-    expect(moneyAfter).not.toEqual(moneyBefore);
+    // El contador de dinero es un tween de ~400ms por rAF (PLAN.md §5.2): en CI los frames
+    // pueden atrasarse, así que se asserta con polling, nunca con una lectura de un solo disparo.
+    await expect(page.locator('#money')).not.toHaveText(moneyBefore, { timeout: 5000 });
   });
 });

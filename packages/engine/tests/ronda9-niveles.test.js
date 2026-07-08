@@ -51,6 +51,16 @@ describe('Ronda 9 — multiplicador de valor por nivel (PLAN.md §11.3)', () => 
     for (const c of containers) expect(c.levelValueMultPerLevel).toBeGreaterThan(0);
   });
 
+  it('un nivel manipulado en el save (fuera de rango o no entero) queda clampeado a [1, MAX] (el save es input externo)', () => {
+    const state = freshState();
+    state.containerLevels.tachoVereda = 1e15; // save trucho: dinero infinito sin clamp
+    expect(getLevelValueMult(state, tacho)).toBeCloseTo(1.45, 10);
+    state.containerLevels.tachoVereda = -5; // multiplicador negativo: los ítems RESTARÍAN dinero
+    expect(getLevelValueMult(state, tacho)).toBe(1);
+    state.containerLevels.tachoVereda = 2.7; // "Nivel 2.7/10" en la UI sin el floor
+    expect(getLevelValueMult(state, tacho)).toBeCloseTo(1.05, 10);
+  });
+
   it('la Suerte recomendada NO cambia aunque todos los contenedores estén a nivel máximo (meta neutra de rondas 7/8 intacta)', () => {
     const advanced = freshState();
     for (const c of containers) advanced.containerLevels[c.id] = CONTAINER_LEVEL_MAX;
