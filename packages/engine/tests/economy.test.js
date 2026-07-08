@@ -52,8 +52,11 @@ describe('§4.2 costo de contenedores: precio FIJO (ronda 6, sin crecimiento por
     });
   }
 
-  it('los 8 contenedores tienen los precios fijos de PLAN.md §2.6 (tiers ×10–×15)', () => {
-    expect(containers.map((c) => c.costoInicial)).toEqual([0, 25, 300, 4000, 50000, 700000, 10000000, 150000000]);
+  it('los 12 contenedores tienen los precios fijos de PLAN.md §2.6/§2.6-ronda11 (tiers ×10–×15)', () => {
+    expect(containers.map((c) => c.costoInicial)).toEqual([
+      0, 25, 300, 4000, 50000, 700000, 10000000, 150000000,
+      5000000000, 80000000000, 1200000000000, 20000000000000,
+    ]);
   });
 });
 
@@ -123,13 +126,13 @@ describe('rediseño de stats (PLAN.md §2.3): cada stat mueve un número distint
     const highResistance = containers.reduce((max, c) => (c.resistencia > max.resistencia ? c : max));
     const low = freshState();
     const mid = freshState();
-    // AJUSTE (ronda 10): resistencia máxima subió a 8.7 (containerExtradimensional); el nivel
-    // necesita superar el piso de ritmo 0.3 contra ella (mult > 0.3×8.7 = 2.61), cosa que el
-    // nivel 10 viejo (mult 1.4, pensado para la resistencia vieja de 4.0) ya no logra.
-    mid.upgradeLevels.digPower = 50;
+    // AJUSTE (ronda 11): resistencia máxima subió a 29 (vertederoDivino); el nivel necesita
+    // superar el piso de ritmo 0.3 contra ella (mult > 0.3×29 = 8.7), cosa que el nivel 50 viejo
+    // (mult 3, pensado para la resistencia vieja de 8.7) ya no logra.
+    mid.upgradeLevels.digPower = 220;
     const high = freshState();
-    // Necesita superar 1.5×8.7 = 13.05 de mult (antes 40 alcanzaba con la resistencia vieja de 4.0).
-    high.upgradeLevels.digPower = 320;
+    // Necesita superar 1.5×29 = 43.5 de mult (antes 320 alcanzaba con la resistencia vieja de 8.7).
+    high.upgradeLevels.digPower = 1200;
     const rateLow = getDigRate(low, highResistance, data);
     const rateMid = getDigRate(mid, highResistance, data);
     const rateHigh = getDigRate(high, highResistance, data);

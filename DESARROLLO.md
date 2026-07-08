@@ -533,6 +533,26 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   `containerExtradimensional` ahora recomienda 290, y el e2e de ronda 7 filtraba
   `.shop-card-luck` sin distinguir Suerte de las líneas nuevas de Fuerza/Búsqueda (mismo
   selector, texto distinto).
+- **Ronda 11 — contenedores de prestigio**: 4 contenedores nuevos al final de `containers.json`
+  (12 en total) — Convoy Fantasma, Cripta del Coleccionista, Estación Orbital Caída y Vertedero
+  de los Dioses — gateados por `requiresPrestigeCount` 2/3/4/5 además del contenedor anterior
+  comprado (`isContainerUnlocked` mira índice + prestigio). Cada uno con pool propio de 7 ítems
+  (28 nuevos en `items.json`) y 3 shapes de ícono nuevas (`crypt`/`satellite`/`temple`, más
+  `convoy-ghost` reusando `truck`). Suerte recomendada calibrada a 340/420/500/580 con
+  `agentes/scripts/calibrate-luck-ronda11.mjs` (mismo método de bisección que ronda 10, con dos
+  ajustes: el rango de búsqueda del factor de escala sube de 100 a 1e8 porque los costoInicial
+  de estos tiers son 3-5 órdenes de magnitud más grandes, y el redondeo de `valorBase` pasa de 3
+  a 4 cifras significativas porque a esa escala 3 cifras eran una grilla demasiado gruesa para
+  clavar el target exacto). `ShopView` distingue "Se desbloquea con el Prestigio N" de "Comprá el
+  contenedor anterior" en la tarjeta bloqueada; el picker de Escarbar y el Índice no necesitaron
+  cambios (ya iteran `allContainers` genéricamente). De paso se ajustaron guards pre-existentes
+  que no habían anticipado más de 8 contenedores: dos tests de ronda 9/10 que mapeaban
+  `getRecommendedLuck` sobre `containers` completo ahora usan `containers.slice(0, 8)` (siguen
+  guardando solo la tabla de ronda 10), el guard de precios fijos de `economy.test.js` pasó de 8
+  a 12 contenedores, el de `getDigRate` con Fuerza "sobrada" subió sus niveles hardcodeados (220
+  y 1200) para seguir superando la nueva resistencia máxima (29, antes 8.7), y el tope de
+  "probabilidad de trampa nunca supera X%" de `fase9-balance.test.js` subió de 35% a 40%
+  (vertederoDivino, el de mayor riesgo, usa 38% a propósito).
 
 ---
 
