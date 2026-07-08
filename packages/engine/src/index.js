@@ -31,6 +31,7 @@ export {
   getContainerLevel,
   digsNeededForNextLevel,
   getLevelRarityShift,
+  getLevelValueMult,
   getDigRate,
   getEffectiveDigTime,
   getTrapPenalty,

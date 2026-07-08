@@ -6,7 +6,7 @@
  * procesa el robot — antes era solo una lista de tarjetas sin contexto.
  */
 
-import { formatMoney, formatNumber, getQueueMax, getParallelAutoSlots, nextUpgradeCost } from '@dumpster/engine';
+import { formatMoney, formatNumber, getQueueMax, getParallelAutoSlots, nextUpgradeCost, hasAutoDig } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 
 export const AutomationView = {
@@ -41,6 +41,8 @@ export const AutomationView = {
 
     const queueMax = getQueueMax(state, data);
     const parallelSlots = getParallelAutoSlots(state, data);
+    // Parte C (ronda 9): el panel de estado depende de si el jugador ya tiene auto-escarbado.
+    const autoDigActive = hasAutoDig(state, data);
     const capacityUpgrade = data.upgrades.find((u) => u.id === 'capacity');
     const capacityCost = capacityUpgrade ? nextUpgradeCost(state, capacityUpgrade) : 0;
     const capacityCanAfford = state.money >= capacityCost;
@@ -76,20 +78,25 @@ export const AutomationView = {
 
     container.innerHTML =
       `<section class="automation-explainer">` +
-      `<p>Cada máquina que comprás abajo hace un trabajo fijo: junta contenedores solo, sin que` +
-      ` los tengas que escarbar a mano. Al comprar una automatización nueva, se van sumando` +
-      ` contenedores a la <strong>cola</strong> de forma automática; el <strong>robot</strong>` +
-      ` toma contenedores de esa cola y los procesa uno por uno (o varios a la vez, según cuántos` +
-      ` "slots simultáneos" tengas), hasta agotarla. Ampliá la cola con la mejora de Capacidad de` +
-      ` abajo si se te llena seguido.</p>` +
+      `<p>Acá no se encola nada a mano: el <strong>Robot Clasificador Básico</strong> es el que` +
+      ` trabaja. Cuando lo tenés, él solo <strong>compra contenedores con tu dinero</strong>` +
+      ` (siempre el más caro que tengas desbloqueado y te alcance), los suma a la` +
+      ` <strong>cola</strong> y los procesa — a cambio, con más riesgo de trampa que escarbar a` +
+      ` mano. Las demás máquinas lo potencian: Carrito y Cinta Transportadora agrandan la cola` +
+      ` (igual que la mejora de Capacidad de abajo) y la Red de Drones suma un segundo robot en` +
+      ` paralelo.</p>` +
       `<p class="automation-explainer-hint">Los botones grises no son un error: significan que` +
       ` todavía no te alcanza el dinero. El texto al pasar el mouse (o mantener tocado) te dice` +
       ` cuánto te falta.</p>` +
       `</section>` +
       `<section class="automation-status">` +
-      `<p>Cola: ${state.autoQueue.length} / ${formatNumber(queueMax)}</p>` +
-      `<p>Slots simultáneos: ${parallelSlots}</p>` +
-      `<p>Procesando: ${processingItems ? `<ul>${processingItems}</ul>` : 'Nada en curso.'}</p>` +
+      (autoDigActive
+        ? `<p>Cola: ${state.autoQueue.length} / ${formatNumber(queueMax)}</p>` +
+          `<p>Slots simultáneos: ${parallelSlots}</p>` +
+          `<p>Procesando: ${processingItems ? `<ul>${processingItems}</ul>` : 'Nada en curso.'}</p>`
+        : `<p class="automation-callout">La cola está <strong>inactiva</strong>: comprá el` +
+          ` <strong>Robot Clasificador Básico</strong> (abajo) y se va a llenar y procesar sola` +
+          ` con tu dinero. No hay nada que encolar a mano.</p>`) +
       (capacityUpgrade
         ? `<button type="button" data-action="buy-capacity" ${capacityCanAfford ? '' : 'disabled'} title="${capacityReason}">` +
           `Ampliar Capacidad (nivel ${Number(state.upgradeLevels.capacity) || 0}) por ${formatMoney(capacityCost)}</button>`

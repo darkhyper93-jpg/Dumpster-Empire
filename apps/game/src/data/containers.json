@@ -12,7 +12,8 @@
     "trapPenaltyMult": 0.3,
     "levelUpDigsBase": 5,
     "levelUpDigsGrowth": 1.35,
-    "levelRarityShiftPerLevel": 2.5
+    "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05
   },
   {
     "id": "contenedorBarrio",
@@ -27,7 +28,8 @@
     "trapPenaltyMult": 0.4,
     "levelUpDigsBase": 5,
     "levelUpDigsGrowth": 1.35,
-    "levelRarityShiftPerLevel": 2.5
+    "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05
   },
   {
     "id": "containerIndustrial",
@@ -42,7 +44,8 @@
     "trapPenaltyMult": 0.55,
     "levelUpDigsBase": 6,
     "levelUpDigsGrowth": 1.35,
-    "levelRarityShiftPerLevel": 2.5
+    "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05
   },
   {
     "id": "depositoAbandonado",
@@ -57,7 +60,8 @@
     "trapPenaltyMult": 0.65,
     "levelUpDigsBase": 6,
     "levelUpDigsGrowth": 1.35,
-    "levelRarityShiftPerLevel": 2.5
+    "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05
   },
   {
     "id": "mudanzaMansion",
@@ -72,7 +76,8 @@
     "trapPenaltyMult": 0.8,
     "levelUpDigsBase": 7,
     "levelUpDigsGrowth": 1.35,
-    "levelRarityShiftPerLevel": 2.5
+    "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05
   },
   {
     "id": "galeriaLiquidacion",
@@ -87,7 +92,8 @@
     "trapPenaltyMult": 0.9,
     "levelUpDigsBase": 7,
     "levelUpDigsGrowth": 1.35,
-    "levelRarityShiftPerLevel": 2.5
+    "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05
   },
   {
     "id": "bovedaPerdida",
@@ -102,7 +108,8 @@
     "trapPenaltyMult": 1.0,
     "levelUpDigsBase": 8,
     "levelUpDigsGrowth": 1.35,
-    "levelRarityShiftPerLevel": 2.5
+    "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05
   },
   {
     "id": "containerExtradimensional",
@@ -118,6 +125,7 @@
     "levelUpDigsBase": 8,
     "levelUpDigsGrowth": 1.35,
     "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05,
     "requiresPrestigeCount": 1,
     "requiresAutomationId": "redDrones"
   }

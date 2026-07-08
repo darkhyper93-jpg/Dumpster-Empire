@@ -14,6 +14,10 @@ import {
   getEffectiveTrapProbability,
   getLuck,
   getRecommendedLuck,
+  getContainerLevel,
+  getLevelValueMult,
+  digsNeededForNextLevel,
+  CONTAINER_LEVEL_MAX,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 
@@ -51,6 +55,14 @@ export const ShopView = {
       const recommendedLuck = getRecommendedLuck(state, c, itemsData, data);
       const currentLuck = getLuck(state, data);
       const luckReached = currentLuck >= recommendedLuck;
+      // PLAN.md §11.3: nivel del contenedor y su bonus — leídos del engine, nunca recalculados.
+      const level = getContainerLevel(state, c.id);
+      const levelBonusPct = Math.round((getLevelValueMult(state, c) - 1) * 100);
+      const levelProgress =
+        level >= CONTAINER_LEVEL_MAX
+          ? 'nivel máximo'
+          : `${formatNumber(Number(state.containerLevelProgress[c.id]) || 0)}/` +
+            `${formatNumber(digsNeededForNextLevel(c, level))} escarbados para el nivel ${level + 1}`;
       return (
         `<article class="shop-card">` +
         `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
@@ -59,6 +71,7 @@ export const ShopView = {
         `<p>Categorías: ${c.categorias.map((id) => rarityNames.get(id) || id).join(', ')}</p>` +
         `<p>Riesgo de trampa: ${Math.round(trapProb * 100)}%</p>` +
         `<p>Comprados: ${Number(state.ownedContainers[c.id]) || 0}</p>` +
+        `<p class="shop-card-level">Nivel ${level}/${CONTAINER_LEVEL_MAX} (+${levelBonusPct}% valor) — ${levelProgress}</p>` +
         `<p class="shop-card-luck ${luckReached ? 'shop-card-luck--reached' : ''}">` +
         `Suerte recomendada: ${formatNumber(recommendedLuck)} ${luckReached ? '(alcanzada)' : `(tenés ${formatNumber(currentLuck)})`}` +
         `</p>` +

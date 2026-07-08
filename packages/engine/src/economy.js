@@ -443,6 +443,21 @@ export function getLevelRarityShift(state, container) {
 }
 
 /**
+ * Multiplicador de valor por nivel del contenedor (PLAN.md §11.3, ronda 9).
+ * multNivel = 1 + (nivel − 1) × levelValueMultPerLevel
+ * Aplica al valor de venta de los ítems de ESTE contenedor (roll real, automatización y
+ * offline). No entra en getRecommendedLuck en la práctica: esa meta se evalúa contra un
+ * jugador neutro (nivel 1 ⇒ mult 1), a propósito (§11.2).
+ * @param {GameState} state
+ * @param {Object} container
+ * @returns {number}
+ */
+export function getLevelValueMult(state, container) {
+  const level = getContainerLevel(state, container.id);
+  return 1 + (level - 1) * (container.levelValueMultPerLevel || 0);
+}
+
+/**
  * Registra un escarbado (trampa o no) contra el progreso de nivel de un contenedor, y sube de
  * nivel si corresponde. Se llama una vez por resolución de contenedor (ver systems/containers.js).
  * @param {GameState} state
@@ -532,14 +547,16 @@ function averageItemValueForContainer(state, container, categoria, itemsData, da
   const rarity = itemsData.rarities.find((r) => r.id === categoria);
   const pool = itemsData.containers[container.id].filter((item) => item.categoria === categoria);
   const avgBase = pool.reduce((sum, item) => sum + item.valorBase, 0) / pool.length;
-  return itemSaleValue({
-    valorBaseObjeto: avgBase,
-    multiplicadorRareza: rarity.mult,
-    suerte: luck,
-    fluctuacionMercado: 1,
-    sellMult: getSellMult(state, categoria, data),
-    depthValueMult,
-  });
+  return (
+    itemSaleValue({
+      valorBaseObjeto: avgBase,
+      multiplicadorRareza: rarity.mult,
+      suerte: luck,
+      fluctuacionMercado: 1,
+      sellMult: getSellMult(state, categoria, data),
+      depthValueMult,
+    }) * getLevelValueMult(state, container)
+  );
 }
 
 function expectedNetValueAtLuck(state, container, itemsData, data, luck) {

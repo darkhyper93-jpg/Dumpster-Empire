@@ -2245,3 +2245,41 @@ datos (CLAUDE.md: constantes de datos, nunca fórmulas).
 ### Verificación
 `npm test`: 139 verdes (1 nuevo) · `npm run test:e2e`: 25 verdes (sin cambios de specs) ·
 manual en `npm run dev`: recomendadas nuevas visibles en Tienda, tacho intacto.
+
+---
+
+## Ronda 9 — multiplicador de valor por nivel + nivel visible (rama `feat/niveles-ronda9`)
+
+Pedido: "meterle niveles a los contenedores... multiplicador al dinero... visible, no OP pero
+útil". Los niveles YA existían (§11.3, engine completo, save persistente) pero eran invisibles
+y solo corrían rarezas.
+
+### Qué cambió
+- PLAN.md §11.3: se agregó el contrato del multiplicador ANTES de implementar (CLAUDE.md).
+- `containers.json`: `levelValueMultPerLevel: 0.05` en los 8 contenedores (constante de datos).
+- Engine: `getLevelValueMult(state, container)` en `economy.js` (exportado en `index.js`),
+  aplicado en `rollContainerResult`, `offline.js averageItemValue` y
+  `averageItemValueForContainer` (este último con jugador neutro es ×1 ⇒ la Suerte recomendada
+  de ronda 8 no se mueve; test guard intacto + test nuevo que lo fija a nivel máximo).
+- UI: ShopView (Nivel X/10, +Y% valor, n/m escarbados), DigContainerPicker (badge "Nv. X"),
+  store.finishManualDig devuelve `levelUp` y UIManager muestra toast. Los level-ups de la
+  automatización no notifican (decisión anti-spam).
+- AutomationView (fix de UX reportado jugando): el explainer decía que "al comprar una
+  automatización nueva se van sumando contenedores a la cola" (solo el Robot Clasificador
+  habilita eso) y mostraba "Cola: 0/2 · Nada en curso" sin robot, como si estuviera rota.
+  Ahora el texto nombra al Robot y lo que hace (compra el contenedor más caro afordable con
+  tu dinero y lo procesa; +riesgo de trampa; Carrito/Cinta/Capacidad agrandan la cola; Drones
+  = segundo robot), y el panel de estado sin robot muestra un callout destacado
+  (`.automation-callout`) con el paso a seguir en vez de la cola muerta.
+- Tests: `ronda9-niveles.test.js` (5, RED primero; el del roll usa el tacho porque tiene una
+  sola categoría y el corrimiento de rareza no contamina el ratio) y
+  `ronda9-regression.spec.js` (5 e2e: tarjeta, badge, toast, callout sin robot, cola con robot;
+  el de la cola asserta `Cola: N / max` por regex porque con el tacho gratis el robot encola
+  solo apenas corre el tick).
+
+### Verificación
+`npm test`: 144 verdes · `npm run test:e2e`: 30 verdes · manejado el juego real con Playwright
+(375px y 1280x800): tarjeta "Nivel 7/10 (+30% valor) — 3/31 escarbados", badge Nv. 7, level-up
+1→2 escarbando de verdad con toast "+5% de valor", compra real del Robot ($3.000 seed) activa
+la cola y borra el callout, cero errores de consola, sin overflow en 375px. Sin bump de
+saveVersion (containerLevels/Progress ya persistían).
