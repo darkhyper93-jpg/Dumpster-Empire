@@ -74,7 +74,9 @@ test.describe('Dumpster Empire — regresión ronda 9 (niveles visibles y automa
     const positions = await getDigPositions(page);
     for (const pos of positions) await rascarObjeto(page, box, pos);
     await expect(page.locator('#dig-empty')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('.toast')).toContainText('subió a nivel 2');
+    // Filtrado: el primer escarbado también dispara toasts de logros (hasta 3 a la vez), y un
+    // locator sin filtrar viola el strict mode de Playwright.
+    await expect(page.locator('.toast').filter({ hasText: 'subió a nivel 2' })).toBeVisible();
   });
 
   test('4: automatización SIN robot muestra el callout de cola inactiva, no una cola muerta', async ({ page }) => {
