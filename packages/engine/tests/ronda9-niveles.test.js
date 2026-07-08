@@ -61,10 +61,10 @@ describe('Ronda 9 — multiplicador de valor por nivel (PLAN.md §11.3)', () => 
     expect(getLevelValueMult(state, tacho)).toBeCloseTo(1.05, 10);
   });
 
-  it('la Suerte recomendada NO cambia aunque todos los contenedores estén a nivel máximo (meta neutra de rondas 7/8 intacta)', () => {
+  it('la Suerte recomendada NO cambia aunque todos los contenedores estén a nivel máximo (meta neutra de rondas 7/8/10 intacta)', () => {
     const advanced = freshState();
     for (const c of containers) advanced.containerLevels[c.id] = CONTAINER_LEVEL_MAX;
     const rec = containers.map((c) => getRecommendedLuck(advanced, c, items, data));
-    expect(rec).toEqual([0, 6, 16, 32, 56, 86, 126, 176]);
+    expect(rec).toEqual([0, 8, 20, 40, 72, 120, 190, 290]);
   });
 });

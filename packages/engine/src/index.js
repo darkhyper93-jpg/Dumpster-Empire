@@ -36,6 +36,8 @@ export {
   getEffectiveDigTime,
   getTrapPenalty,
   getRecommendedLuck,
+  getRecommendedDigPower,
+  getRecommendedArea,
 } from './economy.js';
 
 export { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluctuation, categoryWeights } from './rng.js';

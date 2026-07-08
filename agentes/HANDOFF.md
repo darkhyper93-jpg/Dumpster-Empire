@@ -2283,3 +2283,50 @@ y solo corrían rarezas.
 1→2 escarbando de verdad con toast "+5% de valor", compra real del Robot ($3.000 seed) activa
 la cola y borra el callout, cero errores de consola, sin overflow en 375px. Sin bump de
 saveVersion (containerLevels/Progress ya persistían).
+
+## Ronda 10 — dificultad exponencial (rama `fix/dificultad-ronda10`)
+
+### Qué cambió
+- PLAN.md §11.2: se agregó el contrato de Fuerza/Búsqueda recomendadas y el crecimiento
+  exponencial de las tres metas (~×1.35 Fuerza/Búsqueda, ~×1.6 Suerte) ANTES de implementar.
+- `containers.json`: `resistencia` sube en los 8 contenedores (1.0/1.35/1.85/2.5/3.4/4.7/6.4/8.7,
+  antes 1.0/1.15/1.4/1.8/2.2/2.7/3.3/4.0) y se agrega `areaRecomendada` (nueva clave, misma
+  progresión, ligeramente por debajo de resistencia: 1/1.35/1.8/2.45/3.3/4.5/6.1/8.2).
+- Engine (`economy.js`, exportadas en `index.js`): `getRecommendedDigPower(state, container)`
+  devuelve `container.resistencia`; `getRecommendedArea(state, container)` devuelve
+  `container.areaRecomendada`. El tope de iteración de `getRecommendedLuck` sube de 500 a 800
+  (cubre las metas de ronda 11, hasta 580).
+- Suerte recomendada recalibrada de **0/6/16/32/56/86/126/176** a **0/8/20/40/72/120/190/290**
+  con `agentes/scripts/calibrate-luck-ronda10.mjs` (copia de la de ronda 8, mismo método de
+  bisección contra el engine como oráculo, solo cambian los `TARGETS`); escribe a scratchpad,
+  nunca directo a `apps/game/src/data`. Guards actualizados: `fase9-balance.test.js` (rebautizado
+  "Ronda 10") y `ronda9-niveles.test.js` ("la Suerte recomendada NO cambia...").
+- UI (`ShopView.js`): la tarjeta de cada contenedor desbloqueado ahora muestra "Fuerza
+  recomendada" y "Búsqueda recomendada" (mismo patrón visual que "Suerte recomendada", clase
+  `.shop-card-luck` reusada, sin CSS nuevo), leídas 100% del engine
+  (`getRecommendedDigPower`/`getRecommendedArea` vs. `getDigPowerMult`/`getAreaMult`).
+- Tests nuevos: `packages/engine/tests/ronda10-dificultad.test.js` (3, RED primero) y
+  `apps/game/e2e/ronda10-regression.spec.js` (3: metas de Fuerza/Búsqueda visibles, metas de
+  Suerte nuevas visibles, el hint "Ritmo de escarbado:" solo aparece en contenedores donde la
+  Fuerza base no alcanza).
+
+### Desvíos del roadmap (reportados y resueltos con el usuario antes de seguir)
+El roadmap solo anticipaba 2 tests viejos rotos por el RED de 10.4 (los guards de Suerte). En
+la práctica rompieron 3 más, todos por la MISMA causa raíz (resistencia mucho más alta) que el
+roadmap no había proyectado al escribir esos números:
+- `economy.test.js` y `fase6-mecanicas.test.js`: dos tests de `getDigRate` hardcodeaban un nivel
+  de Fuerza "sobrado" (40 y 200) pensado para alcanzar el tope de ritmo 1.5 contra la
+  resistencia VIEJA. Con la resistencia nueva ya no alcanzaba. Se subieron los niveles
+  hardcodeados (320 y 220 respectivamente, con comentario `AJUSTE (ronda 10)`) preservando la
+  intención original del test.
+- `fase9-balance.test.js` (guard de ronda 6): el tope "alcanzable (< 200)" quedó chico porque
+  `containerExtradimensional` ahora recomienda 290 a propósito. Subido a 350.
+- `ronda7-regression.spec.js`: el test de "Suerte no colapsa a 0" parseaba TODOS los
+  `.shop-card-luck` con una regex de Suerte; con las líneas nuevas de Fuerza/Búsqueda (mismo
+  selector) el array se llenaba de `NaN`. Se agregó `.filter({ hasText: 'Suerte recomendada' })`.
+
+### Verificación
+`npm test`: 148 verdes (145 previos + 3 nuevos, contando los 5 ajustados). `npm run test:e2e`:
+33 verdes (30 previos + 3 nuevos). Manual con Playwright (375px y 1440px): las 3 metas se ven
+sin desbordar, "(alcanzada)" cambia de color como Suerte, sin overflow horizontal. Sin bump de
+saveVersion (ninguna clave nueva persistente).

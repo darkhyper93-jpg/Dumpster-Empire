@@ -123,9 +123,13 @@ describe('rediseño de stats (PLAN.md §2.3): cada stat mueve un número distint
     const highResistance = containers.reduce((max, c) => (c.resistencia > max.resistencia ? c : max));
     const low = freshState();
     const mid = freshState();
-    mid.upgradeLevels.digPower = 10;
+    // AJUSTE (ronda 10): resistencia máxima subió a 8.7 (containerExtradimensional); el nivel
+    // necesita superar el piso de ritmo 0.3 contra ella (mult > 0.3×8.7 = 2.61), cosa que el
+    // nivel 10 viejo (mult 1.4, pensado para la resistencia vieja de 4.0) ya no logra.
+    mid.upgradeLevels.digPower = 50;
     const high = freshState();
-    high.upgradeLevels.digPower = 40;
+    // Necesita superar 1.5×8.7 = 13.05 de mult (antes 40 alcanzaba con la resistencia vieja de 4.0).
+    high.upgradeLevels.digPower = 320;
     const rateLow = getDigRate(low, highResistance, data);
     const rateMid = getDigRate(mid, highResistance, data);
     const rateHigh = getDigRate(high, highResistance, data);
