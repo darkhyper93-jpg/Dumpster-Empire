@@ -14,6 +14,10 @@ import {
   getEffectiveTrapProbability,
   getLuck,
   getRecommendedLuck,
+  getRecommendedDigPower,
+  getRecommendedArea,
+  getDigPowerMult,
+  getAreaMult,
   getContainerLevel,
   getLevelValueMult,
   digsNeededForNextLevel,
@@ -55,6 +59,13 @@ export const ShopView = {
       const recommendedLuck = getRecommendedLuck(state, c, itemsData, data);
       const currentLuck = getLuck(state, data);
       const luckReached = currentLuck >= recommendedLuck;
+      // PLAN.md §11.2 (ronda 10): metas de Fuerza y Búsqueda — leídas del engine.
+      const recDigPower = getRecommendedDigPower(state, c);
+      const curDigPower = getDigPowerMult(state, data);
+      const digPowerReached = curDigPower >= recDigPower;
+      const recArea = getRecommendedArea(state, c);
+      const curArea = getAreaMult(state, data);
+      const areaReached = curArea >= recArea;
       // PLAN.md §11.3: nivel del contenedor y su bonus — leídos del engine, nunca recalculados.
       const level = getContainerLevel(state, c.id);
       const levelBonusPct = Math.round((getLevelValueMult(state, c) - 1) * 100);
@@ -74,6 +85,12 @@ export const ShopView = {
         `<p class="shop-card-level">Nivel ${level}/${CONTAINER_LEVEL_MAX} (+${levelBonusPct}% valor) — ${levelProgress}</p>` +
         `<p class="shop-card-luck ${luckReached ? 'shop-card-luck--reached' : ''}">` +
         `Suerte recomendada: ${formatNumber(recommendedLuck)} ${luckReached ? '(alcanzada)' : `(tenés ${formatNumber(currentLuck)})`}` +
+        `</p>` +
+        `<p class="shop-card-luck ${digPowerReached ? 'shop-card-luck--reached' : ''}">` +
+        `Fuerza recomendada: ×${recDigPower} ${digPowerReached ? '(alcanzada)' : `(tenés ×${curDigPower.toFixed(2)})`}` +
+        `</p>` +
+        `<p class="shop-card-luck ${areaReached ? 'shop-card-luck--reached' : ''}">` +
+        `Búsqueda recomendada: ×${recArea} ${areaReached ? '(alcanzada)' : `(tenés ×${curArea.toFixed(2)})`}` +
         `</p>` +
         `</article>`
       );

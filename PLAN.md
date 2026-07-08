@@ -520,6 +520,13 @@ Trabajá de forma continua hasta entregar el proyecto completo y auditado contra
 - **Trampas más caras (extiende §4.6):** el castigo de trampa debe **sacar más plata** y escalar con
   el tier del contenedor, para que el riesgo importe de verdad. El monto es fijo por tier; la
   Suerte solo reduce la probabilidad (ver §4.6, ronda 7).
+- Además de la Suerte, cada contenedor tiene **Fuerza recomendada** y **Búsqueda recomendada**
+  (ronda 10): la Fuerza recomendada es su `resistencia` (con ella el ritmo de escarbado llega a
+  1.0) y la Búsqueda recomendada es la constante de datos `areaRecomendada` (con ella el pincel
+  compensa el tamaño del contenedor). Son metas VISIBLES que penalizan pero no bloquean: por
+  debajo, el gesto es lento y chico (piso de ritmo 0.3) y la excavación rinde menos.
+- Las tres metas crecen **exponencialmente** por tier (~×1.35 Fuerza/Búsqueda, ~×1.6 Suerte):
+  la progresión exige invertir en las tres stats, no solo en Suerte.
 
 ### 11.3 Niveles de contenedor (NUEVO — extiende §2.6)
 

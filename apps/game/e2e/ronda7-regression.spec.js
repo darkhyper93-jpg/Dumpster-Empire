@@ -49,7 +49,12 @@ test.describe('Dumpster Empire — regresión ronda 7 (riesgo y gesto en partida
 
   test('la Suerte recomendada NO colapsa a 0 con partida avanzada (meta fija por contenedor)', async ({ page }) => {
     await page.locator('[data-tab="tienda"]').click();
-    const luckLines = await page.locator('.shop-card-luck').allTextContents();
+    // AJUSTE (ronda 10): .shop-card-luck ahora también contiene las líneas de Fuerza/Búsqueda
+    // recomendadas (10.7) — se filtra por texto para quedarse solo con las líneas de Suerte.
+    const luckLines = await page
+      .locator('.shop-card-luck')
+      .filter({ hasText: 'Suerte recomendada' })
+      .allTextContents();
     // Los contenedores pagos desbloqueados (barrio/industrial/depósito) muestran su meta > 0.
     const values = luckLines.map((t) => Number((t.match(/Suerte recomendada:\s*(\d+)/) || [])[1]));
     expect(values.length).toBeGreaterThanOrEqual(4);

@@ -598,10 +598,33 @@ function expectedNetValueAtLuck(state, container, itemsData, data, luck) {
  * @returns {number}
  */
 export function getRecommendedLuck(state, container, itemsData, data) {
-  const MAX_LUCK_SEARCH = 500;
+  // AJUSTE (ronda 10/11): tope de búsqueda 800 — las metas de los contenedores de prestigio superan 500.
+  const MAX_LUCK_SEARCH = 800;
   const neutral = freshState();
   for (let luck = 0; luck <= MAX_LUCK_SEARCH; luck++) {
     if (expectedNetValueAtLuck(neutral, container, itemsData, data, luck) >= 0) return luck;
   }
   return MAX_LUCK_SEARCH;
+}
+
+/**
+ * Fuerza de Escarbado recomendada para un contenedor (PLAN.md §11.2, ronda 10): su
+ * resistencia — con ella getDigRate llega a ritmo 1.0. Meta visible; no bloquea.
+ * @param {GameState} state
+ * @param {Object} container
+ * @returns {number}
+ */
+export function getRecommendedDigPower(state, container) {
+  return container.resistencia;
+}
+
+/**
+ * Tamaño de Búsqueda recomendado (PLAN.md §11.2, ronda 10): constante de datos
+ * `areaRecomendada` del contenedor. Meta visible; no bloquea.
+ * @param {GameState} state
+ * @param {Object} container
+ * @returns {number}
+ */
+export function getRecommendedArea(state, container) {
+  return container.areaRecomendada || 1;
 }

@@ -521,6 +521,18 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   Automatización: el explainer nombraba mal la mecánica (nada se encola a mano; el Robot
   Clasificador compra y procesa solo) y el panel de estado ahora es consciente del estado —
   sin robot muestra un callout con el paso a seguir en vez de una cola muerta "0/2".
+- **Ronda 10 — dificultad exponencial**: resistencia y `areaRecomendada` exponenciales (~×1.35),
+  metas de Suerte recalibradas a 0/8/20/40/72/120/190/290 con el oráculo de ronda 8
+  (`agentes/scripts/calibrate-luck-ronda10.mjs`), y Fuerza/Búsqueda recomendadas visibles en la
+  Tienda (`getRecommendedDigPower`/`getRecommendedArea`, ambas del engine). Penalizan, no
+  bloquean. El tope de búsqueda de `getRecommendedLuck` sube de 500 a 800 (metas de ronda 11).
+  De paso se ajustaron 3 tests pre-existentes que el roadmap no había previsto que rompieran:
+  dos guards de `economy.test.js`/`fase6-mecanicas.test.js` hardcodeaban niveles de Fuerza
+  pensados para la resistencia vieja (ya no alcanzaban el tope de ritmo 1.5 con la nueva), el
+  tope "alcanzable (< 200)" de `fase9-balance.test.js` (ronda 6) subió a 350 porque
+  `containerExtradimensional` ahora recomienda 290, y el e2e de ronda 7 filtraba
+  `.shop-card-luck` sin distinguir Suerte de las líneas nuevas de Fuerza/Búsqueda (mismo
+  selector, texto distinto).
 
 ---
 
