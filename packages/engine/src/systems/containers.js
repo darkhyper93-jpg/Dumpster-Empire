@@ -18,10 +18,14 @@ import {
 } from '../economy.js';
 import { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluctuation } from '../rng.js';
 
+// PLAN.md §5.2 (ronda 12): un ítem es "jackpot" si es de la categoría más rara del contenedor
+// y su varianza cayó en el tope del rango 0.85-1.15 de rollItemVariance (~1/6 de las veces).
+const JACKPOT_VARIANCE_MIN = 1.10;
+
 /**
  * @typedef {Object} DigResult
  * @property {boolean} isTrap
- * @property {Array<{ icon: string, name: string, categoria: string, value: number }>} items
+ * @property {Array<{ icon: string, name: string, categoria: string, value: number, isJackpot: boolean }>} items
  * @property {number} moneyDelta
  */
 
@@ -105,7 +109,10 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
         sellMult: getSellMult(state, categoria, data),
         depthValueMult,
       }) * levelValueMult;
-    items.push({ icon: pick.icon, name: pick.name, categoria, value });
+    const isJackpot =
+      categoria === container.categorias[container.categorias.length - 1] &&
+      variance >= JACKPOT_VARIANCE_MIN;
+    items.push({ icon: pick.icon, name: pick.name, categoria, value, isJackpot });
   }
   const moneyDelta = items.reduce((sum, item) => sum + item.value, 0);
   return { isTrap: false, items, moneyDelta };
