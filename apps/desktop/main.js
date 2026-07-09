@@ -55,6 +55,9 @@ function createWindow() {
     minHeight: 640,
     backgroundColor: '#191208',
     autoHideMenuBar: true,
+    // Ícono de ventana/barra de tareas en dev (Win/Linux); el ejecutable empaquetado usa el
+    // ícono que electron-builder genera desde build/icon.png (buildResources).
+    icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,

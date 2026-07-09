@@ -4,6 +4,8 @@ node_modules/
 
 dist/
 build/
+# buildResources de electron-builder (ícono de la app): es fuente, no output de build.
+!apps/desktop/build/
 out/
 release/
 dist-electron/

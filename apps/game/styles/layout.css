@@ -89,9 +89,16 @@ body {
   justify-content: center;
   gap: var(--space-4);
   position: relative;
-  padding: var(--space-4);
+  /* Ronda 13: el arte de fondo se recorta al alto/ancho de la pantalla y el botón "Jugar" se
+     posiciona en unidades de contenedor (cqw/cqh) para calcar el encuadre de object-fit:cover.
+     OJO: cqw/cqh miden el content box y el <img> absoluto cubre el padding box — el padding
+     debe ser 0 acá o el factor de escala queda corto y el botón pintado asoma por debajo del
+     real (visto en la verificación). El respaldo se centra por flex + gap, no necesita padding. */
+  padding: 0;
   background-color: var(--wood-surface);
   background-image: var(--wood-grain);
+  overflow: hidden;
+  container-type: size;
 }
 
 .title-screen[hidden] {
@@ -106,13 +113,36 @@ body {
   display: none !important;
 }
 
+/* Arte de la pantalla de inicio (assets/title-bg.jpg). Estados en data-bg de #title-screen
+   (los setea TitleScreen.js): mientras carga (o si falla) el respaldo es la pantalla previa
+   — madera + logo SVG + botón centrado por flex — así nunca hay pantalla en blanco. */
+.title-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+#title-screen[data-bg='ready'] .title-bg {
+  opacity: 1;
+}
+
 .title-logo {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
   color: var(--amber);
+  position: relative; /* por encima del arte absoluto mientras es respaldo visible */
 }
+
+/* Con el arte listo, el emblema DUMPSTER EMPIRE ya está pintado en el fondo: TitleScreen.js
+   le pone `.sr-only` (components.css) al logo de respaldo — fuera de la vista pero el <h1>
+   sigue para lectores de pantalla. */
 
 .title-logo-text {
   font-family: var(--font-display);
@@ -123,6 +153,35 @@ body {
 .title-play-btn {
   font-size: 1.2rem;
   padding: var(--space-3) var(--space-5);
+  position: relative; /* por encima del arte absoluto en modo respaldo */
+}
+
+/* Botón real calcado sobre el botón pintado en el arte, para que nunca se vean dos botones.
+   Números medidos por escaneo de píxeles sobre el arte original de 1614x975 (fpisp.png): rect
+   del botón pintado x 681-922 / y 589-684 (242x96, centro en 801.5,636.5; centro del arte
+   807,487.5 → offset -5.5,+149). --title-art-scale replica el factor de object-fit:cover
+   (max de ambas proporciones); todas las medidas del arte se multiplican por él. El rect
+   propio va 4px de arte más grande por lado para tapar el antialias del borde pintado. */
+#title-screen[data-bg='ready'] .title-play-btn {
+  --title-art-scale: max(100cqw / 1614, 100cqh / 975);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%)
+    translate(calc(-5.5 * var(--title-art-scale)), calc(149 * var(--title-art-scale)));
+  width: calc(250 * var(--title-art-scale));
+  height: calc(104 * var(--title-art-scale));
+  min-height: var(--touch-target);
+  padding: 0;
+  border-radius: calc(16 * var(--title-art-scale));
+  font-size: calc(26 * var(--title-art-scale));
+}
+
+/* El squish de button:active usa `transform: translateY(4px)` a secas: acá hay que combinarlo
+   con el transform de anclaje o el botón saltaría al centro flex al presionarlo. */
+#title-screen[data-bg='ready'] .title-play-btn:active:not(:disabled) {
+  transform: translate(-50%, -50%)
+    translate(calc(-5.5 * var(--title-art-scale)), calc(149 * var(--title-art-scale) + 4px));
 }
 
 .title-settings-btn {

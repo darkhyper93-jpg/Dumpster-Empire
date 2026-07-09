@@ -13,6 +13,9 @@ copyright: Copyright © Dumpster Empire
 directories:
   app: apps/desktop
   output: dist
+  # icon.png (1254x1254, reference/ui/logo.png): electron-builder lo convierte solo al .ico de
+  # Windows, .icns de mac y set de png de Linux; no hace falta mantener formatos por plataforma.
+  buildResources: apps/desktop/build
 
 files:
   - "**/*"
@@ -23,14 +26,19 @@ files:
 asarUnpack:
   - "node_modules/steamworks.js/**"
 
+# AJUSTE (bug de empaquetado, visto 2026-07): electron-builder 26 resuelve los `from` relativos
+# contra la raíz del workspace (la detecta por el lockfile), NO contra `directories.app`. Con los
+# `../game`/`../../packages/engine` anteriores buscaba fuera del repo ("file source doesn't
+# exist") y el paquete salía SIN el juego ni el engine (ventana en blanco). Rutas desde la raíz.
 extraResources:
-  - from: "../game"
+  - from: "apps/game"
     to: "app/apps/game"
     filter:
       - "**/*"
       - "!e2e/**"
       - "!e2e/.results/**"
-  - from: "../../packages/engine"
+      - "!tests/**"
+  - from: "packages/engine"
     to: "app/packages/engine"
     filter:
       - "**/*"
