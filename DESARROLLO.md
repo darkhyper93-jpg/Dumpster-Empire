@@ -574,6 +574,25 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   primera vez desbloquea el Contenedor de Barrio y el modal nuevo bloquea el pointer del canvas
   debajo — se agregó `cerrarCelebraciones()` a los helpers compartidos (`entrarAlJuego`,
   `iniciarEscarbado`) para que los specs de mecánica (no de celebraciones) no queden bloqueados.
+- **Ronda 13 — identidad visual (ícono + pantalla de inicio) y fix de empaquetado**: (a) el arte
+  `reference/ui/logo.png` pasa a ser el ícono de la app en sus tres superficies: favicon
+  (`apps/game/assets/icon.png`, 256px), ventana de Electron en dev (`icon:` del BrowserWindow) y
+  ejecutable empaquetado (`apps/desktop/build/icon.png` 512px como `buildResources`;
+  electron-builder genera solo el .ico/.icns/png por plataforma). `.gitignore` necesitó la
+  excepción `!apps/desktop/build/` (el patrón genérico `build/` lo ignoraba). (b) la pantalla de
+  inicio usa `reference/ui/fpisp.png` (1614x975, versión sin el pentágono placeholder de
+  `fondopantalladeinicio.png`; optimizado a `assets/title-bg.jpg`, JPEG q85) a pantalla completa.
+  El arte trae el emblema y un botón "Jugar" PINTADOS: el botón real
+  se ancla encima con unidades de container query (`--title-art-scale = max(100cqw/1614,
+  100cqh/975)` replica `object-fit: cover`; rect del botón pintado medido por escaneo de
+  píxeles, x 681-922 / y 589-684) para que nunca se vean dos botones a ningún tamaño. Estados via `data-bg`
+  (loading/ready/error): el respaldo es la pantalla previa (madera + logo SVG), así el juego
+  nunca queda en blanco si el arte falta. GOTCHA: cqw/cqh miden el content box ⇒ `.title-screen`
+  debe tener `padding: 0` o la escala queda corta. (c) FIX de empaquetado: electron-builder 26
+  resuelve los `from` de `extraResources` contra la raíz del workspace (no contra
+  `directories.app`); con `../game`/`../../packages/engine` el paquete salía sin juego ni engine
+  (ventana en blanco). Ahora son `apps/game`/`packages/engine` y el exe empaquetado se verificó
+  booteando y jugando de verdad.
 
 ---
 
