@@ -3,6 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <!-- DECISIÓN (auditoría de seguridad): CSP como defensa en profundidad. La UI construye DOM con
+       innerHTML en varias vistas; si algún día se filtrara HTML inyectado, script-src sin
+       'unsafe-inline' impide ejecutar JS externo o inline. El único script inline es el import map
+       de abajo: se habilita con su hash sha256 (NO con 'unsafe-inline', que abriría la puerta a
+       cualquier script inyectado). IMPORTANTE: si cambia el contenido del import map, recalcular el
+       hash con `node -e '...'` (crypto.createHash sha256 del texto entre las etiquetas) y
+       actualizarlo acá, o el juego no cargará. 'unsafe-inline' solo se concede a style-src (hay
+       atributos style="" en el markup); img-src data: cubre los íconos SVG rasterizados de
+       icons/icons.js. 'self' resuelve al origen actual en ambos modos: http en dev (npx serve) y
+       dumpster:// en Electron. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'sha256-koVbAu6FOADp40i9Sue214iR0cwLHy4ZiHXdyFgcmsY='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; object-src 'none'" />
   <title>Dumpster Empire</title>
   <!-- DECISIÓN (Agente 10, empaquetado Steam, PLAN.md §5.3): Plus Jakarta Sans (400/500/700/800)
        auto-hospedada en apps/game/assets/fonts/ vía @font-face en styles/fonts.css, en vez del

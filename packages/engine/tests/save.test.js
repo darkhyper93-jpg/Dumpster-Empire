@@ -132,6 +132,53 @@ describe('save.js — validación profunda contra XSS almacenado (agentes/fix-xs
   });
 });
 
+describe('validateSave — filtrado de referencias de contenedor huérfanas (auditoría §M1)', () => {
+  const validIds = ['tachoVereda', 'contenedorBarrio'];
+
+  it('descarta de autoQueue los ids que no existen en la data actual', () => {
+    const state = freshState();
+    state.autoQueue = ['tachoVereda', 'contenedorFantasma', 'contenedorBarrio'];
+    const result = validateSave(state, validIds);
+    expect(result.valid).toBe(true);
+    expect(result.data.autoQueue).toEqual(['tachoVereda', 'contenedorBarrio']);
+  });
+
+  it('descarta de autoProcessing los slots cuyo containerId no existe', () => {
+    const state = freshState();
+    state.autoProcessing = [
+      { containerId: 'tachoVereda', totalTime: 10, remaining: 4 },
+      { containerId: 'contenedorFantasma', totalTime: 10, remaining: 4 },
+    ];
+    const result = validateSave(state, validIds);
+    expect(result.valid).toBe(true);
+    expect(result.data.autoProcessing).toHaveLength(1);
+    expect(result.data.autoProcessing[0].containerId).toBe('tachoVereda');
+  });
+
+  it('acepta un Set además de un array como validContainerIds', () => {
+    const state = freshState();
+    state.autoQueue = ['tachoVereda', 'contenedorFantasma'];
+    const result = validateSave(state, new Set(validIds));
+    expect(result.data.autoQueue).toEqual(['tachoVereda']);
+  });
+
+  it('sin validContainerIds no filtra nada (compatibilidad)', () => {
+    const state = freshState();
+    state.autoQueue = ['contenedorFantasma'];
+    const result = validateSave(state);
+    expect(result.valid).toBe(true);
+    expect(result.data.autoQueue).toEqual(['contenedorFantasma']);
+  });
+
+  it('deserializeState propaga el filtrado', () => {
+    const state = freshState();
+    state.autoQueue = ['tachoVereda', 'contenedorFantasma'];
+    const result = deserializeState(serializeState(state), validIds);
+    expect(result.ok).toBe(true);
+    expect(result.state.autoQueue).toEqual(['tachoVereda']);
+  });
+});
+
 describe('save v3 -> v4 migra sin perder partidas viejas (PUNTOS_A_MEJORAR_2.md §5)', () => {
   it('un save v3 sin volume se acepta y se completa con volume: 1', () => {
     const v3 = freshState();

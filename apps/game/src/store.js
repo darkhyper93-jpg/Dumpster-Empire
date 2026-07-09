@@ -55,6 +55,11 @@ export function createStore(ctx) {
   // contextBridge. En modo web ese global no existe y todo se comporta como antes (localStorage).
   const desktopBridge = typeof globalThis !== 'undefined' ? globalThis.dumpsterDesktop : undefined;
 
+  // Ids de contenedores que existen en la data actual. Se pasan a deserializeState/importSave para
+  // limpiar referencias huérfanas en autoQueue/autoProcessing de saves viejos (post-rebalanceo) o
+  // manipulados, antes de que lleguen a automationTick.
+  const containerIds = new Set(allContainers.map((c) => c.id));
+
   let state = loadState();
   let pendingDig = null;
   let offlineSummary = null;
@@ -81,7 +86,7 @@ export function createStore(ctx) {
   function loadState() {
     const raw = ctx.initialSaveText !== undefined ? ctx.initialSaveText : localStorage.getItem(SAVE_KEY);
     if (!raw) return freshState();
-    const result = deserializeState(raw);
+    const result = deserializeState(raw, containerIds);
     return result.ok ? result.state : freshState();
   }
 
@@ -237,7 +242,7 @@ export function createStore(ctx) {
     },
 
     importSave(text) {
-      const result = engineImportSave(text);
+      const result = engineImportSave(text, containerIds);
       if (result.ok) {
         state = result.state;
         pendingDig = null;

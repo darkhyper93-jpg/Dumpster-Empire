@@ -100,6 +100,19 @@ function validateDeepContent(migrated) {
   return null;
 }
 
+/**
+ * Descarta de `autoQueue`/`autoProcessing` las referencias a contenedores que ya no existen
+ * (save de una versión anterior tras un rebalanceo, o import manipulado). El engine ya no crashea
+ * ante un containerId huérfano (systems/automation.js), pero una entrada muerta no debe persistir
+ * ni seguir ocupando un slot/lugar en la cola. Muta `migrated` in place.
+ * @param {Object} migrated - save ya validado a nivel de tipo/contenido
+ * @param {Set<string>} validIds - ids de contenedores que existen en la data actual
+ */
+function sanitizeContainerRefs(migrated, validIds) {
+  migrated.autoQueue = migrated.autoQueue.filter((id) => validIds.has(id));
+  migrated.autoProcessing = migrated.autoProcessing.filter((slot) => validIds.has(slot.containerId));
+}
+
 /** Campos que deben existir y tener el tipo correcto para aceptar un save como válido. */
 const REQUIRED_FIELDS = {
   saveVersion: 'number',
@@ -175,9 +188,12 @@ function migrate(raw) {
 /**
  * Valida que un objeto candidato a save tenga la forma esperada.
  * @param {unknown} candidate
+ * @param {Set<string> | Array<string>} [validContainerIds] - si se pasa, se filtran de
+ *   `autoQueue`/`autoProcessing` los ids de contenedor que no estén en este conjunto (limpieza de
+ *   referencias huérfanas de saves viejos/manipulados). Si se omite, no se filtra (compat).
  * @returns {{ valid: true, data: Object } | { valid: false, error: string }}
  */
-export function validateSave(candidate) {
+export function validateSave(candidate, validContainerIds) {
   if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
     return { valid: false, error: 'El guardado no es un objeto JSON válido.' };
   }
@@ -197,6 +213,10 @@ export function validateSave(candidate) {
   if (deepError) {
     return { valid: false, error: deepError };
   }
+  if (validContainerIds) {
+    const validIds = validContainerIds instanceof Set ? validContainerIds : new Set(validContainerIds);
+    sanitizeContainerRefs(migrated, validIds);
+  }
   return { valid: true, data: migrated };
 }
 
@@ -213,16 +233,17 @@ export function serializeState(state) {
  * Deserializa un string JSON de guardado. Si es inválido, devuelve un error explícito y
  * nunca modifica el estado en curso.
  * @param {string} raw
+ * @param {Set<string> | Array<string>} [validContainerIds] - ver validateSave.
  * @returns {{ ok: true, state: import('./state.js').GameState } | { ok: false, error: string }}
  */
-export function deserializeState(raw) {
+export function deserializeState(raw, validContainerIds) {
   let parsed;
   try {
     parsed = JSON.parse(raw);
   } catch {
     return { ok: false, error: 'El guardado no es JSON válido.' };
   }
-  const result = validateSave(parsed);
+  const result = validateSave(parsed, validContainerIds);
   if (!result.valid) return { ok: false, error: result.error };
   return { ok: true, state: result.data };
 }
@@ -243,9 +264,10 @@ export function exportSave(state) {
  * Decodifica un texto base64 exportado e intenta reconstruir el estado.
  * Rechaza el import (sin tocar la partida en curso) si el texto no decodifica a un save válido.
  * @param {string} encoded
+ * @param {Set<string> | Array<string>} [validContainerIds] - ver validateSave.
  * @returns {{ ok: true, state: import('./state.js').GameState } | { ok: false, error: string }}
  */
-export function importSave(encoded) {
+export function importSave(encoded, validContainerIds) {
   let json;
   try {
     json =
@@ -255,5 +277,5 @@ export function importSave(encoded) {
   } catch {
     return { ok: false, error: 'El texto no es un guardado en base64 válido.' };
   }
-  return deserializeState(json);
+  return deserializeState(json, validContainerIds);
 }
