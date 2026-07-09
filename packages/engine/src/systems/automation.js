@@ -65,15 +65,23 @@ export function automationTick(state, dtSeconds, allContainers, itemsData, data,
     slot.remaining -= dtSeconds;
     if (slot.remaining <= 0) {
       const container = allContainers.find((c) => c.id === slot.containerId);
-      const result = rollContainerResult(state, container, true, itemsData, data, random);
-      applyContainerResult(state, container, result, true, data);
-      state.autoProcessing.splice(i, 1);
+      // DECISIÓN: el containerId viene de un save (input externo). Si referencia un contenedor
+      // que ya no existe (save viejo tras rebalanceo, o import manipulado), NO se crashea el tick:
+      // se descarta el slot en silencio. Sin este guard, `rollContainerResult(undefined)` lanzaba
+      // TypeError cada segundo y dejaba la partida inutilizable (CLAUDE.md: nada de bloqueos).
+      if (container) {
+        const result = rollContainerResult(state, container, true, itemsData, data, random);
+        applyContainerResult(state, container, result, true, data);
+      }
+      state.autoProcessing.splice(i, 1); // el slot se consume exista o no el contenedor
     }
   }
 
   while (state.autoProcessing.length < parallelSlots && state.autoQueue.length > 0) {
     const nextId = state.autoQueue.shift();
     const container = allContainers.find((c) => c.id === nextId);
+    // Mismo motivo: un id huérfano en la cola se descarta sin encolar, no tumba el tick.
+    if (!container) continue;
     // PLAN.md §11.2: el ritmo real de escarbado depende de Resistencia/Fuerza, no del digTime crudo.
     const effectiveTime = getEffectiveDigTime(state, container, data);
     state.autoProcessing.push({ containerId: nextId, totalTime: effectiveTime, remaining: effectiveTime });

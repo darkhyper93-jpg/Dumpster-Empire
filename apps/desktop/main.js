@@ -15,6 +15,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { initSteam, setAchievement, shutdownSteam } = require('./steam.js');
 const { readSaveFile, writeSaveFile } = require('./saveFile.js');
+const { resolveSafePath } = require('./pathGuard.js');
 
 const ROOT_DIR = app.isPackaged
   ? path.join(process.resourcesPath, 'app')
@@ -36,9 +37,10 @@ function registerGameProtocol() {
   protocol.handle('dumpster', (request) => {
     const url = new URL(request.url);
     const decodedPath = decodeURIComponent(url.pathname);
-    const filePath = path.normalize(path.join(ROOT_DIR, decodedPath));
-    // Nunca servir nada fuera de ROOT_DIR (path traversal vía `../` en la URL).
-    if (!filePath.startsWith(ROOT_DIR)) {
+    // Nunca servir nada fuera de ROOT_DIR (path traversal vía `../` o hermano con nombre-prefijo).
+    // El guard vive en pathGuard.js para poder cubrirlo con tests (ver apps/desktop/tests).
+    const filePath = resolveSafePath(ROOT_DIR, decodedPath);
+    if (!filePath) {
       return new Response('Forbidden', { status: 403 });
     }
     return net.fetch(pathToFileURL(filePath).toString());
