@@ -31,6 +31,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | 11 Auditoría | 11 | ✅ hecho (ver bloque al final: veredicto + checklist manual para el usuario) |
 | Ronda 14 — QoL/íconos/settings/i18n | RONDA14-PLAN.md, Agentes A-E | ✅ hecho — Agente E verificó y commiteó (ver bloque al final) |
 | Auditoría post-ronda 14 (Verif&Audit.md) | Verif&Audit.md | ✅ hecho y pusheado (`c42b2ae`) — sin críticos; 2 fixes de validación de save + des-hardcodeo; repo limpio: solo queda `main` (ver bloque al final) |
+| Rondas 15-18 (contenido, inglés, pulido, release) | ROADMAPv3.md | 🔜 planificado — plan minucioso en la raíz del repo; decisiones del usuario registradas (ver bloque al final) |
 
 ---
 
@@ -3070,3 +3071,24 @@ validación de save (riesgo medio) y 5 hardcodeos/edge cases (calidad).
   (`git fetch --prune`). Estado final: **la única rama viva es `main`**, local y en origin.
   Las ramas nuevas de próximas rondas se crean desde `main` como siempre; no hay ninguna rama
   vieja de la que colgarse.
+
+### ROADMAPv3 — plan de las rondas 15-18 (2026-07-10)
+- **Documento**: `ROADMAPv3.md` en la raíz. Autocontenido, estilo RoadmapV2: cada ronda con
+  agentes, código literal, DoD `comando → salida esperada` y riesgos. Anclajes verificados contra
+  el repo el mismo día (226 tests, 43 e2e, 12 contenedores, 83 ítems, 27 logros, 100 claves i18n).
+- **Decisiones del usuario (no re-preguntar)**:
+  - Mejoras del robot: fuerza de escarbado y velocidad de procesamiento como máquinas (dinero,
+    2 tiers c/u); descarte de trampas como **nodo de prestigio en Llaves, caro** (~65 llaves) —
+    vive en el árbol porque `automationOwned` se resetea al prestigiar.
+  - Contenedores: de 12 a **16**, gateados por prestigio 6/7/8/9, con 7 ítems nuevos cada uno.
+  - Logros: rebalancear las 27 recompensas según esfuerzo + 8 nuevos (`a28`..`a35`, los API
+    Names de Steam pasan de 27 a 35).
+  - Inglés completo (UI + data) con auto-detección por navegador en partida nueva + selector en
+    Ajustes con cambio en runtime. La ronda de contenido va ANTES que la de inglés.
+  - Cada ronda de código la cierra un **agente auditor que corre `Verif&Audit.md`** y arregla.
+  - Conteos siempre indicativos: se va a seguir agregando contenido; los tests de paridad se
+    derivan de la data, nunca de números hardcodeados.
+  - Ritmo validado jugando: primer Prestigio en ~20-40 min reales; PLAN.md §3 actualizado y la
+    "deuda de ritmo" de la auditoría 11 queda cerrada.
+- **Saves**: ronda 15 → v6 (`trapsDiscarded`); ronda 16 → v7 (`itemsFoundByItem` pasa de nombre
+  español a `item.id`, con migración `itemNameToId`). Dos migraciones chicas a propósito.

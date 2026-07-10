@@ -179,7 +179,11 @@ Para que el juego "enganche" como el de referencia, la IA debe verificar (jugand
 - Primera automatización (Robot Clasificador): entre los **8 y 15 minutos**.
 - Primer acceso a Electrónica: antes de los **15 minutos**.
 - Sensación de "todo desbloqueado, falta plata": alrededor de los **45-60 minutos**, momento en que el juego empuja naturalmente hacia el Prestigio.
-- Primer Prestigio disponible: entre **1.5 y 3 horas** de juego activo+offline combinado.
+- Primer Prestigio disponible: entre **20 y 40 minutos** de juego activo.
+  <!-- AJUSTE (2026-07-10): el estimado original era "1.5-3 horas" y venía de una simulación de la
+  auditoría 11 que no representaba el juego activo real. El usuario validó jugando (post-rondas
+  10-11) que el primer Prestigio sale en ~20-30 min y dio el ritmo por bueno: este hito se
+  actualiza a la realidad y la "deuda de ritmo" queda cerrada (ver ROADMAPv3.md §7). -->
 
 Si al implementar la economía (sección 4) estos hitos no se cumplen con los números elegidos, ajustar las constantes hasta que se cumplan — esto tiene prioridad sobre mantener números "redondos".
 
