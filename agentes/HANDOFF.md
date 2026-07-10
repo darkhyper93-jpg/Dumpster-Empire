@@ -3092,3 +3092,117 @@ validación de save (riesgo medio) y 5 hardcodeos/edge cases (calidad).
     "deuda de ritmo" de la auditoría 11 queda cerrada.
 - **Saves**: ronda 15 → v6 (`trapsDiscarded`); ronda 16 → v7 (`itemsFoundByItem` pasa de nombre
   español a `item.id`, con migración `itemNameToId`). Dos migraciones chicas a propósito.
+
+---
+
+## Ronda 15 — Agente A (engine: efectos del robot + save v6)
+
+### Qué hice
+- **`PLAN.md` §4.7 (nueva subsección, contrato primero)**: documenté literalmente los tres
+  efectos data-driven de esta ronda antes de tocar código, tal como exige CLAUDE.md/ROADMAPv3.md
+  regla 2 — `autoDigPowerPercent`, `autoSpeedPercent` (máquinas) y `trapDiscardChancePerNivel`
+  (nodo de prestigio).
+- **`packages/engine/tests/ronda15-robot.test.js`** (nuevo, TDD): escrito y confirmado en ROJO
+  (14 tests fallando por funciones inexistentes) ANTES de implementar, con la suite existente de
+  226 en verde. Usa **data stub mínima** (`automationsStub`/`prestigeTreeStub`/`stubContainer`/
+  `itemsDataStub`), no los JSON reales — los efectos todavía no existen en `automations.json`/
+  `prestigeTree.json` (eso es tarea de los Agentes B/C de esta misma ronda). Cubre los 8 casos
+  del plan: `getAutoDigPowerMult` (1 / 1.4 / 2.2), `getEffectiveDigTime` isAuto true<false y
+  ambos iguales sin máquina (incluyendo que el default sin 4º parámetro no cambia nada),
+  `getAutoSpeedMult` (1 / 1.75) + aplicación real en `automationTick` (remaining 10→8.25 tras 1s),
+  `getAutoTrapDiscardChance` (0 / 0.34 / 0.68 / 1 clampeado), descarte end-to-end (sin castigo,
+  `trapsDiscarded` sube, `autoProcessedCount`/`trapsHit` NO suben) y su contraparte sin el nodo
+  (SÍ castiga), migración v5→v6 de `trapsDiscarded` + rechazo de `NaN`, y los 2 cond types nuevos
+  de logros.
+- **`packages/engine/src/state.js`**: `SAVE_VERSION` 5→6 (comentario `AJUSTE (ronda 15)`),
+  `trapsDiscarded: 0` en `freshState()` + typedef.
+- **`packages/engine/src/save.js`**: `trapsDiscarded: 'number'` en `REQUIRED_FIELDS` (cubierto
+  gratis por el loop de finitud de la auditoría post-ronda 14 — rechaza NaN/Infinity sin código
+  nuevo); bloque `migrate()` v5→v6 que rellena `trapsDiscarded: 0` en saves viejos.
+- **`packages/engine/src/economy.js`**: 3 getters nuevos —`getAutoDigPowerMult`,
+  `getAutoSpeedMult` (mismo patrón aditivo sobre base 1 que el resto de getters de máquinas),
+  `getAutoTrapDiscardChance` (mismo patrón que los nodos `*PerNivel` de prestigio, clampeado a 1).
+  `getDigRate`/`getEffectiveDigTime` ganan un 4º parámetro `isAuto = false`: con `true`, la
+  Fuerza efectiva se multiplica por `getAutoDigPowerMult`. Firma retro-compatible — ningún
+  llamador existente (UI, resto de la suite) pasa el 4º parámetro y ve el mismo comportamiento.
+- **`packages/engine/src/systems/automation.js`**: `automationTick` — el decremento de
+  `slot.remaining` ahora multiplica por `getAutoSpeedMult` (aplica también a slots ya en curso,
+  tal como pide el contrato); al completarse un slot con resultado trampa, si
+  `random() < getAutoTrapDiscardChance` se descarta (`registerContainerDig` + `trapsDiscarded++`)
+  en vez de `applyContainerResult` — sin castigo ni loot, cuenta para el nivel del contenedor,
+  no cuenta como procesado. El llenado de slots desde la cola ahora pide
+  `getEffectiveDigTime(state, container, data, true)` (antes sin el 4º parámetro).
+- **`packages/engine/src/systems/achievements.js`**: 2 `CONDITION_EVALUATORS` nuevos —
+  `trapsDiscardedAtLeast`, `containerOwnedAtLeast` (mismo patrón genérico que los existentes,
+  ningún logro hardcodeado en el engine).
+- **`packages/engine/src/index.js`**: el barrel usa exports nombrados explícitos (no `export *`),
+  así que agregué `getAutoDigPowerMult`/`getAutoSpeedMult`/`getAutoTrapDiscardChance` a la lista
+  reexportada desde `economy.js` — sin esto, B/C/D no podrían importarlos desde `@dumpster/engine`.
+
+### Decisiones (`// AJUSTE:` en el código, resumidas acá)
+```
+// AJUSTE (ronda 15): SAVE_VERSION 5->6 por trapsDiscarded (contador de contenedores con trampa
+// descartados por el robot vía el nodo de prestigio "Escáner de Trampas").
+// AJUSTE (ronda 15): isAuto=false por default en getDigRate/getEffectiveDigTime — la Fuerza extra
+// del robot (getAutoDigPowerMult) NUNCA afecta el escarbado manual, solo automationTick la pasa
+// en true.
+// Ronda 15 (PLAN.md §4.7): el Escáner de Trampas descarta el contenedor trampeado — sin castigo
+// ni loot; el contenedor ya pagado se pierde y el escarbado cuenta para su nivel (registerContainerDig
+// se llama igual que en el camino normal, para no romper el progreso de nivel del contenedor).
+```
+
+### Verificado
+- `npm test` → **242/242 verdes** (228 previos de la suite completa + 14 nuevos de
+  `ronda15-robot.test.js`; los 14 nuevos confirmados en ROJO antes de implementar, con los 228
+  existentes ya verdes en ese mismo punto — TDD real, no solo aparente).
+- `npm run test:e2e` → **43/43 verdes** (nada de UI/data real tocado en esta fase; el 4º parámetro
+  opcional de `getDigRate`/`getEffectiveDigTime` no afecta a ningún llamador existente).
+- `node --check` sobre los 8 archivos tocados/nuevos → sin errores de sintaxis.
+- `grep` de `console.log`/`// TODO` sobre `packages/engine/src` y el test nuevo → 0 resultados.
+- `git status --porcelain` limpio tras el commit (solo quedó el propio commit en la rama).
+
+### Qué necesita saber el Agente B (data: contenedores + ítems)
+- No toqué `apps/game/src/data/*.json` — los 3 efectos nuevos existen en el engine pero **ningún
+  JSON real los usa todavía**. Los stubs de mi test (`automationsStub`/`prestigeTreeStub` en
+  `ronda15-robot.test.js`) muestran la forma exacta esperada: `{ type: 'autoDigPowerPercent',
+  percent }`, `{ type: 'autoSpeedPercent', percent }`, `{ type: 'trapDiscardChancePerNivel',
+  percentPerNivel }`.
+- `SAVE_VERSION` ya está en 6. Si tu ronda toca `containers.json` (4 contenedores nuevos), no hace
+  falta que bumpees el esquema de guardado por eso — solo agregás entradas al array, el `save.js`
+  no valida contra una lista fija de ids de contenedor (ver `sanitizeContainerRefs`, que ya
+  descarta referencias huérfanas de forma genérica).
+
+### Qué necesita saber el Agente C (data: máquinas del robot + nodo Escáner + logros)
+- Las funciones del engine ya están listas y exportadas desde `@dumpster/engine`:
+  `getAutoDigPowerMult(state, data)`, `getAutoSpeedMult(state, data)`,
+  `getAutoTrapDiscardChance(state, data)`. Agregá las máquinas nuevas a `automations.json` con
+  `effects: [{ type: 'autoDigPowerPercent', percent: X }]` / `autoSpeedPercent`, y el nodo
+  "Escáner de Trampas" a `prestigeTree.json` con `effects: [{ type: 'trapDiscardChancePerNivel',
+  percentPerNivel: X }]` — el engine ya sabe leerlos sin más cambios.
+- Los 2 cond types nuevos de logros (`trapsDiscardedAtLeast`, `containerOwnedAtLeast`) ya están
+  en `CONDITION_EVALUATORS`. `trapsDiscardedAtLeast` lee `cond.value` contra
+  `state.trapsDiscarded`; `containerOwnedAtLeast` lee `{ containerId, value }` contra
+  `state.ownedContainers[containerId]`.
+- `state.trapsDiscarded` NO cuenta para `autoProcessedCountAtLeast` (a26 y el logro nuevo
+  equivalente si lo agregás) — un descarte no es un procesamiento exitoso, tal como pide el plan.
+
+### Qué necesita saber el Agente D (UI + e2e)
+- `state.trapsDiscarded` es un campo nuevo del estado — si agregás UI que lo muestre (contador en
+  Automatización o en el árbol de prestigio junto al nodo Escáner), leelo directo del store, no lo
+  recalcules.
+- `getAutoDigPowerMult`/`getAutoSpeedMult`/`getAutoTrapDiscardChance` están exportados desde
+  `@dumpster/engine` por si la UI quiere mostrar "Fuerza del robot: +40%" o similar en
+  AutomationView/PrestigeView — no reimplementes la suma de `effects` en la UI.
+- Ningún texto renderizado cambió en esta fase (no toqué `apps/game/src/ui`), por eso los 43 e2e
+  siguen pasando sin tocar specs.
+
+### Estado del DoD (Agente A)
+```
+✅ npm test                    → 242/242 verdes (228 previos + 14 nuevos, RED confirmado antes)
+✅ npm run test:e2e            → 43/43 verdes (nada de UI cambió)
+✅ node --check sobre los 8 archivos tocados/nuevos → sin errores
+✅ Cero console.log / // TODO en el código nuevo
+✅ PLAN.md §4.7 escrito ANTES de implementar (contrato primero, regla 2 de ROADMAPv3.md)
+✅ git add -A && commit        → 9b1ca62, rama feat/contenido-ronda15
+✅ Handoff escrito (este bloque)
+```
