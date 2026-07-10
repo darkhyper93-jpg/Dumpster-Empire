@@ -23,6 +23,7 @@ import {
   buyAutomation as engineBuyAutomation,
   automationTick,
   hasAutoDig,
+  setAutoTarget as engineSetAutoTarget,
   buyPrestigeNode as engineBuyPrestigeNode,
   doPrestige as engineDoPrestige,
   checkAchievements,
@@ -280,6 +281,31 @@ export function createStore(ctx) {
 
     skipTutorial() {
       state.tutorialStep = 3;
+      persist();
+      notify();
+    },
+
+    /**
+     * Fija (o limpia) el contenedor objetivo del robot de automatización (ronda 14).
+     * @param {string|null} containerId - 'auto'/'' o null vuelven al modo Auto
+     * @returns {{ ok: true } | { ok: false, error: string }}
+     */
+    setAutoTarget(containerId) {
+      const normalized = containerId === 'auto' || containerId === '' ? null : containerId;
+      const result = engineSetAutoTarget(state, normalized, allContainers);
+      if (result.ok) {
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /**
+     * Sensibilidad del pincel de escarbado (mouse/touch), persistida en el save (ronda 14).
+     * @param {number} value - 0.5..1.5
+     */
+    setDigSensitivity(value) {
+      state.digSensitivity = Math.min(1.5, Math.max(0.5, Number(value) || 1));
       persist();
       notify();
     },

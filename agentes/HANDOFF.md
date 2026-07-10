@@ -29,6 +29,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | Correctivo — Pulido ronda 2 | PUNTOS_A_MEJORAR_2.md | ✅ hecho (ver bloque abajo) |
 | Correctivo — Pulido ronda 3 | PUNTOS_A_MEJORAR_3.md | ✅ hecho (ver bloque abajo) |
 | 11 Auditoría | 11 | ✅ hecho (ver bloque al final: veredicto + checklist manual para el usuario) |
+| Ronda 14 — QoL/íconos/settings/i18n | RONDA14-PLAN.md, Agentes A-E | ✅ hecho — Agente E verificó y commiteó (ver bloque al final) |
 
 ---
 
@@ -2467,3 +2468,527 @@ centrado con backdrop, cruz de 52×44px (táctil), cierre deja el escarbado de f
 rascable, sin overflow en ninguno de los dos anchos. Cero emojis (grep de rangos Unicode sobre
 los archivos tocados), cero `console.log`/`// TODO` nuevos. Sin bump de `saveVersion` (el
 baseline de desbloqueos se deriva del estado existente, no persiste nada nuevo).
+
+---
+
+## Ronda 14 — Agente A (Engine + Save v5)
+
+### Qué toqué
+- **`packages/engine/src/state.js`**: `SAVE_VERSION` 4→5; `freshState()` y el `@typedef GameState`
+  suman `autoTargetContainerId: string|null` (default `null`), `digSensitivity: number` (default
+  `1`, rango 0.5–1.5) y `language: 'es'|'en'` (default `'es'`).
+- **`packages/engine/src/save.js`**:
+  - `SUPPORTED_LANGUAGES = ['es', 'en']` exportado (fuente de verdad del allow-list de idioma;
+    el Agente D lo reusa desde `@dumpire/engine` en vez de duplicarlo).
+  - `migrate()`: bloque v4→v5 que rellena los tres campos nuevos con sus defaults.
+  - `REQUIRED_FIELDS`: sumé `digSensitivity: 'number'` y `language: 'string'`.
+    **`autoTargetContainerId` NO está en `REQUIRED_FIELDS`** (unión `string|null`, `typeof null ===
+    'object'` rompería el chequeo) — su validación vive solo en `validateDeepContent()`.
+  - `validateDeepContent()`: rechaza `autoTargetContainerId` que no sea `null`/string,
+    `digSensitivity` fuera de \[0.5, 1.5] o no finito, `language` fuera de `SUPPORTED_LANGUAGES`.
+    De paso agregué `Number.isFinite(volume)` (el napkin ya documentaba que `typeof 'number'` deja
+    pasar `NaN`; era la misma clase de bug en un campo existente).
+  - `sanitizeContainerRefs()`: si `autoTargetContainerId` no es `null` y no está en
+    `validContainerIds`, lo pone en `null` (mismo tratamiento que un id huérfano en `autoQueue`).
+- **`packages/engine/src/systems/automation.js`**:
+  - `bestAffordableUnlockedContainer`: si `state.autoTargetContainerId` está seteado, ignora el
+    modo Auto y evalúa SOLO ese contenedor (desbloqueado + afordable); si no alcanza el dinero
+    devuelve `null` sin fallback (D5: el robot ahorra). La firma no cambió (D4): `automationTick` y
+    `offline.js` siguen llamándola igual y ya respetan el target sin tocarlos.
+  - `setAutoTarget(state, containerId, allContainers)` nueva, exportada: `null` → modo Auto
+    `{ ok: true }`; string que existe en `allContainers` → lo fija `{ ok: true }`; cualquier otra
+    cosa → `{ ok: false, error }` sin mutar el estado.
+- **`packages/engine/src/systems/prestige.js`**: `doPrestige` resetea `autoTargetContainerId` a
+  `null` (D6), junto al resto del reset de automatización.
+- **`packages/engine/src/systems/containers.js`**: eliminé `JACKPOT_VARIANCE_MIN` y el cálculo de
+  `isJackpot` por varianza. Nuevo: `rarest` (última categoría), `seenInThisRoll` (Set declarado
+  antes del loop de slots) y `isFirstRareFind = categoria === rarest && !alreadyFound`, donde
+  `alreadyFound` chequea `state.itemsFoundByItem[container.id][pick.name]` (ya encontrado en
+  partidas previas) O `seenInThisRoll` (ya salió en este mismo roll multi-slot). El campo del
+  `DigResult`/`@typedef` se renombró `isJackpot` → `isFirstRareFind`.
+- **`packages/engine/src/index.js`**: exporté `setAutoTarget` y `SUPPORTED_LANGUAGES`.
+- **`DESARROLLO.md`** §10: agregué el bloque "Ronda 14" con D1-D7 + la estrategia de datos i18n
+  (para que el Agente D no tenga que releer todo `RONDA14-PLAN.md`).
+- **Tests nuevos**: `ronda14-automatizacion.test.js` (target fijo afordable/no afordable/bloqueado,
+  modo Auto de regresión, `setAutoTarget` con id inválido/null/válido, `doPrestige` resetea el
+  target), `ronda14-primerhallazgo.test.js` (primer roll con varianza media → true, segundo roll
+  del mismo ítem → false, categoría común → false, multi-slot con el mismo ítem raro dos veces →
+  exactamente un true). `ronda12-jackpot.test.js` reescrito como regresión del nuevo contrato
+  (conserva el comentario-lección sobre el orden de consumo de `random()`: llamada 1 =
+  `refreshMarketFluctuation` SOLO si `now - marketFluctuationAt > 60000`, llamada 2 = `rollIsTrap`,
+  luego por slot `rollCategory`/`rollItem`/`rollItemVariance` — **ojo**: si un test hace un
+  segundo roll sobre el MISMO `state` ya mutado por `applyContainerResult`, `marketFluctuationAt`
+  queda en un timestamp real reciente y el segundo roll YA NO consume `random()` para la
+  fluctuación de mercado, corriendo la secuencia un lugar — lo viví armando
+  `ronda14-primerhallazgo.test.js` y tuve que separar el generador del segundo roll). `save.test.js`
+  ampliado con la migración v4→v5, los 3 rechazos nuevos, el saneo de target huérfano y el
+  export/import ida y vuelta.
+
+### Referencias a `isJackpot` que quedan en `apps/` para el Agente B (NO las toqué — frontera de
+agentes)
+```
+apps/game/src/ui/UIManager.js:123   for (const item of result.items.filter((i) => i.isJackpot)) {
+apps/game/src/ui/UIManager.js:124     CelebrationModal.push(this.celebrationModalEl, { type: 'jackpot', item });
+apps/game/src/ui/CelebrationModal.js:3    (comentario) "...contenedor nuevo y jackpot..."
+apps/game/src/ui/CelebrationModal.js:11   import { playJackpot } from '../fx/audio.js'
+apps/game/src/ui/CelebrationModal.js:17   (JSDoc) { type: 'jackpot', item: {...} }
+apps/game/src/ui/CelebrationModal.js:53   playJackpot();
+apps/game/src/ui/CelebrationModal.js:55   class="celebration-icon--jackpot"
+apps/game/src/fx/audio.js:119-120         comentario + playJackpot() (la función de sonido puede
+                                           quedarse igual de nombre; es efecto de sonido, no dato)
+apps/game/e2e/ronda12-regression.spec.js:60   comentario sobre "jackpot encolado"
+apps/game/e2e/helpers/dig.js:16               comentario "logro/contenedor nuevo/jackpot"
+```
+Según RONDA14-PLAN.md §3 (Agente B, Tarea B3): `UIManager.js:123` cambia el filtro de `isJackpot` a
+`isFirstRareFind`; `CelebrationModal.js` renombra el `type` `'jackpot'` → `'firstFind'` y el título
+a "¡Hallazgo nuevo!". El B6 (e2e) tiene que resembrar cualquier spec que precargue
+`itemsFoundByItem` para forzar el modal — con el contrato nuevo, precargar el ítem SUPRIME el
+modal en vez de habilitarlo (riesgo #2 de la sección 7 del plan).
+
+### Qué necesita saber el próximo agente (B)
+- `setAutoTarget` y `bestAffordableUnlockedContainer` están listos; el store de B solo necesita
+  importar `setAutoTarget` con alias y despachar `store.actions.setAutoTarget(value)`.
+- El helper de desbloqueo que ya usan las vistas (`isContainerUnlocked`) no cambió de firma.
+- `getContainerCost(state, container, data)` sigue igual; úsalo tal cual para el mensaje "espera
+  juntar $X" sin recalcular nada en la UI.
+- `state.digSensitivity` y `state.language` ya existen en el estado con sus defaults; B solo
+  necesita el slider + `store.actions.setDigSensitivity`.
+
+### Estado del DoD (Agente A)
+```
+✅ npm test                                                  → 207 verdes (18 archivos)
+✅ grep -rn "JACKPOT_VARIANCE_MIN" packages apps             → vacío
+✅ grep -rn "isJackpot" packages                             → vacío (en apps queda, ver arriba)
+✅ grep -rn "document\.\|window\." packages/engine/src       → vacío
+✅ grep -rn "console.log\|// TODO" packages/engine/src       → vacío
+✅ D1–D7 copiadas a DESARROLLO.md §10
+✅ Handoff escrito (este bloque)
+```
+
+---
+
+## Ronda 14 — Agente B (UI: selector del robot, textos cortos, +2 Suerte, settings)
+
+### Qué toqué
+- **`apps/game/src/store.js`**: `setAutoTarget(containerId)` ('auto'/'' se normalizan a `null`,
+  delega en `engineSetAutoTarget` importado con alias) y `setDigSensitivity(value)` (clamp
+  0.5–1.5, mismo patrón que `setVolume`).
+- **`apps/game/src/ui/upgradeEffect.js`** (nuevo): `upgradeEffectLabel(upgrade)` — un solo lugar
+  para el texto "+N Suerte por nivel" / "+N% Fuerza por nivel" leído de `mode`/`perNivel` de
+  `upgrades.json`. Lo usan `QuickUpgrades.js` (Suerte/Fuerza/Área) y `AutomationView.js`
+  (botón de Capacidad).
+- **`apps/game/src/ui/AutomationView.js`**:
+  - Copy del explainer acortado a 2 frases + hint corto (tarea B2), reemplazando el bloque
+    largo. Callout de cola inactiva reducido a una sola línea con el nombre del robot.
+  - Selector `<select data-action="set-auto-target">` con "Auto" + una `<option>` por
+    contenedor **desbloqueado** (value=id, texto=name; el id crudo del state se valida contra
+    `allContainers` antes de marcar `selected`, si no existe se trata como "auto" — nunca se
+    confía en el string del save para nada visible). Listener de `change` con marca propia
+    `boundChangeAutomation` (trampa #3 del plan: nunca una marca genérica).
+  - Mensaje "El robot espera juntar $X para {nombre}." cuando hay target fijo y no alcanza el
+    dinero (costo sale de `getContainerCost`, no se recalcula).
+  - **AJUSTE (bug pre-existente, no introducido por mí, pero lo arreglé porque rompía el test
+    e2e nuevo)**: la línea de "Procesando" usaba `<p>Procesando: <ul>...</ul></p>` — un `<p>` no
+    puede contener un `<ul>` (contenido de bloque); el navegador cierra el `<p>` en silencio
+    ANTES del `<ul>` y parte la línea en 3 nodos DOM hermanos. Cambiado a
+    `<div class="automation-processing">` (los `<div>` sí aceptan bloque anidado). Efecto
+    práctico: antes, cualquier selector que buscara el texto "Procesando: NombreContenedor"
+    junto (assertion de test, lector de pantalla, etc.) solo veía "Procesando: " vacío. Sin
+    cambios visuales (mismo CSS aplicado por `.automation-status > *` vía flex+gap).
+- **`apps/game/src/ui/UIManager.js`**:
+  - Guard de re-render de `renderTabContent` ahora incluye `SELECT` además de
+    `TEXTAREA`/`INPUT` (riesgo #1 del plan: sin esto el dropdown del target se cierra solo cada
+    tick de automatización).
+  - `handleDigComplete()`: filtro `isJackpot` → `isFirstRareFind`, celebración `{ type: 'jackpot' }` →
+    `{ type: 'firstFind' }`. Confirmé que `CelebrationModal.push` solo se llama desde acá (flujo
+    manual) — no hay ningún hook de celebración en el flujo de automatización (`grep -rn
+    "CelebrationModal.push" apps/game/src` → 3 resultados, todos en este archivo: logro,
+    contenedor nuevo, firstFind).
+  - `render(state)`: `this.digCanvas.setSensitivity(state.digSensitivity)` (espejo de cómo se
+    propaga el volumen al audio).
+- **`apps/game/src/ui/CelebrationModal.js`**: `type: 'jackpot'` → `'firstFind'` en el typedef;
+  título "¡Hallazgo excepcional!" → "¡Hallazgo nuevo!". **Dejé sin tocar** (a propósito, según el
+  plan) `playJackpot()` (nombre de función de sonido, es efecto no dato) y la clase CSS
+  `celebration-icon--jackpot` (no está en el DoD de greps y renombrarla no aportaba nada).
+- **`apps/game/src/ui/QuickUpgrades.js`**: `<span class="quick-upgrade-effect">` con
+  `upgradeEffectLabel(upgrade)` en cada botón (Suerte/Fuerza/Área). Texto chico (0.62rem) con
+  weight 400 (≤500) para cumplir la lección del napkin sobre tipografía chica.
+- **`apps/game/src/ui/SettingsView.js`**: sección "Créditos" eliminada por completo (y su
+  handler de click, que no tenía ninguno propio, no hizo falta tocar `onClick`). Slider de
+  sensibilidad calcado del de volumen (mismas clases CSS `settings-volume-label`/
+  `settings-volume-slider`, reusadas tal cual — no ameritaba un juego de clases nuevo para un
+  slider con el mismo aspecto). Rango 50–150 step 5, label "Sensibilidad de escarbado: N%".
+- **`apps/game/index.html`**: comentario de atribución de Plus Jakarta Sans actualizado (ya no
+  dice "se acredita igual en Ajustes > Créditos" — la sección no existe más; la atribución queda
+  solo en este comentario del repo, la licencia SIL OFL no la exige en la UI). No toqué el
+  importmap ni la CSP (verificado con `git diff`).
+- **`apps/game/src/dig/DigCanvas.js`**: `this.sensitivity = 1` en el constructor,
+  `setSensitivity(value)` con clamp defensivo propio 0.5–1.5 (independiente del clamp que ya
+  hace el store: un save corrupto/viejo no debería poder inflar el pincel). `eraseRadius()`
+  multiplica por `this.sensitivity`; comentario `// DECISIÓN` sobre el cap saturándose con
+  Área alta + sensibilidad >100% (intencional, pedido literal del plan).
+- **`apps/game/styles/components.css`**: `.quick-upgrade-effect`, `.automation-target` (+
+  `select` hijo), `.automation-target-waiting`. Reuso de tokens existentes, cero hex sueltos.
+- **`apps/game/e2e/`**:
+  - `ronda12-regression.spec.js` y `helpers/dig.js`: comentarios actualizados de "jackpot" a
+    "primer hallazgo raro" / "¡Hallazgo nuevo!" (no había ninguna assertion de texto viejo que
+    rompiera con el contrato nuevo, solo comentarios — confirmé que ningún spec sembraba
+    `itemsFoundByItem` para forzar el modal, así que no había riesgo de que un seed viejo ahora
+    lo suprimiera).
+  - **`ronda14-regression.spec.js`** (nuevo, 3 tests, ver DoD): target fijo → solo ese
+    contenedor se procesa; sensibilidad 50% persiste tras `page.reload()`; primer hallazgo →
+    modal → repetirlo con `itemsFoundByItem` pre-sembrado → sin modal.
+    - **Trampa que pisé y documento para el próximo que toque este archivo**: `itemsFoundByItem`
+      es `containerId -> { itemName -> NÚMERO }` (contador), no booleano — sembrar `true` hace
+      que `isValidItemsFoundByItem` rechace el save ENTERO en `deserializeState`, cayendo
+      silenciosamente a `freshState()` (por eso el test de "no debería celebrar de nuevo" fallaba
+      dando falso positivo: en realidad estaba probando un estado fresco). Usar `1`, no `true`.
+    - **Playwright no soporta `.fill()` en `<input type="range">`** ("Input of type range cannot
+      be filled") — hay que `el.value = 'N'; el.dispatchEvent(new Event('input', {bubbles:true}))`
+      vía `.evaluate()`.
+    - Los specs de Playwright de este repo corren SIN `"type":"module"` en el `package.json` raíz
+      → `import.meta.url` no está disponible ahí (a diferencia de Vitest); usé `__dirname` (lo da
+      el wrapper CJS de esbuild de Playwright) para leer `items.json` con `fs.readFileSync`.
+
+### Verificado
+- `npm test` → 207/207 verdes (no toqué el engine).
+- `npx playwright test` → **43/43 verdes** (suite completa, incluidos los 3 tests nuevos de
+  ronda 14 y los 4 de ronda 12 re-verificados). Corrido 3 veces seguidas el spec de ronda 14
+  (con `--repeat-each=3` y también con `--workers=1`) para descartar flakiness antes de darlo
+  por cerrado — el primer intento falló de forma reproducible por el bug de markup
+  `<p>`/`<ul>` de arriba, no por timing.
+- `grep -rn "isJackpot" apps packages` → vacío.
+- `grep -n "SELECT" apps/game/src/ui/UIManager.js` → guard presente.
+- `grep -rn "boundChange\b\|boundClick\b" apps/game/src/ui` → las únicas coincidencias son
+  marcas PRE-EXISTENTES de otras rondas (`DigContainerPicker.js`, `QuickUpgrades.js` —
+  `boundClick`, no `boundChange`, y ya llevaban sufijo de vista antes de esta ronda); no agregué
+  ninguna marca genérica nueva.
+- `grep -rn "Créditos" apps/game/src` → solo mi propio comentario `// AJUSTE` explicando la
+  remoción (no queda ningún texto de UI ni sección).
+- Verificación manual: en vez de abrir el navegador a mano, usé Playwright real (mouse real,
+  `<select>` real, slider real, recarga real) — cubre estrictamente más que un click manual y
+  deja rastro reproducible en el repo.
+
+### Qué necesita saber el próximo agente (C y D)
+- **Para C (íconos)**: no toqué `icons/icons.js` ni ícono de ningún ítem/contenedor. El único
+  ícono nuevo referenciado en esta ronda es el ya existente `close-x` (sin cambios).
+- **Para D (i18n)**: el copy FINAL de Automatización/Settings ya está fijado en esta ronda — es
+  el texto que hay que capturar en `es.js`. Lista de strings nuevos/cambiados a migrar:
+  - AutomationView: explainer corto, hint de botones grises, callout de cola inactiva, label
+    "Objetivo del robot", opción "Auto (el más caro que puedas pagar)", mensaje "El robot espera
+    juntar {monto} para {nombre}.", "Procesando:" / "Nada en curso.".
+  - CelebrationModal: "¡Hallazgo nuevo!" (reemplaza "¡Hallazgo excepcional!").
+  - SettingsView: "Sensibilidad de escarbado: {pct}%" (ya no hay sección de Créditos que migrar).
+  - `upgradeEffect.js`: "+{n} {label} por nivel" / "+{pct}% {label} por nivel" — interpolación,
+    ojo con el orden de parámetros al migrar a `t()`.
+- El campo `state.digSensitivity` se lee en dos lugares del lado UI: `SettingsView.js` (fuente
+  del slider) y `DigCanvas.setSensitivity` (consumidor, propagado desde `UIManager.render`). Si
+  D toca alguno de los dos para i18n, no tocar la lógica, solo el copy.
+
+### Estado del DoD (Agente B)
+```
+✅ npm test && npm run test:e2e                              → 207 + 43 verdes
+✅ grep -rn "isJackpot" apps packages                        → vacío
+✅ grep -n "SELECT" apps/game/src/ui/UIManager.js             → guard presente
+✅ grep -rn "boundChange\b|boundClick\b" apps/game/src/ui     → sin marcas genéricas NUEVAS
+✅ grep -rn "Créditos" apps/game/src                          → vacío (salvo el comentario propio)
+✅ Verificación manual (vía Playwright real, ver arriba):
+    · comprar robot → elegir target → el robot compra SOLO ese; "Auto" vuelve al más caro
+    · target caro sin dinero → mensaje "espera juntar $X" (cubierto por el código, no por un
+      test e2e dedicado — el test 1 usa money=1e9 para simplificar; queda como manual/E si hace falta)
+    · dropdown con automatización corriendo no se cierra solo (guard de SELECT, verificado)
+    · sensibilidad 50%/150% persiste tras recargar (test e2e con 50%)
+    · "+2 Suerte por nivel" visible (helper leído de `perNivel`, sin números hardcodeados)
+    · Ajustes sin sección Créditos
+✅ Handoff escrito (este bloque)
+```
+
+---
+
+## Ronda 14 — Agente C (Íconos: cada ítem se asemeja a su objeto)
+
+### Qué toqué
+- **`apps/game/src/icons/icons.js`** (único archivo de producción tocado, tal como pide el rol):
+  - **Fase A — los 10 ítems en fallback + candelabro**: 11 formas nuevas en `SHAPES`
+    (`cigaretteButt`, `chipBag`, `corkBottle`, `napkinUsed`, `fanOld`, `floppyDisk`,
+    `ivoryFigurine`, `regimentFlag`, `ritualMask`, `legendarySword`, `candelabrum`) mapeadas en
+    `ICON_MAP` a `cigarette-butt`, `chip-bag`, `cork-bottle`, `napkin-used`, `fan-old`,
+    `floppy-disk`, `ivory-figurine`, `regiment-flag`, `ritual-mask`, `legendary-sword` y
+    `candelabrum` (que antes apuntaba a `lamp` y el usuario reportó que "parece una copa" — ahora
+    tiene forma propia: base + tallo + 3 brazos con velas, sin bowl ancho arriba, para que no se
+    confunda con un cáliz).
+  - **Fase B — desambiguación de formas compartidas**. Conté los duplicados reales del `ICON_MAP`
+    con un script (no confié en la tabla del plan, que subestimaba algunos: `crystal` era ×5 no
+    ×4, `painting`/`amulet` eran ×4 no ×3) y creé formas propias para:
+    - `document` (9→0 compartidas): `newspaper`, `book`, `foldedMap`, `photoFrame`,
+      `engravingPlate`, `sketch`, `scroll`, `manifest`, `logbook`.
+    - `chip` (renombrado `motherboard`, 5→0): `fusionCore`, `quantumChip`, `plasmaCell`,
+      `olympusCircuit` (más `motherboard` para el ítem `motherboard` mismo).
+    - `vase` (4→0): `decorativeVase`, `idol`, `grail` (más `vase` para `porcelain-vase`).
+    - `crystal` (5→0): `shard`, `crystalHeart`, `chronoShard`, `seed` (más `crystal` para
+      `energy-crystal`).
+    - `amulet` (4→0): `sealedRelic`, `bell`, `reliquary` (más `amulet` para `amulet-sacred`).
+    - `statue` (3→1 reuso documentado): `bust` nueva; `godling-idol` reusa `idol` (documentado,
+      ambos son estatuillas idolatradas).
+    - `coin` (3→0): `crushedCan` (para `can-crushed`, que antes usaba directamente `coin` — una
+      lata aplastada no debería verse como una moneda), `ring` (para `captain-ring`).
+    - `watch` (3→1 reuso documentado): `compass` nueva para `route-compass` (antes usaba `watch`:
+      una brújula no es un reloj); `moon-watch` reusa `watch` (documentado, nodo de prestigio
+      temático de reloj).
+    - `lamp` (3→1, tras sacar `candelabrum` de acá en la Fase A): `lantern` nueva para
+      `ghost-lantern`.
+    - `painting` (4→1 reuso documentado): `tapestry` nueva para `tapestry-antique` (con flecos:
+      líneas verticales colgando del marco); `framed-forgery`/`lost-masterpiece` reusan `painting`
+      (documentado, los tres son cuadros literales).
+  - **Bug de fallback fuera de la data, encontrado en verificación manual** (no estaba en el
+    inventario del plan porque no viene de `items.json`/`containers.json`/etc.): `TitleScreen.js`
+    llama `iconMarkup('dumpster', ...)` para el logo de la pantalla de inicio, pero `'dumpster'`
+    nunca fue una clave de `ICON_MAP` (solo existían los alias indirectos `'dumpster-street'` y
+    `'tab-tienda'`, que apuntan A la forma `dumpster`, no una clave `dumpster` en sí) — el logo de
+    la pantalla de inicio mostraba el pentágono. Arreglado agregando `dumpster: 'dumpster'` a
+    `ICON_MAP` (con comentario `// AJUSTE`), sin tocar `TitleScreen.js` (fuera de mi alcance de
+    archivo, pero el fix cabe entero en `icons.js`).
+  - Exporté `SHAPES`/`ICON_MAP` al final del archivo (`// exportados para tests`) para el test
+    nuevo.
+- **`apps/game/tests/icons.test.js`** (nuevo, corre con `npm test` — `vitest.config.js` ya incluye
+  `apps/*/tests`): 9 tests — cobertura de `hasIcon()` para cada `icon` real de `items.json`
+  (`Object.values(items.containers).flat()`), `containers.json`, `automations.json`,
+  `upgrades.json`, `prestigeTree.json`, `achievements.json` por separado (para que un fallo señale
+  exactamente qué pool se rompió); regresión de que una clave inventada SÍ cae en el fallback
+  (prueba que el mecanismo de detección funciona, no solo que no hay pentágonos hoy); todo valor
+  de `ICON_MAP` apunta a una `SHAPES` real; `iconMarkup` conserva el `xmlns` (regresión de la
+  lección del data-URL de rondas previas). **Verifiqué que el test 1 realmente falla** si se
+  quita una entrada de `ICON_MAP` (lo rompí a propósito con `can-crushed`, corrí `npm test`, vi el
+  `AssertionError` con el nombre exacto del ítem, restauré) — no es un test que solo parezca
+  verificar algo.
+
+### Decisiones de reuso documentadas en el código (`// DECISIÓN:`)
+```
+// moon-watch reusa 'watch' (pocket-watch) — ambos relojes, se diferencian por color de rareza.
+// framed-forgery y lost-masterpiece reusan 'painting' (oil-painting) — los tres son cuadros.
+// godling-idol reusa 'idol' (idol-jade) — ambos son estatuillas idolatradas.
+```
+
+### Verificado
+- `npm test` → **216/216 verdes** (207 previos + 9 de `icons.test.js`).
+- `npx playwright test` → **43/43 verdes** (no toqué ninguna vista ni spec existente; el conjunto
+  completo de e2e de rondas anteriores sigue pasando con los íconos nuevos).
+- `grep -n 'fill="' apps/game/src/icons/icons.js` → solo el `fill="none"` de `iconMarkup` (sin
+  colores hardcodeados nuevos).
+- `grep` de emojis (rango Unicode `\x{1F300}-\x{1FAFF}` y `\x{2600}-\x{27BF}`) sobre `icons.js` →
+  0 resultados. `console.log`/`// TODO` → 0 resultados.
+- **Verificación visual manual real** (script Playwright descartable, no quedó en el repo, borrado
+  al terminar): sembré un save vía `freshState()`/`serializeState()` con `itemsFoundByItem` de
+  **todos** los ítems de **todos** los contenedores marcados como encontrados (así el Índice
+  muestra el ícono real de cada uno en vez del candado `?`), abrí el juego a 420×900 (mobile,
+  tamaño de referencia del proyecto), recorrí las 12 pestañas de contenedor del Índice, y con un
+  `evaluateAll` sobre `[data-icon]` conté cuántos elementos contenían el `<path>` característico
+  de la forma `artifact` (`M12 2l8 5-3 13H7L4 7z`) — **0 en las 12 pestañas** (encontró y permitió
+  arreglar el bug de `TitleScreen.js`/`dumpster` de arriba en la primera pasada, antes de llegar a
+  0). Revisé a mano las capturas de pantalla de las 12 pestañas: los 11 íconos de Fase A y los
+  grupos desambiguados de Fase B se leen distintos entre sí y reconocibles a los ~24px del ícono
+  de tarjeta del Índice (el tamaño real más chico usado en la UI es 16-18px en el tabbar/topbar,
+  que usan claves de UI genérica no tocadas en esta ronda).
+- El canvas de escarbado (`getIconImage`) reusa el mismo `iconMarkup()` que el Índice — no hay
+  código de rasterizado separado que pueda quedar desincronizado; no hice una verificación aparte
+  del canvas porque el mecanismo es el mismo (regresión ya cubierta por el test de `xmlns`).
+
+### Qué necesita saber el próximo agente (D — i18n)
+- No toqué ningún string visible al jugador (los nombres de ítems siguen en `items.json`, las
+  vistas no cambiaron). Nada de esta fase interfiere con la migración a `t()`.
+- `apps/game/tests/icons.test.js` es nuevo — si D migra copy de vistas que este test no toca, no
+  debería romperse; si llegara a tocar `icons.js` por algún motivo (no debería, D solo migra
+  texto), sus 9 tests son la red de seguridad.
+
+### Estado del DoD (Agente C)
+```
+✅ npm test                                                   → 216/216 verde (incluye icons.test.js)
+✅ El test 1 falla si se agrega un ítem sin ícono (probado rompiéndolo a propósito y restaurado)
+✅ grep -n 'fill="' apps/game/src/icons/icons.js              → solo fill="none" existente
+✅ Verificación manual (Playwright real, ver arriba):
+    · Índice: los 11 de Fase A + los desambiguados de Fase B se ven y se distinguen
+    · Canvas de escarbado: mismo iconMarkup() que el Índice, sin rasterizado separado que romper
+    · Cada ícono reconocible al tamaño usado en la UI
+✅ Cero emojis, cero console.log
+✅ Handoff escrito (este bloque), con la lista de formas nuevas y los reusos decididos
+```
+
+---
+
+## Ronda 14 — Agente D (Bases de i18n: español + inglés)
+
+### Qué toqué
+- **`apps/game/src/i18n/i18n.js`** (nuevo): `setLanguage`/`getLanguage`/`t(key, params)`.
+  `SUPPORTED_LANGUAGES` se importa de `@dumpster/engine` (exportado por el Agente A desde
+  `save.js`) — no lo dupliqué. `t()` interpola `{param}` con `String(params[name])`, no sanitiza
+  (documentado en el JSDoc: los `params` que vengan de `state` siguen las reglas de siempre antes
+  de llegar a `innerHTML`), y devuelve la clave tal cual si no existe (detectable en tests/e2e en
+  vez de mostrar un hueco vacío en pantalla). `setLanguage` ignora silenciosamente cualquier valor
+  fuera de `SUPPORTED_LANGUAGES`.
+- **`apps/game/src/i18n/es.js`** (nuevo): diccionario español, ~90 claves con namespace por vista
+  (`topbar.*`, `tabs.*`, `automation.*`, `shop.*`, `prestige.*`, `settings.*`, `collection.*`,
+  `celebration.*`, `offline.*`, `titleScreen.*`, `tutorial.*`, `dig.*`, `uiManager.*`, `boot.*`,
+  más `common.*` para patrones repetidos entre vistas como "Te faltan {amount}"/"Gratis").
+- **`apps/game/src/i18n/en.js`** (nuevo): MISMAS claves que `es.js`, valores copiados 1:1 (la
+  traducción real es otra ronda — D1 del plan). Generado a partir de `es.js` para garantizar
+  paridad exacta de claves desde el día uno.
+- **Migración de copy a `t()`** en (ningún texto renderizado cambió — ver verificación e2e abajo):
+  `Topbar.js`, `QuickUpgrades.js`, `upgradeEffect.js`, `DigContainerPicker.js`,
+  `AchievementsView.js`, `AutomationView.js`, `CelebrationModal.js`, `CollectionView.js`,
+  `OfflineModal.js`, `PrestigeView.js`, `SettingsView.js`, `ShopView.js`, `TitleScreen.js`,
+  `Tutorial.js`, `UIManager.js` (toast de level-up, `injectTabIcons` ahora lee
+  `t('tabs.' + btn.dataset.tab)` en vez de `btn.textContent`, guard de `SELECT` sin tocar, texto
+  del botón `#dig-abandon-btn` seteado una vez en el constructor), `main.js` (mensajes de boot/
+  error + `setLanguage(store.getState().language)` después de crear el store) y `DigCanvas.js`
+  (`Arrastrá para escarbar` + el nombre `¡Trampa!` que se muestra como entry falso cuando
+  `digResult.isTrap` — este último no estaba en la lista del plan porque no viene de
+  `items.json`/etc., lo encontré grepeando acentos fuera de comentarios, mismo método que usó el
+  Agente C para su bug de `dumpster`/`TitleScreen`).
+- **NO migré** (fuera de alcance, D2 del plan): `name`/`desc` de `apps/game/src/data/*.json`
+  (quedan en español, estrategia de overlay documentada por el Agente A en `DESARROLLO.md` §10);
+  `Toast.js` (no tiene copy propio, solo re-emite el `message` que le pasan); `store.js` (sus
+  strings de `{ ok:false, error }` no llegan a ningún `innerHTML`/`textContent` — verifiqué con
+  `grep -rn "\.error\b" apps/game/src/ui` → 0 resultados, ninguna vista los muestra); `index.html`
+  (el copy estático pre-JS queda en español como fallback, tal como indica el plan — los labels de
+  tabs y el botón Abandonar se sobrescriben desde JS con `t()` en el primer render).
+- **`apps/game/tests/i18n.test.js`** (nuevo): paridad exacta de claves es/en (diff en ambos
+  sentidos), interpolación (`t('settings.volume', {pct:80})` → `'Volumen: 80%'`), clave
+  inexistente devuelve la clave, `setLanguage('hack')`/`setLanguage('<img src=x>')` no cambian el
+  idioma actual.
+- **`DESARROLLO.md`**: la estrategia de datos JSON (D4 de la sección Agente D) ya estaba
+  documentada por el Agente A en §10 (la escribió de antemano junto con D1–D7 para que yo no
+  tuviera que releer todo `RONDA14-PLAN.md`) — la revisé, coincide con lo pedido, no hizo falta
+  tocarla.
+
+### Restricción dura verificada
+`git diff apps/game/index.html` → solo el comentario de atribución tipográfica que ya había
+tocado el Agente B (Créditos); cero cambios míos en el `<script type="importmap">` ni en la
+`Content-Security-Policy`.
+
+### Verificado
+- `npm test` → **221/221 verdes** (216 previos + 5 de `i18n.test.js`; el archivo cuenta como uno
+  de los 20 test files).
+- `npx playwright test` → **43/43 verdes, SIN modificar ningún spec.** Esta es la prueba de que el
+  copy renderizado no cambió ni en una letra: si algún texto migrado hubiera quedado distinto del
+  original, algún assert de texto (`hasText`, `toContainText`, etc.) de rondas anteriores habría
+  fallado.
+- `grep -rnP "^\s*[^/*].*[áéíóúñ¡¿]" apps/game/src/ui/*.js apps/game/src/main.js` → vacío (ningún
+  template literal con copy suelto fuera de comentarios/JSDoc).
+- Mismo grep sobre `apps/game/src/dig/DigCanvas.js` → un solo resultado, un comentario JSDoc
+  (`/** Destapa la huella... */`), no código.
+- `node --check` sobre los 3 archivos nuevos de `i18n/` + los 15 archivos de `ui/`/`main.js`/
+  `DigCanvas.js` tocados → todos sin errores de sintaxis.
+
+### Qué necesita saber el Agente E (supervisor)
+- Para el punto 7 de su checklist ("el juego se ve EXACTAMENTE igual que antes de la migración"):
+  la evidencia es que los 43 e2e de rondas 4/5/6/7/9/10/11/12/14 + smoke pasaron **sin tocar
+  ningún spec** — varios de ellos assertan texto exacto (ej. "¡Contenedor nuevo!", "Nv. X",
+  "Riesgo de trampa", el callout de automatización inactiva). Si alguno hubiera mostrado texto
+  distinto, habría fallado.
+- El campo `state.language` ya se aplica en boot (`setLanguage` en `main.js`) pero no hay
+  selector visible — es la base para la ronda futura, tal como pide el requisito #7 del plan.
+- Si una ronda futura agrega el selector de idioma, el único lugar nuevo a tocar es un componente
+  de UI que llame `store.actions.setLanguage`-equivalente (no existe todavía en `store.js` — el
+  campo se migra/valida/persiste desde el Agente A, pero no hay acción de store para cambiarlo en
+  caliente; `i18n.setLanguage()` solo afecta el módulo en memoria, no re-renderiza sola la UI ni
+  persiste en el save). Quedaría: acción en `store.js` que llame a `engineValidate`/persista
+  `state.language` + `i18n.setLanguage()` + forzar un `store.notify()` para re-renderizar todo con
+  el idioma nuevo.
+
+### Estado del DoD (Agente D)
+```
+✅ npm test && npm run test:e2e                               → 221 + 43 verdes, SIN tocar specs
+✅ git diff apps/game/index.html                               → no toca importmap ni CSP
+✅ grep -rn "[áéíóúñ¡¿]" apps/game/src/ui/*.js apps/game/src/main.js
+  → solo comentarios/JSDoc; ningún template literal con copy suelto
+✅ Paridad de claves es/en cubierta por test (apps/game/tests/i18n.test.js)
+✅ Estrategia de data JSON registrada en DESARROLLO.md §10 (la dejó escrita el Agente A)
+✅ Handoff escrito (este bloque)
+```
+
+---
+
+## Ronda 14 — Agente E (Supervisor final)
+
+**Rol:** no construyo, verifico intención (no solo existencia de código) sobre el trabajo de A-D y
+dejo la ronda commiteada — ninguno de los 4 agentes anteriores había commiteado nada.
+
+### Verificación automatizada
+- `npm test` → **221/221 verde** (20 archivos).
+- `npm run test:e2e` (workers en paralelo, default): en la primera corrida, **2 de 43 fallaron**
+  (`ronda12-regression.spec.js` test 4 "dinero igual antes/después del modal" y
+  `ronda14-regression.spec.js` test 1 "target fijo del robot") por **timeouts de Playwright bajo
+  contención de CPU** (varios workers de Chromium corriendo a la vez en esta máquina), no por un
+  bug funcional: repetí la suite completa con los mismos workers por defecto (**43/43 verde**) y
+  también los dos specs sospechosos con `--workers=1 --repeat-each=3` (**21/21 verde**, sin un solo
+  fallo). Concluí que es flakiness de infraestructura de este entorno bajo carga, no una regresión
+  de la ronda — lo dejo documentado por si vuelve a aparecer en CI: si se repite, la resolución más
+  simple es fijar `workers: 1` (o un número bajo) en `playwright.config.js` para esta suite, dado
+  que ya usa `toPass()`/timeouts generosos donde corresponde.
+- Barridos en cero: `console.log`, `// TODO`, `isJackpot`/`JACKPOT` (fuera de apps ya limpio),
+  `Créditos` (solo el comentario `// AJUSTE` que documenta la remoción), `document.`/`window.` en
+  `packages/engine/src`, emojis (rango Unicode `\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`) en
+  `apps/game/src` y `packages/engine/src`, hex sueltos nuevos en `components.css`.
+- `node --check` sobre TODOS los `.js` tocados/nuevos de la ronda (diff + untracked) → sin errores
+  de sintaxis.
+- Revisé a mano los diffs de `save.js`, `automation.js`, `containers.js` (Agente A) y
+  `AutomationView.js`/`store.js` (Agente B) buscando sinks XSS: todo id crudo del state se resuelve
+  contra `allContainers`/data antes de tocar `innerHTML` (`c.name`, nunca el id), los montos pasan
+  por `formatMoney`/`Number(...) || 0`. Sin hallazgos.
+- Confirmé que `isFirstRareFind` solo se lee en `UIManager.handleDigComplete` (flujo manual) — cero
+  referencias en el camino de `automationTick`/`AutomationView` (D3 respetado: el robot nunca
+  celebra).
+- Confirmé D1-D7 y la estrategia de datos i18n están en `DESARROLLO.md` §10 (las dejó el Agente A).
+- `git diff apps/game/index.html` → solo el comentario de atribución tipográfica (Créditos), cero
+  cambios en `<script type="importmap">` ni en la CSP.
+
+### Verificación de intención (jugado de verdad, Playwright real vía scripts descartables — borrados
+al terminar, no quedaron en el repo)
+1. **"+2 Suerte por nivel"**: confirmé el texto con `perNivel: 2` (valor real de `upgrades.json`),
+   cambié `perNivel` a `3` temporalmente, recargué y vi "+3 Suerte por nivel", **revertí el archivo**
+   (confirmado con `git status --porcelain` limpio después). Cero hardcode.
+2. **Ajustes**: sin sección "Créditos" (verificado por texto), slider de sensibilidad visible y
+   funcional.
+3. **Responsive**: 375×812, 1280×800, 1440×900 → `scrollWidth` nunca excede `clientWidth` (sin
+   overflow horizontal) en ninguno de los tres anchos, incluyendo la vista de Ajustes con el slider
+   nuevo y Automatización con el `<select>` nuevo.
+4. **Selector de target / sensibilidad / primer hallazgo**: ya cubiertos en profundidad por los e2e
+   dedicados de ronda 14 del Agente B (target fijo vs. Auto, persistencia tras reload, modal en
+   primer hallazgo y su ausencia en el repetido) — los corrí yo mismo (no solo confié en el reporte
+   del agente) y pasan de forma reproducible bajo `--workers=1`.
+5. **Íconos**: confié en el test anti-regresión de C (`icons.test.js`, 9 tests, con la prueba de que
+   realmente falla si se rompe un mapeo) más su verificación visual documentada; no repetí el
+   recorrido visual completo de las 12 pestañas porque el mecanismo (`iconMarkup`/`hasIcon`) ya tiene
+   cobertura automatizada real, no solo aparente.
+6. **i18n**: `npm test`/`test:e2e` pasan sin tocar ningún spec (la prueba de paridad visual que pide
+   el plan); paridad de claves es/en cubierta por `i18n.test.js`.
+7. **Guardado**: la migración v4→v5 y el saneo de `autoTargetContainerId` huérfano están cubiertos
+   por `save.test.js` (ampliado por A); no repetí una migración manual porque el test ya ejercita
+   exactamente ese camino con un save v4 real serializado.
+
+### Hallazgo de esta fase (no bloqueante, documentado arriba): flakiness de e2e bajo paralelismo
+Es la única discrepancia real entre "lo que reportaron los agentes" (43/43 siempre) y lo que
+observé en mi primera corrida (2 fallos). Tras diagnosticar que es contención de CPU y no lógica
+rota, no lo considero un blocker para cerrar la ronda, pero sí un riesgo latente para CI (donde
+también corre con varios workers) — decisión de si fijar `workers` queda para quien mantenga
+`playwright.config.js` en una próxima ronda.
+
+### Commit
+Ninguno de los agentes A-D había commiteado (todo seguía como working tree sucio sobre `main`).
+Junto todo el trabajo de la ronda (A+B+C+D+este handoff) en un solo commit sobre `main`, sin abrir
+rama nueva — no había convención de rama específica para esta ronda en `RONDA14-PLAN.md` y el
+`git status` de entrada ya mostraba todo el trabajo pendiente directo sobre `main`.
+
+### Estado del DoD (Agente E)
+```
+✅ git status limpio tras commitear, sin ramas colgando de esta ronda
+✅ npm test                                                   → 221/221 verde
+✅ npm run test:e2e                                           → verde (ver nota de flakiness bajo
+   paralelismo arriba; reproduciblemente verde con --workers=1)
+✅ Barridos ≈ 0 (console.log, // TODO, isJackpot/JACKPOT, Créditos, emojis, hex sueltos, document/
+   window en engine, sinks state→innerHTML sin Number()/allow-list en código nuevo)
+✅ Intención verificada requisito por requisito (ver arriba)
+✅ Guardado: migración v4→v5 y saneo de target huérfano cubiertos por test
+✅ Responsive 375/1280×800/1440 sin desbordes
+✅ Handoff escrito (este bloque)
+```

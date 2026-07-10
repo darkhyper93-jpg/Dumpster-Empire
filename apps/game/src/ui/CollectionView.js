@@ -9,6 +9,7 @@
 
 import { getLuck, getLevelRarityShift, categoryWeights, formatMoney } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { t } from '../i18n/i18n.js';
 
 /** Estado de presentación local (qué contenedor está seleccionado), no persistido. */
 let selectedContainerId = null;
@@ -36,7 +37,7 @@ export const CollectionView = {
 
     const { allContainers, itemsData, data } = store.ctx;
     if (!allContainers.length) {
-      container.innerHTML = '<p class="empty-state">No hay contenedores configurados.</p>';
+      container.innerHTML = `<p class="empty-state">${t('common.emptyContainers')}</p>`;
       return;
     }
 
@@ -58,7 +59,7 @@ export const CollectionView = {
     const grid = container.querySelector('#index-grid');
     const pool = itemsData.containers[selected.id] || [];
     if (!pool.length) {
-      grid.innerHTML = '<p class="empty-state">Este contenedor no tiene recompensas configuradas.</p>';
+      grid.innerHTML = `<p class="empty-state">${t('collection.emptyPool')}</p>`;
       return;
     }
 
@@ -80,8 +81,8 @@ export const CollectionView = {
           return (
             `<article class="index-card index-card--hidden">` +
             `<span class="index-card-icon">${iconMarkup('locked', { size: 26 })}</span>` +
-            `<h3>???</h3>` +
-            `<p>Todavía no encontraste este objeto.</p>` +
+            `<h3>${t('collection.hiddenName')}</h3>` +
+            `<p>${t('collection.notFound')}</p>` +
             `</article>`
           );
         }
@@ -89,9 +90,9 @@ export const CollectionView = {
           `<article class="index-card" style="--rarity-color:var(${rarity ? rarity.colorToken : '--amber'})">` +
           `<span class="index-card-icon">${iconMarkup(item.icon, { size: 26 })}</span>` +
           `<h3>${item.name}</h3>` +
-          `<p>Probabilidad: ${(itemProb * 100).toFixed(1)}%</p>` +
-          `<p>Valor base: ${formatMoney(item.valorBase)}</p>` +
-          `<p>Encontrado: ${foundCount}</p>` +
+          `<p>${t('collection.probability', { pct: (itemProb * 100).toFixed(1) })}</p>` +
+          `<p>${t('collection.baseValue', { amount: formatMoney(item.valorBase) })}</p>` +
+          `<p>${t('collection.foundCount', { count: foundCount })}</p>` +
           `</article>`
         );
       })

@@ -10,6 +10,7 @@
 import { formatMoney, bestAffordableUnlockedContainer } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { tweenNumberText } from '../fx/tween.js';
+import { t } from '../i18n/i18n.js';
 
 export const OfflineModal = {
   /**
@@ -41,11 +42,11 @@ export const OfflineModal = {
 
     container.innerHTML =
       `<div class="modal-card offline-modal-card">` +
-      `<h2>Mientras no estabas...</h2>` +
-      `<p>Tus robots trabajaron ${minutes} min y encontraron:</p>` +
+      `<h2>${t('offline.title')}</h2>` +
+      `<p>${t('offline.summary', { minutes })}</p>` +
       `<p class="offline-money" id="offline-money-value">$0</p>` +
       (highlightIcons ? `<div class="offline-highlights">${highlightIcons}</div>` : '') +
-      `<button type="button" data-action="close-offline">Genial</button>` +
+      `<button type="button" data-action="close-offline">${t('offline.close')}</button>` +
       `</div>`;
 
     container.hidden = false;

@@ -6,6 +6,7 @@
 import { formatMoney, formatNumber } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { tweenNumberText } from '../fx/tween.js';
+import { t } from '../i18n/i18n.js';
 
 export const Topbar = {
   /**
@@ -33,7 +34,7 @@ export const Topbar = {
     }
     if (settingsBtn && !settingsBtn.dataset.iconReady) {
       settingsBtn.dataset.iconReady = 'true';
-      settingsBtn.innerHTML = `${iconMarkup('settings')}<span class="sr-only">Ajustes</span>`;
+      settingsBtn.innerHTML = `${iconMarkup('settings')}<span class="sr-only">${t('topbar.settings')}</span>`;
     }
   },
 };

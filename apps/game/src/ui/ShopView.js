@@ -24,6 +24,7 @@ import {
   CONTAINER_LEVEL_MAX,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { t } from '../i18n/i18n.js';
 
 export const ShopView = {
   /**
@@ -34,7 +35,7 @@ export const ShopView = {
   render(container, state, store) {
     const { allContainers, data, itemsData } = store.ctx;
     if (!allContainers.length) {
-      container.innerHTML = '<p class="empty-state">No hay contenedores configurados.</p>';
+      container.innerHTML = `<p class="empty-state">${t('common.emptyContainers')}</p>`;
       return;
     }
 
@@ -46,8 +47,8 @@ export const ShopView = {
         // PLAN.md §2.6 (ronda 11): la razón del bloqueo importa — prestigio vs. progresión.
         const needsPrestige = c.requiresPrestigeCount && state.prestigeCount < c.requiresPrestigeCount;
         const reason = needsPrestige
-          ? `Se desbloquea con el Prestigio ${c.requiresPrestigeCount}.`
-          : 'Bloqueado. Comprá el contenedor anterior primero.';
+          ? t('shop.unlocksAtPrestige', { count: c.requiresPrestigeCount })
+          : t('shop.lockedDefault');
         return (
           `<article class="shop-card shop-card--locked">` +
           `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
@@ -57,7 +58,7 @@ export const ShopView = {
         );
       }
       const cost = getContainerCost(state, c, data);
-      const costLabel = cost === 0 ? 'Gratis' : formatMoney(cost);
+      const costLabel = cost === 0 ? t('common.free') : formatMoney(cost);
       const trapProb = getEffectiveTrapProbability(state, c, false, data);
       // PLAN.md §11.2: Suerte recomendada — punto de rentabilidad esperada positiva, calculado
       // por el engine (getRecommendedLuck), nunca aproximado acá.
@@ -76,26 +77,38 @@ export const ShopView = {
       const levelBonusPct = Math.round((getLevelValueMult(state, c) - 1) * 100);
       const levelProgress =
         level >= CONTAINER_LEVEL_MAX
-          ? 'nivel máximo'
-          : `${formatNumber(Number(state.containerLevelProgress[c.id]) || 0)}/` +
-            `${formatNumber(digsNeededForNextLevel(c, level))} escarbados para el nivel ${level + 1}`;
+          ? t('shop.maxLevel')
+          : t('shop.levelProgress', {
+              cur: formatNumber(Number(state.containerLevelProgress[c.id]) || 0),
+              needed: formatNumber(digsNeededForNextLevel(c, level)),
+              next: level + 1,
+            });
       return (
         `<article class="shop-card">` +
         `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
         `<h3>${c.name}</h3>` +
-        `<p>Costo: ${costLabel}</p>` +
-        `<p>Categorías: ${c.categorias.map((id) => rarityNames.get(id) || id).join(', ')}</p>` +
-        `<p>Riesgo de trampa: ${Math.round(trapProb * 100)}%</p>` +
-        `<p>Comprados: ${Number(state.ownedContainers[c.id]) || 0}</p>` +
-        `<p class="shop-card-level">Nivel ${level}/${CONTAINER_LEVEL_MAX} (+${levelBonusPct}% valor) — ${levelProgress}</p>` +
+        `<p>${t('shop.cost', { label: costLabel })}</p>` +
+        `<p>${t('shop.categories', { list: c.categorias.map((id) => rarityNames.get(id) || id).join(', ') })}</p>` +
+        `<p>${t('shop.trapRisk', { pct: Math.round(trapProb * 100) })}</p>` +
+        `<p>${t('shop.owned', { count: Number(state.ownedContainers[c.id]) || 0 })}</p>` +
+        `<p class="shop-card-level">${t('shop.levelLine', { level, max: CONTAINER_LEVEL_MAX, pct: levelBonusPct, progress: levelProgress })}</p>` +
         `<p class="shop-card-luck ${luckReached ? 'shop-card-luck--reached' : ''}">` +
-        `Suerte recomendada: ${formatNumber(recommendedLuck)} ${luckReached ? '(alcanzada)' : `(tenés ${formatNumber(currentLuck)})`}` +
+        `${t('shop.luckLine', {
+          rec: formatNumber(recommendedLuck),
+          status: luckReached ? t('shop.reached') : t('shop.haveLuck', { cur: formatNumber(currentLuck) }),
+        })}` +
         `</p>` +
         `<p class="shop-card-luck ${digPowerReached ? 'shop-card-luck--reached' : ''}">` +
-        `Fuerza recomendada: ×${recDigPower} ${digPowerReached ? '(alcanzada)' : `(tenés ×${curDigPower.toFixed(2)})`}` +
+        `${t('shop.digPowerLine', {
+          rec: recDigPower,
+          status: digPowerReached ? t('shop.reached') : t('shop.haveMult', { cur: curDigPower.toFixed(2) }),
+        })}` +
         `</p>` +
         `<p class="shop-card-luck ${areaReached ? 'shop-card-luck--reached' : ''}">` +
-        `Búsqueda recomendada: ×${recArea} ${areaReached ? '(alcanzada)' : `(tenés ×${curArea.toFixed(2)})`}` +
+        `${t('shop.areaLine', {
+          rec: recArea,
+          status: areaReached ? t('shop.reached') : t('shop.haveMult', { cur: curArea.toFixed(2) }),
+        })}` +
         `</p>` +
         `</article>`
       );

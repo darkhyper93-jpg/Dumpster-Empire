@@ -10,6 +10,7 @@
 
 import { formatMoney, formatNumber, canPrestige, prestigeKeysPreview, nextPrestigeNodeCost, isPrestigeNodeUnlocked } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { t } from '../i18n/i18n.js';
 
 /**
  * Deriva { branch, depth, parent } por nodo a partir de `requires` (cada nodo tiene 0 o 1
@@ -82,7 +83,7 @@ export const PrestigeView = {
 
     const { data } = store.ctx;
     if (!data.prestigeTree.length) {
-      container.innerHTML = '<p class="empty-state">No hay árbol de prestigio configurado.</p>';
+      container.innerHTML = `<p class="empty-state">${t('prestige.empty')}</p>`;
       return;
     }
 
@@ -102,13 +103,13 @@ export const PrestigeView = {
         let action;
         if (!unlocked) {
           const parentName = layout.parent ? nodeById.get(layout.parent)?.name || layout.parent : '';
-          action = `<span class="badge badge--locked">Requiere: ${parentName}</span>`;
+          action = `<span class="badge badge--locked">${t('prestige.requires', { name: parentName })}</span>`;
         } else if (maxed) {
-          action = '<span class="badge">Máximo</span>';
+          action = `<span class="badge">${t('prestige.maxed')}</span>`;
         } else {
           action = `<button type="button" data-action="buy-node" data-id="${node.id}" ${canAfford ? '' : 'disabled'} title="${
-            canAfford ? '' : `Te faltan ${formatNumber(cost - state.prestigeKeys)} llaves`
-          }">Mejorar por ${formatNumber(cost)} llaves</button>`;
+            canAfford ? '' : t('common.missingKeys', { amount: formatNumber(cost - state.prestigeKeys) })
+          }">${t('prestige.upgradeFor', { amount: formatNumber(cost) })}</button>`;
         }
         const stateClass = !unlocked
           ? 'prestige-node--locked'
@@ -132,12 +133,12 @@ export const PrestigeView = {
     container.innerHTML =
       `<section class="prestige-summary">` +
       `<span class="prestige-summary-icon">${iconMarkup('key', { size: 22 })}</span>` +
-      `<p>Llaves de Ciudad: ${formatNumber(state.prestigeKeys)}</p>` +
-      `<p>Prestigios completados: ${Number(state.prestigeCount) || 0}</p>` +
-      `<p>Si prestigiás ahora ganás: ${formatNumber(preview)} llaves.</p>` +
+      `<p>${t('prestige.keysLabel', { amount: formatNumber(state.prestigeKeys) })}</p>` +
+      `<p>${t('prestige.completedCount', { count: Number(state.prestigeCount) || 0 })}</p>` +
+      `<p>${t('prestige.previewGain', { amount: formatNumber(preview) })}</p>` +
       `<button type="button" class="prestige-btn-main" data-action="do-prestige" ${eligible ? '' : 'disabled'} title="${
-        eligible ? '' : 'Necesitás $1.000.000.000 ganados en total para prestigiar.'
-      }">Hacer Prestigio</button>` +
+        eligible ? '' : t('prestige.needMoney')
+      }">${t('prestige.doButton')}</button>` +
       `</section>` +
       `<div class="prestige-tree">${nodes}</div>`;
   },

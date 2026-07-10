@@ -18,14 +18,10 @@ import {
 } from '../economy.js';
 import { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluctuation } from '../rng.js';
 
-// PLAN.md §5.2 (ronda 12): un ítem es "jackpot" si es de la categoría más rara del contenedor
-// y su varianza cayó en el tope del rango 0.85-1.15 de rollItemVariance (~1/6 de las veces).
-const JACKPOT_VARIANCE_MIN = 1.10;
-
 /**
  * @typedef {Object} DigResult
  * @property {boolean} isTrap
- * @property {Array<{ icon: string, name: string, categoria: string, value: number, isJackpot: boolean }>} items
+ * @property {Array<{ icon: string, name: string, categoria: string, value: number, isFirstRareFind: boolean }>} items
  * @property {number} moneyDelta
  */
 
@@ -93,6 +89,11 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
   const levelValueMult = getLevelValueMult(state, container);
   const containerPool = itemsData.containers[container.id];
   const items = [];
+  const rarest = container.categorias[container.categorias.length - 1];
+  // Un contenedor multi-slot puede sacar el mismo ítem dos veces en el MISMO roll — solo la
+  // primera lleva el flag. Esto funciona porque este loop corre ANTES de que applyContainerResult
+  // incremente itemsFoundByItem (D7, PLAN.md §5.2 ronda 14).
+  const seenInThisRoll = new Set();
   for (let i = 0; i < container.slots; i++) {
     const categoria = rollCategory(container.categorias, luck, levelShift, random);
     const rarity = itemsData.rarities.find((r) => r.id === categoria);
@@ -109,10 +110,11 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
         sellMult: getSellMult(state, categoria, data),
         depthValueMult,
       }) * levelValueMult;
-    const isJackpot =
-      categoria === container.categorias[container.categorias.length - 1] &&
-      variance >= JACKPOT_VARIANCE_MIN;
-    items.push({ icon: pick.icon, name: pick.name, categoria, value, isJackpot });
+    const alreadyFound =
+      Boolean(state.itemsFoundByItem?.[container.id]?.[pick.name]) || seenInThisRoll.has(pick.name);
+    const isFirstRareFind = categoria === rarest && !alreadyFound;
+    seenInThisRoll.add(pick.name);
+    items.push({ icon: pick.icon, name: pick.name, categoria, value, isFirstRareFind });
   }
   const moneyDelta = items.reduce((sum, item) => sum + item.value, 0);
   return { isTrap: false, items, moneyDelta };

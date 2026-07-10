@@ -5,6 +5,7 @@
 
 import { formatMoney, formatNumber } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { t } from '../i18n/i18n.js';
 
 export const AchievementsView = {
   /**
@@ -15,7 +16,7 @@ export const AchievementsView = {
   render(container, state, store) {
     const { achievementsData } = store.ctx;
     if (!achievementsData.length) {
-      container.innerHTML = '<p class="empty-state">No hay logros configurados.</p>';
+      container.innerHTML = `<p class="empty-state">${t('achievements.empty')}</p>`;
       return;
     }
 
@@ -26,14 +27,14 @@ export const AchievementsView = {
         // acá solo se muestra, el engine ya la aplicó una sola vez al desbloquear.
         const rewardLabel =
           a.reward.type === 'keys'
-            ? `${formatNumber(a.reward.amount)} llave${a.reward.amount === 1 ? '' : 's'} de Ciudad`
+            ? t('achievements.rewardKeys', { amount: formatNumber(a.reward.amount), plural: a.reward.amount === 1 ? '' : 's' })
             : formatMoney(a.reward.amount);
         return (
           `<article class="achievement-card ${unlocked ? 'achievement-card--unlocked' : 'achievement-card--locked'}">` +
           `<span class="achievement-card-icon">${iconMarkup(a.icon, { size: 26 })}</span>` +
           `<h3>${a.name}</h3>` +
           `<p class="achievement-card-reward">${iconMarkup(a.reward.type === 'keys' ? 'key' : 'money', { size: 16 })} ${rewardLabel}</p>` +
-          `<span class="badge">${unlocked ? 'Reclamado' : 'Pendiente'}</span>` +
+          `<span class="badge">${unlocked ? t('achievements.claimed') : t('achievements.pending')}</span>` +
           `</article>`
         );
       })

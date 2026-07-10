@@ -4,11 +4,9 @@
  * de pago). El progreso se guarda en `state.tutorialStep`, así que se muestra una sola vez.
  */
 
-const STEPS = [
-  'Escarbá el Tacho de Vereda (gratis) arrastrando sobre el contenedor para empezar.',
-  'Comprá tu primera mejora de Suerte, Fuerza o Área en el panel de mejoras rápidas.',
-  'Escarbá tu primer contenedor de pago eligiéndolo en la pantalla Escarbar.',
-];
+import { t } from '../i18n/i18n.js';
+
+const STEP_KEYS = ['tutorial.step0', 'tutorial.step1', 'tutorial.step2'];
 
 export class Tutorial {
   /**
@@ -26,13 +24,14 @@ export class Tutorial {
 
   /** @param {import('@dumpster/engine').GameState} state */
   render(state) {
-    if (state.tutorialStep >= STEPS.length) {
+    if (state.tutorialStep >= STEP_KEYS.length) {
       this.root.hidden = true;
       this.root.innerHTML = '';
       return;
     }
     this.root.hidden = false;
     this.root.innerHTML =
-      `<p>${STEPS[state.tutorialStep]}</p>` + `<button type="button" data-action="skip-tutorial">Saltar tutorial</button>`;
+      `<p>${t(STEP_KEYS[state.tutorialStep])}</p>` +
+      `<button type="button" data-action="skip-tutorial">${t('tutorial.skip')}</button>`;
   }
 }

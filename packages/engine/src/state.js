@@ -13,7 +13,9 @@
 // pasan por la UI). save.js migra saves v1/v2 rellenando el campo en {}.
 // AJUSTE (PUNTOS_A_MEJORAR_2.md §5): bump a 4 por `volume` (0..1) — el control de volumen de
 // Configuración se persiste junto a `soundOn`. save.js migra saves v1/v2/v3 rellenando `volume: 1`.
-export const SAVE_VERSION = 4;
+// AJUSTE (ronda 14): v5 agrega autoTargetContainerId (selector del robot),
+// digSensitivity (slider de sensibilidad) y language (base de i18n es/en).
+export const SAVE_VERSION = 5;
 
 /**
  * @typedef {Object} AutoProcessingSlot
@@ -51,6 +53,9 @@ export const SAVE_VERSION = 4;
  * @property {boolean} soundOn
  * @property {number} volume - volumen maestro de SFX, 0..1 (PUNTOS_A_MEJORAR_2.md §5)
  * @property {number} lastSavedAt - epoch ms, usado para calcular progreso offline
+ * @property {string|null} autoTargetContainerId - contenedor fijo que compra el robot; null = Auto (el más caro afordable)
+ * @property {number} digSensitivity - multiplicador del pincel de escarbado, rango 0.5–1.5
+ * @property {string} language - idioma de la UI: 'es' | 'en'
  */
 
 /**
@@ -85,5 +90,8 @@ export function freshState() {
     soundOn: true,
     volume: 1,
     lastSavedAt: Date.now(),
+    autoTargetContainerId: null,
+    digSensitivity: 1,
+    language: 'es',
   };
 }

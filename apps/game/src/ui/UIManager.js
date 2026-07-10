@@ -23,6 +23,7 @@ import { CelebrationModal } from './CelebrationModal.js';
 import { iconMarkup } from '../icons/icons.js';
 import { setEnabled as setSoundEnabled, setVolume as setMasterVolume, playFindPop, playTrapThud } from '../fx/audio.js';
 import { spawnFindPop, triggerRarityGlow, triggerTrapShake } from '../fx/particles.js';
+import { t } from '../i18n/i18n.js';
 
 const TAB_VIEWS = {
   tienda: ShopView,
@@ -82,7 +83,7 @@ export class UIManager {
 
   injectTabIcons() {
     for (const btn of this.tabbarEl.querySelectorAll('[data-tab]')) {
-      const label = btn.textContent;
+      const label = t(`tabs.${btn.dataset.tab}`);
       btn.innerHTML = `${iconMarkup(`tab-${btn.dataset.tab}`, { size: 20 })}<span>${label}</span>`;
     }
   }
@@ -103,6 +104,7 @@ export class UIManager {
       });
     }
 
+    this.digAbandonBtn.textContent = t('dig.abandon');
     this.digAbandonBtn.addEventListener('click', () => this.store.actions.abandonManualDig());
     // El click de "elegir contenedor" lo bindea DigContainerPicker.render() sobre #dig-empty
     // (mismo patrón que ShopView/QuickUpgrades: delegación bindeada una sola vez por vista).
@@ -116,12 +118,14 @@ export class UIManager {
     if (result) this.playDigFeedback(result);
     if (res && res.ok && res.levelUp) {
       this.toast.push(
-        `${res.levelUp.containerName} subió a nivel ${res.levelUp.level}: +${res.levelUp.bonusPct}% de valor`
+        t('uiManager.levelUp', { name: res.levelUp.containerName, level: res.levelUp.level, pct: res.levelUp.bonusPct })
       );
     }
     if (result && !result.isTrap) {
-      for (const item of result.items.filter((i) => i.isJackpot)) {
-        CelebrationModal.push(this.celebrationModalEl, { type: 'jackpot', item });
+      // D3/D7 (ronda 14): solo el escarbado manual celebra, y solo la 1ra vez que se encuentra
+      // ESE ítem de la categoría más rara — el robot nunca dispara este modal.
+      for (const item of result.items.filter((i) => i.isFirstRareFind)) {
+        CelebrationModal.push(this.celebrationModalEl, { type: 'firstFind', item });
       }
     }
   }
@@ -180,6 +184,7 @@ export class UIManager {
   render(state) {
     setSoundEnabled(state.soundOn);
     setMasterVolume(state.volume);
+    this.digCanvas.setSensitivity(state.digSensitivity);
     this.renderTopbar(state);
     // PLAN.md §11.9 / PUNTOS_A_MEJORAR_2.md §3: la visibilidad de dig-area/quick-upgrades por
     // pantalla la decide el CSS según el breakpoint, leyendo `data-active-tab` en `.game-shell`.
@@ -213,8 +218,8 @@ export class UIManager {
       const trapPct = Math.round(pending.trapProb * 100);
       // Feedback de "cuánto falta" (CLAUDE.md): si el ritmo está por debajo de lo normal, se lo
       // decimos al jugador en vez de dejar que el arrastre lento se sienta como un bug.
-      const rateHint = pending.digRate < 0.99 ? ` · Ritmo de escarbado: ${Math.round(pending.digRate * 100)}% (subí Fuerza)` : '';
-      this.digTrapHint.textContent = `Riesgo de trampa: ${trapPct}%${rateHint}`;
+      const rateHint = pending.digRate < 0.99 ? t('dig.rateHint', { pct: Math.round(pending.digRate * 100) }) : '';
+      this.digTrapHint.textContent = t('dig.trapRiskLine', { pct: trapPct, hint: rateHint });
       if (this.mountedDig !== pending) {
         this.mountedDig = pending;
         this.digCanvas.start(pending.result, pending.areaMult, pending.digRate);
@@ -234,7 +239,12 @@ export class UIManager {
   renderTabContent(state) {
     // No interrumpir mientras el jugador está escribiendo (ej. import de guardado).
     const active = document.activeElement;
-    if (this.tabContentEl.contains(active) && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) {
+    // El guard de SELECT (riesgo #1 de RONDA14-PLAN.md §7): sin él, el dropdown del target del
+    // robot se cierra solo cada segundo porque automationTick notifica en cada tick.
+    if (
+      this.tabContentEl.contains(active) &&
+      (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT' || active.tagName === 'SELECT')
+    ) {
       return;
     }
 
@@ -253,7 +263,7 @@ export class UIManager {
 
     const view = TAB_VIEWS[this.activeTab];
     if (!view) {
-      this.tabContentEl.innerHTML = '<p class="empty-state">Vista desconocida.</p>';
+      this.tabContentEl.innerHTML = `<p class="empty-state">${t('uiManager.unknownView')}</p>`;
       return;
     }
     view.render(this.tabContentEl, state, this.store);

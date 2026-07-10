@@ -27,7 +27,11 @@ const SHAPES = {
   phone: '<rect x="7" y="2" width="10" height="20" rx="1.5"/><line x1="7" y1="18" x2="17" y2="18"/>',
   console: '<rect x="3" y="8" width="18" height="9" rx="2"/><circle cx="7" cy="12.5" r="1.4"/><circle cx="17" cy="11" r="1"/><circle cx="17" cy="14" r="1"/>',
   cable: '<path d="M5 5c4 0 3 5 7 5s3-5 7-5"/><path d="M5 19c4 0 3-5 7-5s3 5 7 5"/><circle cx="5" cy="5" r="1.5"/><circle cx="19" cy="5" r="1.5"/><circle cx="5" cy="19" r="1.5"/><circle cx="19" cy="19" r="1.5"/>',
-  chip: '<rect x="7" y="7" width="10" height="10" rx="1"/><line x1="9" y1="3" x2="9" y2="7"/><line x1="15" y1="3" x2="15" y2="7"/><line x1="9" y1="17" x2="9" y2="21"/><line x1="15" y1="17" x2="15" y2="21"/><line x1="3" y1="9" x2="7" y2="9"/><line x1="3" y1="15" x2="7" y2="15"/><line x1="17" y1="9" x2="21" y2="9"/><line x1="17" y1="15" x2="21" y2="15"/>',
+  motherboard: '<rect x="7" y="7" width="10" height="10" rx="1"/><line x1="9" y1="3" x2="9" y2="7"/><line x1="15" y1="3" x2="15" y2="7"/><line x1="9" y1="17" x2="9" y2="21"/><line x1="15" y1="17" x2="15" y2="21"/><line x1="3" y1="9" x2="7" y2="9"/><line x1="3" y1="15" x2="7" y2="15"/><line x1="17" y1="9" x2="21" y2="9"/><line x1="17" y1="15" x2="21" y2="15"/>',
+  fusionCore: '<circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="7" stroke-dasharray="2 2"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/>',
+  quantumChip: '<rect x="9" y="9" width="6" height="6" rx="1"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(30 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(-30 12 12)"/>',
+  plasmaCell: '<rect x="7" y="5" width="10" height="16" rx="2"/><line x1="10" y1="2" x2="10" y2="5"/><line x1="14" y1="2" x2="14" y2="5"/><path d="M13 9l-3 5h3l-1 5 4-6h-3z"/>',
+  olympusCircuit: '<rect x="8" y="8" width="8" height="8" rx="1"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="2" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="22" y2="12"/><line x1="5" y1="5" x2="8.5" y2="8.5"/><line x1="19" y1="5" x2="15.5" y2="8.5"/><line x1="5" y1="19" x2="8.5" y2="15.5"/><line x1="19" y1="19" x2="15.5" y2="15.5"/>',
   camera: '<rect x="3" y="7" width="18" height="12" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M9 7l1.5-2h3L15 7"/>',
   tv: '<rect x="3" y="5" width="18" height="12" rx="1"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="17" x2="12" y2="20"/>',
   watch: '<circle cx="12" cy="12" r="7"/><path d="M12 8v4l3 2"/><path d="M9 3h6l-1 3H10z"/><path d="M9 21h6l-1-3H10z"/>',
@@ -84,14 +88,59 @@ const SHAPES = {
   satellite: '<rect x="9" y="9" width="6" height="6" rx="1" transform="rotate(45 12 12)"/><rect x="2" y="10" width="5" height="4" rx="0.5"/><rect x="17" y="10" width="5" height="4" rx="0.5"/><path d="M14 8l4-4"/><circle cx="18.5" cy="3.5" r="1.2"/>',
   temple: '<path d="M4 9l8-5 8 5"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="6" y1="9" x2="6" y2="18"/><line x1="10" y1="9" x2="10" y2="18"/><line x1="14" y1="9" x2="14" y2="18"/><line x1="18" y1="9" x2="18" y2="18"/><line x1="4" y1="18" x2="20" y2="18"/><line x1="3" y1="21" x2="21" y2="21"/>',
   closeX: '<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
+
+  // Ronda 14 — Fase A: los 10 ítems que caían en el fallback "artifact" + candelabro rehecho
+  cigaretteButt: '<rect x="3" y="14" width="13" height="4" rx="2" transform="rotate(-20 9.5 16)"/><line x1="8" y1="12.3" x2="9.6" y2="15.6" transform="rotate(-20 9.5 16)"/><path d="M17 7c1.2 1-1 2.2 0 3.2s-1 2.2 0 3.2"/>',
+  chipBag: '<path d="M6 5l1 3-2 2 2 2-2 2 2 2-1 3h12l-1-3 2-2-2-2 2-2-2-2 1-3z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="14" x2="15" y2="14"/>',
+  corkBottle: '<path d="M9 3h6l-1 15a2 2 0 0 1-4 0z"/><line x1="9.3" y1="7" x2="14.7" y2="7"/><line x1="9.6" y1="11" x2="14.4" y2="11"/><line x1="9.9" y1="15" x2="14.1" y2="15"/>',
+  napkinUsed: '<path d="M4 6h16v12L4 6z"/><path d="M9.5 6.9l4.3 7.4" stroke-dasharray="1.4 1.4"/>',
+  fanOld: '<circle cx="12" cy="9" r="6.5"/><path d="M12 9c0-3 2-4 3-3s-1 3-3 3z"/><path d="M12 9c2.6 1.5 2 3.8 .5 4.3s-2.5-2-.5-4.3z"/><path d="M12 9c-2.6 1.5-4.5 0-4-1.8s2.4-1 4 1.8z"/><line x1="12" y1="15.5" x2="12" y2="20"/><line x1="8" y1="20" x2="16" y2="20"/>',
+  floppyDisk: '<path d="M5 4h11l3 3v13H5z"/><rect x="8" y="4" width="6" height="5"/><rect x="7" y="13" width="10" height="6"/>',
+  ivoryFigurine: '<circle cx="12" cy="6" r="2"/><path d="M9 17c0-4 1-6 3-6s3 2 3 6"/><rect x="8" y="17" width="8" height="2"/><rect x="9" y="19" width="6" height="2"/>',
+  regimentFlag: '<line x1="6" y1="3" x2="6" y2="21"/><path d="M6 4c4-1.5 6 1.5 10 0v9c-4 1.5-6-1.5-10 0z"/><circle cx="11" cy="8.5" r="1.6"/>',
+  ritualMask: '<path d="M12 3c-4 0-6 3-6 7 0 5 2.5 9 6 9s6-4 6-9c0-4-2-7-6-7z"/><circle cx="9.3" cy="10" r="1.3"/><circle cx="14.7" cy="10" r="1.3"/><path d="M9 15c1 1 5 1 6 0"/><line x1="7" y1="7" x2="9" y2="8"/><line x1="17" y1="7" x2="15" y2="8"/>',
+  legendarySword: '<line x1="12" y1="2" x2="12" y2="15"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="10" y1="4" x2="12" y2="2"/><line x1="14" y1="4" x2="12" y2="2"/><line x1="12" y1="15" x2="12" y2="19"/><circle cx="12" cy="21" r="1.3"/>',
+  candelabrum: '<line x1="12" y1="14" x2="12" y2="20"/><line x1="8" y1="20" x2="16" y2="20"/><path d="M12 14c0-3-3-2-3-5"/><path d="M12 14c0-3 3-2 3-5"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="9" y1="9" x2="9" y2="6"/><line x1="12" y1="9" x2="12" y2="5"/><line x1="15" y1="9" x2="15" y2="6"/><path d="M9 6c-.5-1 .5-1.5 0-2.5"/><path d="M12 5c-.5-1 .5-1.5 0-2.5"/><path d="M15 6c-.5-1 .5-1.5 0-2.5"/>',
+
+  // Ronda 14 — Fase B: desambiguación de formas compartidas (document/chip/vase/crystal/
+  // painting/amulet/statue/coin/watch/lamp) — ver ICON_MAP para qué ítem usa cada una.
+  newspaper: '<path d="M4 5h16v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5z"/><line x1="4" y1="5" x2="20" y2="5"/><line x1="7" y1="8" x2="11" y2="8"/><line x1="7" y1="10" x2="11" y2="10"/><line x1="7" y1="12" x2="11" y2="12"/><line x1="13" y1="8" x2="17" y2="8"/><line x1="13" y1="10" x2="17" y2="10"/>',
+  book: '<path d="M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><line x1="8" y1="4" x2="8" y2="20"/><line x1="10" y1="8" x2="14" y2="8"/><line x1="10" y1="11" x2="14" y2="11"/>',
+  foldedMap: '<path d="M4 6l6-2 4 2 6-2v14l-6 2-4-2-6 2z"/><line x1="10" y1="4" x2="10" y2="18"/><line x1="14" y1="6" x2="14" y2="20"/><path d="M6 12c2 1 3-2 5-1s3 3 5 1" stroke-dasharray="1.2 1.6"/>',
+  photoFrame: '<rect x="4" y="4" width="16" height="14" rx="1"/><circle cx="9" cy="9" r="1.6"/><path d="M4 16l5-5 4 4 3-3 4 4"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="18" x2="12" y2="21"/>',
+  engravingPlate: '<rect x="5" y="5" width="14" height="14" rx="1"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="8" y1="11" x2="13" y2="16"/><line x1="8" y1="14" x2="10" y2="16"/><line x1="11" y1="8" x2="16" y2="13"/><line x1="14" y1="8" x2="16" y2="10"/>',
+  sketch: '<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M8 9c2-2 3 2 5 0s3 2 5 0"/><line x1="15" y1="16" x2="19" y2="12"/><line x1="17" y1="18" x2="19" y2="16"/>',
+  scroll: '<path d="M5 8a2 2 0 1 1 0-4h1v16H5a2 2 0 1 1 0-4"/><path d="M19 8a2 2 0 1 0 0-4h-1v16h1a2 2 0 1 0 0-4"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="15" x2="14" y2="15"/>',
+  manifest: '<rect x="6" y="4" width="12" height="17" rx="1"/><rect x="9" y="2" width="6" height="4" rx="1"/><line x1="8" y1="10" x2="14" y2="10"/><line x1="8" y1="13" x2="14" y2="13"/><line x1="8" y1="16" x2="12" y2="16"/><circle cx="16.5" cy="16" r="2"/>',
+  logbook: '<rect x="5" y="4" width="14" height="16" rx="1"/><circle cx="8" cy="7" r="0.7"/><circle cx="8" cy="12" r="0.7"/><circle cx="8" cy="17" r="0.7"/><line x1="11" y1="7" x2="17" y2="7"/><line x1="11" y1="12" x2="17" y2="12"/><path d="M13 16.5c1.5-1 3.5-1 4 .5" stroke-dasharray="1 1.4"/>',
+  decorativeVase: '<path d="M9 3h6v3l3 6c1 3-1 9-6 9s-7-6-6-9l3-6V3z"/><line x1="7.5" y1="13" x2="16.5" y2="13"/><line x1="8" y1="16" x2="16" y2="16"/>',
+  idol: '<circle cx="12" cy="5" r="2"/><path d="M9 21V12c0-2 .5-3 1.5-3.5L12 7l1.5 1.5C14.5 9 15 10 15 12v9"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="10" y1="11" x2="14" y2="11"/>',
+  grail: '<path d="M7 3h10l-1 6a4 4 0 0 1-8 0z"/><line x1="12" y1="9" x2="12" y2="17"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="9" y1="17" x2="15" y2="17"/>',
+  shard: '<path d="M12 2l4 7-2 5 3 8-7-6-4 2 2-9z"/>',
+  crystalHeart: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/><line x1="12" y1="7" x2="12" y2="17"/>',
+  chronoShard: '<path d="M12 2l6 6-6 14-6-14z"/><circle cx="12" cy="9" r="2.2"/><line x1="12" y1="9" x2="12" y2="7.3"/><line x1="12" y1="9" x2="13.3" y2="9.7"/>',
+  seed: '<path d="M12 22c-5-2-6-8-3-13 2-3 3-5 3-7 0 2 1 4 3 7 3 5 2 11-3 13z"/><line x1="12" y1="6" x2="12" y2="18"/>',
+  tapestry: '<rect x="4" y="3" width="16" height="13" rx="1"/><path d="M4 16l5-5 4 4 3-3 4 4"/><line x1="6" y1="18" x2="6" y2="21"/><line x1="9" y1="18" x2="9" y2="21"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="15" y1="18" x2="15" y2="21"/><line x1="18" y1="18" x2="18" y2="21"/>',
+  sealedRelic: '<rect x="6" y="8" width="12" height="12" rx="1"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><rect x="10.5" y="12" width="3" height="4" rx="0.5"/>',
+  bell: '<path d="M12 3v2"/><path d="M6 15c0-4 1.5-7 6-7s6 3 6 7l1.5 3h-15z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/>',
+  reliquary: '<path d="M8 21V13a4 4 0 0 1 8 0v8z"/><path d="M8 13a4 4 0 0 1 8 0"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="9" y1="6" x2="15" y2="6"/><line x1="8" y1="21" x2="16" y2="21"/>',
+  bust: '<circle cx="12" cy="7" r="3"/><path d="M6 21v-4c0-3 3-5 6-5s6 2 6 5v4z"/><line x1="4" y1="21" x2="20" y2="21"/>',
+  crushedCan: '<path d="M8 5h8l-1 4 2 2-3 2 2 2-2 2 1 4H9l1-4-2-2 2-2-3-2 2-2z"/><line x1="8.5" y1="5" x2="15.5" y2="5"/>',
+  ring: '<circle cx="12" cy="13" r="6"/><circle cx="12" cy="13" r="3.2"/><path d="M9 8l3-5 3 5"/><circle cx="12" cy="5" r="1.1"/>',
+  compass: '<circle cx="12" cy="12" r="8"/><path d="M15 9l-2 5-5 2 2-5z"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>',
+  lantern: '<path d="M9 4h6l1 3H8z"/><rect x="7" y="7" width="10" height="10" rx="1"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="9" y1="17" x2="9" y2="20"/><line x1="15" y1="17" x2="15" y2="20"/><circle cx="12" cy="12" r="2" stroke-dasharray="1 1.2"/>',
 };
 
 /** Mapea cada clave `icon` de la data (items/containers/upgrades/automations/prestigeTree/achievements) a una forma. */
 const ICON_MAP = {
   // Items — común
-  'can-crushed': 'coin',
+  'can-crushed': 'crushedCan',
   'banana-peel': 'crescent',
-  'newspaper-old': 'document',
+  'cigarette-butt': 'cigaretteButt',
+  'chip-bag': 'chipBag',
+  'cork-bottle': 'corkBottle',
+  'napkin-used': 'napkinUsed',
+  'newspaper-old': 'newspaper',
   'shoe-odd': 'shoe',
   'bottle-plastic': 'bottle',
   'cardboard-box': 'box',
@@ -100,50 +149,56 @@ const ICON_MAP = {
   'lamp-old': 'lamp',
   'bike-rusty': 'bike',
   'radio-antique': 'radio',
+  'fan-old': 'fanOld',
   'suitcase-worn': 'suitcase',
   'mirror-cracked': 'mirror',
   // Items — electrónica
   'phone-old': 'phone',
   'console-broken': 'console',
   'copper-cable': 'cable',
-  motherboard: 'chip',
+  motherboard: 'motherboard',
   'camera-analog': 'camera',
   'tv-crt': 'tv',
+  'floppy-disk': 'floppyDisk',
   // Items — antigüedades
   'pocket-watch': 'watch',
   'porcelain-vase': 'vase',
-  'antique-book': 'document',
-  candelabrum: 'lamp',
+  'antique-book': 'book',
+  candelabrum: 'candelabrum',
   typewriter: 'typewriter',
   'coin-old': 'coin',
+  'ivory-figurine': 'ivoryFigurine',
   // Items — históricos
   'war-helmet': 'helmet',
-  'map-antique': 'document',
+  'map-antique': 'foldedMap',
   'military-medal': 'medal',
-  'dagger-ceremonial': 'dagger',
   'uniform-historic': 'shirt',
-  'photo-historic': 'document',
+  'dagger-ceremonial': 'dagger',
+  'photo-historic': 'photoFrame',
+  'regiment-flag': 'regimentFlag',
   // Items — arte
   'oil-painting': 'painting',
   'bronze-sculpture': 'statue',
-  'engraving-original': 'document',
-  'tapestry-antique': 'painting',
-  'vase-decorative': 'vase',
-  'sketch-master': 'document',
+  'engraving-original': 'engravingPlate',
+  'tapestry-antique': 'tapestry',
+  'vase-decorative': 'decorativeVase',
+  'sketch-master': 'sketch',
   // Items — reliquias
   'crown-lost': 'crown',
   'amulet-sacred': 'amulet',
-  'scroll-arcane': 'document',
+  'scroll-arcane': 'scroll',
   'scepter-royal': 'scepter',
-  'idol-jade': 'vase',
-  'relic-sealed': 'amulet',
+  'idol-jade': 'idol',
+  'relic-sealed': 'sealedRelic',
+  'ritual-mask': 'ritualMask',
+  'legendary-sword': 'legendarySword',
   // Items — futuro
-  'fusion-core': 'chip',
-  'quantum-chip': 'chip',
+  'fusion-core': 'fusionCore',
+  'quantum-chip': 'quantumChip',
   'neural-implant': 'implant',
   'drone-rescued': 'drone',
   'energy-crystal': 'crystal',
-  'stellar-fragment': 'crystal',
+  'stellar-fragment': 'shard',
 
   // Contenedores
   'trash-bin-street': 'bin',
@@ -179,6 +234,8 @@ const ICON_MAP = {
   'cash-stack': 'cashStack',
   'clover-glow': 'clover',
   'eagle-eye': 'radar',
+  // DECISIÓN: moon-watch reusa la forma 'watch' de pocket-watch — ambos son relojes, se
+  // diferencian por color de rareza/contexto (uno es hallazgo, el otro nodo de prestigio).
   'moon-watch': 'watch',
   'truck-fleet': 'truck',
   'appraiser-loupe': 'loupe',
@@ -209,6 +266,11 @@ const ICON_MAP = {
   'touch-app': 'touchApp',
   'tab-escarbar': 'touchApp',
   'tab-tienda': 'dumpster',
+  // AJUSTE (ronda 14): TitleScreen.js llama iconMarkup('dumpster', ...) directo para el logo
+  // de la pantalla de inicio — sin esta clave caía en el fallback "artifact" (el pentágono que
+  // reportó el usuario), porque antes solo existían alias INDIRECTOS ('dumpster-street',
+  // 'tab-tienda') que apuntan A la forma 'dumpster', no una clave 'dumpster' en sí.
+  dumpster: 'dumpster',
   'tab-automatizacion': 'gear',
   'tab-logros': 'medal',
   'tab-prestigio': 'crown',
@@ -217,34 +279,38 @@ const ICON_MAP = {
   'close-x': 'closeX',
 
   // Items — contenedores de prestigio (ronda 11)
-  'cargo-manifest': 'document',
-  'ghost-lantern': 'lamp',
-  'route-compass': 'watch',
+  'cargo-manifest': 'manifest',
+  'ghost-lantern': 'lantern',
+  'route-compass': 'compass',
   'sealed-strongbox': 'crate',
-  'captain-ring': 'coin',
+  'captain-ring': 'ring',
   'cursed-cargo': 'box',
-  'phantom-bell': 'amulet',
+  'phantom-bell': 'bell',
+  // DECISIÓN: framed-forgery y lost-masterpiece reusan 'painting' (misma forma que oil-painting)
+  // porque los tres son, literalmente, cuadros — se diferencian por color de rareza.
   'framed-forgery': 'painting',
-  'marble-bust': 'statue',
+  'marble-bust': 'bust',
   'lost-masterpiece': 'painting',
   'burial-mask': 'helmet',
-  'grail-replica': 'vase',
-  'saint-reliquary': 'amulet',
-  'collector-heart': 'crystal',
+  'grail-replica': 'grail',
+  'saint-reliquary': 'reliquary',
+  'collector-heart': 'crystalHeart',
   'heat-shield': 'shield',
   'zero-g-tool': 'fist',
-  'cosmonaut-log': 'document',
+  'cosmonaut-log': 'logbook',
   'orbital-gyro': 'radar',
-  'plasma-cell': 'chip',
+  'plasma-cell': 'plasmaCell',
   'ai-core-salvaged': 'implant',
   'station-heart': 'satellite',
   'titan-bolt': 'gear',
-  'chrono-shard': 'crystal',
+  'chrono-shard': 'chronoShard',
   'ambrosia-flask': 'bottle',
-  'olympus-circuit': 'chip',
-  'godling-idol': 'statue',
+  'olympus-circuit': 'olympusCircuit',
+  // DECISIÓN: godling-idol reusa 'idol' (misma forma que idol-jade) — ambos son estatuillas
+  // idolatradas; se diferencian por color de rareza.
+  'godling-idol': 'idol',
   'thunder-coil': 'cable',
-  'creation-seed': 'crystal',
+  'creation-seed': 'seed',
 };
 
 /**
@@ -272,6 +338,9 @@ export function iconMarkup(key, opts = {}) {
 export function hasIcon(key) {
   return Boolean(ICON_MAP[key]);
 }
+
+// exportados para tests
+export { SHAPES, ICON_MAP };
 
 const imageCache = new Map();
 

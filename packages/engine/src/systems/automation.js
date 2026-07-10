@@ -27,12 +27,22 @@ export function hasAutoDig(state, data) {
 
 /**
  * Entre los contenedores desbloqueados y afordables, el de mayor costo (mejor $/contenedor).
+ * Si `state.autoTargetContainerId` fija un target (ronda 14), el robot SOLO compra ese
+ * contenedor: si está desbloqueado pero no alcanza el dinero, espera/ahorra (D5) — sin
+ * fallback silencioso al modo Auto.
  * @param {import('../state.js').GameState} state
  * @param {Array<Object>} allContainers
  * @param {import('../economy.js').EngineData} data
  * @returns {Object|null}
  */
 export function bestAffordableUnlockedContainer(state, allContainers, data) {
+  if (state.autoTargetContainerId) {
+    const target = allContainers.find((c) => c.id === state.autoTargetContainerId);
+    if (!target) return null;
+    if (!isContainerUnlocked(state, target, allContainers)) return null;
+    if (getContainerCost(state, target, data) > state.money) return null;
+    return target;
+  }
   let best = null;
   let bestCost = -Infinity;
   for (const container of allContainers) {
@@ -44,6 +54,25 @@ export function bestAffordableUnlockedContainer(state, allContainers, data) {
     }
   }
   return best;
+}
+
+/**
+ * Fija (o limpia) el contenedor objetivo del robot de automatización (ronda 14).
+ * @param {import('../state.js').GameState} state
+ * @param {string|null} containerId - null vuelve al modo Auto (el más caro afordable)
+ * @param {Array<Object>} allContainers - data de containers.json (allow-list)
+ * @returns {{ ok: true } | { ok: false, error: string }}
+ */
+export function setAutoTarget(state, containerId, allContainers) {
+  if (containerId === null) {
+    state.autoTargetContainerId = null;
+    return { ok: true };
+  }
+  if (typeof containerId !== 'string' || !allContainers.some((c) => c.id === containerId)) {
+    return { ok: false, error: 'Contenedor inválido para el target del robot.' };
+  }
+  state.autoTargetContainerId = containerId;
+  return { ok: true };
 }
 
 /**

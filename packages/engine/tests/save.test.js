@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { freshState, SAVE_VERSION } from '../src/state.js';
 import { serializeState, deserializeState, exportSave, importSave, validateSave } from '../src/save.js';
+import containers from '../../../apps/game/src/data/containers.json';
 
 describe('save.js — ida y vuelta sin pérdida', () => {
   it('serializeState + deserializeState reconstruye el mismo estado', () => {
@@ -197,5 +198,69 @@ describe('save v3 -> v4 migra sin perder partidas viejas (PUNTOS_A_MEJORAR_2.md 
     const result = deserializeState(serializeState(state));
     expect(result.ok).toBe(true);
     expect(result.state.volume).toBe(0.4);
+  });
+});
+
+describe('save v4 -> v5 migra sin perder partidas viejas (ronda 14)', () => {
+  it('un save v4 real migra a v5 con los tres campos nuevos por defecto', () => {
+    const v4 = freshState();
+    delete v4.autoTargetContainerId;
+    delete v4.digSensitivity;
+    delete v4.language;
+    v4.saveVersion = 4;
+
+    const result = validateSave(v4);
+    expect(result.valid).toBe(true);
+    expect(result.data.saveVersion).toBe(SAVE_VERSION);
+    expect(result.data.autoTargetContainerId).toBeNull();
+    expect(result.data.digSensitivity).toBe(1);
+    expect(result.data.language).toBe('es');
+  });
+
+  it('rechaza autoTargetContainerId que no sea null ni string', () => {
+    const state = freshState();
+    state.autoTargetContainerId = 123;
+    const result = validateSave(state);
+    expect(result.valid).toBe(false);
+  });
+
+  it('rechaza digSensitivity fuera de rango o NaN', () => {
+    const nan = freshState();
+    nan.digSensitivity = NaN;
+    expect(validateSave(nan).valid).toBe(false);
+
+    const outOfRange = freshState();
+    outOfRange.digSensitivity = 99;
+    expect(validateSave(outOfRange).valid).toBe(false);
+  });
+
+  it('rechaza language fuera de la allow-list (incluye intento de XSS)', () => {
+    const state = freshState();
+    state.language = '<img src=x onerror=alert(1)>';
+    const result = validateSave(state);
+    expect(result.valid).toBe(false);
+  });
+
+  it('target huérfano (id que no existe en containers) se sanea a null, save aceptado', () => {
+    const state = freshState();
+    state.autoTargetContainerId = 'contenedorFantasma';
+    const validIds = containers.map((c) => c.id);
+    const result = validateSave(state, validIds);
+    expect(result.valid).toBe(true);
+    expect(result.data.autoTargetContainerId).toBeNull();
+  });
+
+  it('export/import ida y vuelta conserva los tres campos nuevos', () => {
+    const state = freshState();
+    state.autoTargetContainerId = containers[0].id;
+    state.digSensitivity = 0.7;
+    state.language = 'en';
+
+    const encoded = exportSave(state);
+    const result = importSave(encoded);
+    expect(result.ok).toBe(true);
+    expect(result.state.autoTargetContainerId).toBe(containers[0].id);
+    expect(result.state.digSensitivity).toBe(0.7);
+    expect(result.state.language).toBe('en');
   });
 });

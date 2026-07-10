@@ -6,8 +6,19 @@
  * procesa el robot — antes era solo una lista de tarjetas sin contexto.
  */
 
-import { formatMoney, formatNumber, getQueueMax, getParallelAutoSlots, nextUpgradeCost, hasAutoDig } from '@dumpster/engine';
+import {
+  formatMoney,
+  formatNumber,
+  getQueueMax,
+  getParallelAutoSlots,
+  nextUpgradeCost,
+  hasAutoDig,
+  isContainerUnlocked,
+  getContainerCost,
+} from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { upgradeEffectLabel } from './upgradeEffect.js';
+import { t } from '../i18n/i18n.js';
 
 export const AutomationView = {
   /**
@@ -32,10 +43,19 @@ export const AutomationView = {
         }
       });
     }
+    // Marca propia (trampa #3 del plan): el <select> del target del robot despacha en 'change',
+    // no en 'click' — necesita su propio listener con nombre de vista, nunca uno genérico.
+    if (!container.dataset.boundChangeAutomation) {
+      container.dataset.boundChangeAutomation = 'true';
+      container.addEventListener('change', (evt) => {
+        const sel = evt.target.closest('[data-action="set-auto-target"]');
+        if (sel) store.actions.setAutoTarget(sel.value);
+      });
+    }
 
     const { data, allContainers } = store.ctx;
     if (!data.automations.length) {
-      container.innerHTML = '<p class="empty-state">No hay automatizaciones configuradas.</p>';
+      container.innerHTML = `<p class="empty-state">${t('automation.empty')}</p>`;
       return;
     }
 
@@ -46,13 +66,35 @@ export const AutomationView = {
     const capacityUpgrade = data.upgrades.find((u) => u.id === 'capacity');
     const capacityCost = capacityUpgrade ? nextUpgradeCost(state, capacityUpgrade) : 0;
     const capacityCanAfford = state.money >= capacityCost;
-    const capacityReason = capacityCanAfford ? '' : `Te faltan ${formatMoney(capacityCost - state.money)}`;
+    const capacityReason = capacityCanAfford ? '' : t('common.missingMoney', { amount: formatMoney(capacityCost - state.money) });
+
+    // Selector de target (requisito #3 del plan): el jugador elige qué contenedor compra/
+    // automatiza el robot; "auto" es el modo por defecto (el más caro que le alcance).
+    const unlockedContainers = allContainers.filter((c) => isContainerUnlocked(state, c, allContainers));
+    const validTargetId =
+      state.autoTargetContainerId && unlockedContainers.some((c) => c.id === state.autoTargetContainerId)
+        ? state.autoTargetContainerId
+        : null;
+    const targetOptions =
+      `<option value="auto" ${validTargetId ? '' : 'selected'}>${t('automation.targetAuto')}</option>` +
+      unlockedContainers
+        .map((c) => `<option value="${c.id}" ${c.id === validTargetId ? 'selected' : ''}>${c.name}</option>`)
+        .join('');
+    const targetContainer = validTargetId ? allContainers.find((c) => c.id === validTargetId) : null;
+    const targetCost = targetContainer ? getContainerCost(state, targetContainer, data) : 0;
+    const waitingHint =
+      targetContainer && targetCost > state.money
+        ? `<p class="automation-target-waiting">${t('automation.waiting', {
+            amount: formatMoney(targetCost - state.money),
+            name: targetContainer.name,
+          })}</p>`
+        : '';
 
     const processingItems = state.autoProcessing
       .map((slot) => {
         const pct = Math.round(((slot.totalTime - slot.remaining) / slot.totalTime) * 100);
-        const containerName = allContainers.find((c) => c.id === slot.containerId)?.name || 'Contenedor desconocido';
-        return `<li>${containerName}: ${pct}%</li>`;
+        const containerName = allContainers.find((c) => c.id === slot.containerId)?.name || t('automation.unknownContainer');
+        return `<li>${t('automation.processingItem', { name: containerName, pct })}</li>`;
       })
       .join('');
 
@@ -61,10 +103,10 @@ export const AutomationView = {
         const owned = Boolean(state.automationOwned[a.id]);
         const canAfford = state.money >= a.cost;
         const button = owned
-          ? '<span class="badge">Activo</span>'
+          ? `<span class="badge">${t('automation.active')}</span>`
           : `<button type="button" data-action="buy-automation" data-id="${a.id}" ${canAfford ? '' : 'disabled'} title="${
-              canAfford ? '' : `Te faltan ${formatMoney(a.cost - state.money)}`
-            }">Comprar por ${formatMoney(a.cost)}</button>`;
+              canAfford ? '' : t('common.missingMoney', { amount: formatMoney(a.cost - state.money) })
+            }">${t('automation.buyFor', { amount: formatMoney(a.cost) })}</button>`;
         return (
           `<article class="automation-card ${owned ? 'automation-card--owned' : ''}">` +
           `<span class="automation-card-icon">${iconMarkup(a.icon, { size: 28 })}</span>` +
@@ -78,28 +120,28 @@ export const AutomationView = {
 
     container.innerHTML =
       `<section class="automation-explainer">` +
-      `<p>Acá no se encola nada a mano: el <strong>Robot Clasificador Básico</strong> es el que` +
-      ` trabaja. Cuando lo tenés, él solo <strong>compra contenedores con tu dinero</strong>` +
-      ` (siempre el más caro que tengas desbloqueado y te alcance), los suma a la` +
-      ` <strong>cola</strong> y los procesa — a cambio, con más riesgo de trampa que escarbar a` +
-      ` mano. Las demás máquinas lo potencian: Carrito y Cinta Transportadora agrandan la cola` +
-      ` (igual que la mejora de Capacidad de abajo) y la Red de Drones suma un segundo robot en` +
-      ` paralelo.</p>` +
-      `<p class="automation-explainer-hint">Los botones grises no son un error: significan que` +
-      ` todavía no te alcanza el dinero. El texto al pasar el mouse (o mantener tocado) te dice` +
-      ` cuánto te falta.</p>` +
+      `<p>${t('automation.explainer')}</p>` +
+      `<p class="automation-explainer-hint">${t('automation.hint')}</p>` +
       `</section>` +
       `<section class="automation-status">` +
       (autoDigActive
-        ? `<p>Cola: ${state.autoQueue.length} / ${formatNumber(queueMax)}</p>` +
-          `<p>Slots simultáneos: ${parallelSlots}</p>` +
-          `<p>Procesando: ${processingItems ? `<ul>${processingItems}</ul>` : 'Nada en curso.'}</p>`
-        : `<p class="automation-callout">La cola está <strong>inactiva</strong>: comprá el` +
-          ` <strong>Robot Clasificador Básico</strong> (abajo) y se va a llenar y procesar sola` +
-          ` con tu dinero. No hay nada que encolar a mano.</p>`) +
+        ? `<p>${t('automation.queue', { count: state.autoQueue.length, max: formatNumber(queueMax) })}</p>` +
+          `<p>${t('automation.slots', { count: parallelSlots })}</p>` +
+          // AJUSTE: un <p> no puede contener un <ul> (contenido de bloque) — el navegador cierra
+          // el <p> antes del <ul> en silencio y parte la línea en 3 nodos hermanos, rompiendo
+          // cualquier selector/test que busque el texto "Procesando" completo. <div> sí puede.
+          `<div class="automation-processing">${t('automation.processingLabel')} ${
+            processingItems ? `<ul>${processingItems}</ul>` : t('automation.nothingInProgress')
+          }</div>` +
+          `<label class="automation-target">${t('automation.targetLabel')}` +
+          `<select data-action="set-auto-target">${targetOptions}</select>` +
+          `</label>` +
+          waitingHint
+        : `<p class="automation-callout">${t('automation.calloutInactive')}</p>`) +
       (capacityUpgrade
         ? `<button type="button" data-action="buy-capacity" ${capacityCanAfford ? '' : 'disabled'} title="${capacityReason}">` +
-          `Ampliar Capacidad (nivel ${Number(state.upgradeLevels.capacity) || 0}) por ${formatMoney(capacityCost)}</button>`
+          `${t('automation.expandCapacity', { level: Number(state.upgradeLevels.capacity) || 0, amount: formatMoney(capacityCost) })}` +
+          `<span class="quick-upgrade-effect">${upgradeEffectLabel(capacityUpgrade)}</span></button>`
         : '') +
       `</section>` +
       `<div class="automation-grid">${automationCards}</div>`;

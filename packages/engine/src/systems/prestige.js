@@ -85,6 +85,9 @@ export function doPrestige(state, data) {
   state.automationOwned = {};
   state.autoQueue = [];
   state.autoProcessing = [];
+  // DECISIÓN (ronda 14, D6): un target apuntando a un contenedor re-bloqueado por el prestigio
+  // dejaría al robot idle sin explicación; vuelve a modo Auto igual que el resto de automatización.
+  state.autoTargetContainerId = null;
 
   return { ok: true, keysEarned };
 }

@@ -12,6 +12,7 @@
  */
 
 import { iconMarkup } from '../icons/icons.js';
+import { t } from '../i18n/i18n.js';
 
 export const TitleScreen = {
   /**
@@ -26,8 +27,8 @@ export const TitleScreen = {
       `<span class="title-logo-icon">${iconMarkup('dumpster', { size: 64 })}</span>` +
       `<h1 class="title-logo-text">DUMPSTER EMPIRE</h1>` +
       `</div>` +
-      `<button type="button" id="title-play-btn" class="title-play-btn">Jugar</button>` +
-      `<button type="button" id="title-settings-btn" class="icon-btn-circle title-settings-btn" title="Configuración">` +
+      `<button type="button" id="title-play-btn" class="title-play-btn">${t('titleScreen.play')}</button>` +
+      `<button type="button" id="title-settings-btn" class="icon-btn-circle title-settings-btn" title="${t('titleScreen.settings')}">` +
       `${iconMarkup('settings', { size: 20 })}` +
       `</button>`;
 

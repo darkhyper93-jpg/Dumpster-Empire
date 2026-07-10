@@ -20,6 +20,7 @@
 import { attachDigInput } from './digInput.js';
 import { getIconImage, iconMarkup } from '../icons/icons.js';
 import { startScratchSound, stopScratchSound } from '../fx/audio.js';
+import { t } from '../i18n/i18n.js';
 import {
   createRevealModel,
   applyStroke,
@@ -89,7 +90,7 @@ export class DigCanvas {
     this.idlePrompt.className = 'dig-idle-prompt';
     this.idlePrompt.innerHTML =
       `<span class="dig-idle-ring"></span>${iconMarkup('touch-app', { size: 32 })}` +
-      `<p>Arrastrá para escarbar</p>`;
+      `<p>${t('dig.idlePrompt')}</p>`;
     this.idlePrompt.hidden = true;
     host.appendChild(this.idlePrompt);
 
@@ -101,6 +102,7 @@ export class DigCanvas {
     this.touched = false;
     this.areaMult = 1;
     this.digRate = 1;
+    this.sensitivity = 1;
     this.model = null;
     this.entries = [];
     this._lastPos = null;
@@ -129,6 +131,16 @@ export class DigCanvas {
     };
     window.addEventListener('focus', this._repaintHandler);
     document.addEventListener('visibilitychange', this._repaintHandler);
+  }
+
+  /**
+   * Sensibilidad del pincel de escarbado (ronda 14, settings persistidos). Clamp defensivo
+   * propio: el store ya clampa 0.5-1.5 antes de persistir, pero un save corrupto/antiguo no
+   * debería poder hacer crecer el pincel más allá del rango de diseño.
+   * @param {number} value - 0.5..1.5
+   */
+  setSensitivity(value) {
+    this.sensitivity = Math.min(1.5, Math.max(0.5, Number(value) || 1));
   }
 
   markTouched() {
@@ -162,7 +174,7 @@ export class DigCanvas {
     this.digGeneration = (this.digGeneration || 0) + 1;
 
     this.entries = digResult.isTrap
-      ? [{ icon: 'artifact', name: '¡Trampa!', colorHex: '#c0392b', isTrap: true }]
+      ? [{ icon: 'artifact', name: t('dig.trapEntryName'), colorHex: '#c0392b', isTrap: true }]
       : digResult.items.map((item) => ({
           icon: item.icon,
           name: item.name,
@@ -424,17 +436,21 @@ export class DigCanvas {
   }
 
   /**
-   * Radio efectivo del pincel (ronda 7, PLAN.md §11.2):
-   *   radio = base × √áreaMult × ritmo,  con tope 1.5× el radio del objeto.
+   * Radio efectivo del pincel (ronda 7, PLAN.md §11.2; sensibilidad sumada en ronda 14):
+   *   radio = base × √áreaMult × ritmo × sensibilidad,  con tope 1.5× el radio del objeto.
    * — √área: el Área lineal a nivel alto (ej. mult 3.35) daba pinceles de 2× el objeto y
    *   trivializaba TODOS los contenedores por igual; con raíz sigue creciendo pero sin explotar.
    * — ritmo: clamp(Fuerza/resistencia, 0.3, 1.5) ya calculado por el engine — cada contenedor
    *   se siente distinto según tu Fuerza (sobre-Fuerza rasca más grande, quedarse corto mucho
    *   más chico).
+   * — sensibilidad: preferencia de accesibilidad del jugador (settings, 0.5-1.5), independiente
+   *   del balance de juego.
    * — tope: nunca más de 1.5× el objeto, así el gesto siempre exige recorrer el canvas.
    */
   eraseRadius() {
-    const radius = BASE_ERASE_RADIUS * Math.sqrt(this.areaMult) * this.digRate;
+    const radius = BASE_ERASE_RADIUS * Math.sqrt(this.areaMult) * this.digRate * this.sensitivity;
+    // DECISIÓN: con Área alta, sensibilidad >100% puede saturar el cap — intencional, el cap es
+    // el guard de diseño.
     return Math.min(radius, OBJECT_RADIUS * ERASE_RADIUS_MAX_VS_OBJECT);
   }
 

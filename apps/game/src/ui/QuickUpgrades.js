@@ -7,6 +7,8 @@
 
 import { formatMoney, nextUpgradeCost } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { upgradeEffectLabel } from './upgradeEffect.js';
+import { t } from '../i18n/i18n.js';
 
 const QUICK_UPGRADE_IDS = ['luck', 'digPower', 'area'];
 
@@ -28,7 +30,7 @@ export const QuickUpgrades = {
 
     const { data } = store.ctx;
     if (!data.upgrades.length) {
-      container.textContent = 'No hay mejoras configuradas.';
+      container.textContent = t('quickUpgrades.empty');
       return;
     }
 
@@ -38,11 +40,12 @@ export const QuickUpgrades = {
       const level = state.upgradeLevels[id] || 0;
       const cost = nextUpgradeCost(state, upgrade);
       const canAfford = state.money >= cost;
-      const missing = canAfford ? '' : `Te faltan ${formatMoney(cost - state.money)}`;
+      const missing = canAfford ? '' : t('common.missingMoney', { amount: formatMoney(cost - state.money) });
       return (
         `<button type="button" class="quick-upgrade-btn" data-upgrade="${upgrade.id}" ${canAfford ? '' : 'disabled'} title="${missing}">` +
         `<span class="quick-upgrade-icon-circle">${iconMarkup(upgrade.icon, { size: 22 })}</span>` +
-        `<span class="quick-upgrade-label">${upgrade.label} · LV. ${level}</span>` +
+        `<span class="quick-upgrade-label">${t('quickUpgrades.levelLabel', { label: upgrade.label, level })}</span>` +
+        `<span class="quick-upgrade-effect">${upgradeEffectLabel(upgrade)}</span>` +
         `<span class="quick-upgrade-cost">${formatMoney(cost)}</span>` +
         `</button>`
       );

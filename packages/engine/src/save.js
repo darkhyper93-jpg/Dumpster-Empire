@@ -5,6 +5,9 @@
 
 import { SAVE_VERSION, freshState } from './state.js';
 
+/** Idiomas soportados por el módulo i18n (apps/game/src/i18n). Fuente de verdad del allow-list. */
+export const SUPPORTED_LANGUAGES = ['es', 'en'];
+
 /** Mapas planos `id -> number` (freshState() los arranca en `{}` o con valores numéricos). */
 const NUMERIC_MAP_FIELDS = [
   'upgradeLevels',
@@ -97,6 +100,18 @@ function validateDeepContent(migrated) {
   if (!isValidAutoProcessing(migrated.autoProcessing)) {
     return 'Contenido inválido en autoProcessing: debe ser un array de slots { containerId, totalTime, remaining }.';
   }
+  if (migrated.autoTargetContainerId !== null && typeof migrated.autoTargetContainerId !== 'string') {
+    return 'Contenido inválido en autoTargetContainerId: debe ser null o un string.';
+  }
+  if (!Number.isFinite(migrated.digSensitivity) || migrated.digSensitivity < 0.5 || migrated.digSensitivity > 1.5) {
+    return 'Contenido inválido en digSensitivity: debe ser un número entre 0.5 y 1.5.';
+  }
+  if (!SUPPORTED_LANGUAGES.includes(migrated.language)) {
+    return `Contenido inválido en language: debe ser uno de ${SUPPORTED_LANGUAGES.join(', ')}.`;
+  }
+  if (!Number.isFinite(migrated.volume)) {
+    return 'Contenido inválido en volume: debe ser un número finito.';
+  }
   return null;
 }
 
@@ -111,6 +126,9 @@ function validateDeepContent(migrated) {
 function sanitizeContainerRefs(migrated, validIds) {
   migrated.autoQueue = migrated.autoQueue.filter((id) => validIds.has(id));
   migrated.autoProcessing = migrated.autoProcessing.filter((slot) => validIds.has(slot.containerId));
+  if (migrated.autoTargetContainerId !== null && !validIds.has(migrated.autoTargetContainerId)) {
+    migrated.autoTargetContainerId = null;
+  }
 }
 
 /** Campos que deben existir y tener el tipo correcto para aceptar un save como válido. */
@@ -141,7 +159,11 @@ const REQUIRED_FIELDS = {
   soundOn: 'boolean',
   volume: 'number',
   lastSavedAt: 'number',
+  digSensitivity: 'number',
+  language: 'string',
 };
+// autoTargetContainerId NO va en REQUIRED_FIELDS: es unión `string|null` y `typeof null === 'object'`
+// rompería el chequeo de tipo; su validación de contenido vive en validateDeepContent().
 
 /**
  * Migra un objeto de guardado de una versión anterior a la actual. v1 es la primera versión,
@@ -180,6 +202,18 @@ function migrate(raw) {
       ...migrated,
       volume: typeof migrated.volume === 'number' ? migrated.volume : 1,
       saveVersion: 4,
+    };
+  }
+  // v4 -> v5 (ronda 14): agrega autoTargetContainerId (selector del robot), digSensitivity
+  // (slider de sensibilidad) y language (base de i18n). Saves viejos arrancan en modo Auto,
+  // sensibilidad neutra y español (comportamiento actual sin cambios visibles).
+  if (migrated.saveVersion < 5) {
+    migrated = {
+      ...migrated,
+      autoTargetContainerId: null,
+      digSensitivity: 1,
+      language: 'es',
+      saveVersion: 5,
     };
   }
   return migrated;

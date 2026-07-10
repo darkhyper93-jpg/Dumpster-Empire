@@ -593,6 +593,38 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   `directories.app`); con `../game`/`../../packages/engine` el paquete salía sin juego ni engine
   (ventana en blanco). Ahora son `apps/game`/`packages/engine` y el exe empaquetado se verificó
   booteando y jugando de verdad.
+- **Ronda 14 — QoL, íconos, settings y bases de i18n (decisiones D1-D7 de RONDA14-PLAN.md)**:
+  - **D1** — Un solo bump `SAVE_VERSION` 4→5 con TRES campos nuevos: `autoTargetContainerId:
+    string|null` (default `null` = modo Auto), `digSensitivity: number` (rango 0.5–1.5, default 1)
+    y `language: 'es'|'en'` (default `'es'`). `language` entra ya aunque no haya selector visible
+    todavía: evita un v6 en la ronda futura de traducción. Los tres viajan en el save (y Steam
+    Cloud), igual que `soundOn`/`volume`.
+  - **D2** — Orden estricto A → B → C → D. i18n va ÚLTIMO porque A y B agregan/acortan strings:
+    así la extracción al diccionario captura el copy FINAL una sola vez.
+  - **D3** — Los hallazgos del robot NUNCA disparan el modal de celebración. El robot corre
+    desatendido (apilaría modales); sus hallazgos solo incrementan `itemsFoundByItem` y aparecen
+    en el Índice (CollectionView), como ya ocurre. Consecuencia asumida: si el robot encuentra
+    primero un ítem raro, ese ítem ya no celebra nunca — el modal es exclusivo del hallazgo manual.
+  - **D4** — El target del robot se lee del state DENTRO de `bestAffordableUnlockedContainer` (la
+    firma NO cambia). Motivo: `packages/engine/src/systems/offline.js` llama a la misma función
+    para estimar la tasa offline; leyendo del state, la estimación offline respeta el target sin
+    tocar nada más.
+  - **D5** — Semántica del target fijo: si no alcanza el dinero, el robot ESPERA/AHORRA. Sin
+    fallback silencioso a otro contenedor. La UI muestra cuánto falta.
+  - **D6** — `doPrestige` resetea `autoTargetContainerId` a `null`. El prestigio ya resetea
+    `automationOwned`, `ownedContainers`, `autoQueue` y `autoProcessing`; un target apuntando a un
+    contenedor re-bloqueado dejaría al robot idle sin explicación.
+  - **D7** — `isJackpot` se renombra a `isFirstRareFind` y cambia su definición. Antes: categoría
+    más rara + varianza ≥ 1.10 (`JACKPOT_VARIANCE_MIN`), cada vez. Ahora: categoría más rara +
+    primera vez que se encuentra ESE ítem. La constante de varianza se elimina. El flag se calcula
+    en `rollContainerResult`, que corre ANTES de que `applyContainerResult` incremente los
+    contadores (un contenedor multi-slot que saca el mismo ítem dos veces en el mismo roll solo
+    marca la primera aparición con el flag, vía un `Set` local al roll).
+  - **Estrategia de datos i18n (D4 de la sección Agente D, no confundir con D4 de arriba)**: los
+    `name`/`desc` de `apps/game/src/data/*.json` quedan como fuente de verdad en español. Una
+    ronda futura de traducción agregará overlays `apps/game/src/i18n/data.en.js` con mapas
+    `id → { name, desc }` que `main.js` aplicará sobre la data cargada cuando `language !== 'es'`.
+    La data cruda no se bifurca, los ids no cambian, el engine jamás ve texto de UI.
 
 ---
 

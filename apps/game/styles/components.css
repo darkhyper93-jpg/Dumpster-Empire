@@ -264,6 +264,31 @@ button:hover:not(:disabled) {
   color: var(--fg-0);
 }
 
+/* Selector del target del robot (ronda 14, requisito #3): mismo select nativo del resto de la
+   UI, sin reimplementar un dropdown propio. */
+.automation-target {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.85rem;
+  color: var(--fg-0);
+}
+
+.automation-target select {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-highest);
+  box-shadow: var(--shadow-recessed);
+  color: var(--fg-0);
+  border: none;
+}
+
+.automation-target-waiting {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--fg-1);
+}
+
 .shop-card--locked,
 .achievement-card--locked {
   opacity: 0.7;
@@ -616,6 +641,15 @@ textarea {
   font-family: var(--font-display);
   font-weight: 600;
   color: var(--amber);
+}
+
+/* Efecto por nivel, leído de data (ronda 14, "+2 Suerte por nivel"). Texto chico con weight
+   normal (≤500): cumple la lección del napkin sin subir el tamaño de fuente. */
+.quick-upgrade-effect {
+  font-size: 0.62rem;
+  font-weight: 400;
+  color: var(--fg-2);
+  text-align: center;
 }
 
 /* --- Íconos en tarjetas (Shop/Automation/Achievements/Prestige) --- */

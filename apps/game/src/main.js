@@ -9,6 +9,7 @@ import { createStore, SAVE_KEY } from './store.js';
 import { startLoop } from './loop.js';
 import { UIManager } from './ui/UIManager.js';
 import { TitleScreen } from './ui/TitleScreen.js';
+import { setLanguage, t } from './i18n/i18n.js';
 
 const DATA_FILES = {
   items: './data/items.json',
@@ -28,7 +29,7 @@ async function loadData() {
       // en vez de `/apps/game/src/data/items.json`. Detectado con el smoke test de Playwright.
       const url = new URL(path, import.meta.url);
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`No se pudo cargar ${path} (HTTP ${response.status}).`);
+      if (!response.ok) throw new Error(t('boot.loadFailed', { path, status: response.status }));
       return [key, await response.json()];
     })
   );
@@ -37,7 +38,7 @@ async function loadData() {
 
 function renderFatalError(app, message) {
   const status = app.querySelector('#boot-status');
-  status.textContent = `No se pudo iniciar Dumpster Empire: ${message}`;
+  status.textContent = t('boot.fatalError', { message });
 }
 
 /**
@@ -94,6 +95,7 @@ async function boot() {
   const initialSaveText = await resolveInitialSaveText();
 
   const store = createStore({ data, itemsData, allContainers, achievementsData, initialSaveText });
+  setLanguage(store.getState().language);
   const ui = new UIManager(app, store);
   startLoop(store, ui);
 

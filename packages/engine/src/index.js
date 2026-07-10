@@ -42,7 +42,14 @@ export {
 
 export { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluctuation, categoryWeights } from './rng.js';
 
-export { validateSave, serializeState, deserializeState, exportSave, importSave } from './save.js';
+export {
+  validateSave,
+  serializeState,
+  deserializeState,
+  exportSave,
+  importSave,
+  SUPPORTED_LANGUAGES,
+} from './save.js';
 
 export { isContainerUnlocked, buyContainer, rollContainerResult, applyContainerResult } from './systems/containers.js';
 
@@ -53,6 +60,7 @@ export {
   automationTick,
   hasAutoDig,
   bestAffordableUnlockedContainer,
+  setAutoTarget,
 } from './systems/automation.js';
 
 export {

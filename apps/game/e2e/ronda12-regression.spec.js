@@ -57,9 +57,10 @@ test.describe('Dumpster Empire — regresión ronda 12 (celebraciones)', () => {
     await expect(modal).toBeVisible();
 
     // El primer escarbado no-trampa del tacho garantiza 2 logros (a1 "Primeros Pasos" +
-    // a10 "Primer Objeto") y con el RNG real puede sumarse un jackpot encolado (categoría
-    // única del tacho, ~1/6 por objeto) — se cierran una por una sin asumir la cuenta total,
-    // contando cuántas fueron logro (con "Recompensa:") para verificar que caen juntas.
+    // a10 "Primer Objeto") y con el RNG real puede sumarse un "¡Hallazgo nuevo!" encolado
+    // (ronda 14: categoría más rara + primera vez que se encuentra ESE ítem, categoría única
+    // del tacho ~1/6 por objeto) — se cierran una por una sin asumir la cuenta total, contando
+    // cuántas fueron logro (con "Recompensa:") para verificar que caen juntas.
     let achievementCount = 0;
     for (let i = 0; i < 10 && (await modal.isVisible()); i++) {
       const text = await modal.textContent();

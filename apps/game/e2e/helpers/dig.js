@@ -13,7 +13,7 @@ export const DIG_W = 600;
 export const DIG_H = 330;
 
 /**
- * Cierra cualquier celebración encolada (ronda 12: logro/contenedor nuevo/jackpot) que esté
+ * Cierra cualquier celebración encolada (ronda 12: logro/contenedor nuevo/primer hallazgo raro) que esté
  * tapando la pantalla. Los specs de mecánica no prueban el modal en sí (eso es
  * ronda12-regression.spec.js) — acá solo se la saca de encima para no bloquear los gestos de
  * puntero del resto de los tests con su backdrop.
