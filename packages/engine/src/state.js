@@ -15,7 +15,9 @@
 // Configuración se persiste junto a `soundOn`. save.js migra saves v1/v2/v3 rellenando `volume: 1`.
 // AJUSTE (ronda 14): v5 agrega autoTargetContainerId (selector del robot),
 // digSensitivity (slider de sensibilidad) y language (base de i18n es/en).
-export const SAVE_VERSION = 5;
+// AJUSTE (ronda 15): v6 agrega trapsDiscarded (contador de contenedores con trampa que el
+// robot descartó vía el nodo de prestigio "Escáner de Trampas", PLAN.md §4.7).
+export const SAVE_VERSION = 6;
 
 // AJUSTE (auditoría post-ronda 14): rango de diseño de `digSensitivity`, exportado como única
 // fuente de verdad. Antes el 0.5–1.5 estaba repetido como número mágico en save.js (validación),
@@ -52,6 +54,7 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  *   y nombre de ítem (`state.itemsFoundByItem[containerId][itemName]`), para el INDEX (PLAN.md §11.5)
  * @property {number} categoryFragments
  * @property {number} trapsHit
+ * @property {number} trapsDiscarded - contenedores con trampa descartados por el robot (PLAN.md §4.7)
  * @property {number} autoProcessedCount
  * @property {string[]} autoQueue - ids de contenedor en espera de ser procesados por el/los robot(s)
  * @property {AutoProcessingSlot[]} autoProcessing
@@ -89,6 +92,7 @@ export function freshState() {
     itemsFoundByItem: {},
     categoryFragments: 0,
     trapsHit: 0,
+    trapsDiscarded: 0,
     autoProcessedCount: 0,
     autoQueue: [],
     autoProcessing: [],

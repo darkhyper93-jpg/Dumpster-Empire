@@ -258,6 +258,22 @@ que sacar una cantidad decente de dinero para que suba la presión de mejorar la
 avanzar al siguiente contenedor (decisión de la ronda 7; antes el monto también bajaba hasta ×0.4
 con la Suerte y en late-game perder era irrelevante).
 
+### 4.7 Mejoras del robot (ronda 15)
+
+- **Mejoras del robot (ronda 15).** Tres efectos nuevos, todos data-driven:
+  - `autoDigPowerPercent` (máquinas): la Fuerza efectiva del robot es
+    `getDigPowerMult(state) × (1 + Σ percent de máquinas compradas)`. Afecta SOLO el tiempo de
+    procesamiento automático (vía `getDigRate(..., isAuto=true)`), nunca el escarbado manual.
+    Pega más fuerte contra contenedores de alta `resistencia` (el ritmo clampa 0.3–1.5).
+  - `autoSpeedPercent` (máquinas): multiplicador plano de velocidad de procesamiento;
+    `remaining` decrece a razón de `dt × (1 + Σ percent)`. Aplica también a slots ya en curso.
+  - `trapDiscardChancePerNivel` (nodo de prestigio, se paga con Llaves): al completarse un slot
+    cuyo roll dio trampa, con probabilidad `min(1, nivel × percentPerNivel)` el robot DESCARTA
+    el contenedor: no hay castigo ni loot, el contenedor se pierde (ya se pagó), cuenta para el
+    nivel del contenedor y suma `state.trapsDiscarded`. No cuenta como "procesado" (a26/a33).
+    Vive en el árbol de prestigio y no en máquinas porque `automationOwned` se resetea al
+    prestigiar y las Llaves son la moneda permanente.
+
 ---
 
 ## 5. UI / UX

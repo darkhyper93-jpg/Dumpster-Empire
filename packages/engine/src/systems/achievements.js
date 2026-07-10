@@ -13,6 +13,8 @@ const CONDITION_EVALUATORS = {
   allContainersOwned: (state, cond, ctx) => ctx.allContainers.every((c) => (state.ownedContainers[c.id] || 0) >= 1),
   allAutomationsOwned: (state, cond, ctx) => ctx.allAutomations.every((a) => state.automationOwned[a.id]),
   allUpgradeLevelsAtLeast: (state, cond) => Object.values(state.upgradeLevels).every((level) => level >= cond.value),
+  trapsDiscardedAtLeast: (state, cond) => state.trapsDiscarded >= cond.value,
+  containerOwnedAtLeast: (state, cond) => (state.ownedContainers[cond.containerId] || 0) >= cond.value,
 };
 
 /**

@@ -159,6 +159,7 @@ const REQUIRED_FIELDS = {
   itemsFoundByItem: 'object',
   categoryFragments: 'number',
   trapsHit: 'number',
+  trapsDiscarded: 'number',
   autoProcessedCount: 'number',
   autoQueue: 'object',
   autoProcessing: 'object',
@@ -224,6 +225,11 @@ function migrate(raw) {
       language: 'es',
       saveVersion: 5,
     };
+  }
+  // v5 -> v6 (ronda 15): agrega trapsDiscarded (contador de contenedores con trampa que el
+  // robot descartó vía el nodo "Escáner de Trampas"). Saves viejos arrancan en 0.
+  if (migrated.saveVersion < 6) {
+    migrated = { ...migrated, trapsDiscarded: 0, saveVersion: 6 };
   }
   return migrated;
 }
