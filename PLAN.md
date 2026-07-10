@@ -143,6 +143,22 @@ la progresión la marcan los saltos ×10–×15 entre tiers (ronda 6 de playtest
   Tienda (bloqueados dicen con qué prestigio se desbloquean), en el selector de escarbado y en
   el Índice al desbloquearse, como cualquier otro.
 
+- **Contenedores de prestigio (ronda 15)**: 4 contenedores más, continuando la curva de costo
+  ×15 por tier y gateados por `requiresPrestigeCount` 6/7/8/9, cada uno con su pool propio de 7
+  ítems:
+
+  | Contenedor | Costo (fijo) | Categorías posibles | Prob. de trampa | Prestigio requerido |
+  |---|---|---|---|---|
+  | Chatarrería de Titanes | $300.000.000.000.000 | Reliquias, Tecnología futurista | 40% | 6 |
+  | Naufragio Temporal | $4.500.000.000.000.000 | Histórico, Reliquias | 41% | 7 |
+  | Archivo del Multiverso | $70.000.000.000.000.000 | Arte, Reliquias | 42% | 8 |
+  | Vertedero del Big Bang | $1.000.000.000.000.000.000 | Tecnología futurista | 44% | 9 |
+
+  Suerte recomendada calibrada en esta ronda (script de calibración por búsqueda binaria sobre
+  `valorBase`, mismo método que ronda 10): 651 / 740 / 831 / 920 respectivamente — continúa la
+  progresión de ~15% por tier de la ronda 10/11 (…420, 500, 580 → 651, 740, 831, 920). El tope de
+  búsqueda de `getRecommendedLuck` (economy.js) sube de 800 a 1500 para poder encontrarlas.
+
 ### 2.7 Automatización
 
 Progresión de herramientas, calcada de la curva manual→automático del juego de referencia:

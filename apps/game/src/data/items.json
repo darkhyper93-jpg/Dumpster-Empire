@@ -571,6 +571,182 @@
         "valorBase": 132400000,
         "categoria": "future"
       }
+    ],
+    "chatarreriaTitanes": [
+      {
+        "icon": "rivet-colossal",
+        "name": "Remache colosal",
+        "valorBase": 659668000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "chain-titanic",
+        "name": "Eslabón de cadena titánica",
+        "valorBase": 841862000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "anvil-titan",
+        "name": "Yunque agrietado de titán",
+        "valorBase": 1061752000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "gear-colossus",
+        "name": "Engranaje de coloso",
+        "valorBase": 1319337000,
+        "categoria": "future"
+      },
+      {
+        "icon": "piston-seismic",
+        "name": "Pistón sísmico",
+        "valorBase": 1608334000,
+        "categoria": "future"
+      },
+      {
+        "icon": "core-starforge",
+        "name": "Núcleo de forja estelar",
+        "valorBase": 1985287000,
+        "categoria": "future"
+      },
+      {
+        "icon": "heart-automaton",
+        "name": "Corazón de autómata titán",
+        "valorBase": 2487892000,
+        "categoria": "future"
+      }
+    ],
+    "naufragioTemporal": [
+      {
+        "icon": "compass-reversed",
+        "name": "Brújula que gira al revés",
+        "valorBase": 38135909000,
+        "categoria": "historic"
+      },
+      {
+        "icon": "map-extinct",
+        "name": "Mapa de rutas extintas",
+        "valorBase": 48756036000,
+        "categoria": "historic"
+      },
+      {
+        "icon": "figurehead-ghost",
+        "name": "Mascarón de proa fantasmal",
+        "valorBase": 61307095000,
+        "categoria": "historic"
+      },
+      {
+        "icon": "hourglass-frozen",
+        "name": "Reloj de arena congelado",
+        "valorBase": 76271819000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "anchor-lostsea",
+        "name": "Ancla de un mar que no existe",
+        "valorBase": 93167475000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "chronometer-eternal",
+        "name": "Cronómetro del capitán eterno",
+        "valorBase": 114407728000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "helm-time",
+        "name": "Timón del tiempo",
+        "valorBase": 143854443000,
+        "categoria": "relics"
+      }
+    ],
+    "archivoMultiverso": [
+      {
+        "icon": "portrait-alternate",
+        "name": "Autorretrato de otro vos",
+        "valorBase": 434583743000,
+        "categoria": "art"
+      },
+      {
+        "icon": "score-silent",
+        "name": "Partitura de una realidad muda",
+        "valorBase": 554712582000,
+        "categoria": "art"
+      },
+      {
+        "icon": "sculpture-impossible",
+        "name": "Escultura de geometría imposible",
+        "valorBase": 696040629000,
+        "categoria": "art"
+      },
+      {
+        "icon": "tome-unhappened",
+        "name": "Tomo de historias que no pasaron",
+        "valorBase": 869167485000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "key-infinite",
+        "name": "Llave de infinitas puertas",
+        "valorBase": 1059960348000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "mirror-timelines",
+        "name": "Espejo de líneas temporales",
+        "valorBase": 1303751228000,
+        "categoria": "relics"
+      },
+      {
+        "icon": "catalog-multiverse",
+        "name": "Catálogo del multiverso",
+        "valorBase": 1635872137000,
+        "categoria": "relics"
+      }
+    ],
+    "vertederoBigBang": [
+      {
+        "icon": "dust-firststar",
+        "name": "Polvo de la primera estrella",
+        "valorBase": 1037274501000,
+        "categoria": "future"
+      },
+      {
+        "icon": "bubble-void",
+        "name": "Burbuja de vacío primordial",
+        "valorBase": 1320167547000,
+        "categoria": "future"
+      },
+      {
+        "icon": "fragment-horizon",
+        "name": "Fragmento de horizonte",
+        "valorBase": 1661996644000,
+        "categoria": "future"
+      },
+      {
+        "icon": "echo-bigbang",
+        "name": "Eco del estallido inicial",
+        "valorBase": 2068655397000,
+        "categoria": "future"
+      },
+      {
+        "icon": "atom-primordial",
+        "name": "Átomo primigenio embotellado",
+        "valorBase": 2528356597000,
+        "categoria": "future"
+      },
+      {
+        "icon": "spark-genesis",
+        "name": "Chispa de génesis",
+        "valorBase": 3105929898000,
+        "categoria": "future"
+      },
+      {
+        "icon": "relic-dayzero",
+        "name": "Resto del día cero",
+        "valorBase": 3901566590000,
+        "categoria": "future"
+      }
     ]
   }
 }

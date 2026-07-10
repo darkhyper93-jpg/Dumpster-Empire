@@ -52,11 +52,23 @@ describe('§4.2 costo de contenedores: precio FIJO (ronda 6, sin crecimiento por
     });
   }
 
-  it('los 12 contenedores tienen los precios fijos de PLAN.md §2.6/§2.6-ronda11 (tiers ×10–×15)', () => {
-    expect(containers.map((c) => c.costoInicial)).toEqual([
+  it('los primeros 12 contenedores (rondas 1-11) tienen los precios fijos de PLAN.md §2.6/§2.6-ronda11 (tiers ×10–×15)', () => {
+    // AJUSTE (ronda 15): acotado a los primeros 12 (histórico) — los 4 nuevos de la ronda 15
+    // se verifican por su propia progresión (×15 por tier) en el test siguiente, sin pisar esto.
+    expect(containers.slice(0, 12).map((c) => c.costoInicial)).toEqual([
       0, 25, 300, 4000, 50000, 700000, 10000000, 150000000,
       5000000000, 80000000000, 1200000000000, 20000000000000,
     ]);
+  });
+
+  it('los contenedores agregados después del tier 12 mantienen costos crecientes (~×10-×16 por tier)', () => {
+    // Ronda 15: en vez de hardcodear los costos exactos, se deriva la relación de la data —
+    // cada contenedor nuevo debe costar entre 10x y 16x el anterior, continuando la curva.
+    for (let i = 12; i < containers.length; i++) {
+      const ratio = containers[i].costoInicial / containers[i - 1].costoInicial;
+      expect(ratio).toBeGreaterThanOrEqual(10);
+      expect(ratio).toBeLessThanOrEqual(16);
+    }
   });
 });
 
@@ -124,15 +136,16 @@ describe('rediseño de stats (PLAN.md §2.3): cada stat mueve un número distint
 
   it('el ritmo (getDigRate) es clamp(Fuerza/resistencia, 0.3, 1.5): sube con la Fuerza y premia la sobre-Fuerza (ronda 7)', () => {
     const highResistance = containers.reduce((max, c) => (c.resistencia > max.resistencia ? c : max));
+    const digPowerDef = upgrades.find((u) => u.id === 'digPower');
+    // AJUSTE (ronda 15): en vez de hardcodear niveles de Fuerza pensados para la resistencia
+    // máxima de rondas anteriores (29), se derivan del `resistencia` real del contenedor más
+    // duro, cualquiera sea — así el test no se rompe cada vez que un tier nuevo sube el techo.
+    const levelForMult = (targetMult) => Math.ceil((targetMult - digPowerDef.baseValue) / digPowerDef.perNivel);
     const low = freshState();
     const mid = freshState();
-    // AJUSTE (ronda 11): resistencia máxima subió a 29 (vertederoDivino); el nivel necesita
-    // superar el piso de ritmo 0.3 contra ella (mult > 0.3×29 = 8.7), cosa que el nivel 50 viejo
-    // (mult 3, pensado para la resistencia vieja de 8.7) ya no logra.
-    mid.upgradeLevels.digPower = 220;
+    mid.upgradeLevels.digPower = levelForMult(highResistance.resistencia); // mult ≈ resistencia (ritmo ≈ 1, sin clampear)
     const high = freshState();
-    // Necesita superar 1.5×29 = 43.5 de mult (antes 320 alcanzaba con la resistencia vieja de 8.7).
-    high.upgradeLevels.digPower = 1200;
+    high.upgradeLevels.digPower = levelForMult(highResistance.resistencia * 2); // mult >> 1.5×resistencia (clampea)
     const rateLow = getDigRate(low, highResistance, data);
     const rateMid = getDigRate(mid, highResistance, data);
     const rateHigh = getDigRate(high, highResistance, data);

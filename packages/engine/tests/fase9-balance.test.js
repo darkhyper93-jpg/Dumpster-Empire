@@ -57,11 +57,11 @@ describe('Ronda 6 — la Suerte recomendada es real (no 0) y crece por tier', ()
   for (let i = 0; i < containers.length; i++) {
     const container = containers[i];
     if (container.costoInicial === 0) continue;
-    // AJUSTE (ronda 11): el tope "alcanzable" sube de 350 a 650 — los 4 contenedores de
-    // prestigio nuevos recomiendan hasta 580 (vertederoDivino) con la calibración de esta ronda.
-    it(`${container.id}: recomendada > 0, alcanzable (< 650) y en pérdida a Suerte 0`, () => {
+    // AJUSTE (ronda 15): el tope "alcanzable" sube de 650 a 1000 — los 4 contenedores nuevos
+    // (prestigio 6-9) recomiendan hasta 920 (vertederoBigBang) con la calibración de esta ronda.
+    it(`${container.id}: recomendada > 0, alcanzable (< 1000) y en pérdida a Suerte 0`, () => {
       expect(recommended[i]).toBeGreaterThan(0);
-      expect(recommended[i]).toBeLessThan(650);
+      expect(recommended[i]).toBeLessThan(1000);
       expect(expectedNetValueAtLuck(container, 0)).toBeLessThan(0);
     });
   }
@@ -79,10 +79,19 @@ describe('Ronda 6 — la Suerte recomendada es real (no 0) y crece por tier', ()
 // agentes/scripts/calibrate-luck-ronda10.mjs. Este test fija los targets EXACTOS: si un
 // rebalanceo futuro de data los mueve, tiene que verse acá a propósito.
 describe('Ronda 10/11 — requerimientos de Suerte por contenedor (targets exactos)', () => {
-  it('la Suerte recomendada de los 12 contenedores es exactamente la tabla de las rondas 10 y 11', () => {
+  it('la Suerte recomendada de los primeros 12 contenedores (rondas 1-11) sigue siendo la tabla exacta de las rondas 10 y 11', () => {
+    // AJUSTE (ronda 15): acotado a los primeros 12 — es la regresión histórica de esa data.
+    // Los 4 contenedores nuevos de la ronda 15 tienen su propio target exacto abajo.
     const state = freshState();
-    const recommended = containers.map((c) => getRecommendedLuck(state, c, items, data));
+    const recommended = containers.slice(0, 12).map((c) => getRecommendedLuck(state, c, items, data));
     expect(recommended).toEqual([0, 8, 20, 40, 72, 120, 190, 290, 340, 420, 500, 580]);
+  });
+
+  it('la Suerte recomendada de los 4 contenedores nuevos de la ronda 15 es exactamente la calibrada en esta ronda', () => {
+    const state = freshState();
+    const NEW_IDS = ['chatarreriaTitanes', 'naufragioTemporal', 'archivoMultiverso', 'vertederoBigBang'];
+    const recommended = NEW_IDS.map((id) => getRecommendedLuck(state, containers.find((c) => c.id === id), items, data));
+    expect(recommended).toEqual([651, 740, 831, 920]);
   });
 });
 
@@ -128,11 +137,11 @@ describe('PLAN.md §11.2 — trampas más caras por tier, nunca injustas', () =>
     }
   });
 
-  // AJUSTE (ronda 11): el tope sube de 35% a 40% — vertederoDivino (el contenedor de mayor
-  // riesgo, gateado por Prestigio 5) sube a 38% a propósito para justificar su Suerte recomendada.
-  it('incluso en el contenedor de mayor riesgo, la probabilidad base de trampa nunca supera 40%', () => {
+  // AJUSTE (ronda 15): el tope sube de 40% a 44% — vertederoBigBang (el contenedor de mayor
+  // riesgo, gateado por Prestigio 9) sube a 44% a propósito para justificar su Suerte recomendada.
+  it('incluso en el contenedor de mayor riesgo, la probabilidad base de trampa nunca supera 44%', () => {
     for (const container of containers) {
-      expect(container.probTrampaBase).toBeLessThanOrEqual(0.4);
+      expect(container.probTrampaBase).toBeLessThanOrEqual(0.44);
     }
   });
 });

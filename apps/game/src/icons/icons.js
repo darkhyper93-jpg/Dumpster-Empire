@@ -129,6 +129,27 @@ const SHAPES = {
   ring: '<circle cx="12" cy="13" r="6"/><circle cx="12" cy="13" r="3.2"/><path d="M9 8l3-5 3 5"/><circle cx="12" cy="5" r="1.1"/>',
   compass: '<circle cx="12" cy="12" r="8"/><path d="M15 9l-2 5-5 2 2-5z"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>',
   lantern: '<path d="M9 4h6l1 3H8z"/><rect x="7" y="7" width="10" height="10" rx="1"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="9" y1="17" x2="9" y2="20"/><line x1="15" y1="17" x2="15" y2="20"/><circle cx="12" cy="12" r="2" stroke-dasharray="1 1.2"/>',
+
+  // Ronda 15 — Agente B: 4 contenedores de prestigio 6-9 + sus 28 ítems.
+  junkyard: '<path d="M4 21h16"/><path d="M7 21l1.5-7 3 1.5 2-5 2.5 4 2-2.5 1 9"/><line x1="18" y1="4" x2="18" y2="10"/><path d="M15 4h3"/>',
+  shipwreck: '<path d="M3 15c3 3 15 3 18 0l-2 6H5z"/><line x1="12" y1="15" x2="12" y2="3"/><path d="M12 6l5 2"/><path d="M8 15l1-4"/>',
+  archive: '<rect x="5" y="3" width="14" height="18" rx="1"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><circle cx="12" cy="6" r="0.8"/><circle cx="12" cy="12" r="0.8"/><circle cx="12" cy="18" r="0.8"/>',
+  bigbang: '<circle cx="12" cy="12" r="2.5"/><line x1="12" y1="2" x2="12" y2="7"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="2" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="22" y2="12"/><line x1="5" y1="5" x2="8.5" y2="8.5"/><line x1="19" y1="5" x2="15.5" y2="8.5"/><line x1="5" y1="19" x2="8.5" y2="15.5"/><line x1="19" y1="19" x2="15.5" y2="15.5"/>',
+  rivetColossal: '<path d="M12 3l7 4v10l-7 4-7-4V7z"/><circle cx="12" cy="12" r="3"/>',
+  chainLink: '<ellipse cx="9" cy="9" rx="4" ry="5" transform="rotate(-20 9 9)"/><ellipse cx="15" cy="15" rx="4" ry="5" transform="rotate(-20 15 15)"/>',
+  anvilTitan: '<path d="M3 13h6l2-3h6l3 3v2H3z"/><rect x="10" y="15" width="4" height="5"/><line x1="7" y1="20" x2="17" y2="20"/>',
+  pistonSeismic: '<rect x="9" y="3" width="6" height="8" rx="1"/><line x1="12" y1="11" x2="12" y2="17"/><rect x="7" y="17" width="10" height="4" rx="1"/>',
+  figurehead: '<path d="M12 2c2 3 5 4 5 8 0 5-3 8-5 12-2-4-5-7-5-12 0-4 3-5 5-8z"/><line x1="8" y1="10" x2="16" y2="10"/><circle cx="12" cy="7" r="1"/>',
+  hourglass: '<line x1="6" y1="3" x2="18" y2="3"/><line x1="6" y1="21" x2="18" y2="21"/><path d="M7 3c0 5 5 6 5 9s-5 4-5 9"/><path d="M17 3c0 5-5 6-5 9s5 4 5 9"/>',
+  anchor: '<circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="19"/><path d="M6 13a6 6 0 0 0 12 0"/><line x1="7" y1="10" x2="17" y2="10"/>',
+  helm: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><line x1="12" y1="5" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="19"/><line x1="5" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="19" y2="12"/><line x1="7" y1="7" x2="9" y2="9"/><line x1="15" y1="15" x2="17" y2="17"/><line x1="7" y1="17" x2="9" y2="15"/><line x1="15" y1="9" x2="17" y2="7"/>',
+  musicScore: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="8" cy="16" r="1.6"/><line x1="9.5" y1="16" x2="9.5" y2="8"/><circle cx="15" cy="18" r="1.6"/><line x1="16.5" y1="18" x2="16.5" y2="8"/>',
+  stardust: '<circle cx="12" cy="12" r="1.5"/><circle cx="6" cy="7" r="1"/><circle cx="18" cy="8" r="1"/><circle cx="7" cy="17" r="1"/><circle cx="17" cy="17" r="1"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/>',
+  voidBubble: '<circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/><circle cx="9" cy="9" r="1.5"/>',
+  echoWave: '<circle cx="12" cy="18" r="1.3"/><path d="M8 18a4 4 0 0 1 8 0"/><path d="M5 18a7 7 0 0 1 14 0"/><path d="M2 18a10 10 0 0 1 20 0"/>',
+  atomPrimordial: '<circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="9" ry="3.5"/><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(120 12 12)"/>',
+  sparkGenesis: '<path d="M13 2 7 13h4l-2 9 8-13h-5z"/>',
+  relicDayzero: '<circle cx="12" cy="12" r="8"/><line x1="12" y1="12" x2="12" y2="5"/><line x1="12" y1="12" x2="16" y2="14"/><path d="M4 4l4 4M20 4l-4 4M4 20l4-4M20 20l-4-4" stroke-dasharray="1 2"/>',
 };
 
 /** Mapea cada clave `icon` de la data (items/containers/upgrades/automations/prestigeTree/achievements) a una forma. */
@@ -311,6 +332,44 @@ const ICON_MAP = {
   'godling-idol': 'idol',
   'thunder-coil': 'cable',
   'creation-seed': 'seed',
+
+  // Ronda 15 — Agente B: 4 contenedores de prestigio 6-9 + sus 28 ítems.
+  'junkyard-titans': 'junkyard',
+  'shipwreck-temporal': 'shipwreck',
+  'archive-multiverse': 'archive',
+  'dump-bigbang': 'bigbang',
+  'rivet-colossal': 'rivetColossal',
+  'chain-titanic': 'chainLink',
+  'anvil-titan': 'anvilTitan',
+  // DECISIÓN: gear-colossus reusa 'gear' (mismo objeto, escala mayor) — se diferencia por
+  // color de rareza, igual que otros reusos ya documentados en este archivo.
+  'gear-colossus': 'gear',
+  'piston-seismic': 'pistonSeismic',
+  // DECISIÓN: core-starforge reusa 'fusionCore' (mismo concepto de núcleo energético).
+  'core-starforge': 'fusionCore',
+  // DECISIÓN: heart-automaton reusa 'crystalHeart' (misma forma que collector-heart).
+  'heart-automaton': 'crystalHeart',
+  'compass-reversed': 'compass',
+  'map-extinct': 'foldedMap',
+  'figurehead-ghost': 'figurehead',
+  'hourglass-frozen': 'hourglass',
+  'anchor-lostsea': 'anchor',
+  'chronometer-eternal': 'watch',
+  'helm-time': 'helm',
+  'portrait-alternate': 'painting',
+  'score-silent': 'musicScore',
+  'sculpture-impossible': 'statue',
+  'tome-unhappened': 'book',
+  'key-infinite': 'key',
+  'mirror-timelines': 'mirror',
+  'catalog-multiverse': 'manifest',
+  'dust-firststar': 'stardust',
+  'bubble-void': 'voidBubble',
+  'fragment-horizon': 'shard',
+  'echo-bigbang': 'echoWave',
+  'atom-primordial': 'atomPrimordial',
+  'spark-genesis': 'sparkGenesis',
+  'relic-dayzero': 'relicDayzero',
 };
 
 /**
