@@ -28,6 +28,7 @@
   --fg-2: #9d8e84; /* outline */
   --danger: #ffb4ab; /* error */
   --danger-container: #93000a; /* error-container */
+  --trap: #c0392b; /* rojo del "objeto" trampa en el canvas de escarbado (DigCanvas lo resuelve vía resolveCssColor) */
   --outline: #50453c; /* outline-variant, bordes de tarjetas/inputs */
 
   /* --- Tipografía: Plus Jakarta Sans única familia (titulares, números, cuerpo, labels) --- */

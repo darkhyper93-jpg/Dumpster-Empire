@@ -3,7 +3,7 @@
  * y export/import en base64. Nunca corrompe la partida en curso ante un input inválido.
  */
 
-import { SAVE_VERSION, freshState } from './state.js';
+import { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, freshState } from './state.js';
 
 /** Idiomas soportados por el módulo i18n (apps/game/src/i18n). Fuente de verdad del allow-list. */
 export const SUPPORTED_LANGUAGES = ['es', 'en'];
@@ -61,13 +61,19 @@ function isValidItemsFoundByItem(obj) {
  */
 function isValidAutoProcessing(arr) {
   if (!Array.isArray(arr)) return false;
+  // AJUSTE (auditoría post-ronda 14): además de finitud, coherencia del slot. automationTick
+  // solo persiste slots con 0 < remaining <= totalTime; un slot manipulado con totalTime 0 (o
+  // remaining > totalTime) producía "Contenedor: NaN%" / porcentajes negativos en AutomationView.
   return arr.every(
     (slot) =>
       typeof slot === 'object' &&
       slot !== null &&
       typeof slot.containerId === 'string' &&
       Number.isFinite(slot.totalTime) &&
-      Number.isFinite(slot.remaining)
+      Number.isFinite(slot.remaining) &&
+      slot.totalTime > 0 &&
+      slot.remaining >= 0 &&
+      slot.remaining <= slot.totalTime
   );
 }
 
@@ -103,15 +109,18 @@ function validateDeepContent(migrated) {
   if (migrated.autoTargetContainerId !== null && typeof migrated.autoTargetContainerId !== 'string') {
     return 'Contenido inválido en autoTargetContainerId: debe ser null o un string.';
   }
-  if (!Number.isFinite(migrated.digSensitivity) || migrated.digSensitivity < 0.5 || migrated.digSensitivity > 1.5) {
-    return 'Contenido inválido en digSensitivity: debe ser un número entre 0.5 y 1.5.';
+  if (
+    !Number.isFinite(migrated.digSensitivity) ||
+    migrated.digSensitivity < DIG_SENSITIVITY_MIN ||
+    migrated.digSensitivity > DIG_SENSITIVITY_MAX
+  ) {
+    return `Contenido inválido en digSensitivity: debe ser un número entre ${DIG_SENSITIVITY_MIN} y ${DIG_SENSITIVITY_MAX}.`;
   }
   if (!SUPPORTED_LANGUAGES.includes(migrated.language)) {
     return `Contenido inválido en language: debe ser uno de ${SUPPORTED_LANGUAGES.join(', ')}.`;
   }
-  if (!Number.isFinite(migrated.volume)) {
-    return 'Contenido inválido en volume: debe ser un número finito.';
-  }
+  // El chequeo de finitud de `volume` (y de todo campo numérico top-level) vive ahora en el
+  // loop de REQUIRED_FIELDS de validateSave — ver AJUSTE de la auditoría post-ronda 14.
   return null;
 }
 
@@ -241,6 +250,13 @@ export function validateSave(candidate, validContainerIds) {
   for (const [field, type] of Object.entries(REQUIRED_FIELDS)) {
     if (typeof migrated[field] !== type) {
       return { valid: false, error: `Campo inválido o faltante: ${field}` };
+    }
+    // AJUSTE (auditoría post-ronda 14): `typeof NaN === 'number'` — un save manipulado con
+    // money/lastSavedAt/tutorialStep en NaN o Infinity pasaba la validación y dejaba la partida
+    // inutilizable (botones muertos por costo NaN, offline NaN). Misma lección del napkin que
+    // ya motivó Number.isFinite en los mapas numéricos: el typeof solo no alcanza.
+    if (type === 'number' && !Number.isFinite(migrated[field])) {
+      return { valid: false, error: `Campo numérico no finito: ${field}` };
     }
   }
   const deepError = validateDeepContent(migrated);

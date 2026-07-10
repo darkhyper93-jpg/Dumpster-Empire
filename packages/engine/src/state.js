@@ -17,6 +17,14 @@
 // digSensitivity (slider de sensibilidad) y language (base de i18n es/en).
 export const SAVE_VERSION = 5;
 
+// AJUSTE (auditoría post-ronda 14): rango de diseño de `digSensitivity`, exportado como única
+// fuente de verdad. Antes el 0.5–1.5 estaba repetido como número mágico en save.js (validación),
+// store.js (clamp), DigCanvas.js (clamp defensivo) y SettingsView.js (min/max del slider).
+/** Mínimo del multiplicador del pincel de escarbado (settings). */
+export const DIG_SENSITIVITY_MIN = 0.5;
+/** Máximo del multiplicador del pincel de escarbado (settings). */
+export const DIG_SENSITIVITY_MAX = 1.5;
+
 /**
  * @typedef {Object} AutoProcessingSlot
  * @property {string} containerId

@@ -4,7 +4,10 @@
 
 import { prestigeKeysEarned, upgradeCost, getPrestigeStartMoney } from '../economy.js';
 
-const PRESTIGE_MONEY_THRESHOLD = 1_000_000_000;
+// AJUSTE (auditoría post-ronda 14): exportado para que la UI (PrestigeView) muestre el umbral
+// real en el tooltip de "Hacer Prestigio" en vez de un "$1.000.000.000" hardcodeado en el
+// diccionario i18n que mentiría si el balance cambia. Es el mismo umbral de PLAN.md §4.3.
+export const PRESTIGE_MONEY_THRESHOLD = 1_000_000_000;
 
 /**
  * @param {import('../state.js').GameState} state

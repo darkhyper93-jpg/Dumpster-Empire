@@ -17,6 +17,7 @@
  * SVG (`icons/icons.js`) rasterizado a `Image` para poder dibujarse en canvas.
  */
 
+import { DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX } from '@dumpster/engine';
 import { attachDigInput } from './digInput.js';
 import { getIconImage, iconMarkup } from '../icons/icons.js';
 import { startScratchSound, stopScratchSound } from '../fx/audio.js';
@@ -135,12 +136,13 @@ export class DigCanvas {
 
   /**
    * Sensibilidad del pincel de escarbado (ronda 14, settings persistidos). Clamp defensivo
-   * propio: el store ya clampa 0.5-1.5 antes de persistir, pero un save corrupto/antiguo no
-   * debería poder hacer crecer el pincel más allá del rango de diseño.
-   * @param {number} value - 0.5..1.5
+   * propio: el store ya clampa al mismo rango antes de persistir, pero un save corrupto/antiguo
+   * no debería poder hacer crecer el pincel más allá del rango de diseño (el rango vive en el
+   * engine como única fuente de verdad: DIG_SENSITIVITY_MIN/MAX).
+   * @param {number} value - DIG_SENSITIVITY_MIN..DIG_SENSITIVITY_MAX
    */
   setSensitivity(value) {
-    this.sensitivity = Math.min(1.5, Math.max(0.5, Number(value) || 1));
+    this.sensitivity = Math.min(DIG_SENSITIVITY_MAX, Math.max(DIG_SENSITIVITY_MIN, Number(value) || 1));
   }
 
   markTouched() {
@@ -174,7 +176,7 @@ export class DigCanvas {
     this.digGeneration = (this.digGeneration || 0) + 1;
 
     this.entries = digResult.isTrap
-      ? [{ icon: 'artifact', name: t('dig.trapEntryName'), colorHex: '#c0392b', isTrap: true }]
+      ? [{ icon: 'artifact', name: t('dig.trapEntryName'), colorHex: this.resolveCssColor('--trap'), isTrap: true }]
       : digResult.items.map((item) => ({
           icon: item.icon,
           name: item.name,

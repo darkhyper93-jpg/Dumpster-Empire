@@ -63,6 +63,10 @@ export const AutomationView = {
     const parallelSlots = getParallelAutoSlots(state, data);
     // Parte C (ronda 9): el panel de estado depende de si el jugador ya tiene auto-escarbado.
     const autoDigActive = hasAutoDig(state, data);
+    // AJUSTE (auditoría post-ronda 14): el nombre de la máquina que habilita la cola sale de la
+    // data (efecto enablesAutoDig, el mismo criterio que usa hasAutoDig), no de un "Robot
+    // Clasificador Básico" hardcodeado en el diccionario que mentiría si la data se renombra.
+    const autoDigMachine = data.automations.find((a) => (a.effects || []).some((e) => e.type === 'enablesAutoDig'));
     const capacityUpgrade = data.upgrades.find((u) => u.id === 'capacity');
     const capacityCost = capacityUpgrade ? nextUpgradeCost(state, capacityUpgrade) : 0;
     const capacityCanAfford = state.money >= capacityCost;
@@ -137,7 +141,7 @@ export const AutomationView = {
           `<select data-action="set-auto-target">${targetOptions}</select>` +
           `</label>` +
           waitingHint
-        : `<p class="automation-callout">${t('automation.calloutInactive')}</p>`) +
+        : `<p class="automation-callout">${t('automation.calloutInactive', { name: autoDigMachine ? autoDigMachine.name : '' })}</p>`) +
       (capacityUpgrade
         ? `<button type="button" data-action="buy-capacity" ${capacityCanAfford ? '' : 'disabled'} title="${capacityReason}">` +
           `${t('automation.expandCapacity', { level: Number(state.upgradeLevels.capacity) || 0, amount: formatMoney(capacityCost) })}` +

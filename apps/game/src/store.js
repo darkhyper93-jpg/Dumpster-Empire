@@ -6,6 +6,8 @@
 
 import {
   freshState,
+  DIG_SENSITIVITY_MIN,
+  DIG_SENSITIVITY_MAX,
   getAreaMult,
   getDigRate,
   getEffectiveTrapProbability,
@@ -302,10 +304,10 @@ export function createStore(ctx) {
 
     /**
      * Sensibilidad del pincel de escarbado (mouse/touch), persistida en el save (ronda 14).
-     * @param {number} value - 0.5..1.5
+     * @param {number} value - DIG_SENSITIVITY_MIN..DIG_SENSITIVITY_MAX
      */
     setDigSensitivity(value) {
-      state.digSensitivity = Math.min(1.5, Math.max(0.5, Number(value) || 1));
+      state.digSensitivity = Math.min(DIG_SENSITIVITY_MAX, Math.max(DIG_SENSITIVITY_MIN, Number(value) || 1));
       persist();
       notify();
     },

@@ -10,6 +10,7 @@
  * la UI) y se sumó el slider de sensibilidad de escarbado, calcado del de volumen.
  */
 
+import { DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX } from '@dumpster/engine';
 import { t } from '../i18n/i18n.js';
 
 const local = {
@@ -70,8 +71,10 @@ export const SettingsView = {
       `<section class="settings-block settings-volume">` +
       `<label class="settings-volume-label" for="sensitivity-slider" data-sensitivity-label>` +
       `${t('settings.sensitivity', { pct: sensitivityPct })}</label>` +
+      // El rango del slider sale del engine (DIG_SENSITIVITY_MIN/MAX), no de un 50/150 suelto:
+      // si el rango de diseño cambia, cambia en un solo lugar (state.js) y la UI lo sigue.
       `<input class="settings-volume-slider" type="range" id="sensitivity-slider" data-action="set-sensitivity"` +
-      ` min="50" max="150" step="5" value="${sensitivityPct}" />` +
+      ` min="${DIG_SENSITIVITY_MIN * 100}" max="${DIG_SENSITIVITY_MAX * 100}" step="5" value="${sensitivityPct}" />` +
       `</section>` +
       `<section class="settings-block">` +
       `<button type="button" data-action="reset-game">${

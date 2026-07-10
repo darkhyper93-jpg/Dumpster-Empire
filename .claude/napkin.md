@@ -7,15 +7,18 @@
 - Each item includes date + "Do instead".
 
 ## Execution & Validation (Highest Priority)
-1. **[2026-07-02] `save.js` only checked top-level `typeof` on save fields, not content**
-   `REQUIRED_FIELDS` verified e.g. `itemsFoundByItem: 'object'` but never that the values inside
-   were finite numbers — a manipulated/imported save could smuggle a string (incl. HTML) into any
-   `id -> number` map or nested map and pass validation.
-   Do instead: when adding a new persisted field to `GameState` (`packages/engine/src/state.js`),
-   also add a content-level check to `validateDeepContent()` in `packages/engine/src/save.js` —
-   numeric maps must be `Number.isFinite` per value, boolean maps `typeof === 'boolean'`, arrays
-   must have their element shape checked, not just `Array.isArray`. Top-level `typeof` alone is not
-   enough for any field the UI will later interpolate.
+1. **[2026-07-02, ampliado 2026-07-09] `typeof` solo NUNCA alcanza para validar un save**
+   Dos rondas de la misma clase de bug: (a) `REQUIRED_FIELDS` validaba `itemsFoundByItem: 'object'`
+   sin mirar el contenido (string/HTML colable en mapas `id -> number`); (b) `typeof NaN ===
+   'number'` — `money: NaN` / `lastSavedAt: Infinity` pasaban y brickeaban la partida; y un slot
+   de `autoProcessing` con `totalTime: 0` pasaba la finitud pero daba "NaN%" en la UI (división
+   por cero). Desde la auditoría post-ronda 14 el loop de `validateSave` exige `Number.isFinite`
+   en TODO campo `number` top-level (los nuevos quedan cubiertos gratis).
+   Do instead: al agregar un campo persistido a `GameState`, el `typeof` de `REQUIRED_FIELDS` +
+   finitud genérica ya están; lo que sigue faltando siempre es el chequeo de CONTENIDO en
+   `validateDeepContent()` — mapas numéricos `Number.isFinite` por valor, arrays con forma de
+   elemento verificada, y COHERENCIA entre campos (rangos, `remaining <= totalTime`, allow-lists).
+   Preguntarse: "¿qué valor pasa el typeof pero rompe la UI o la economía?" y validarlo.
 2. **[2026-07-08] Assertar `.toast` sin filtrar es un strict-mode violation latente (solo en CI)**
    El primer escarbado de una partida sembrada dispara además toasts de logros ("Primeros
    Pasos", "Primer Objeto"): hasta 3 `.toast` conviven. Local pasa por timing (los de logros ya

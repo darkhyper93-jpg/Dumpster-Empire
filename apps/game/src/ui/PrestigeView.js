@@ -8,7 +8,7 @@
  * el árbol de datos cambia de forma, el dibujo se recalcula solo.
  */
 
-import { formatMoney, formatNumber, canPrestige, prestigeKeysPreview, nextPrestigeNodeCost, isPrestigeNodeUnlocked } from '@dumpster/engine';
+import { formatMoney, formatNumber, canPrestige, prestigeKeysPreview, nextPrestigeNodeCost, isPrestigeNodeUnlocked, PRESTIGE_MONEY_THRESHOLD } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { t } from '../i18n/i18n.js';
 
@@ -136,8 +136,10 @@ export const PrestigeView = {
       `<p>${t('prestige.keysLabel', { amount: formatNumber(state.prestigeKeys) })}</p>` +
       `<p>${t('prestige.completedCount', { count: Number(state.prestigeCount) || 0 })}</p>` +
       `<p>${t('prestige.previewGain', { amount: formatNumber(preview) })}</p>` +
+      // AJUSTE (auditoría post-ronda 14): el umbral sale del engine (PRESTIGE_MONEY_THRESHOLD),
+      // no de un "$1.000.000.000" hardcodeado en el diccionario que mentiría si el balance cambia.
       `<button type="button" class="prestige-btn-main" data-action="do-prestige" ${eligible ? '' : 'disabled'} title="${
-        eligible ? '' : t('prestige.needMoney')
+        eligible ? '' : t('prestige.needMoney', { amount: formatMoney(PRESTIGE_MONEY_THRESHOLD, 0) })
       }">${t('prestige.doButton')}</button>` +
       `</section>` +
       `<div class="prestige-tree">${nodes}</div>`;

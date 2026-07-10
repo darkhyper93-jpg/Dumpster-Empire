@@ -30,6 +30,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | Correctivo — Pulido ronda 3 | PUNTOS_A_MEJORAR_3.md | ✅ hecho (ver bloque abajo) |
 | 11 Auditoría | 11 | ✅ hecho (ver bloque al final: veredicto + checklist manual para el usuario) |
 | Ronda 14 — QoL/íconos/settings/i18n | RONDA14-PLAN.md, Agentes A-E | ✅ hecho — Agente E verificó y commiteó (ver bloque al final) |
+| Auditoría post-ronda 14 (Verif&Audit.md) | Verif&Audit.md | ✅ hecho — sin críticos; 2 fixes de validación de save + des-hardcodeo (ver bloque al final) |
 
 ---
 
@@ -2992,3 +2993,66 @@ rama nueva — no había convención de rama específica para esta ronda en `RON
 ✅ Responsive 375/1280×800/1440 sin desbordes
 ✅ Handoff escrito (este bloque)
 ```
+
+---
+
+## Auditoría post-ronda 14 (guía: Verif&Audit.md, commit auditado: 8d16907)
+
+**Rol:** auditoría adversarial línea por línea del diff completo de la ronda 14 (engine, UI, i18n,
+íconos, tests, e2e) siguiendo Verif&Audit.md: OWASP/XSS, hardcoding, edge cases, deuda técnica.
+**Veredicto: sin hallazgos críticos.** El trabajo de A-E resistió bien el ataque (los sinks
+state→innerHTML nuevos resuelven ids contra data, `t()` documenta que no sanitiza y ningún caller
+le pasa strings crudos del state, la CSP/importmap quedaron intactos). Se corrigieron 2 huecos de
+validación de save (riesgo medio) y 5 hardcodeos/edge cases (calidad).
+
+### 🟡 Corregido — validación de save (packages/engine/src/save.js + tests)
+1. **`REQUIRED_FIELDS` aceptaba `NaN`/`Infinity` en campos numéricos top-level** (`typeof NaN ===
+   'number'`): un save manipulado con `money: NaN` o `lastSavedAt: Infinity` pasaba la validación
+   y dejaba la partida inutilizable (costos NaN → todos los botones muertos; offline NaN). Es la
+   misma clase de bug que el napkin ya documentaba para los mapas numéricos, extendida al nivel
+   superior. Fix: el loop de `validateSave` ahora exige `Number.isFinite` para todo campo `number`;
+   el chequeo especial de `volume` que la ronda 14 había agregado quedó cubierto por el genérico y
+   se eliminó (era redundante).
+2. **`isValidAutoProcessing` aceptaba slots incoherentes**: `totalTime: 0` producía
+   "Contenedor: NaN%" en AutomationView (división por cero) y `remaining > totalTime` porcentajes
+   negativos. `automationTick` jamás persiste slots así (0 < remaining ≤ totalTime siempre). Fix:
+   la validación exige `totalTime > 0` y `0 ≤ remaining ≤ totalTime`.
+   Tests nuevos en `save.test.js` para ambos (money NaN, lastSavedAt Infinity, tutorialStep NaN,
+   totalTime 0, remaining > totalTime) → suite en 226/226.
+
+### 🔵 Corregido — des-hardcodeo y edge cases
+3. **Rango de sensibilidad 0.5–1.5 repetido en 4 archivos** (save.js, store.js, DigCanvas.js y el
+   `min="50" max="150"` de SettingsView): ahora `DIG_SENSITIVITY_MIN/MAX` viven en
+   `packages/engine/src/state.js` (exportados vía index.js) y los 4 consumidores los importan.
+4. **`prestige.needMoney` hardcodeaba "$1.000.000.000" en los diccionarios i18n**: si el balance
+   cambiaba, el tooltip mentía. Ahora `PRESTIGE_MONEY_THRESHOLD` se exporta del engine y
+   PrestigeView interpola `{amount}` con `formatMoney(threshold, 0)` → el tooltip dice "$1B"
+   (además cumple mejor la regla K/M/B/T de CLAUDE.md que el número con puntos).
+5. **`automation.calloutInactive` hardcodeaba "Robot Clasificador Básico" en los diccionarios**:
+   ahora AutomationView resuelve la máquina con efecto `enablesAutoDig` desde `automations.json`
+   (mismo criterio que `hasAutoDig`) e interpola `{name}` — texto renderizado idéntico (el e2e de
+   ronda 9 que asserta "Robot Clasificador" pasa sin tocarlo).
+6. **`#c0392b` (rojo de trampa) hardcodeado en DigCanvas.js**: movido a `tokens.css` como
+   `--trap` y resuelto con el `resolveCssColor` que ya usaban los colores de rareza. Mismo color
+   renderizado, cero hex sueltos.
+7. **Tutorial.js renderizaba "undefined"** si `tutorialStep` era fraccionario (save manipulado;
+   `STEP_KEYS[2.5]` → `t(undefined)` → "undefined" en pantalla): lookup defensivo que oculta el
+   tooltip si la clave no existe.
+
+### Evaluado y decidido NO tocar (para que nadie lo "arregle" por error)
+- **La vista de Automatización se congela mientras el `<select>` del target tiene foco** (guard de
+  `SELECT` en `renderTabContent`): es el diseño elegido en RONDA14-PLAN.md §7 (riesgo #1) — sin el
+  guard, el dropdown se cierra cada tick. Consecuencia asumida: el "espera juntar $X" recién
+  aparece al sacar el foco del select. El e2e de ronda 14 ya documenta el workaround (`blur()`).
+- **`en.js` con valores en español**: intencional (D1 del plan; la traducción real es otra ronda).
+- **`setDigSensitivity` muta `state` directo en el store**: mismo patrón sancionado de `setVolume`.
+- **El fallback `#e8c07d` de `resolveCssColor`**: es el fallback defensivo de "variable CSS no
+  resuelta", documentado; no un color de diseño.
+
+### Verificado
+- `npm test` → **226/226 verdes** (221 previos + 5 nuevos de validación).
+- `npx playwright test` → **43/43 verdes sin tocar ningún spec** (prueba de que ningún texto
+  renderizado cambió, salvo el tooltip de prestigio que ahora dice "$1B" — no asertado por e2e).
+- `node --check` sobre los 12 archivos tocados → sin errores.
+- Barridos en cero: `console.log`, `// TODO`, `isJackpot/JACKPOT`, hex sueltos fuera de tokens.css,
+  `1.000.000.000`/`min="50"`/`Math.max(0.5` residuales (solo quedan en comentarios explicativos).

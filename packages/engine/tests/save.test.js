@@ -112,6 +112,45 @@ describe('save.js — validación profunda contra XSS almacenado (agentes/fix-xs
     expect(result.valid).toBe(false);
   });
 
+  // Auditoría post-ronda 14: typeof NaN === 'number' — los campos numéricos top-level
+  // necesitan Number.isFinite además del typeof (misma lección que los mapas numéricos).
+  it('rechaza money en NaN (rompería todos los botones con costos NaN)', () => {
+    const state = freshState();
+    state.money = NaN;
+    const result = validateSave(state);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('money');
+  });
+
+  it('rechaza lastSavedAt en Infinity (rompería el cálculo de progreso offline)', () => {
+    const state = freshState();
+    state.lastSavedAt = Infinity;
+    const result = validateSave(state);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('lastSavedAt');
+  });
+
+  it('rechaza tutorialStep en NaN', () => {
+    const state = freshState();
+    state.tutorialStep = NaN;
+    expect(validateSave(state).valid).toBe(false);
+  });
+
+  // Auditoría post-ronda 14: un slot con totalTime 0 producía "Contenedor: NaN%" en
+  // AutomationView; remaining > totalTime, porcentajes negativos. automationTick jamás
+  // persiste slots así (0 < remaining <= totalTime siempre).
+  it('rechaza autoProcessing con totalTime 0 (división por cero → NaN% en la UI)', () => {
+    const state = freshState();
+    state.autoProcessing = [{ containerId: 'tachoVereda', totalTime: 0, remaining: 0 }];
+    expect(validateSave(state).valid).toBe(false);
+  });
+
+  it('rechaza autoProcessing con remaining mayor que totalTime (porcentaje negativo en la UI)', () => {
+    const state = freshState();
+    state.autoProcessing = [{ containerId: 'tachoVereda', totalTime: 10, remaining: 25 }];
+    expect(validateSave(state).valid).toBe(false);
+  });
+
   it('acepta un save legítimo con contenido numérico normal en todos los mapas', () => {
     const state = freshState();
     state.ownedContainers = { tachoVereda: 3 };

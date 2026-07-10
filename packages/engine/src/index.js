@@ -3,7 +3,7 @@
  * Cero DOM en todo lo que este módulo reexporta.
  */
 
-export { SAVE_VERSION, freshState } from './state.js';
+export { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, freshState } from './state.js';
 export { formatNumber, formatMoney } from './format.js';
 
 export {
@@ -64,6 +64,7 @@ export {
 } from './systems/automation.js';
 
 export {
+  PRESTIGE_MONEY_THRESHOLD,
   canPrestige,
   prestigeKeysPreview,
   nextPrestigeNodeCost,

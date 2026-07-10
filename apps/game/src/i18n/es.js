@@ -51,7 +51,8 @@ export default {
   'automation.explainer':
     'El robot compra contenedores con tu dinero, los encola y los procesa (más riesgo de trampa que a mano). Elegí abajo cuál compra, o dejá "Auto". Las demás máquinas agrandan la cola o suman robots.',
   'automation.hint': 'Botón gris = todavía no te alcanza; el tooltip dice cuánto falta.',
-  'automation.calloutInactive': 'Necesitás el <strong>Robot Clasificador Básico</strong> para usar la cola.',
+  // {name} = la máquina con efecto enablesAutoDig, resuelta desde automations.json (AutomationView).
+  'automation.calloutInactive': 'Necesitás el <strong>{name}</strong> para usar la cola.',
   'automation.queue': 'Cola: {count} / {max}',
   'automation.slots': 'Slots simultáneos: {count}',
   'automation.processingLabel': 'Procesando:',
@@ -96,7 +97,8 @@ export default {
   'prestige.completedCount': 'Prestigios completados: {count}',
   'prestige.previewGain': 'Si prestigiás ahora ganás: {amount} llaves.',
   'prestige.doButton': 'Hacer Prestigio',
-  'prestige.needMoney': 'Necesitás $1.000.000.000 ganados en total para prestigiar.',
+  // {amount} = PRESTIGE_MONEY_THRESHOLD del engine formateado (PrestigeView), nunca un número fijo acá.
+  'prestige.needMoney': 'Necesitás {amount} ganados en total para prestigiar.',
 
   // SettingsView.js
   'settings.on': 'Encendido',

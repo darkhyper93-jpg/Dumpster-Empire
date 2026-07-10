@@ -24,14 +24,17 @@ export class Tutorial {
 
   /** @param {import('@dumpster/engine').GameState} state */
   render(state) {
-    if (state.tutorialStep >= STEP_KEYS.length) {
+    // Lookup defensivo: un tutorialStep fuera de rango o fraccionario (save manipulado) caía en
+    // STEP_KEYS[x] === undefined y renderizaba "undefined" en pantalla; sin clave, se oculta.
+    const stepKey = STEP_KEYS[state.tutorialStep];
+    if (!stepKey) {
       this.root.hidden = true;
       this.root.innerHTML = '';
       return;
     }
     this.root.hidden = false;
     this.root.innerHTML =
-      `<p>${t(STEP_KEYS[state.tutorialStep])}</p>` +
+      `<p>${t(stepKey)}</p>` +
       `<button type="button" data-action="skip-tutorial">${t('tutorial.skip')}</button>`;
   }
 }
