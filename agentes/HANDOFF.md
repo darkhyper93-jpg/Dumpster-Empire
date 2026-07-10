@@ -3206,3 +3206,109 @@ validación de save (riesgo medio) y 5 hardcodeos/edge cases (calidad).
 ✅ git add -A && commit        → 9b1ca62, rama feat/contenido-ronda15
 ✅ Handoff escrito (este bloque)
 ```
+
+## Ronda 15 — Agente B (data: 4 contenedores de prestigio 6-9 + 28 ítems + íconos)
+
+### Qué hice
+- **`apps/game/src/data/containers.json`**: 4 entradas nuevas al final del array —
+  `chatarreriaTitanes` (Prestigio 6), `naufragioTemporal` (Prestigio 7), `archivoMultiverso`
+  (Prestigio 8), `vertederoBigBang` (Prestigio 9) — con los valores exactos de la tabla de
+  ROADMAPv3.md §15.B1 (costo ×15 por tier, resistencia/trampa/digTime continuando la progresión
+  de los tiers 9-12).
+- **`apps/game/src/data/items.json`**: 4 pools nuevos (7 ítems c/u, 28 total) bajo `containers`,
+  uno por cada contenedor nuevo, cubriendo TODAS las categorías que declara cada contenedor
+  (regla dura: pool filtrado vacío crashea `rollItem`). Validado con el one-liner de Node del
+  plan: `OK 16 contenedores`.
+- **`apps/game/src/icons/icons.js`**: 32 claves nuevas (4 contenedores + 28 ítems). De esas, 19
+  son shapes 100% nuevas (`junkyard`, `shipwreck`, `archive`, `bigbang`, `rivetColossal`,
+  `chainLink`, `anvilTitan`, `pistonSeismic`, `figurehead`, `hourglass`, `anchor`, `helm`,
+  `musicScore`, `stardust`, `voidBubble`, `echoWave`, `atomPrimordial`, `sparkGenesis`,
+  `relicDayzero`) y 13 reusan shapes existentes con `// DECISIÓN:` documentando el reuso (mismo
+  patrón que ya usaba el archivo — ej. `gear-colossus`→`gear`, `core-starforge`→`fusionCore`,
+  `chronometer-eternal`→`watch`). Verificado con script Node que las 32 claves nuevas de la data
+  resuelven a un ícono real (no caen en el fallback `artifact`). Cero emojis.
+- **`PLAN.md` §2.6**: agregada la tabla de los 4 contenedores nuevos (costo, categorías, prob.
+  de trampa, prestigio requerido) y la Suerte recomendada calibrada, documento maestro primero.
+
+### Decisiones (`// AJUSTE:` en el código, resumidas acá)
+```
+// AJUSTE (ronda 15, packages/engine/src/economy.js): MAX_LUCK_SEARCH de getRecommendedLuck
+// sube de 800 a 1500. Con el escalado ×15 de costo/trampa de los 4 contenedores nuevos, la
+// Suerte recomendada real superaba el tope viejo (búsqueda no encontraba solución <= 800 para
+// 3 de los 4 contenedores). Mismo tipo de ajuste que ya hicieron las rondas 10/11 (350->650->800)
+// al agregar tiers — es un límite de búsqueda del algoritmo, no una fórmula de PLAN.md.
+//
+// AJUSTE (ronda 15, apps/game/src/data/items.json): valorBase de los 28 ítems nuevos NO es un
+// escalado lineal simple (×15) del tier anterior — se recalibró con búsqueda binaria (mismo
+// método que el script de la ronda 10) para que la Suerte recomendada quedara EN RANGO
+// alcanzable (<1500) y CRECIENTE por tier: 651 (chatarreriaTitanes) / 740 (naufragioTemporal) /
+// 831 (archivoMultiverso) / 920 (vertederoBigBang), continuando la progresión ~15%/tier de
+// 420->500->580 de la ronda 10/11. Un escalado ×15 ingenuo dejaba 3 de los 4 contenedores
+// nunca-rentables dentro de cualquier Suerte alcanzable (el costo escala ×15 pero el ítem
+// promedio necesitaba un factor distinto por tier para no romper la curva de riesgo/recompensa).
+```
+
+### Tests existentes que hardcodeaban conteos/valores viejos (arreglados para derivar de la data)
+- `packages/engine/tests/economy.test.js`: "los 12 contenedores tienen los precios fijos" →
+  acotado a `containers.slice(0, 12)` (regresión histórica intacta) + test nuevo que verifica
+  que los contenedores agregados después del tier 12 mantienen costos crecientes (ratio 10x-16x),
+  sin hardcodear los valores nuevos. El test de `getDigRate` con Fuerza vs. resistencia máxima
+  ahora deriva los niveles de Fuerza necesarios de `container.resistencia` en vez de usar niveles
+  fijos (220/1200) calculados para la resistencia vieja (29) — con la resistencia nueva (88 de
+  `vertederoBigBang`) esos niveles ya no alcanzaban el clamp esperado.
+- `packages/engine/tests/fase9-balance.test.js`: tope "alcanzable" de Suerte recomendada
+  650→1000; target exacto de Suerte separado en dos tests (primeros 12 = regresión histórica,
+  4 nuevos = target calibrado en esta ronda); tope de `probTrampaBase` 40%→44% (vertederoBigBang
+  sube a 44% a propósito, documentado en ROADMAPv3.md).
+- `packages/engine/tests/ronda11-prestigio.test.js`: el test que asumía `containers` tiene
+  longitud exacta 12 ahora busca los 4 ids de la ronda 11 por `findIndex` en vez de asumir
+  posición fija — sobrevive a que se sigan agregando contenedores. La tabla exacta de Suerte
+  recomendada quedó acotada a `containers.slice(0, 12)`.
+
+### Verificado
+- `node` (validación B2): `OK 16 contenedores`.
+- `node` (validación de íconos): las 32 claves nuevas de containers.json/items.json resuelven a
+  un ícono real vía `hasIcon()` — 0 faltantes.
+- `npm test` → **260/260 verdes** (245 previos del Agente A + 15 nuevos/actualizados de esta
+  ronda entre los 3 archivos de test tocados).
+- `npm run test:e2e` → **43/43 verdes** (un fallo de timeout de teardown de browser en
+  `ronda4-regression.spec.js` al correr la suite completa la primera vez resultó flaky — reintenté
+  ese spec solo y pasó 7/7; corrí la suite completa de nuevo y dio 43/43 limpio).
+- Manual con Playwright headless contra `npm run dev` (seed vía `addInitScript` +
+  `serializeState(freshState())` mutado, patrón de `ronda14-regression.spec.js`): con
+  `prestigeCount: 5`, la Tienda muestra "Chatarrería de Titanes" con el texto de bloqueo
+  "Prestigio 6" y "Vertedero del Big Bang" (todos los contenedores nuevos aparecen, ninguno
+  crashea el render). El Índice lista los 4 tabs nuevos con sus pools en "???" (nada encontrado
+  aún). A 375px el grid del Índice no desborda el viewport (343px de ancho medido contra 375px).
+  Truco usado para evitar la avalancha de modales de logro al setear `money`/`prestigeCount`
+  altos: `state.achievementsUnlocked = achievements.map(a => a.id)` en el seed (todos
+  pre-desbloqueados, cero toasts/modales que bloqueen los clicks del test).
+- `grep` de emojis y `console.log`/`// TODO` sobre los archivos tocados → 0 resultados.
+
+### Qué necesita saber el Agente C (data: máquinas del robot + nodo Escáner + logros)
+- `containers.json` tiene ahora 16 entradas; `items.json` tiene 16 pools. Ningún test de la
+  suite asume ya un conteo fijo de contenedores — los que agregues (máquinas/nodo/logros) no
+  deberían necesitar tocar `containers.json`/`items.json` de nuevo.
+- Si agregás más contenedores/ítems en el futuro y algún test de balance vuelve a fallar por
+  "Suerte recomendada fuera de rango", el patrón para calibrar `valorBase` es: escribir un
+  script Node descartable que haga búsqueda binaria de un factor de escala sobre el pool del
+  contenedor, usando la función real exportada `getRecommendedLuck` (no reimplementarla) — no
+  lo dejé versionado a propósito (era de una sola vez), pero el método queda documentado arriba
+  por si hace falta repetirlo.
+- `a34` (Ojo Biónico, `trapsDiscardedAtLeast`) y `a35` (Basura Primordial,
+  `containerOwnedAtLeast` sobre `vertederoBigBang`) del plan de C ya tienen su contenedor
+  (`vertederoBigBang` existe en `containers.json`) y su ícono (`dump-bigbang` → shape `bigbang`)
+  listos para usarse sin cambios adicionales.
+- El ícono `scanner-trap` que necesita C (nodo Escáner + logro a34) **no lo creé yo** — queda
+  pendiente para C, tal como dice el plan (C1/C2/C5).
+
+### Estado del DoD (Agente B)
+```
+✅ node (validación B2)        → OK 16 contenedores
+✅ npm test                    → 260/260 verdes
+✅ npm run test:e2e            → 43/43 verdes
+✅ npm run dev + jugar (headless Playwright) → tienda con los 4 nuevos bloqueados/desbloqueados
+   según prestigio, Índice con sus pools en "???", 375px sin overflow
+✅ git commit                  → da61049, rama feat/contenido-ronda15
+✅ Handoff escrito (este bloque)
+```
