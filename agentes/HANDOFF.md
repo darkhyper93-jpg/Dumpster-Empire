@@ -30,7 +30,7 @@ qué necesita saber el próximo agente · estado del DoD.
 | Correctivo — Pulido ronda 3 | PUNTOS_A_MEJORAR_3.md | ✅ hecho (ver bloque abajo) |
 | 11 Auditoría | 11 | ✅ hecho (ver bloque al final: veredicto + checklist manual para el usuario) |
 | Ronda 14 — QoL/íconos/settings/i18n | RONDA14-PLAN.md, Agentes A-E | ✅ hecho — Agente E verificó y commiteó (ver bloque al final) |
-| Auditoría post-ronda 14 (Verif&Audit.md) | Verif&Audit.md | ✅ hecho — sin críticos; 2 fixes de validación de save + des-hardcodeo (ver bloque al final) |
+| Auditoría post-ronda 14 (Verif&Audit.md) | Verif&Audit.md | ✅ hecho y pusheado (`c42b2ae`) — sin críticos; 2 fixes de validación de save + des-hardcodeo; repo limpio: solo queda `main` (ver bloque al final) |
 
 ---
 
@@ -3056,3 +3056,17 @@ validación de save (riesgo medio) y 5 hardcodeos/edge cases (calidad).
 - `node --check` sobre los 12 archivos tocados → sin errores.
 - Barridos en cero: `console.log`, `// TODO`, `isJackpot/JACKPOT`, hex sueltos fuera de tokens.css,
   `1.000.000.000`/`min="50"`/`Math.max(0.5` residuales (solo quedan en comentarios explicativos).
+
+### Cierre — commits y limpieza de repo (2026-07-10)
+- Los fixes de esta auditoría quedaron en el commit `c42b2ae` (main, pusheado a origin).
+- **`.claude/napkin.md` dejó de versionarse** (commit `c592789`, `git rm --cached`): `.claude/`
+  estaba en el `.gitignore` pero el archivo había quedado trackeado de antes de esa regla. El
+  archivo sigue existiendo en el disco de cada máquina — los agentes lo siguen leyendo/curando
+  igual — pero ya no viaja por git. No lo re-agregues con `git add -f`.
+- **Se borraron las 20 ramas históricas de rondas** (`fase/*`, `feat/*`, `fix/*`), locales y
+  remotas: todas estaban 100% mergeadas a `main` (verificado con `git branch --merged main`;
+  el borrado local fue con `-d`, que falla si hay trabajo sin mergear). 7 de las remotas ya no
+  existían en GitHub (borradas al mergear sus PRs) y solo quedaban las refs locales viejas
+  (`git fetch --prune`). Estado final: **la única rama viva es `main`**, local y en origin.
+  Las ramas nuevas de próximas rondas se crean desde `main` como siempre; no hay ninguna rama
+  vieja de la que colgarse.
