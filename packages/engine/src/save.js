@@ -45,6 +45,15 @@ function isBooleanMap(obj) {
 }
 
 /**
+ * ¿Es un objeto plano (no null, no array)? La forma mínima que exige todo mapa del save.
+ * @param {unknown} v
+ * @returns {boolean}
+ */
+function isPlainObject(v) {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
  * Valida `itemsFoundByItem`: mapa `containerId -> { itemName -> number }`.
  * @param {unknown} obj
  * @returns {boolean}
@@ -236,16 +245,37 @@ function migrate(raw, itemNameToId) {
   }
   // v6 -> v7 (ronda 16): itemsFoundByItem pasa de nombre-español a id de ítem como clave, para
   // que la colección sobreviva a la traducción. Claves desconocidas pasan tal cual (idempotente).
+  // AUDITORÍA (ronda 16): este loop corre ANTES de validateDeepContent, así que no puede confiar
+  // en la forma del save. La versión ingenua (a) tiraba TypeError con un byItem null (brick de
+  // boot con localStorage manipulado), (b) "lavaba" arrays a objetos válidos, y (c) con una clave
+  // __proto__ seteaba el prototipo de remapped, dejando contenido heredado invisible para la
+  // validación (bypass de la capa primaria anti-XSS del save). Fix: solo se remapea lo que ya
+  // tiene la forma esperada (el resto pasa tal cual y la validación lo rechaza con su error de
+  // siempre), sobre objetos sin prototipo (Object.create(null): toda clave, incluida __proto__,
+  // es propiedad propia y visible), y los lookups de mapas usan Object.hasOwn (una clave
+  // 'constructor' no debe resolver contra el prototipo).
   if (migrated.saveVersion < 7) {
-    const remapped = {};
-    for (const [containerId, byItem] of Object.entries(migrated.itemsFoundByItem || {})) {
-      const nameMap = (itemNameToId && itemNameToId[containerId]) || {};
-      remapped[containerId] = {};
-      for (const [key, count] of Object.entries(byItem)) {
-        remapped[containerId][nameMap[key] || key] = count;
+    if (isPlainObject(migrated.itemsFoundByItem)) {
+      const remapped = Object.create(null);
+      for (const [containerId, byItem] of Object.entries(migrated.itemsFoundByItem)) {
+        if (!isPlainObject(byItem)) {
+          remapped[containerId] = byItem;
+          continue;
+        }
+        const nameMap =
+          itemNameToId && Object.hasOwn(itemNameToId, containerId) ? itemNameToId[containerId] : {};
+        const target = (remapped[containerId] = Object.create(null));
+        for (const [key, count] of Object.entries(byItem)) {
+          target[Object.hasOwn(nameMap, key) ? nameMap[key] : key] = count;
+        }
       }
+      migrated = { ...migrated, itemsFoundByItem: remapped, saveVersion: 7 };
+    } else {
+      // Campo ausente o con forma inválida: NO se fabrica un `{}` que lo haga pasar — se deja
+      // tal cual para que REQUIRED_FIELDS/validateDeepContent lo rechacen (pre-ronda-16 un v6
+      // sin itemsFoundByItem válido se rechazaba; la migración no debe relajar eso).
+      migrated = { ...migrated, saveVersion: 7 };
     }
-    migrated = { ...migrated, itemsFoundByItem: remapped, saveVersion: 7 };
   }
   return migrated;
 }
