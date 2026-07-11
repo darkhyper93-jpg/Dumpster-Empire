@@ -48,6 +48,8 @@ export default {
 
   // AutomationView.js
   'automation.empty': 'No hay automatizaciones configuradas.',
+  // Ronda 15: toast al descartar un contenedor trampeado (nodo Escáner de Trampas).
+  'automation.trapDiscarded': 'El robot descartó un contenedor con trampa.',
   'automation.explainer':
     'El robot compra contenedores con tu dinero, los encola y los procesa (más riesgo de trampa que a mano). Elegí abajo cuál compra, o dejá "Auto". Las demás máquinas agrandan la cola o suman robots.',
   'automation.hint': 'Botón gris = todavía no te alcanza; el tooltip dice cuánto falta.',
