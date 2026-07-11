@@ -3924,3 +3924,99 @@ Recién ahí creé `feat/i18n-ronda16` desde `main` actualizado.
     "test(e2e): ronda 16 — i18n cubierto (detección, switch, migración v7)"
 [x] Handoff escrito (este bloque)
 ```
+
+## Ronda 16 — Agente E: auditoría (Verif&Audit.md) sobre el diff de la ronda
+
+### Alcance
+`git diff main...HEAD` completo (23 archivos) línea por línea, con los focos extra del roadmap:
+XSS vía diccionarios en `innerHTML`, frontera engine↔UI del overlay, `resolveInitialLanguage`
+con inputs basura, e import de un save v5 real. Cada vector se REPRODUJO con Node antes de
+reportarlo (nada teórico en 🔴/🟡).
+
+### 🔴 CRÍTICO / ALTO RIESGO
+
+1. **`migrate()` v6→v7 crasheaba con un save manipulado (brick de boot).** El remap de
+   `itemsFoundByItem` corre ANTES de `validateDeepContent` y hacía `Object.entries(byItem)`
+   confiando en la forma: `{"tachoVereda": null}` en un save `saveVersion ≤ 6` tiraba
+   `TypeError: Cannot convert undefined or null to object` NO capturado →
+   `deserializeState` propagaba → `store.loadState()` reventaba → el juego no bootea hasta
+   limpiar localStorage. Pre-ronda-16 ese mismo save se rechazaba limpio (regresión).
+   **Arreglado en `e6a6048`**: solo se remapea lo que ya es objeto plano; lo inválido pasa tal
+   cual y la validación lo rechaza con su error de siempre. Test de regresión sobre el camino
+   real (`deserializeState` no debe lanzar jamás).
+
+### 🟡 ADVERTENCIAS DE SEGURIDAD / RIESGO MEDIO (todas arregladas en `e6a6048`)
+
+2. **Bypass de la validación anti-XSS vía clave `__proto__`.** `JSON.parse` crea `__proto__`
+   como propiedad PROPIA, pero `remapped[containerId] = {}` la asigna con semántica de setter:
+   seteaba el PROTOTIPO de `remapped` y el contenido del atacante quedaba heredado — invisible
+   para el `Object.values` de `isValidItemsFoundByItem`. Reproducido:
+   `{"__proto__": {"tachoVereda": {"<img src=x onerror=alert(1)>": "boom"}}}` era ACEPTADO y
+   `state.itemsFoundByItem.tachoVereda` devolvía los strings crudos por herencia. La cadena a
+   `innerHTML` la corta hoy la defensa en profundidad de la UI (`Number(x) || 0` en
+   CollectionView), pero la capa primaria del save quedaba anulada. Fix: los mapas remapeados
+   son `Object.create(null)` — toda clave es propiedad propia y visible para la validación
+   (el payload ahora se RECHAZA).
+3. **Clave `'constructor'` resolvía contra el prototipo.** `nameMap[key] || key` con
+   `key: 'constructor'` devolvía `Object` heredado y persistía
+   `"function Object() { [native code] }"` como clave del estado. Fix: `Object.hasOwn` en todos
+   los lookups con claves del save (también `itemNameToId[containerId]`).
+4. **Lavado de formas inválidas.** Un `byItem` array (`[1,2]`) se convertía en `{0:1,1:2}`
+   válido, y un v6 SIN `itemsFoundByItem` se aceptaba con `{}` fabricado (pre-ronda-16 ambos se
+   rechazaban). Fix: lo que no tiene la forma esperada pasa tal cual al validador.
+5. **Faltaba la cobertura del foco extra del roadmap** (import de save v5 real). Agregada en
+   `packages/engine/tests/ronda16-audit.test.js`: un v5 con colección por nombre español (y sin
+   `trapsDiscarded`, como un v5 de verdad) importa OK vía v5→v6→v7 y conserva la colección
+   remapeada a ids, con `itemNameToId` construido desde `items.json` real igual que store.js.
+
+### 🔵 MEJORAS DE CALIDAD Y RENDIMIENTO (no bloqueantes, no aplicadas)
+
+- `migrate()` acumula 7 pasos con spreads encadenados; si algún día hay v10+, valdría extraer
+  cada paso a una función con su typedef de entrada/salida. Hoy es legible; no lo toqué.
+- El `catch` de `boot()` en main.js muestra `err.message` crudo en `#boot-status`; para el
+  jugador un mensaje genérico + detalle en consola sería más prolijo (preexistente, no de esta
+  ronda).
+
+### ✅ Veredicto Final
+Con `e6a6048` aplicado, el diff de la ronda 16 es apto para producción: la superficie de input
+externo (save/import) rechaza limpio todo lo probado, la frontera engine↔UI se respeta y los
+diccionarios no abren sinks nuevos. Sin refactorización obligatoria pendiente.
+
+### Verificado (lo que NO encontré, con evidencia)
+- **XSS vía diccionarios**: `en.js`/`data-en.js` no tienen `<`/`>` salvo el
+  `<strong>{name}</strong>` intencional de `automation.calloutInactive` (mismo que es.js), cuyo
+  `{name}` se resuelve desde data estática, nunca del jugador. Los caracteres españoles que
+  quedan en ambos archivos son solo comentarios. `t()` con clave inexistente devuelve la clave
+  (nunca hueco) y solo interpola params con `hasOwnProperty`.
+- **Frontera engine↔UI del overlay**: `dataI18n.js` no importa nada del engine ni toca estado;
+  el engine no importa nada de i18n. `itemNameToId` se construye en createStore ANTES de
+  cualquier `applyDataLanguage` (R-16.3 respetado; el overlay muta los MISMOS objetos después,
+  pero el mapa ya copió los strings). `DigResult` decide por `id` y muestra `name` (R-16.9 OK).
+- **`resolveInitialLanguage` con basura**: `undefined`/`null`/`''`/`42`/objetos → 'en' sin
+  lanzar (typeof-guard); cubierto por tests de B. `setLanguage` del store y de i18n validan
+  contra `SUPPORTED_LANGUAGES` (un `<img src=x>` como idioma se ignora y el overlay cae al
+  baseline español — test de B lo cubre).
+- **Ids de ítems**: únicos por pool e iguales a `icon` (verificación A1 re-corrida). Ningún
+  acceso a `itemsFoundByItem` fuera de engine + CollectionView (grep R-16.2 re-corrido); la UI
+  nunca enumera sus claves hacia `innerHTML`, solo hace lookup por id con `Number(x) || 0`.
+- **Copy español intocable**: la traducción solo tocó en.js/data-en.js/es.js(+1 clave); los 48
+  e2e previos siguen verdes.
+
+### Verificación manual (script de Playwright sobre Chromium real, `npx serve` + data real)
+- Desktop 1280px, locale es-ES: bootea en español; switch a inglés EN VIVO (tabs, tienda con
+  "Cost:", Índice) y vuelta a español restaurando el baseline exacto. Screenshot revisado.
+- R-16.10 (sin UI de import, el camino real es el save de boot): save con `language:'en'` +
+  locale es-ES → bootea en inglés (el save manda).
+- 375px táctil: selector visible, área de toque de 34px de alto, switch en vivo OK. Screenshot
+  revisado (layout de Ajustes íntegro en inglés).
+- Cero errores de consola/página en los 3 escenarios.
+
+### Estado del DoD (Agente E)
+```
+[x] Auditoría Verif&Audit.md sobre todo el diff, reporte 🔴/🟡/🔵/✅ (este bloque)
+[x] Todo 🔴/🟡 arreglado en commit propio audit: (e6a6048) con tests de regresión
+[x] npm test → 292/292 verde (285 + 7 de auditoría)
+[x] npx playwright test --workers=1 → 51/51 verde (corrida completa post-fix)
+[x] Manual: switch en vivo ida y vuelta, save en otro idioma manda, 375px, cero errores
+[x] HANDOFF actualizado (este bloque) + push de la rama + link de PR para el usuario
+```
