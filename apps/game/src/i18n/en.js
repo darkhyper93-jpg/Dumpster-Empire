@@ -1,148 +1,148 @@
 /**
- * Diccionario inglés (RONDA14-PLAN.md tarea D1). MISMAS claves que es.js; valores copiados del
- * español a propósito (la traducción real es otra ronda) para que la paridad de claves sea
- * testeable desde el día uno y no queden agujeros. Sin selector de idioma visible todavía.
+ * Diccionario inglés (ronda 16, tarea 16.C — traducción real). MISMAS claves y {params} que
+ * es.js (paridad testeada dinámicamente en apps/game/tests/ronda16-i18n.test.js).
  */
 
 export default {
   // Topbar.js
-  'topbar.settings': 'Ajustes',
+  'topbar.settings': 'Settings',
 
   // tabs (index.html / UIManager.injectTabIcons — data-tab)
-  'tabs.escarbar': 'Escarbar',
-  'tabs.tienda': 'Contenedores',
-  'tabs.automatizacion': 'Automatización',
-  'tabs.logros': 'Logros',
-  'tabs.prestigio': 'Prestigio',
-  'tabs.index': 'Índice',
+  'tabs.escarbar': 'Dig',
+  'tabs.tienda': 'Containers',
+  'tabs.automatizacion': 'Automation',
+  'tabs.logros': 'Achievements',
+  'tabs.prestigio': 'Prestige',
+  'tabs.index': 'Index',
 
   // Compartidos entre vistas
-  'common.free': 'Gratis',
-  'common.missingMoney': 'Te faltan {amount}',
-  'common.missingKeys': 'Te faltan {amount} llaves',
-  'common.effectFlat': '+{amount} {label} por nivel',
-  'common.effectPercent': '+{pct}% {label} por nivel',
-  'common.emptyContainers': 'No hay contenedores configurados.',
+  'common.free': 'Free',
+  'common.missingMoney': 'You need {amount} more',
+  'common.missingKeys': 'You need {amount} more keys',
+  'common.effectFlat': '+{amount} {label} per level',
+  'common.effectPercent': '+{pct}% {label} per level',
+  'common.emptyContainers': 'No containers configured.',
 
   // QuickUpgrades.js
-  'quickUpgrades.empty': 'No hay mejoras configuradas.',
+  'quickUpgrades.empty': 'No upgrades configured.',
   'quickUpgrades.levelLabel': '{label} · LV. {level}',
 
   // DigContainerPicker.js
-  'digPicker.empty': 'No hay contenedores disponibles todavía.',
-  'digPicker.prompt': 'Elegí un contenedor para escarbar.',
-  'digPicker.level': 'Nv. {level}',
+  'digPicker.empty': 'No containers available yet.',
+  'digPicker.prompt': 'Choose a container to dig.',
+  'digPicker.level': 'Lv. {level}',
 
   // dig (DigCanvas.js + UIManager render de dig-area)
-  'dig.idlePrompt': 'Arrastrá para escarbar',
-  'dig.abandon': 'Abandonar',
-  'dig.trapEntryName': '¡Trampa!',
-  'dig.trapRiskLine': 'Riesgo de trampa: {pct}%{hint}',
-  'dig.rateHint': ' · Ritmo de escarbado: {pct}% (subí Fuerza)',
+  'dig.idlePrompt': 'Drag to dig',
+  'dig.abandon': 'Abandon',
+  'dig.trapEntryName': 'Trap!',
+  'dig.trapRiskLine': 'Trap risk: {pct}%{hint}',
+  'dig.rateHint': ' · Dig rate: {pct}% (raise Dig Power)',
 
   // AchievementsView.js
-  'achievements.empty': 'No hay logros configurados.',
-  'achievements.rewardKeys': '{amount} llave{plural} de Ciudad',
-  'achievements.claimed': 'Reclamado',
-  'achievements.pending': 'Pendiente',
+  'achievements.empty': 'No achievements configured.',
+  'achievements.rewardKeys': '{amount} City Key{plural}',
+  'achievements.claimed': 'Claimed',
+  'achievements.pending': 'Pending',
 
   // AutomationView.js
-  'automation.empty': 'No hay automatizaciones configuradas.',
+  'automation.empty': 'No automations configured.',
   // Ronda 15: toast al descartar un contenedor trampeado (nodo Escáner de Trampas).
-  'automation.trapDiscarded': 'El robot descartó un contenedor con trampa.',
+  'automation.trapDiscarded': 'The robot discarded a trapped container.',
   'automation.explainer':
-    'El robot compra contenedores con tu dinero, los encola y los procesa (más riesgo de trampa que a mano). Elegí abajo cuál compra, o dejá "Auto". Las demás máquinas agrandan la cola o suman robots.',
-  'automation.hint': 'Botón gris = todavía no te alcanza; el tooltip dice cuánto falta.',
+    'The robot buys containers with your money, queues them, and processes them (more trap risk than digging by hand). Pick below which one it buys, or leave it on "Auto". The other machines grow the queue or add more robots.',
+  'automation.hint': "Gray button = you can't afford it yet; the tooltip shows how much you need.",
   // {name} = la máquina con efecto enablesAutoDig, resuelta desde automations.json (AutomationView).
-  'automation.calloutInactive': 'Necesitás el <strong>{name}</strong> para usar la cola.',
-  'automation.queue': 'Cola: {count} / {max}',
-  'automation.slots': 'Slots simultáneos: {count}',
-  'automation.processingLabel': 'Procesando:',
-  'automation.nothingInProgress': 'Nada en curso.',
+  'automation.calloutInactive': 'You need the <strong>{name}</strong> to use the queue.',
+  'automation.queue': 'Queue: {count} / {max}',
+  'automation.slots': 'Simultaneous slots: {count}',
+  'automation.processingLabel': 'Processing:',
+  'automation.nothingInProgress': 'Nothing in progress.',
   'automation.processingItem': '{name}: {pct}%',
-  'automation.unknownContainer': 'Contenedor desconocido',
-  'automation.targetLabel': 'Objetivo del robot',
-  'automation.targetAuto': 'Auto (el más caro que puedas pagar)',
-  'automation.waiting': 'El robot espera juntar {amount} para {name}.',
-  'automation.active': 'Activo',
-  'automation.buyFor': 'Comprar por {amount}',
-  'automation.expandCapacity': 'Ampliar Capacidad (nivel {level}) por {amount}',
+  'automation.unknownContainer': 'Unknown container',
+  'automation.targetLabel': "Robot's target",
+  'automation.targetAuto': 'Auto (the priciest you can afford)',
+  'automation.waiting': 'The robot is saving up {amount} for {name}.',
+  'automation.active': 'Active',
+  'automation.buyFor': 'Buy for {amount}',
+  'automation.expandCapacity': 'Expand Capacity (level {level}) for {amount}',
 
   // CelebrationModal.js
-  'celebration.close': 'Cerrar',
-  'celebration.achievementTitle': '¡Logro desbloqueado!',
-  'celebration.rewardLine': 'Recompensa: {reward}',
-  'celebration.rewardKeys': '{amount} Llaves de Ciudad',
-  'celebration.containerTitle': '¡Contenedor nuevo!',
-  'celebration.containerReady': 'Ya está disponible para escarbar.',
-  'celebration.firstFindTitle': '¡Hallazgo nuevo!',
+  'celebration.close': 'Close',
+  'celebration.achievementTitle': 'Achievement unlocked!',
+  'celebration.rewardLine': 'Reward: {reward}',
+  'celebration.rewardKeys': '{amount} City Keys',
+  'celebration.containerTitle': 'New container!',
+  'celebration.containerReady': "It's now available to dig.",
+  'celebration.firstFindTitle': 'New find!',
 
   // CollectionView.js
-  'collection.emptyPool': 'Este contenedor no tiene recompensas configuradas.',
+  'collection.emptyPool': 'This container has no rewards configured.',
   'collection.hiddenName': '???',
-  'collection.notFound': 'Todavía no encontraste este objeto.',
-  'collection.probability': 'Probabilidad: {pct}%',
-  'collection.baseValue': 'Valor base: {amount}',
-  'collection.foundCount': 'Encontrado: {count}',
+  'collection.notFound': "You haven't found this item yet.",
+  'collection.probability': 'Probability: {pct}%',
+  'collection.baseValue': 'Base value: {amount}',
+  'collection.foundCount': 'Found: {count}',
 
   // OfflineModal.js
-  'offline.title': 'Mientras no estabas...',
-  'offline.summary': 'Tus robots trabajaron {minutes} min y encontraron:',
-  'offline.close': 'Genial',
+  'offline.title': 'While you were away...',
+  'offline.summary': 'Your robots worked for {minutes} min and found:',
+  'offline.close': 'Great',
 
   // PrestigeView.js
-  'prestige.empty': 'No hay árbol de prestigio configurado.',
-  'prestige.requires': 'Requiere: {name}',
-  'prestige.maxed': 'Máximo',
-  'prestige.upgradeFor': 'Mejorar por {amount} llaves',
-  'prestige.keysLabel': 'Llaves de Ciudad: {amount}',
-  'prestige.completedCount': 'Prestigios completados: {count}',
-  'prestige.previewGain': 'Si prestigiás ahora ganás: {amount} llaves.',
-  'prestige.doButton': 'Hacer Prestigio',
+  'prestige.empty': 'No prestige tree configured.',
+  'prestige.requires': 'Requires: {name}',
+  'prestige.maxed': 'Maxed',
+  'prestige.upgradeFor': 'Upgrade for {amount} keys',
+  'prestige.keysLabel': 'City Keys: {amount}',
+  'prestige.completedCount': 'Prestiges completed: {count}',
+  'prestige.previewGain': "If you prestige now you'll gain: {amount} keys.",
+  'prestige.doButton': 'Prestige',
   // {amount} = PRESTIGE_MONEY_THRESHOLD del engine formateado (PrestigeView), nunca un número fijo acá.
-  'prestige.needMoney': 'Necesitás {amount} ganados en total para prestigiar.',
+  'prestige.needMoney': 'You need {amount} earned in total to prestige.',
 
   // SettingsView.js
-  'settings.on': 'Encendido',
-  'settings.off': 'Apagado',
-  'settings.sound': 'Sonido: {state}',
-  'settings.volume': 'Volumen: {pct}%',
-  'settings.sensitivity': 'Sensibilidad de escarbado: {pct}%',
-  'settings.resetConfirm': '¿Seguro? Tocá de nuevo para confirmar',
-  'settings.resetButton': 'Reiniciar partida',
+  'settings.on': 'On',
+  'settings.off': 'Off',
+  'settings.sound': 'Sound: {state}',
+  'settings.volume': 'Volume: {pct}%',
+  'settings.sensitivity': 'Dig sensitivity: {pct}%',
+  'settings.language': 'Language',
+  'settings.resetConfirm': 'Are you sure? Tap again to confirm',
+  'settings.resetButton': 'Reset game',
 
   // ShopView.js
-  'shop.unlocksAtPrestige': 'Se desbloquea con el Prestigio {count}.',
-  'shop.lockedDefault': 'Bloqueado. Comprá el contenedor anterior primero.',
-  'shop.cost': 'Costo: {label}',
-  'shop.categories': 'Categorías: {list}',
-  'shop.trapRisk': 'Riesgo de trampa: {pct}%',
-  'shop.owned': 'Comprados: {count}',
-  'shop.levelLine': 'Nivel {level}/{max} (+{pct}% valor) — {progress}',
-  'shop.maxLevel': 'nivel máximo',
-  'shop.levelProgress': '{cur}/{needed} escarbados para el nivel {next}',
-  'shop.reached': '(alcanzada)',
-  'shop.haveLuck': '(tenés {cur})',
-  'shop.haveMult': '(tenés ×{cur})',
-  'shop.luckLine': 'Suerte recomendada: {rec} {status}',
-  'shop.digPowerLine': 'Fuerza recomendada: ×{rec} {status}',
-  'shop.areaLine': 'Búsqueda recomendada: ×{rec} {status}',
+  'shop.unlocksAtPrestige': 'Unlocks at Prestige {count}.',
+  'shop.lockedDefault': 'Locked. Buy the previous container first.',
+  'shop.cost': 'Cost: {label}',
+  'shop.categories': 'Categories: {list}',
+  'shop.trapRisk': 'Trap risk: {pct}%',
+  'shop.owned': 'Owned: {count}',
+  'shop.levelLine': 'Level {level}/{max} (+{pct}% value) — {progress}',
+  'shop.maxLevel': 'max level',
+  'shop.levelProgress': '{cur}/{needed} digs for level {next}',
+  'shop.reached': '(reached)',
+  'shop.haveLuck': '(you have {cur})',
+  'shop.haveMult': '(you have ×{cur})',
+  'shop.luckLine': 'Recommended Luck: {rec} {status}',
+  'shop.digPowerLine': 'Recommended Dig Power: ×{rec} {status}',
+  'shop.areaLine': 'Recommended Search Area: ×{rec} {status}',
 
   // TitleScreen.js
-  'titleScreen.play': 'Jugar',
-  'titleScreen.settings': 'Configuración',
+  'titleScreen.play': 'Play',
+  'titleScreen.settings': 'Settings',
 
   // Tutorial.js
-  'tutorial.step0': 'Escarbá el Tacho de Vereda (gratis) arrastrando sobre el contenedor para empezar.',
-  'tutorial.step1': 'Comprá tu primera mejora de Suerte, Fuerza o Área en el panel de mejoras rápidas.',
-  'tutorial.step2': 'Escarbá tu primer contenedor de pago eligiéndolo en la pantalla Escarbar.',
-  'tutorial.skip': 'Saltar tutorial',
+  'tutorial.step0': 'Dig the Street Bin (free) by dragging over the container to get started.',
+  'tutorial.step1': 'Buy your first Luck, Dig Power, or Search Area upgrade in the quick upgrades panel.',
+  'tutorial.step2': 'Dig your first paid container by picking it on the Dig screen.',
+  'tutorial.skip': 'Skip tutorial',
 
   // UIManager.js
-  'uiManager.levelUp': '{name} subió a nivel {level}: +{pct}% de valor',
-  'uiManager.unknownView': 'Vista desconocida.',
+  'uiManager.levelUp': '{name} leveled up to {level}: +{pct}% value',
+  'uiManager.unknownView': 'Unknown view.',
 
   // main.js
-  'boot.loadFailed': 'No se pudo cargar {path} (HTTP {status}).',
-  'boot.fatalError': 'No se pudo iniciar Dumpster Empire: {message}',
+  'boot.loadFailed': 'Could not load {path} (HTTP {status}).',
+  'boot.fatalError': 'Could not start Dumpster Empire: {message}',
 };

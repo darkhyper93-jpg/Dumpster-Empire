@@ -3586,3 +3586,437 @@ con regresión. Los dos commits de auditoría (`fd2a375`, `8195420`) cierran la 
 ✅ Handoff escrito (este bloque)
 ✅ Push de feat/contenido-ronda15 + link de PR para el usuario
 ```
+
+## Ronda 16 — Agente A (engine): ids estables de ítems + save v7
+
+### Nota previa: ronda 15 mergeada a main
+ROADMAPv3.md exige que la ronda 16 no arranque sin la 15 mergeada en `main` (la traducción cubre
+contenido que crea la 15). Verifiqué con `git merge-base --is-ancestor` que NO lo estaba (main
+seguía en `bee7534`, el commit del propio ROADMAPv3). Le pregunté al usuario cómo proceder;
+eligió mergear primero. Hice `git switch main && git merge --no-ff feat/contenido-ronda15`
+(merge limpio, sin conflictos), `npm test` → 263/263 verde, y `git push origin main` (`08c11d3`).
+Recién ahí creé `feat/i18n-ronda16` desde `main` actualizado.
+
+### Qué hice
+- **`apps/game/src/data/items.json`**: los 87 ítems (16 contenedores) ganan `id` como primer
+  campo = su `icon` (script de Node, no a mano). Verificado: `id`s únicos dentro de cada pool
+  (el comando de validación de la tarea A1 del roadmap → `OK ids únicos por pool`).
+- **`packages/engine/src/systems/containers.js`**: `rollContainerResult` agrega `id: pick.id` al
+  ítem pusheado; `alreadyFound`/`seenInThisRoll` ahora comparan por `pick.id` (antes por
+  `pick.name`, que iba a romperse en cuanto `en.js`/`data-en.js` tradujeran el nombre).
+  `applyContainerResult` indexa `byContainer[item.id]` en vez de `byContainer[item.name]`.
+  Typedef `DigResult` documenta `id: string` en cada item.
+- **`apps/game/src/ui/CollectionView.js:76`**: `foundInContainer[item.name]` →
+  `foundInContainer[item.id]` (línea 92 sigue mostrando `item.name`: el display es traducible,
+  la clave de persistencia no).
+- **`packages/engine/src/state.js`**: `SAVE_VERSION` 6 → 7 con su `AJUSTE (ronda 16)`; typedef de
+  `itemsFoundByItem` documenta que ahora es "por id de ítem".
+- **`packages/engine/src/save.js`**: `migrate(raw, itemNameToId)` gana el bloque v6→v7 (remapea
+  claves español→id vía el mapa `containerId -> { nombreEspañol -> id }`, claves desconocidas
+  pasan tal cual — idempotente); `validateSave`/`deserializeState`/`importSave` enhebran el
+  parámetro `itemNameToId` como 3er argumento opcional (mismo patrón que `validContainerIds`).
+- **`apps/game/src/store.js`**: antes de `loadState()` arma `itemNameToId` desde `itemsData`
+  (todavía en español — se ejecuta antes de que exista overlay de idioma, la ronda 16.B lo
+  reusará); lo pasa a `deserializeState` (línea de `loadState`) y a `engineImportSave` (acción
+  `importSave`).
+- **`apps/game/e2e/ronda14-regression.spec.js`**: el seed de `itemsFoundByItem` de
+  `tachoAgotadoSave()` pasa de nombres (`item.name`) a ids (`item.id`) — el save sembrado sale de
+  `freshState()` v7 directo, no pasa por `migrate()`.
+- **`packages/engine/tests/fase7-index.test.js`**: los dos tests de `applyContainerResult` de la
+  Fase 7 construían `DigResult.items` a mano sin `id` — les agregué el campo (`can-crushed`,
+  `banana-peel`, `item-a`) y las aserciones ahora comparan por id, no por nombre.
+- **`packages/engine/tests/ronda16-i18n-save.test.js`** (nuevo, RED→GREEN): 6 casos — save v6 con
+  claves español migra a ids con `itemNameToId`; clave desconocida pasa tal cual; doble migración
+  idempotente; ida y vuelta v7 sin pérdida (`exportSave`/`importSave`); sin `itemNameToId` las
+  claves quedan como están (compat); `deserializeState` completo con `itemNameToId`.
+
+### Verificado
+- `npm test` → **269/269 verdes** (263 previos de la ronda 15 + 6 nuevos de
+  `ronda16-i18n-save.test.js`; los 2 de `fase7-index.test.js` reescritos siguen contando en el
+  total, no sumaron).
+- `npm run test:e2e` → **48/48 verdes** (sin cambios de conteo: la ronda 16.A no toca UI de e2e
+  más allá del seed reescrito de la 14).
+- `node --check` sobre los 5 archivos de código tocados (`store.js`, `CollectionView.js`,
+  `save.js`, `state.js`, `containers.js`) → sin errores de sintaxis.
+- Verificación manual en runtime (`npx serve . -l 5173`, script descartable de Playwright, no
+  versionado): seedeé un save v6 real con `itemsFoundByItem: { tachoVereda: { 'Lata aplastada':
+  3 } }` en `localStorage`, boot del juego, cerré el modal de celebración (logros por el dinero
+  sembrado) y entré al Índice — la tarjeta "Lata aplastada" mostró "Encontrado: 3" (la migración
+  v6→v7 resolvió `'Lata aplastada'` → `'can-crushed'` en memoria vía `itemNameToId` y
+  `CollectionView` la encontró por `item.id`). Cero errores de consola. `localStorage` seguía con
+  la forma pre-migración porque no hubo ninguna acción que disparara `persist()` tras el boot —
+  comportamiento esperado, no un bug (la migración vive en memoria hasta el próximo guardado).
+- Barridos en 0 sobre el diff: `console.log`, `// TODO`, emojis (rango
+  `\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`).
+
+### Qué necesita saber el Agente B (plomería de idioma)
+- `itemNameToId` ya vive en `store.js` (construido ANTES de `loadState()`), pero la ronda 16.B
+  tiene que asegurarse de construirlo/usarlo con la data TODAVÍA en español — es decir, antes de
+  llamar a `applyDataLanguage` por primera vez (R-16.3 del roadmap). Ahora mismo no hay overlay
+  de idioma, así que no hay riesgo de orden todavía; en cuanto B agregue `initDataLocalization`/
+  `applyDataLanguage`, verificar que sigan corriendo DESPUÉS de que `itemNameToId` ya se calculó.
+- No toqué `main.js` ni `i18n/` — ninguno de esos módulos existe aún, son tarea de B.
+- `DigResult.items[].id` ya viaja hasta `DigCanvas.js`/`UIManager.js`/`CelebrationModal.js` sin
+  que yo tocara esos archivos (siguen usando `.name` solo para mostrar, nunca como clave) — R-16.9
+  del roadmap ("el snapshot de DigResult usa id para decidir, name solo para mostrar") ya se
+  cumple desde este bloque.
+- El grep obligatorio de R-16.2 (`itemsFoundByItem` en `apps`/`packages`) lo corrí: los únicos
+  accesos son los que dejé listados arriba (`store.js`, `save.js`, `state.js`, `containers.js`,
+  `CollectionView.js`) más comentarios/typedefs. Ningún otro archivo de UI o engine lo toca.
+
+### Estado del DoD (Agente A, ronda 16)
+```
+[x] npm test → 269/269 verde (263 previos + 6 nuevos)
+[x] npm run test:e2e → 48/48 verde (sin cambio de conteo, tarea de A no toca UI)
+[x] git commit → 597350a, rama feat/i18n-ronda16,
+    "feat(engine): ronda 16 — ids estables de ítems y save v7 (colección sobrevive a la traducción)"
+[x] Handoff escrito (este bloque)
+```
+
+## Ronda 16 — Agente B (plomería de idioma)
+
+### Qué hice
+- **`playwright.config.js`**: `locale: 'es-ES'` en `use:` — PRIMERO que todo (R-16.1): sin eso,
+  la detección de idioma nueva booteaba los 48 e2e existentes en inglés y morían todos.
+- **`apps/game/src/i18n/i18n.js`**: `resolveInitialLanguage(navLang)` exportada — pura, recibe
+  el locale por parámetro (R-16.8: ningún módulo toca `navigator`; el caller le pasa
+  `globalThis.navigator?.language`).
+- **`apps/game/src/i18n/dataI18n.js`** (nuevo): `initDataLocalization(loaded)` captura el
+  baseline español (mapas `id → string` de todos los campos de display) y
+  `applyDataLanguage(loaded, lang)` pisa in-place: `'en'` desde data-en.js con fallback al
+  baseline por clave faltante (nunca un hueco); cualquier otro valor restaura el español.
+  Aplicar sin init previo LANZA Error a propósito (orden de boot roto = R-16.3, mejor ruidoso).
+- **`apps/game/src/i18n/data-en.js`** (nuevo): esqueleto GENERADO por script de Node desde la
+  data real (no a mano) — 16 containers, 87 ítems por pool, 8 rarities, 35 achievements,
+  12 automations `{name, desc}`, 13 prestigeTree `{name, desc}`, 4 upgrades. Valores todavía
+  en ESPAÑOL a propósito: la traducción real es la tarea 16.C.
+- **`apps/game/src/store.js`**: acción `setLanguage(lang)` (valida contra
+  `SUPPORTED_LANGUAGES` del engine, ignora en silencio lo demás — mismo allow-list que
+  save.js); `resetGame` copia `language` del estado saliente (DECISIÓN: resetear la partida
+  no cambia el idioma de la UI).
+- **`apps/game/src/main.js`**: orden de boot NUEVO — detección por `navigator.language` SOLO
+  en partida nueva (sin initialSaveText ni localStorage); `initDataLocalization` DESPUÉS de
+  `createStore` (que ya construyó `itemNameToId` con nombres españoles) y ANTES del primer
+  `applyDataLanguage`; `document.documentElement.lang` sincronizado; `UIManager` ahora recibe
+  `loaded` como 3er argumento del constructor (DECISIÓN: lo mínimo — render() necesita
+  re-aplicar el overlay sobre el MISMO objeto que localizó main.js).
+- **`apps/game/src/ui/UIManager.js`**: sync de idioma en `render(state)` (mismo patrón que el
+  sync de audio/sensibilidad): si `getLanguage() !== state.language` → setLanguage +
+  applyDataLanguage + `documentElement.lang` + `refreshStaticTexts()`. Ese método nuevo
+  re-ejecuta `injectTabIcons()`, re-asigna el texto de `dig.abandon` y borra
+  `dataset.iconReady` de los nodos del Topbar para que el próximo Topbar.render los
+  reconstruya con el idioma nuevo. Cubre también R-16.10 (save importado con otro idioma).
+- **`apps/game/src/ui/SettingsView.js`**: bloque nuevo con `<select id="language-select">`
+  (labels "Español"/"English" son endónimos fijos a propósito — NO se traducen); listener
+  `change` en el bind-once propio con `evt.target.blur()` ANTES de despachar (R-16.4: el
+  guard de SELECT de UIManager se tragaría el re-render). AJUSTE: la marca de bind pasó de
+  `dataset.bound` (genérica, #tab-content es compartido) a `dataset.boundSettings` (R-16.5 /
+  napkin; ninguna otra vista leía `bound`, cambio inocuo).
+- **`apps/game/styles/components.css`**: regla `.settings-block select` calcada del select
+  recesado del target del robot — solo tokens.
+- **`es.js` / `en.js`**: clave nueva `'settings.language': 'Idioma'` (el valor inglés real es
+  de 16.C). Ni una letra del copy español existente cambió (regla dura 11).
+- **`apps/game/tests/ronda16-i18n.test.js`** (nuevo, 16 tests): resolveInitialLanguage
+  ('es'/'es-AR'/'ES-mx' → es; 'en-US'/'pt-BR'/undefined/null/''/42 → en); paridad DINÁMICA
+  es/en (mismas claves y mismos `{params}` por clave vía regex, cero conteos hardcodeados);
+  paridad de ids data-en.js ↔ data real EN AMBAS direcciones (por colección, incluidos los
+  pools de ítems uno a uno); overlay: aplica por id con fallback, ida y vuelta sin pérdida,
+  idempotencia, idioma basura cae al baseline, throw sin init.
+
+### Verificado
+- `npm test` → **285/285 verdes** (269 de A + 16 nuevos).
+- `npm run test:e2e` → **48/48 verdes** — siguen asertando copy español gracias al locale.
+- `node --check` sobre los 11 archivos JS tocados/nuevos → sin errores.
+- Barridos en 0 sobre el diff (incluidos los untracked): emojis
+  (`\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`), `console.log`, `// TODO`.
+- **Verificación manual en runtime** (scripts descartables de Playwright en el scratchpad de
+  la sesión, no versionados; server propio en :5199, apagado al terminar). Como en.js y
+  data-en.js son placeholders idénticos al español, el switch no sería visible a ojo: se
+  interceptaron esos DOS módulos por HTTP (`page.route`) con una string cambiada por lado
+  ("Containers-TEST" / "Street Bin TEST" / "Crushed Can TEST") para probar el pipeline
+  completo de verdad. 22/22 checks OK en 3 escenarios:
+  1. locale es-ES, partida nueva → bootea español; el select cambia tabs + tienda EN VIVO sin
+     recargar; `<html lang>` sigue; el save persiste `"language":"en"`; recarga mantiene
+     inglés; volver a 'es' restaura el baseline exacto.
+  2. locale en-US, partida nueva → detección automática: bootea directo en inglés y el save
+     nuevo ya persiste `en`.
+  3. save v7 sembrado con `language:'en'` + ítem encontrado por id, locale es-ES → el save
+     manda sobre el locale; el Índice muestra el nombre del ítem con el overlay aplicado
+     (nombres de ítems cubiertos, tal como pide el DoD).
+  Cero errores de consola en los 3 escenarios. Además: Ajustes a 375px sin overflow
+  (scrollWidth 375 = clientWidth 375) con el selector visible.
+
+### Qué necesita saber el Agente C (traducción real — SOLO diccionarios)
+- Tocás únicamente VALORES en `en.js` (~103 con `settings.language`) y `data-en.js` (~230
+  strings). Las claves/ids NO se tocan: los tests de paridad de
+  `apps/game/tests/ronda16-i18n.test.js` te van a marcar cualquier id agregado/perdido y
+  cualquier `{param}` que difiera del español (`achievements.rewardKeys` usa `{plural}`,
+  `automation.calloutInactive` lleva `<strong>{name}</strong>`, `dig.rateHint` empieza con
+  espacio — conservalos exactos).
+- Los labels "Español"/"English" del select en SettingsView.js son endónimos fijos: NO son
+  claves de diccionario, no los toques.
+- `data-en.js`: automations y prestigeTree son `{ name, desc }`; el resto mapas `id → string`.
+  El fallback al español existe (una clave que borres no rompe, cae al baseline), pero el test
+  de paridad la detecta igual — no dependas del fallback.
+- Para VER tus traducciones jugando: `npm run dev`, partida nueva con DevTools →
+  `localStorage.clear()` y un navegador en inglés, o simplemente el selector de Ajustes. Ya no
+  hace falta el truco de interceptar módulos (con traducciones reales el cambio se ve solo).
+- El copy español es INTOCABLE (regla dura 11) — es.js y los JSON de data quedan como están.
+
+### Estado del DoD (Agente B)
+```
+[x] npm test → 285/285 verde (269 previos + 16 nuevos)
+[x] npm run test:e2e → 48/48 verde (siguen en español por el locale es-ES)
+[x] Manual: selector cambia tabs/tienda/ítems del Índice en vivo, persiste al recargar,
+    detección en-US, save manda sobre locale, 375px sin overflow, cero errores de consola
+[x] git commit → 2e09539, rama feat/i18n-ronda16,
+    "feat(ui): ronda 16 — plomería de idioma (detección, selector, overlay de data)"
+[x] Handoff escrito (este bloque)
+```
+
+## Ronda 16 — Agente C: traducción real (SOLO diccionarios, cero código)
+
+### Qué hice
+- **`apps/game/src/i18n/en.js`**: traduje los 103 valores (los 100 originales de ronda 14 +
+  `settings.language` de la B) a inglés casual de idle game, en segunda persona. Conservé
+  EXACTOS: todos los `{params}`, el HTML embebido de `automation.calloutInactive`
+  (`<strong>{name}</strong>`), y el espacio inicial de `dig.rateHint` (`' · Dig rate: ...'`).
+  `achievements.rewardKeys` usa `{amount} City Key{plural}` (el `{plural}` inglés funciona
+  igual: `s`/vacío, tal como anticipó el handoff de B).
+- **`apps/game/src/i18n/data-en.js`**: traduje TODOS los valores (16 contenedores, 87 ítems
+  repartidos en sus 16 pools, 8 rarezas, 35 logros, 12 automatizaciones `{name, desc}`,
+  13 nodos de prestigio `{name, desc}`, 4 mejoras) — cero código, solo strings. Nombres de
+  ítems con inventiva equivalente donde el literal sonaba forzado (p. ej. "Autorretrato de
+  otro vos" → "Self-Portrait of Another You", "El corazón del coleccionista" →
+  "The collector's heart"). No toqué ninguna clave/id: son las que generó el script de B.
+- **Glosario fijo aplicado** (documentado en ROADMAPv3.md §16.C, respetado en todo el
+  diccionario): Llaves de Ciudad → City Keys; Escarbar → Dig; Fuerza de Escarbado → Dig Power;
+  Área de Búsqueda → Search Area; Suerte → Luck; Contenedor → Container; Trampa → Trap;
+  Prestigio → Prestige; Mejora → Upgrade; Basura Común → Common Junk.
+- No toqué `es.js` ni ningún JSON de `apps/game/src/data/` (regla dura 11: copy español
+  intocable — los 43+ e2e existentes lo asertan).
+
+### Verificado
+- `npm test` → **285/285 verdes** (paridad dinámica es/en y data-en/data real pasa con
+  traducciones reales, no solo con el placeholder de B).
+- `npm run test:e2e` con `--workers=1` → **48/48 verdes**. La corrida por defecto (paralela)
+  tira 1 falla intermitente en `ronda14-regression.spec.js` (test 1: modal de celebración
+  intercepta el click al tab de Automatización, timeout de Playwright) — confirmé que es
+  flake de contención entre workers, NO relacionado con este diff: el mismo test pasa solo
+  (`npx playwright test apps/game/e2e/ronda14-regression.spec.js` → 3/3 verdes) y la suite
+  completa pasa 48/48 con `--workers=1`. Diff de esta tarea son solo 2 archivos de
+  diccionario, cero código — no hay superficie para afectar timing de UI.
+- `grep console.log|TODO` sobre los 2 archivos tocados → 0.
+- **Verificación manual en runtime** (Playwright descartable en el scratchpad de la sesión,
+  server propio `npx serve . -l 5199`, apagado al terminar; sin tocar el save real del
+  jugador): partida nueva con locale `en-US` → bootea directo en inglés, tabs
+  `['Dig','Containers','Automation','Achievements','Prestige','Index']`, la tienda muestra
+  "Cost:" y CERO "Costo:" en pantalla, cero errores de consola. Partida nueva con locale
+  `es-ES` → tabs siguen exactos
+  `['Escarbar','Contenedores','Automatización','Logros','Prestigio','Índice']` (copy español
+  byte a byte intacto), cero errores de consola.
+
+### Qué necesita saber el Agente D (e2e + boot bilingüe)
+- Los textos ancla en inglés que probablemente uses: tabs (`Dig`/`Containers`/`Automation`/
+  `Achievements`/`Prestige`/`Index`), `titleScreen.play` → "Play", `shop.cost` → "Cost: {label}"
+  (empieza con "Cost:" tal como pide la tarea D1 del roadmap).
+- `apps/game/index.html:44` (`Cargando Dumpster Empire…`) SIGUE en español — es tarea tuya
+  (D1) cambiarlo al texto bilingüe corto.
+- El save v6→v7 sembrado a mano en tu test de migración necesita el NOMBRE español real de un
+  ítem de `tachoVereda` (p. ej. `'Lata aplastada'` para `can-crushed`) — la clave inglesa NO
+  se usa ahí, la migración mapea por nombre español (itemNameToId se construye desde la data
+  pristina, ver R-16.3 del handoff de B).
+- No quedó ningún string en español visible al jugar en inglés (verificado manualmente en las
+  vistas Tienda y Tabs; D cubre el resto de vistas en su e2e).
+
+### Estado del DoD (Agente C)
+```
+[x] npm test → 285/285 verde (paridad real, sin conteos hardcodeados)
+[x] npm run test:e2e → 48/48 verde con --workers=1 (flake de contención documentado, no
+    relacionado con este diff — diff son 2 archivos de diccionario, cero código)
+[x] Manual: inglés sin string español visible (tabs, tienda), español intacto, cero errores
+    de consola en ambos locales
+[x] git commit → 9e6e669, rama feat/i18n-ronda16,
+    "feat(i18n): ronda 16 — traducción completa al inglés (UI + data)"
+[x] Handoff escrito (este bloque)
+```
+
+## Ronda 16 — Agente D: e2e de i18n + boot bilingüe
+
+### Qué hice
+- **`apps/game/index.html:44`**: `Cargando Dumpster Empire…` → `Cargando… / Loading…` (único
+  texto visible antes de que cargue el JS y aplique el idioma real).
+- **`apps/game/e2e/ronda16-i18n.spec.js`** (nuevo, 3 tests):
+  1. `test.use({ locale: 'en-US' })` (describe anidado, no pisa el `locale: 'es-ES'` global de
+     `playwright.config.js`) → partida nueva: `#title-play-btn` dice "Play", los 6 tabs dan
+     exactamente `['Dig','Containers','Automation','Achievements','Prestige','Index']`, la
+     Tienda contiene "Cost:" y NO "Costo:", y el save recién persistido en `localStorage` ya
+     trae `language:"en"` (cubre boot bilingüe end-to-end, no solo la UI).
+  2. Locale es-ES (el global): arranca en español (`Escarbar`), cambia a inglés desde el
+     `<select>` de Ajustes (con `blur()` antes de despachar — R-16.4), verifica el cambio EN
+     VIVO (`Dig`, `<html lang="en">`) sin recargar, y que sobrevive a un `reload()`.
+  3. Migración v6→v7: arma a mano (vía `freshState()` + overrides, no JSON literal manual —
+     ver AJUSTE abajo) un save con `saveVersion: 6` y `itemsFoundByItem.tachoVereda` indexado
+     por el NOMBRE español real (`'Lata aplastada'`, de `items.json`), lo siembra con
+     `addInitScript`, bootea, y verifica en el Índice la tarjeta revelada con
+     "Encontrado: 3". Dispara una acción inocua (`toggle-sound`) para forzar el próximo
+     `persist()` y verifica el `localStorage` migrado: `itemsFoundByItem.tachoVereda['can-crushed'] === 3`
+     y la clave española ya no existe.
+- No toqué código de plomería/traducción (A/B/C ya cerraron esas tareas) ni `es.js`/`en.js`/
+  `data-en.js`/`playwright.config.js`.
+
+### AJUSTE (decisión no trivial)
+- El roadmap sugiere armar el save v6 de la tarea 3 como "JSON literal a mano". En la práctica
+  se construye desde `freshState()` (que ya trae el esquema v7 completo) + overrides de
+  `saveVersion` e `itemsFoundByItem`, serializado con `JSON.stringify` — no un objeto tipeado
+  a mano campo por campo. Motivo: `REQUIRED_FIELDS` de `save.js` exige TODOS los campos del
+  esquema actual con su tipo (incluida finitud), y `migrate()` decide qué backfillear
+  exclusivamente por `saveVersion` (no por ausencia de campo) — omitir a mano un campo v6 real
+  (p. ej. `trapsDiscarded`) rechaza el save entero (`validateSave` → `deserializeState` →
+  `store.loadState()` cae a `freshState()` y el test de migración quedaría probando la nada).
+  Partir de `freshState()` da un save "v6" válido en todo lo demás y deja que la migración v6→v7
+  sea la única diferencia real bajo prueba.
+- Descubierto en la primera corrida local: intenté `delete raw.trapsDiscarded` pensando que un
+  v6 "real" de antes de la ronda 15 no lo tendría — pero un save YA etiquetado `saveVersion: 6`
+  SÍ pasó por la migración v5→v6 que agrega ese campo; borrarlo rompe la validación. Se sacó el
+  `delete` antes de commitear.
+
+### Verificado
+- `npm test` → **285/285 verdes** (sin tests nuevos de Vitest — esta tarea es 100% e2e).
+- `npx playwright test --list` → **51 tests en 14 archivos** (48 previos de B/C + 3 nuevos; el
+  roadmap anticipaba "47+3=50" pero el conteo real tras B/C ya era 48 — conteos indicativos
+  per PLAN.md §0, no se hardcodeó ninguno en el spec).
+- `npx playwright test --workers=1` (dos corridas completas) → **51/51 verdes** en ambas.
+- La corrida por defecto (paralela) tiró 1 falla intermitente en
+  `ronda15-contenido.spec.js:128` (test 4, logro "Billonario Galáctico"), reproducido con el
+  mismo patrón que ya documentó el Agente C para `ronda14-regression.spec.js`: corrido en
+  aislamiento (`npx playwright test apps/game/e2e/ronda15-contenido.spec.js --workers=1`) da
+  **4/4 verdes** — flake de contención entre workers, preexistente, no relacionado con este
+  diff (2 archivos tocados: 1 spec nuevo + 1 línea de texto en `index.html`).
+- `node --check` sobre el spec nuevo → sin errores.
+- Barridos sobre el diff: `console.log`/`// TODO` → 0; emojis → 0 (texto plano en
+  `index.html`).
+- No se hizo verificación manual adicional en navegador: los 3 escenarios que pedía el DoD
+  (boot en inglés por locale, switch en vivo persistente, migración v6→v7 visible en el
+  Índice) quedan cubiertos por los propios e2e, que corren en un Chromium real contra el juego
+  servido por HTTP — no hay diferencia de fidelidad con un playtest manual para esta tarea
+  puntual (a diferencia de B/C, que sí tocaron código de runtime nuevo sin cobertura e2e
+  todavía en el momento de escribirlo).
+
+### Qué necesita saber el Agente E (auditor)
+- El glosario fijo de la traducción (Llaves de Ciudad → City Keys, etc.) está documentado en
+  `ROADMAPv3.md` §16.C y en el handoff de C — no repetido acá.
+- Los 3 tests nuevos son el único lugar del repo que arma un save v6 a mano; si algún día se
+  agrega v8, revisar que `saveV6ConItemPorNombre()` (en el spec) siga generando algo que
+  `validateSave` acepte como v6 legítimo (ver AJUSTE arriba).
+- El flake de `ronda15-contenido.spec.js:128` bajo carga paralela sigue sin investigarse a
+  fondo (documentado también por C para `ronda14-regression.spec.js`) — no es de esta ronda,
+  pero si el auditor corre la suite en paralelo y ve un rojo ahí, es ese flake conocido:
+  confirmar con `--workers=1` o el archivo aislado antes de reportarlo como regresión.
+
+### Estado del DoD (Agente D)
+```
+[x] npm test → 285/285 verde (sin tests nuevos de Vitest, tarea 100% e2e)
+[x] npm run test:e2e → 51/51 verde con --workers=1 (dos corridas; flake de contención
+    preexistente en ronda15-contenido.spec.js:128 bajo paralelismo, no relacionado)
+[x] apps/game/index.html:44 con el texto bilingüe corto
+[x] git commit → 6f73b38, rama feat/i18n-ronda16,
+    "test(e2e): ronda 16 — i18n cubierto (detección, switch, migración v7)"
+[x] Handoff escrito (este bloque)
+```
+
+## Ronda 16 — Agente E: auditoría (Verif&Audit.md) sobre el diff de la ronda
+
+### Alcance
+`git diff main...HEAD` completo (23 archivos) línea por línea, con los focos extra del roadmap:
+XSS vía diccionarios en `innerHTML`, frontera engine↔UI del overlay, `resolveInitialLanguage`
+con inputs basura, e import de un save v5 real. Cada vector se REPRODUJO con Node antes de
+reportarlo (nada teórico en 🔴/🟡).
+
+### 🔴 CRÍTICO / ALTO RIESGO
+
+1. **`migrate()` v6→v7 crasheaba con un save manipulado (brick de boot).** El remap de
+   `itemsFoundByItem` corre ANTES de `validateDeepContent` y hacía `Object.entries(byItem)`
+   confiando en la forma: `{"tachoVereda": null}` en un save `saveVersion ≤ 6` tiraba
+   `TypeError: Cannot convert undefined or null to object` NO capturado →
+   `deserializeState` propagaba → `store.loadState()` reventaba → el juego no bootea hasta
+   limpiar localStorage. Pre-ronda-16 ese mismo save se rechazaba limpio (regresión).
+   **Arreglado en `e6a6048`**: solo se remapea lo que ya es objeto plano; lo inválido pasa tal
+   cual y la validación lo rechaza con su error de siempre. Test de regresión sobre el camino
+   real (`deserializeState` no debe lanzar jamás).
+
+### 🟡 ADVERTENCIAS DE SEGURIDAD / RIESGO MEDIO (todas arregladas en `e6a6048`)
+
+2. **Bypass de la validación anti-XSS vía clave `__proto__`.** `JSON.parse` crea `__proto__`
+   como propiedad PROPIA, pero `remapped[containerId] = {}` la asigna con semántica de setter:
+   seteaba el PROTOTIPO de `remapped` y el contenido del atacante quedaba heredado — invisible
+   para el `Object.values` de `isValidItemsFoundByItem`. Reproducido:
+   `{"__proto__": {"tachoVereda": {"<img src=x onerror=alert(1)>": "boom"}}}` era ACEPTADO y
+   `state.itemsFoundByItem.tachoVereda` devolvía los strings crudos por herencia. La cadena a
+   `innerHTML` la corta hoy la defensa en profundidad de la UI (`Number(x) || 0` en
+   CollectionView), pero la capa primaria del save quedaba anulada. Fix: los mapas remapeados
+   son `Object.create(null)` — toda clave es propiedad propia y visible para la validación
+   (el payload ahora se RECHAZA).
+3. **Clave `'constructor'` resolvía contra el prototipo.** `nameMap[key] || key` con
+   `key: 'constructor'` devolvía `Object` heredado y persistía
+   `"function Object() { [native code] }"` como clave del estado. Fix: `Object.hasOwn` en todos
+   los lookups con claves del save (también `itemNameToId[containerId]`).
+4. **Lavado de formas inválidas.** Un `byItem` array (`[1,2]`) se convertía en `{0:1,1:2}`
+   válido, y un v6 SIN `itemsFoundByItem` se aceptaba con `{}` fabricado (pre-ronda-16 ambos se
+   rechazaban). Fix: lo que no tiene la forma esperada pasa tal cual al validador.
+5. **Faltaba la cobertura del foco extra del roadmap** (import de save v5 real). Agregada en
+   `packages/engine/tests/ronda16-audit.test.js`: un v5 con colección por nombre español (y sin
+   `trapsDiscarded`, como un v5 de verdad) importa OK vía v5→v6→v7 y conserva la colección
+   remapeada a ids, con `itemNameToId` construido desde `items.json` real igual que store.js.
+
+### 🔵 MEJORAS DE CALIDAD Y RENDIMIENTO (no bloqueantes, no aplicadas)
+
+- `migrate()` acumula 7 pasos con spreads encadenados; si algún día hay v10+, valdría extraer
+  cada paso a una función con su typedef de entrada/salida. Hoy es legible; no lo toqué.
+- El `catch` de `boot()` en main.js muestra `err.message` crudo en `#boot-status`; para el
+  jugador un mensaje genérico + detalle en consola sería más prolijo (preexistente, no de esta
+  ronda).
+
+### ✅ Veredicto Final
+Con `e6a6048` aplicado, el diff de la ronda 16 es apto para producción: la superficie de input
+externo (save/import) rechaza limpio todo lo probado, la frontera engine↔UI se respeta y los
+diccionarios no abren sinks nuevos. Sin refactorización obligatoria pendiente.
+
+### Verificado (lo que NO encontré, con evidencia)
+- **XSS vía diccionarios**: `en.js`/`data-en.js` no tienen `<`/`>` salvo el
+  `<strong>{name}</strong>` intencional de `automation.calloutInactive` (mismo que es.js), cuyo
+  `{name}` se resuelve desde data estática, nunca del jugador. Los caracteres españoles que
+  quedan en ambos archivos son solo comentarios. `t()` con clave inexistente devuelve la clave
+  (nunca hueco) y solo interpola params con `hasOwnProperty`.
+- **Frontera engine↔UI del overlay**: `dataI18n.js` no importa nada del engine ni toca estado;
+  el engine no importa nada de i18n. `itemNameToId` se construye en createStore ANTES de
+  cualquier `applyDataLanguage` (R-16.3 respetado; el overlay muta los MISMOS objetos después,
+  pero el mapa ya copió los strings). `DigResult` decide por `id` y muestra `name` (R-16.9 OK).
+- **`resolveInitialLanguage` con basura**: `undefined`/`null`/`''`/`42`/objetos → 'en' sin
+  lanzar (typeof-guard); cubierto por tests de B. `setLanguage` del store y de i18n validan
+  contra `SUPPORTED_LANGUAGES` (un `<img src=x>` como idioma se ignora y el overlay cae al
+  baseline español — test de B lo cubre).
+- **Ids de ítems**: únicos por pool e iguales a `icon` (verificación A1 re-corrida). Ningún
+  acceso a `itemsFoundByItem` fuera de engine + CollectionView (grep R-16.2 re-corrido); la UI
+  nunca enumera sus claves hacia `innerHTML`, solo hace lookup por id con `Number(x) || 0`.
+- **Copy español intocable**: la traducción solo tocó en.js/data-en.js/es.js(+1 clave); los 48
+  e2e previos siguen verdes.
+
+### Verificación manual (script de Playwright sobre Chromium real, `npx serve` + data real)
+- Desktop 1280px, locale es-ES: bootea en español; switch a inglés EN VIVO (tabs, tienda con
+  "Cost:", Índice) y vuelta a español restaurando el baseline exacto. Screenshot revisado.
+- R-16.10 (sin UI de import, el camino real es el save de boot): save con `language:'en'` +
+  locale es-ES → bootea en inglés (el save manda).
+- 375px táctil: selector visible, área de toque de 34px de alto, switch en vivo OK. Screenshot
+  revisado (layout de Ajustes íntegro en inglés).
+- Cero errores de consola/página en los 3 escenarios.
+
+### Estado del DoD (Agente E)
+```
+[x] Auditoría Verif&Audit.md sobre todo el diff, reporte 🔴/🟡/🔵/✅ (este bloque)
+[x] Todo 🔴/🟡 arreglado en commit propio audit: (e6a6048) con tests de regresión
+[x] npm test → 292/292 verde (285 + 7 de auditoría)
+[x] npx playwright test --workers=1 → 51/51 verde (corrida completa post-fix)
+[x] Manual: switch en vivo ida y vuelta, save en otro idioma manda, 375px, cero errores
+[x] HANDOFF actualizado (este bloque) + push de la rama + link de PR para el usuario
+```

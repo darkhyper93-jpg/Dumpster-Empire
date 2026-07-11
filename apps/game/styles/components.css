@@ -244,6 +244,17 @@ button:hover:not(:disabled) {
   box-shadow: var(--shadow-tactile-pressed);
 }
 
+/* Selector de idioma en Configuración (ronda 16): mismo select nativo recesado del target del
+   robot, con padding generoso para toque cómodo en Steam Deck. Todo sale de tokens. */
+.settings-block select {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-highest);
+  box-shadow: var(--shadow-recessed);
+  color: var(--fg-0);
+  border: none;
+}
+
 .automation-explainer {
   margin-bottom: var(--space-3);
 }

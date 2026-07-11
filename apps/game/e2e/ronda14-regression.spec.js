@@ -23,7 +23,8 @@ import { entrarAlJuego, iniciarEscarbadoSinTrampa, rascarObjeto, cerrarCelebraci
 const itemsData = JSON.parse(readFileSync(path.join(__dirname, '../src/data/items.json'), 'utf8'));
 // Los 6 ítems de tachoVereda son TODOS de categoría "common" — como es la única categoría del
 // contenedor, "common" es siempre la más rara: cualquier hallazgo nuevo de acá dispara el modal.
-const TACHO_ITEM_NAMES = itemsData.containers.tachoVereda.map((item) => item.name);
+// Ronda 16: itemsFoundByItem se indexa por id estable de ítem, no por nombre (PLAN.md §16).
+const TACHO_ITEM_IDS = itemsData.containers.tachoVereda.map((item) => item.id);
 
 async function seed(page, save) {
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), ['dumpsterEmpireSave', save]);
@@ -43,10 +44,10 @@ function conRobotSave() {
 function tachoAgotadoSave() {
   const seeded = freshState();
   seeded.tutorialStep = 99;
-  // itemsFoundByItem es containerId -> { itemName -> número } (contador, ver save.js
+  // itemsFoundByItem es containerId -> { itemId -> número } (contador, ver save.js
   // isValidItemsFoundByItem) — un booleano no pasa la validación y el save entero se rechaza.
   seeded.itemsFoundByItem = {
-    tachoVereda: Object.fromEntries(TACHO_ITEM_NAMES.map((name) => [name, 1])),
+    tachoVereda: Object.fromEntries(TACHO_ITEM_IDS.map((id) => [id, 1])),
   };
   return serializeState(seeded);
 }

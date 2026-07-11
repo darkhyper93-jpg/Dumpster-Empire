@@ -23,7 +23,8 @@ import { CelebrationModal } from './CelebrationModal.js';
 import { iconMarkup } from '../icons/icons.js';
 import { setEnabled as setSoundEnabled, setVolume as setMasterVolume, playFindPop, playTrapThud } from '../fx/audio.js';
 import { spawnFindPop, triggerRarityGlow, triggerTrapShake } from '../fx/particles.js';
-import { t } from '../i18n/i18n.js';
+import { t, getLanguage, setLanguage } from '../i18n/i18n.js';
+import { applyDataLanguage } from '../i18n/dataI18n.js';
 
 const TAB_VIEWS = {
   tienda: ShopView,
@@ -38,10 +39,14 @@ export class UIManager {
   /**
    * @param {HTMLElement} root
    * @param {ReturnType<import('../store.js').createStore>} store
+   * @param {import('../i18n/dataI18n.js').LoadedData} [loaded] - la data cargada por main.js.
+   *   DECISIÓN (ronda 16): se pasa por constructor (lo mínimo) porque el sync de idioma de
+   *   render() necesita re-aplicar el overlay sobre el MISMO objeto que localizó main.js.
    */
-  constructor(root, store) {
+  constructor(root, store, loaded) {
     this.root = root;
     this.store = store;
+    this.loaded = loaded || null;
     // PLAN.md §11.8/§11.9: la pantalla de escarbado es la home — ya no está pegada a la Tienda.
     this.activeTab = 'escarbar';
     this.mountedDig = null;
@@ -181,10 +186,33 @@ export class UIManager {
     Topbar.render(this.topbarEl, state);
   }
 
+  /**
+   * Re-renderiza los textos que se escriben UNA sola vez fuera del ciclo de render (ronda 16):
+   * las etiquetas de los tabs, el botón de abandonar escarbado y los nodos bind-once del Topbar
+   * (se les borra `dataset.iconReady` para que el próximo Topbar.render los reconstruya con el
+   * idioma nuevo). Todo lo demás se re-renderiza solo en el render en curso.
+   */
+  refreshStaticTexts() {
+    this.injectTabIcons();
+    this.digAbandonBtn.textContent = t('dig.abandon');
+    for (const el of this.topbarEl.querySelectorAll('[data-icon-ready]')) {
+      delete el.dataset.iconReady;
+    }
+  }
+
   render(state) {
     setSoundEnabled(state.soundOn);
     setMasterVolume(state.volume);
     this.digCanvas.setSensitivity(state.digSensitivity);
+    // Ronda 16: sync de idioma (mismo patrón que el sync de audio/sensibilidad de arriba —
+    // el estado manda y la capa de presentación lo sigue en cada render). Cubre el selector
+    // de Ajustes y también un save importado con otro idioma (R-16.10).
+    if (this.loaded && getLanguage() !== state.language) {
+      setLanguage(state.language);
+      applyDataLanguage(this.loaded, state.language);
+      document.documentElement.lang = state.language;
+      this.refreshStaticTexts();
+    }
     // Ronda 15 (R5 del roadmap): toast cuando el robot descarta un contenedor trampeado (nodo
     // Escáner de Trampas). Solo se compara contra el render anterior del MISMO objeto de estado:
     // en el primer render y cada vez que el store lo reemplaza (importSave/resetGame devuelven

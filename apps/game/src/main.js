@@ -9,7 +9,8 @@ import { createStore, SAVE_KEY } from './store.js';
 import { startLoop } from './loop.js';
 import { UIManager } from './ui/UIManager.js';
 import { TitleScreen } from './ui/TitleScreen.js';
-import { setLanguage, t } from './i18n/i18n.js';
+import { setLanguage, resolveInitialLanguage, t } from './i18n/i18n.js';
+import { initDataLocalization, applyDataLanguage } from './i18n/dataI18n.js';
 
 const DATA_FILES = {
   items: './data/items.json',
@@ -95,8 +96,18 @@ async function boot() {
   const initialSaveText = await resolveInitialSaveText();
 
   const store = createStore({ data, itemsData, allContainers, achievementsData, initialSaveText });
+  // Partida nueva: si no había save, el idioma inicial sale del navegador (es-* → es, resto en).
+  // Con save existente manda su state.language (ya validado por el engine contra el allow-list).
+  if (!initialSaveText && !localStorage.getItem(SAVE_KEY)) {
+    store.actions.setLanguage(resolveInitialLanguage(globalThis.navigator?.language));
+  }
+  // Orden duro (R-16.3): initDataLocalization va DESPUÉS de createStore (el store construyó
+  // itemNameToId con los nombres todavía en español) y ANTES del primer applyDataLanguage.
+  initDataLocalization(loaded);
   setLanguage(store.getState().language);
-  const ui = new UIManager(app, store);
+  applyDataLanguage(loaded, store.getState().language);
+  document.documentElement.lang = store.getState().language;
+  const ui = new UIManager(app, store, loaded);
   startLoop(store, ui);
 
   // Electron fuerza un autoguardado antes de cerrar de verdad (`before-quit` en

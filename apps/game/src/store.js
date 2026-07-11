@@ -8,6 +8,7 @@ import {
   freshState,
   DIG_SENSITIVITY_MIN,
   DIG_SENSITIVITY_MAX,
+  SUPPORTED_LANGUAGES,
   getAreaMult,
   getDigRate,
   getEffectiveTrapProbability,
@@ -63,6 +64,14 @@ export function createStore(ctx) {
   // manipulados, antes de que lleguen a automationTick.
   const containerIds = new Set(allContainers.map((c) => c.id));
 
+  // Ronda 16: mapa `containerId -> { nombreEspañol -> id }` construido desde la data TODAVÍA en
+  // español (antes de cualquier applyDataLanguage) — lo usa la migración v6->v7 de itemsFoundByItem
+  // para remapear claves de saves viejos sin perder la colección.
+  const itemNameToId = {};
+  for (const [containerId, pool] of Object.entries(itemsData.containers)) {
+    itemNameToId[containerId] = Object.fromEntries(pool.map((it) => [it.name, it.id]));
+  }
+
   let state = loadState();
   let pendingDig = null;
   let offlineSummary = null;
@@ -89,7 +98,7 @@ export function createStore(ctx) {
   function loadState() {
     const raw = ctx.initialSaveText !== undefined ? ctx.initialSaveText : localStorage.getItem(SAVE_KEY);
     if (!raw) return freshState();
-    const result = deserializeState(raw, containerIds);
+    const result = deserializeState(raw, containerIds, itemNameToId);
     return result.ok ? result.state : freshState();
   }
 
@@ -245,7 +254,7 @@ export function createStore(ctx) {
     },
 
     importSave(text) {
-      const result = engineImportSave(text, containerIds);
+      const result = engineImportSave(text, containerIds, itemNameToId);
       if (result.ok) {
         state = result.state;
         pendingDig = null;
@@ -257,7 +266,11 @@ export function createStore(ctx) {
     },
 
     resetGame() {
+      // DECISIÓN (ronda 16): resetear la partida no cambia el idioma de la UI — freshState()
+      // trae 'es' fijo, así que se copia el language del estado saliente.
+      const language = state.language;
       state = freshState();
+      state.language = language;
       pendingDig = null;
       persist();
       notify();
@@ -277,6 +290,20 @@ export function createStore(ctx) {
      */
     setVolume(value) {
       state.volume = Math.max(0, Math.min(1, value));
+      persist();
+      notify();
+    },
+
+    /**
+     * Cambia el idioma de la UI (ronda 16). Mismo allow-list que valida save.js: un valor
+     * fuera de SUPPORTED_LANGUAGES se ignora en silencio (nunca entra al estado un idioma
+     * que el save rechazaría al recargar). La aplicación visual (diccionario + overlay de
+     * data) la hace el sync de UIManager.render al ver el state.language nuevo.
+     * @param {string} lang - 'es' | 'en'
+     */
+    setLanguage(lang) {
+      if (!SUPPORTED_LANGUAGES.includes(lang)) return;
+      state.language = lang;
       persist();
       notify();
     },

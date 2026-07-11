@@ -15,6 +15,10 @@ export default defineConfig({
   outputDir: './apps/game/e2e/.results',
   use: {
     baseURL: BASE_URL,
+    // Ronda 16 (R-16.1): Chromium reporta 'en-US' por defecto y la detección de idioma en
+    // partida nueva (resolveInitialLanguage) bootearía TODO e2e en inglés — los specs
+    // existentes asertan copy español. Los tests de i18n lo pisan con test.use({ locale }).
+    locale: 'es-ES',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

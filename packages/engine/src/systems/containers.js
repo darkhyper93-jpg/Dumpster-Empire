@@ -21,7 +21,7 @@ import { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluc
 /**
  * @typedef {Object} DigResult
  * @property {boolean} isTrap
- * @property {Array<{ icon: string, name: string, categoria: string, value: number, isFirstRareFind: boolean }>} items
+ * @property {Array<{ id: string, icon: string, name: string, categoria: string, value: number, isFirstRareFind: boolean }>} items
  * @property {number} moneyDelta
  */
 
@@ -111,10 +111,10 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
         depthValueMult,
       }) * levelValueMult;
     const alreadyFound =
-      Boolean(state.itemsFoundByItem?.[container.id]?.[pick.name]) || seenInThisRoll.has(pick.name);
+      Boolean(state.itemsFoundByItem?.[container.id]?.[pick.id]) || seenInThisRoll.has(pick.id);
     const isFirstRareFind = categoria === rarest && !alreadyFound;
-    seenInThisRoll.add(pick.name);
-    items.push({ icon: pick.icon, name: pick.name, categoria, value, isFirstRareFind });
+    seenInThisRoll.add(pick.id);
+    items.push({ id: pick.id, icon: pick.icon, name: pick.name, categoria, value, isFirstRareFind });
   }
   const moneyDelta = items.reduce((sum, item) => sum + item.value, 0);
   return { isTrap: false, items, moneyDelta };
@@ -147,8 +147,10 @@ export function applyContainerResult(state, container, result, isAuto, data) {
     state.itemsFoundCount++;
     state.itemsFoundByCategory[item.categoria] = (state.itemsFoundByCategory[item.categoria] || 0) + 1;
     // PLAN.md §11.5: el INDEX necesita el contador por ítem específico, no solo por categoría.
+    // Ronda 16: la clave es el id estable del ítem (no el nombre) para que la colección
+    // sobreviva a la traducción — ver PLAN.md §16.
     const byContainer = state.itemsFoundByItem[container.id] || (state.itemsFoundByItem[container.id] = {});
-    byContainer[item.name] = (byContainer[item.name] || 0) + 1;
+    byContainer[item.id] = (byContainer[item.id] || 0) + 1;
     if (fragmentCategories.includes(item.categoria)) {
       state.categoryFragments += 1 * getFragmentMult(state, data);
     }
