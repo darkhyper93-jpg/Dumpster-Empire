@@ -3420,3 +3420,77 @@ validación de save (riesgo medio) y 5 hardcodeos/edge cases (calidad).
 [x] git commit → "feat(data): ronda 15 — máquinas del robot, nodo Escáner de Trampas y
     rebalanceo de logros (a1-a35)" (e74d3ef)
 ```
+
+## Ronda 15 — Agente D (UI + e2e)
+
+### Qué hice
+- **`apps/game/src/i18n/es.js` / `en.js`**: clave nueva `automation.trapDiscarded` (mismo valor
+  español en ambos, sección AutomationView — la traducción real es la ronda 16), tal como pide
+  D1.
+- **`apps/game/src/ui/UIManager.js`**: en `render(state)`, guardo `this.lastTrapsDiscarded` y
+  disparo `this.toast.push(t('automation.trapDiscarded'))` solo cuando `state.trapsDiscarded`
+  sube respecto del render anterior. En el primer render (`this.lastTrapsDiscarded === undefined`)
+  solo guardo el valor sin mostrar toast — evita el bug R5 del roadmap (un save que ya traía
+  `trapsDiscarded > 0` no debe disparar el toast al bootear). La UI solo LEE el contador, cero
+  economía nueva en la capa de presentación.
+- **`apps/game/e2e/ronda15-contenido.spec.js`** (nuevo, 4 tests, patrón de seed de
+  `ronda14-regression.spec.js`):
+  1. Contenedores por prestigio: `prestigeCount: 6` + los 12 contenedores previos (ids derivados
+     de `containers.json`, nunca hardcodeados por posición — regla R3) poseídos → "Chatarrería de
+     Titanes" comprable, "Naufragio Temporal" bloqueado con `Se desbloquea con el Prestigio 7.`.
+  2. Comprar Servobrazos Reforzados desde Automatización → badge "Activo" + `#money` cambia
+     (polling con `not.toHaveText`, regla 8).
+  3. `prestigeKeys: 70` + los 3 nodos previos de la rama (`capitalInicial`/`suerteAncestral`/
+     `instintoCarronero`) ya a nivel 1 → comprar el Escáner de Trampas 3 veces → badge "Máximo" y
+     `#keys-value` termina en "5" (70 − 65).
+  4. `totalMoneyEarned: 1e12 - 1` con el logro `a28` (id resuelto dinámicamente desde
+     `achievements.json` por `cond.type`/`cond.value`, no hardcodeado) excluido de
+     `achievementsUnlocked` sembrado + un escarbado gratis de `tachoVereda` → celebración con
+     "Billonario Galáctico" visible.
+  - DECISIÓN (ya prevista por D2 del roadmap): el descarte de trampas del Escáner NO tiene e2e
+    propio — RNG no determinista en el navegador. Cubierto por
+    `packages/engine/tests/ronda15-robot.test.js` caso 5 (Agente A) y por la verificación manual
+    del Agente E.
+- No hizo falta tocar `PrestigeView.js`: desde la Fase 3/Agente 8 el árbol de prestigio deriva su
+  layout dinámicamente de `requires` (`buildTreeLayout`) — el nodo `escanerTrampas` que agregó el
+  Agente C aparece solo, sin necesitar un `TREE_LAYOUT` estático (la preocupación que dejó C en su
+  handoff ya no aplica; el archivo cambió de forma en una fase anterior).
+- No hizo falta tocar `ShopView.js`/`AutomationView.js`: ambas ya leían la data genéricamente
+  (`allContainers`/`data.automations`), así que los 4 contenedores y las 4 máquinas nuevas
+  renderizan sin cambios de código, tal como esperaban los handoffs de B y C.
+
+### Verificado
+- `npm test` → **260/260 verdes** (nada de `packages/engine` tocado en este bloque).
+- `npm run test:e2e` → **47/47 verdes** (43 previos + los 4 nuevos de `ronda15-contenido.spec.js`).
+- `node --check` sobre los 4 archivos tocados/nuevos → sin errores de sintaxis.
+- Verificación manual con un script descartable de Playwright (seed con dinero/llaves/prestigio
+  altos, los 16 contenedores poseídos, todos los logros pre-desbloqueados): capturas a 375px de
+  Contenedores/Automatización/Prestigio — cero errores de consola, ninguna tarjeta desborda el
+  viewport (incluida `vertederoBigBang` con `slots: 8`, riesgo R4 del roadmap), el árbol de
+  prestigio cae a la lista simple de una columna sin romperse. Script y capturas borrados tras la
+  verificación (no quedaron en el repo).
+- `grep` de emojis (rango Unicode `\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`) y de
+  `console.log`/`// TODO` sobre los 4 archivos tocados → **0 resultados**.
+- `git status --porcelain` tras el commit: limpio, ningún archivo suelto del script de
+  verificación quedó trackeado.
+
+### Qué necesita saber el Agente E (auditor)
+- El toast de descarte (`UIManager.js`) es la única lógica nueva de esta fase fuera de datos i18n
+  y el spec de e2e — vale la pena que la auditoría confirme especialmente el caso de saves viejos
+  con `trapsDiscarded > 0` ya seedeado (R5), aunque no tiene e2e por el motivo de RNG explicado
+  arriba.
+- Checklist manual pendiente para E (D3/roadmap 15.E4): comprar las 4 máquinas y ver el robot
+  acelerar de verdad (tiempos de procesamiento más cortos), prestigiar con el nodo Escáner
+  comprado y ver el toast de descarte aparecer en un contenedor de trampa alta (no forzable
+  determinísticamente, requiere jugar varias rondas o forzar RNG a mano).
+- Formato de números grandes (riesgo R8 del roadmap): `formatMoney`/`formatNumber` ya cubren
+  hasta cuatrillones (`Qa`, ver Agente 1) — los $1e18 de `vertederoBigBang` se vieron en pantalla
+  como `$1.00Qa` en la verificación manual, sin notación científica cruda.
+
+### Estado del DoD (Agente D)
+```
+[x] npm test && npm run test:e2e → todo verde; e2e = 47 (43 + 4)
+[x] git commit → 393722a, rama feat/contenido-ronda15,
+    "test(e2e): ronda 15 — contenido nuevo cubierto + toast de descarte"
+[x] Handoff escrito (este bloque)
+```
