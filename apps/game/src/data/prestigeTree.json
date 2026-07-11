@@ -137,5 +137,16 @@
       }
     ],
     "requires": ["guardiaPermanente"]
+  },
+  {
+    "id": "escanerTrampas",
+    "name": "Escáner de Trampas",
+    "icon": "scanner-trap",
+    "costoBase": 8,
+    "factorCrecimiento": 2.2,
+    "nivelMaximo": 3,
+    "desc": "El robot detecta trampas y descarta esos contenedores: +34% de probabilidad por nivel.",
+    "effects": [{ "type": "trapDiscardChancePerNivel", "percentPerNivel": 0.34 }],
+    "requires": ["instintoCarronero"]
   }
 ]

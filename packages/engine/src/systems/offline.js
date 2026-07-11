@@ -14,6 +14,7 @@ import {
   getLevelRarityShift,
   getLevelValueMult,
   getEffectiveDigTime,
+  getAutoSpeedMult,
   itemSaleValue,
   offlineEarnings,
 } from '../economy.js';
@@ -72,7 +73,17 @@ export function estimateAutomationRatePerSecond(state, allContainers, itemsData,
   const parallelSlots = getParallelAutoSlots(state, data);
   // PLAN.md §11.2: el ritmo real de automatización respeta Resistencia/Fuerza (getEffectiveDigTime),
   // no el digTime crudo del contenedor.
-  return (expectedContainerValue(state, container, itemsData, data) / getEffectiveDigTime(state, container, data)) * parallelSlots;
+  // AJUSTE (auditoría ronda 15): la tasa refleja las máquinas del robot (§4.7) igual que
+  // automationTick — isAuto=true (Fuerza del robot acorta el tiempo efectivo) y getAutoSpeedMult
+  // (el remaining decrece a dt × mult, así que el ciclo real dura tiempoEfectivo / mult). Sin
+  // esto, las máquinas compradas no aportaban nada al progreso offline (§4.5): la estimación
+  // usaba el ritmo manual y el robot "trabajaba más lento" con el juego cerrado que abierto.
+  return (
+    (expectedContainerValue(state, container, itemsData, data) /
+      getEffectiveDigTime(state, container, data, true)) *
+    getAutoSpeedMult(state, data) *
+    parallelSlots
+  );
 }
 
 /**

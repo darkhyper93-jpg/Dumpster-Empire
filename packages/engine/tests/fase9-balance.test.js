@@ -57,11 +57,11 @@ describe('Ronda 6 — la Suerte recomendada es real (no 0) y crece por tier', ()
   for (let i = 0; i < containers.length; i++) {
     const container = containers[i];
     if (container.costoInicial === 0) continue;
-    // AJUSTE (ronda 11): el tope "alcanzable" sube de 350 a 650 — los 4 contenedores de
-    // prestigio nuevos recomiendan hasta 580 (vertederoDivino) con la calibración de esta ronda.
-    it(`${container.id}: recomendada > 0, alcanzable (< 650) y en pérdida a Suerte 0`, () => {
+    // AJUSTE (ronda 15): el tope "alcanzable" sube de 650 a 1000 — los 4 contenedores nuevos
+    // (prestigio 6-9) recomiendan hasta 920 (vertederoBigBang) con la calibración de esta ronda.
+    it(`${container.id}: recomendada > 0, alcanzable (< 1000) y en pérdida a Suerte 0`, () => {
       expect(recommended[i]).toBeGreaterThan(0);
-      expect(recommended[i]).toBeLessThan(650);
+      expect(recommended[i]).toBeLessThan(1000);
       expect(expectedNetValueAtLuck(container, 0)).toBeLessThan(0);
     });
   }
@@ -79,10 +79,19 @@ describe('Ronda 6 — la Suerte recomendada es real (no 0) y crece por tier', ()
 // agentes/scripts/calibrate-luck-ronda10.mjs. Este test fija los targets EXACTOS: si un
 // rebalanceo futuro de data los mueve, tiene que verse acá a propósito.
 describe('Ronda 10/11 — requerimientos de Suerte por contenedor (targets exactos)', () => {
-  it('la Suerte recomendada de los 12 contenedores es exactamente la tabla de las rondas 10 y 11', () => {
+  it('la Suerte recomendada de los primeros 12 contenedores (rondas 1-11) sigue siendo la tabla exacta de las rondas 10 y 11', () => {
+    // AJUSTE (ronda 15): acotado a los primeros 12 — es la regresión histórica de esa data.
+    // Los 4 contenedores nuevos de la ronda 15 tienen su propio target exacto abajo.
     const state = freshState();
-    const recommended = containers.map((c) => getRecommendedLuck(state, c, items, data));
+    const recommended = containers.slice(0, 12).map((c) => getRecommendedLuck(state, c, items, data));
     expect(recommended).toEqual([0, 8, 20, 40, 72, 120, 190, 290, 340, 420, 500, 580]);
+  });
+
+  it('la Suerte recomendada de los 4 contenedores nuevos de la ronda 15 es exactamente la calibrada en esta ronda', () => {
+    const state = freshState();
+    const NEW_IDS = ['chatarreriaTitanes', 'naufragioTemporal', 'archivoMultiverso', 'vertederoBigBang'];
+    const recommended = NEW_IDS.map((id) => getRecommendedLuck(state, containers.find((c) => c.id === id), items, data));
+    expect(recommended).toEqual([651, 740, 831, 920]);
   });
 });
 
@@ -128,11 +137,11 @@ describe('PLAN.md §11.2 — trampas más caras por tier, nunca injustas', () =>
     }
   });
 
-  // AJUSTE (ronda 11): el tope sube de 35% a 40% — vertederoDivino (el contenedor de mayor
-  // riesgo, gateado por Prestigio 5) sube a 38% a propósito para justificar su Suerte recomendada.
-  it('incluso en el contenedor de mayor riesgo, la probabilidad base de trampa nunca supera 40%', () => {
+  // AJUSTE (ronda 15): el tope sube de 40% a 44% — vertederoBigBang (el contenedor de mayor
+  // riesgo, gateado por Prestigio 9) sube a 44% a propósito para justificar su Suerte recomendada.
+  it('incluso en el contenedor de mayor riesgo, la probabilidad base de trampa nunca supera 44%', () => {
     for (const container of containers) {
-      expect(container.probTrampaBase).toBeLessThanOrEqual(0.4);
+      expect(container.probTrampaBase).toBeLessThanOrEqual(0.44);
     }
   });
 });
@@ -145,16 +154,30 @@ describe('PLAN.md §11.6 — recompensas de logros no rompen la economía', () =
     expect(totalMoney).toBeLessThan(1_000_000_000 * 0.05);
   });
 
-  it('la suma de recompensas en Llaves de todos los logros es comparable a una sola tanda de Prestigio, no varias', () => {
+  // AJUSTE (ronda 15): el árbol de prestigio creció a 1.588 llaves de costo total (13 nodos hasta
+  // Escáner de Trampas) y la progresión de logros ahora cubre hasta Prestigio 9 (a31) y dinero
+  // total 1e15 (a29) — comparar contra "una sola tanda de Prestigio" (10 llaves) ya no es
+  // representativo del alcance real del juego. El techo nuevo se deriva de la data: los logros no
+  // deberían, sumados, cubrir más de un ~15% del árbol completo (no pueden "comprar" el árbol solos).
+  it('la suma de recompensas en Llaves de todos los logros es una fracción chica del costo total del árbol de Prestigio', () => {
     const totalKeys = achievements.filter((a) => a.reward.type === 'keys').reduce((s, a) => s + a.reward.amount, 0);
-    // §4.3: llaves = floor(sqrt(dineroTotalGanado / 1e9) * 10). En el umbral exacto (1e9) da 10.
-    // Los logros no deberían regalar, sumados, mucho más que eso de entrada.
-    expect(totalKeys).toBeLessThanOrEqual(60);
+    const totalTreeCost = prestigeTree.reduce((sum, node) => {
+      let nodeCost = 0;
+      for (let lvl = 0; lvl < node.nivelMaximo; lvl++) {
+        nodeCost += Math.ceil(node.costoBase * Math.pow(node.factorCrecimiento, lvl));
+      }
+      return sum + nodeCost;
+    }, 0);
+    expect(totalKeys).toBeLessThanOrEqual(totalTreeCost * 0.15);
   });
 
-  it('ningún logro individual de dinero regala, de una, una fracción relevante del umbral de Prestigio', () => {
+  // AJUSTE (ronda 15): el principio de balance cambió — PLAN.md ahora pide que los hitos de dinero
+  // paguen ~10% de SU PROPIO umbral (antes decrecía de 20% a 4%, castigando el esfuerzo). El techo
+  // absoluto sigue existiendo para que ningún logro individual sea desproporcionado frente al
+  // umbral de Prestigio, pero pasa de 1% estricto a 1% inclusive (a8/a33 caen justo en el borde).
+  it('ningún logro individual de dinero regala, de una, más de una fracción relevante del umbral de Prestigio', () => {
     for (const a of achievements.filter((x) => x.reward.type === 'money')) {
-      expect(a.reward.amount).toBeLessThan(1_000_000_000 * 0.01);
+      expect(a.reward.amount).toBeLessThanOrEqual(1_000_000_000 * 0.01);
     }
   });
 });

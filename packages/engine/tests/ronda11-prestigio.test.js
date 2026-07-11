@@ -16,10 +16,14 @@ const data = { upgrades, automations, prestigeTree };
 const NEW_IDS = ['convoyFantasma', 'criptaColeccionista', 'estacionOrbital', 'vertederoDivino'];
 
 describe('Ronda 11 — contenedores de prestigio', () => {
-  it('hay 12 contenedores y los 4 nuevos gatean por prestigio 2/3/4/5', () => {
-    expect(containers).toHaveLength(12);
-    expect(containers.slice(8).map((c) => c.id)).toEqual(NEW_IDS);
-    expect(containers.slice(8).map((c) => c.requiresPrestigeCount)).toEqual([2, 3, 4, 5]);
+  // AJUSTE (ronda 15): la ronda 15 agrega 4 contenedores más al final (prestigio 6-9) — este
+  // test ya no asume el total de contenedores del array, solo que los 4 de ESTA ronda existen
+  // en el orden esperado y con su gate de prestigio, sin importar cuántos más se agreguen después.
+  it('los 4 contenedores de la ronda 11 existen y gatean por prestigio 2/3/4/5, en orden', () => {
+    const indices = NEW_IDS.map((id) => containers.findIndex((c) => c.id === id));
+    expect(indices.every((i) => i >= 0)).toBe(true);
+    expect(indices).toEqual([...indices].sort((a, b) => a - b)); // conservan el orden relativo
+    expect(NEW_IDS.map((id) => containers.find((c) => c.id === id).requiresPrestigeCount)).toEqual([2, 3, 4, 5]);
   });
 
   it('bloqueados sin el prestigio, desbloqueados con prestigio + contenedor anterior comprado', () => {
@@ -47,9 +51,12 @@ describe('Ronda 11 — contenedores de prestigio', () => {
     }
   });
 
-  it('las metas de Suerte de los 12 son las de las rondas 10 y 11, exactas', () => {
+  it('las metas de Suerte de los primeros 12 (rondas 1-11) siguen siendo las de las rondas 10 y 11, exactas', () => {
+    // AJUSTE (ronda 15): acotado a los primeros 12 contenedores (histórico de esta ronda) — los
+    // 4 nuevos de la ronda 15 se verifican en fase9-balance.test.js, sin pisar esta regresión.
     const neutral = freshState();
-    const rec = containers.map((c) => getRecommendedLuck(neutral, c, items, data));
+    const firstTwelve = containers.slice(0, 12);
+    const rec = firstTwelve.map((c) => getRecommendedLuck(neutral, c, items, data));
     expect(rec).toEqual([0, 8, 20, 40, 72, 120, 190, 290, 340, 420, 500, 580]);
   });
 

@@ -3092,3 +3092,497 @@ validación de save (riesgo medio) y 5 hardcodeos/edge cases (calidad).
     "deuda de ritmo" de la auditoría 11 queda cerrada.
 - **Saves**: ronda 15 → v6 (`trapsDiscarded`); ronda 16 → v7 (`itemsFoundByItem` pasa de nombre
   español a `item.id`, con migración `itemNameToId`). Dos migraciones chicas a propósito.
+
+---
+
+## Ronda 15 — Agente A (engine: efectos del robot + save v6)
+
+### Qué hice
+- **`PLAN.md` §4.7 (nueva subsección, contrato primero)**: documenté literalmente los tres
+  efectos data-driven de esta ronda antes de tocar código, tal como exige CLAUDE.md/ROADMAPv3.md
+  regla 2 — `autoDigPowerPercent`, `autoSpeedPercent` (máquinas) y `trapDiscardChancePerNivel`
+  (nodo de prestigio).
+- **`packages/engine/tests/ronda15-robot.test.js`** (nuevo, TDD): escrito y confirmado en ROJO
+  (14 tests fallando por funciones inexistentes) ANTES de implementar, con la suite existente de
+  226 en verde. Usa **data stub mínima** (`automationsStub`/`prestigeTreeStub`/`stubContainer`/
+  `itemsDataStub`), no los JSON reales — los efectos todavía no existen en `automations.json`/
+  `prestigeTree.json` (eso es tarea de los Agentes B/C de esta misma ronda). Cubre los 8 casos
+  del plan: `getAutoDigPowerMult` (1 / 1.4 / 2.2), `getEffectiveDigTime` isAuto true<false y
+  ambos iguales sin máquina (incluyendo que el default sin 4º parámetro no cambia nada),
+  `getAutoSpeedMult` (1 / 1.75) + aplicación real en `automationTick` (remaining 10→8.25 tras 1s),
+  `getAutoTrapDiscardChance` (0 / 0.34 / 0.68 / 1 clampeado), descarte end-to-end (sin castigo,
+  `trapsDiscarded` sube, `autoProcessedCount`/`trapsHit` NO suben) y su contraparte sin el nodo
+  (SÍ castiga), migración v5→v6 de `trapsDiscarded` + rechazo de `NaN`, y los 2 cond types nuevos
+  de logros.
+- **`packages/engine/src/state.js`**: `SAVE_VERSION` 5→6 (comentario `AJUSTE (ronda 15)`),
+  `trapsDiscarded: 0` en `freshState()` + typedef.
+- **`packages/engine/src/save.js`**: `trapsDiscarded: 'number'` en `REQUIRED_FIELDS` (cubierto
+  gratis por el loop de finitud de la auditoría post-ronda 14 — rechaza NaN/Infinity sin código
+  nuevo); bloque `migrate()` v5→v6 que rellena `trapsDiscarded: 0` en saves viejos.
+- **`packages/engine/src/economy.js`**: 3 getters nuevos —`getAutoDigPowerMult`,
+  `getAutoSpeedMult` (mismo patrón aditivo sobre base 1 que el resto de getters de máquinas),
+  `getAutoTrapDiscardChance` (mismo patrón que los nodos `*PerNivel` de prestigio, clampeado a 1).
+  `getDigRate`/`getEffectiveDigTime` ganan un 4º parámetro `isAuto = false`: con `true`, la
+  Fuerza efectiva se multiplica por `getAutoDigPowerMult`. Firma retro-compatible — ningún
+  llamador existente (UI, resto de la suite) pasa el 4º parámetro y ve el mismo comportamiento.
+- **`packages/engine/src/systems/automation.js`**: `automationTick` — el decremento de
+  `slot.remaining` ahora multiplica por `getAutoSpeedMult` (aplica también a slots ya en curso,
+  tal como pide el contrato); al completarse un slot con resultado trampa, si
+  `random() < getAutoTrapDiscardChance` se descarta (`registerContainerDig` + `trapsDiscarded++`)
+  en vez de `applyContainerResult` — sin castigo ni loot, cuenta para el nivel del contenedor,
+  no cuenta como procesado. El llenado de slots desde la cola ahora pide
+  `getEffectiveDigTime(state, container, data, true)` (antes sin el 4º parámetro).
+- **`packages/engine/src/systems/achievements.js`**: 2 `CONDITION_EVALUATORS` nuevos —
+  `trapsDiscardedAtLeast`, `containerOwnedAtLeast` (mismo patrón genérico que los existentes,
+  ningún logro hardcodeado en el engine).
+- **`packages/engine/src/index.js`**: el barrel usa exports nombrados explícitos (no `export *`),
+  así que agregué `getAutoDigPowerMult`/`getAutoSpeedMult`/`getAutoTrapDiscardChance` a la lista
+  reexportada desde `economy.js` — sin esto, B/C/D no podrían importarlos desde `@dumpster/engine`.
+
+### Decisiones (`// AJUSTE:` en el código, resumidas acá)
+```
+// AJUSTE (ronda 15): SAVE_VERSION 5->6 por trapsDiscarded (contador de contenedores con trampa
+// descartados por el robot vía el nodo de prestigio "Escáner de Trampas").
+// AJUSTE (ronda 15): isAuto=false por default en getDigRate/getEffectiveDigTime — la Fuerza extra
+// del robot (getAutoDigPowerMult) NUNCA afecta el escarbado manual, solo automationTick la pasa
+// en true.
+// Ronda 15 (PLAN.md §4.7): el Escáner de Trampas descarta el contenedor trampeado — sin castigo
+// ni loot; el contenedor ya pagado se pierde y el escarbado cuenta para su nivel (registerContainerDig
+// se llama igual que en el camino normal, para no romper el progreso de nivel del contenedor).
+```
+
+### Verificado
+- `npm test` → **242/242 verdes** (228 previos de la suite completa + 14 nuevos de
+  `ronda15-robot.test.js`; los 14 nuevos confirmados en ROJO antes de implementar, con los 228
+  existentes ya verdes en ese mismo punto — TDD real, no solo aparente).
+- `npm run test:e2e` → **43/43 verdes** (nada de UI/data real tocado en esta fase; el 4º parámetro
+  opcional de `getDigRate`/`getEffectiveDigTime` no afecta a ningún llamador existente).
+- `node --check` sobre los 8 archivos tocados/nuevos → sin errores de sintaxis.
+- `grep` de `console.log`/`// TODO` sobre `packages/engine/src` y el test nuevo → 0 resultados.
+- `git status --porcelain` limpio tras el commit (solo quedó el propio commit en la rama).
+
+### Qué necesita saber el Agente B (data: contenedores + ítems)
+- No toqué `apps/game/src/data/*.json` — los 3 efectos nuevos existen en el engine pero **ningún
+  JSON real los usa todavía**. Los stubs de mi test (`automationsStub`/`prestigeTreeStub` en
+  `ronda15-robot.test.js`) muestran la forma exacta esperada: `{ type: 'autoDigPowerPercent',
+  percent }`, `{ type: 'autoSpeedPercent', percent }`, `{ type: 'trapDiscardChancePerNivel',
+  percentPerNivel }`.
+- `SAVE_VERSION` ya está en 6. Si tu ronda toca `containers.json` (4 contenedores nuevos), no hace
+  falta que bumpees el esquema de guardado por eso — solo agregás entradas al array, el `save.js`
+  no valida contra una lista fija de ids de contenedor (ver `sanitizeContainerRefs`, que ya
+  descarta referencias huérfanas de forma genérica).
+
+### Qué necesita saber el Agente C (data: máquinas del robot + nodo Escáner + logros)
+- Las funciones del engine ya están listas y exportadas desde `@dumpster/engine`:
+  `getAutoDigPowerMult(state, data)`, `getAutoSpeedMult(state, data)`,
+  `getAutoTrapDiscardChance(state, data)`. Agregá las máquinas nuevas a `automations.json` con
+  `effects: [{ type: 'autoDigPowerPercent', percent: X }]` / `autoSpeedPercent`, y el nodo
+  "Escáner de Trampas" a `prestigeTree.json` con `effects: [{ type: 'trapDiscardChancePerNivel',
+  percentPerNivel: X }]` — el engine ya sabe leerlos sin más cambios.
+- Los 2 cond types nuevos de logros (`trapsDiscardedAtLeast`, `containerOwnedAtLeast`) ya están
+  en `CONDITION_EVALUATORS`. `trapsDiscardedAtLeast` lee `cond.value` contra
+  `state.trapsDiscarded`; `containerOwnedAtLeast` lee `{ containerId, value }` contra
+  `state.ownedContainers[containerId]`.
+- `state.trapsDiscarded` NO cuenta para `autoProcessedCountAtLeast` (a26 y el logro nuevo
+  equivalente si lo agregás) — un descarte no es un procesamiento exitoso, tal como pide el plan.
+
+### Qué necesita saber el Agente D (UI + e2e)
+- `state.trapsDiscarded` es un campo nuevo del estado — si agregás UI que lo muestre (contador en
+  Automatización o en el árbol de prestigio junto al nodo Escáner), leelo directo del store, no lo
+  recalcules.
+- `getAutoDigPowerMult`/`getAutoSpeedMult`/`getAutoTrapDiscardChance` están exportados desde
+  `@dumpster/engine` por si la UI quiere mostrar "Fuerza del robot: +40%" o similar en
+  AutomationView/PrestigeView — no reimplementes la suma de `effects` en la UI.
+- Ningún texto renderizado cambió en esta fase (no toqué `apps/game/src/ui`), por eso los 43 e2e
+  siguen pasando sin tocar specs.
+
+### Estado del DoD (Agente A)
+```
+✅ npm test                    → 242/242 verdes (228 previos + 14 nuevos, RED confirmado antes)
+✅ npm run test:e2e            → 43/43 verdes (nada de UI cambió)
+✅ node --check sobre los 8 archivos tocados/nuevos → sin errores
+✅ Cero console.log / // TODO en el código nuevo
+✅ PLAN.md §4.7 escrito ANTES de implementar (contrato primero, regla 2 de ROADMAPv3.md)
+✅ git add -A && commit        → 9b1ca62, rama feat/contenido-ronda15
+✅ Handoff escrito (este bloque)
+```
+
+## Ronda 15 — Agente B (data: 4 contenedores de prestigio 6-9 + 28 ítems + íconos)
+
+### Qué hice
+- **`apps/game/src/data/containers.json`**: 4 entradas nuevas al final del array —
+  `chatarreriaTitanes` (Prestigio 6), `naufragioTemporal` (Prestigio 7), `archivoMultiverso`
+  (Prestigio 8), `vertederoBigBang` (Prestigio 9) — con los valores exactos de la tabla de
+  ROADMAPv3.md §15.B1 (costo ×15 por tier, resistencia/trampa/digTime continuando la progresión
+  de los tiers 9-12).
+- **`apps/game/src/data/items.json`**: 4 pools nuevos (7 ítems c/u, 28 total) bajo `containers`,
+  uno por cada contenedor nuevo, cubriendo TODAS las categorías que declara cada contenedor
+  (regla dura: pool filtrado vacío crashea `rollItem`). Validado con el one-liner de Node del
+  plan: `OK 16 contenedores`.
+- **`apps/game/src/icons/icons.js`**: 32 claves nuevas (4 contenedores + 28 ítems). De esas, 19
+  son shapes 100% nuevas (`junkyard`, `shipwreck`, `archive`, `bigbang`, `rivetColossal`,
+  `chainLink`, `anvilTitan`, `pistonSeismic`, `figurehead`, `hourglass`, `anchor`, `helm`,
+  `musicScore`, `stardust`, `voidBubble`, `echoWave`, `atomPrimordial`, `sparkGenesis`,
+  `relicDayzero`) y 13 reusan shapes existentes con `// DECISIÓN:` documentando el reuso (mismo
+  patrón que ya usaba el archivo — ej. `gear-colossus`→`gear`, `core-starforge`→`fusionCore`,
+  `chronometer-eternal`→`watch`). Verificado con script Node que las 32 claves nuevas de la data
+  resuelven a un ícono real (no caen en el fallback `artifact`). Cero emojis.
+- **`PLAN.md` §2.6**: agregada la tabla de los 4 contenedores nuevos (costo, categorías, prob.
+  de trampa, prestigio requerido) y la Suerte recomendada calibrada, documento maestro primero.
+
+### Decisiones (`// AJUSTE:` en el código, resumidas acá)
+```
+// AJUSTE (ronda 15, packages/engine/src/economy.js): MAX_LUCK_SEARCH de getRecommendedLuck
+// sube de 800 a 1500. Con el escalado ×15 de costo/trampa de los 4 contenedores nuevos, la
+// Suerte recomendada real superaba el tope viejo (búsqueda no encontraba solución <= 800 para
+// 3 de los 4 contenedores). Mismo tipo de ajuste que ya hicieron las rondas 10/11 (350->650->800)
+// al agregar tiers — es un límite de búsqueda del algoritmo, no una fórmula de PLAN.md.
+//
+// AJUSTE (ronda 15, apps/game/src/data/items.json): valorBase de los 28 ítems nuevos NO es un
+// escalado lineal simple (×15) del tier anterior — se recalibró con búsqueda binaria (mismo
+// método que el script de la ronda 10) para que la Suerte recomendada quedara EN RANGO
+// alcanzable (<1500) y CRECIENTE por tier: 651 (chatarreriaTitanes) / 740 (naufragioTemporal) /
+// 831 (archivoMultiverso) / 920 (vertederoBigBang), continuando la progresión ~15%/tier de
+// 420->500->580 de la ronda 10/11. Un escalado ×15 ingenuo dejaba 3 de los 4 contenedores
+// nunca-rentables dentro de cualquier Suerte alcanzable (el costo escala ×15 pero el ítem
+// promedio necesitaba un factor distinto por tier para no romper la curva de riesgo/recompensa).
+```
+
+### Tests existentes que hardcodeaban conteos/valores viejos (arreglados para derivar de la data)
+- `packages/engine/tests/economy.test.js`: "los 12 contenedores tienen los precios fijos" →
+  acotado a `containers.slice(0, 12)` (regresión histórica intacta) + test nuevo que verifica
+  que los contenedores agregados después del tier 12 mantienen costos crecientes (ratio 10x-16x),
+  sin hardcodear los valores nuevos. El test de `getDigRate` con Fuerza vs. resistencia máxima
+  ahora deriva los niveles de Fuerza necesarios de `container.resistencia` en vez de usar niveles
+  fijos (220/1200) calculados para la resistencia vieja (29) — con la resistencia nueva (88 de
+  `vertederoBigBang`) esos niveles ya no alcanzaban el clamp esperado.
+- `packages/engine/tests/fase9-balance.test.js`: tope "alcanzable" de Suerte recomendada
+  650→1000; target exacto de Suerte separado en dos tests (primeros 12 = regresión histórica,
+  4 nuevos = target calibrado en esta ronda); tope de `probTrampaBase` 40%→44% (vertederoBigBang
+  sube a 44% a propósito, documentado en ROADMAPv3.md).
+- `packages/engine/tests/ronda11-prestigio.test.js`: el test que asumía `containers` tiene
+  longitud exacta 12 ahora busca los 4 ids de la ronda 11 por `findIndex` en vez de asumir
+  posición fija — sobrevive a que se sigan agregando contenedores. La tabla exacta de Suerte
+  recomendada quedó acotada a `containers.slice(0, 12)`.
+
+### Verificado
+- `node` (validación B2): `OK 16 contenedores`.
+- `node` (validación de íconos): las 32 claves nuevas de containers.json/items.json resuelven a
+  un ícono real vía `hasIcon()` — 0 faltantes.
+- `npm test` → **260/260 verdes** (245 previos del Agente A + 15 nuevos/actualizados de esta
+  ronda entre los 3 archivos de test tocados).
+- `npm run test:e2e` → **43/43 verdes** (un fallo de timeout de teardown de browser en
+  `ronda4-regression.spec.js` al correr la suite completa la primera vez resultó flaky — reintenté
+  ese spec solo y pasó 7/7; corrí la suite completa de nuevo y dio 43/43 limpio).
+- Manual con Playwright headless contra `npm run dev` (seed vía `addInitScript` +
+  `serializeState(freshState())` mutado, patrón de `ronda14-regression.spec.js`): con
+  `prestigeCount: 5`, la Tienda muestra "Chatarrería de Titanes" con el texto de bloqueo
+  "Prestigio 6" y "Vertedero del Big Bang" (todos los contenedores nuevos aparecen, ninguno
+  crashea el render). El Índice lista los 4 tabs nuevos con sus pools en "???" (nada encontrado
+  aún). A 375px el grid del Índice no desborda el viewport (343px de ancho medido contra 375px).
+  Truco usado para evitar la avalancha de modales de logro al setear `money`/`prestigeCount`
+  altos: `state.achievementsUnlocked = achievements.map(a => a.id)` en el seed (todos
+  pre-desbloqueados, cero toasts/modales que bloqueen los clicks del test).
+- `grep` de emojis y `console.log`/`// TODO` sobre los archivos tocados → 0 resultados.
+
+### Qué necesita saber el Agente C (data: máquinas del robot + nodo Escáner + logros)
+- `containers.json` tiene ahora 16 entradas; `items.json` tiene 16 pools. Ningún test de la
+  suite asume ya un conteo fijo de contenedores — los que agregues (máquinas/nodo/logros) no
+  deberían necesitar tocar `containers.json`/`items.json` de nuevo.
+- Si agregás más contenedores/ítems en el futuro y algún test de balance vuelve a fallar por
+  "Suerte recomendada fuera de rango", el patrón para calibrar `valorBase` es: escribir un
+  script Node descartable que haga búsqueda binaria de un factor de escala sobre el pool del
+  contenedor, usando la función real exportada `getRecommendedLuck` (no reimplementarla) — no
+  lo dejé versionado a propósito (era de una sola vez), pero el método queda documentado arriba
+  por si hace falta repetirlo.
+- `a34` (Ojo Biónico, `trapsDiscardedAtLeast`) y `a35` (Basura Primordial,
+  `containerOwnedAtLeast` sobre `vertederoBigBang`) del plan de C ya tienen su contenedor
+  (`vertederoBigBang` existe en `containers.json`) y su ícono (`dump-bigbang` → shape `bigbang`)
+  listos para usarse sin cambios adicionales.
+- El ícono `scanner-trap` que necesita C (nodo Escáner + logro a34) **no lo creé yo** — queda
+  pendiente para C, tal como dice el plan (C1/C2/C5).
+
+### Estado del DoD (Agente B)
+```
+✅ node (validación B2)        → OK 16 contenedores
+✅ npm test                    → 260/260 verdes
+✅ npm run test:e2e            → 43/43 verdes
+✅ npm run dev + jugar (headless Playwright) → tienda con los 4 nuevos bloqueados/desbloqueados
+   según prestigio, Índice con sus pools en "???", 375px sin overflow
+✅ git commit                  → da61049, rama feat/contenido-ronda15
+✅ Handoff escrito (este bloque)
+```
+
+---
+
+## Agente C (ronda 15 — máquinas del robot + nodo Escáner + rebalanceo de logros)
+
+**Qué hice:**
+- `apps/game/src/data/automations.json`: 4 máquinas nuevas insertadas manteniendo el array
+  ordenado por `cost` ascendente — `servobrazosReforzados` ($150.000, entre Cinta Transportadora
+  y Planta de Reciclaje), `chipOverclock` ($800.000, entre Planta de Reciclaje y Centro de
+  Subastas), `servobrazosTitanio` ($25.000.000) y `nucleoCuantico` ($120.000.000), estas dos
+  últimas al final tras Red de Drones. Los cuatro usan los efectos `autoDigPowerPercent`/
+  `autoSpeedPercent` que dejó el Agente A en `economy.js`/`systems/automation.js`.
+- `apps/game/src/data/prestigeTree.json`: nodo `escanerTrampas` (Escáner de Trampas) al final,
+  `costoBase: 8`, `factorCrecimiento: 2.2`, `nivelMaximo: 3` (≈65 Llaves los 3 niveles — el nodo
+  más caro después de completar el árbol entero, por pedido explícito del usuario), colgando de
+  `instintoCarronero`. Efecto `trapDiscardChancePerNivel: 0.34`.
+- `apps/game/src/data/achievements.json`: reescritura completa del array — rebalanceo de
+  recompensas de `a1`-`a27` tal cual la tabla del roadmap (dinero baja en los hitos tempranos que
+  antes castigaban el esfuerzo, sube fuerte en los hitos de esfuerzo real y en las Llaves de
+  hitos duros) más 8 logros nuevos `a28`-`a35` (Billonario Galáctico, Fortuna Cósmica, Cincuenta
+  Mil Objetos, Ciudadano del Multiverso, Cicatrices de Guerra, Ejército de Robots, Ojo Biónico,
+  Basura Primordial). `a34`/`a35` usan los cond types `trapsDiscardedAtLeast`/
+  `containerOwnedAtLeast` que el Agente A ya había dejado en `CONDITION_EVALUATORS` — verifiqué
+  que existían antes de commitear (riesgo R1 del roadmap) para no crashear `evaluateCondition`.
+- `apps/game/src/icons/icons.js`: 5 claves nuevas en `ICON_MAP` (`servo-arm`,
+  `servo-arm-titanium`, `chip-overclock`, `core-quantum`, `scanner-trap`), todas reusando formas
+  (`SHAPES`) ya existentes en el archivo con su comentario `// DECISIÓN:` — `steelArm` (brazo
+  mecánico, ya usado por el nodo Brazos de Acero), `quantumChip` (ya usado por el ítem
+  quantum-chip), `olympusCircuit` (núcleo con líneas radiales) y `radar` (ya usado por Detector de
+  Metales/Instinto de Carroñero). Cero shapes nuevas: el vocabulario existente ya cubría el
+  concepto de cada clave.
+- `PLAN.md`: actualicé §2.7 (lista de automatización, ahora 12 ítems con las 4 máquinas nuevas en
+  su posición real) y §2.8 (mención del nodo Escáner de Trampas, árbol pasa de "mínimo 12" a "13
+  nodos"). No toqué §4.7 (las fórmulas del robot) porque el Agente A ya las había documentado ahí.
+- `packages/engine/tests/fase9-balance.test.js`: el rebalanceo de logros rompió 2 tests de Fase 9
+  que asumían el alcance viejo del juego (antes de las rondas 10-15, cuando el umbral de Prestigio
+  de $1.000M todavía era representativo del final del juego). Los arreglé sin parchear el número
+  a ciegas:
+  - "suma de Llaves de logros comparable a una tanda de Prestigio" comparaba contra un tope fijo
+    de 60 Llaves. Con 35 logros el total es 122. Verifiqué que el árbol de Prestigio completo
+    (13 nodos) cuesta 1.588 Llaves (confirma el "1.523 llaves" que mencionaba el roadmap antes de
+    sumar `escanerTrampas`, +65). Cambié el test para que derive el tope de la data real: la suma
+    de Llaves de logros no puede superar el 15% del costo total del árbol (122/1588 ≈ 7.7%,
+    cómodo). Así el test vuelve a ser una salvaguarda real en vez de un número mágico desactualizado.
+  - "ningún logro individual de dinero regala más de 1% del umbral de Prestigio" usaba
+    `toBeLessThan` estricto; `a8`/`a33` ahora valen exactamente `10.000.000` = 1% de $1.000M, el
+    borde exacto que pide el nuevo principio de balance del roadmap ("los hitos de dinero pagan
+    ~10% de SU PROPIO umbral"). Cambié a `toBeLessThanOrEqual` — el techo global sigue existiendo
+    (ningún logro es desproporcionado), solo dejó de ser una desigualdad estricta que un valor
+    intencional en el borde iba a romper para siempre.
+
+**Decisiones (`// AJUSTE:` en el código, resumidas acá):**
+```
+// AJUSTE: los 2 tests de fase9-balance.test.js que fallaron tras el rebalanceo de logros medían
+// contra supuestos de alcance de Fase 9 (umbral de Prestigio $1.000M como "final del juego"), que
+// ronda 10-15 dejaron obsoletos (el juego ahora llega a Prestigio 9 y $1e18 en contenedores). No
+// bajé el rebalanceo de logros para hacer pasar los tests viejos: actualicé los tests para que
+// deriven sus topes de la data real (costo total del árbol de Prestigio) en vez de una constante
+// fija, siguiendo el principio "no hardcodear/no aproximar" de CLAUDE.md.
+```
+
+**Verificado:**
+- `npm test`: **260/260 verde** (226 previos de A/B + los que agregó A en ronda15-robot.test.js +
+  los 2 de fase9-balance.test.js reescritos).
+- `npm run test:e2e`: **43/43 verde** (nada de UI se tocó en este bloque).
+- `node --check apps/game/src/icons/icons.js`: sin errores de sintaxis.
+- Validación de orden: `automations.json` queda ordenado 50 → 300 → 800 → 2000 → 45000 → 150000
+  (servobrazosReforzados) → 220000 → 800000 (chipOverclock) → 1600000 → 9000000 → 25000000
+  (servobrazosTitanio) → 120000000 (nucleoCuantico) — costos estrictamente ascendentes.
+- `prestigeTree.json` tiene 13 nodos, `escanerTrampas` al final con `requires: ["instintoCarronero"]`.
+- `achievements.json` tiene 35 entradas (`a1`-`a35`), sin duplicar `id`.
+- Verificación manual con un script descartable de Playwright (seedeando `localStorage` con
+  dinero/llaves/prestigio altos y recargando): pestaña Automatización muestra las 4 máquinas
+  nuevas con sus nombres reales, pestaña Prestigio muestra "Escáner de Trampas", pestaña Logros
+  muestra los nuevos ids — cero errores de consola. Script borrado tras la verificación (no quedó
+  en el repo).
+- Grep de emojis (rango Unicode `\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`) sobre los 4 JSON tocados
+  e `icons.js`: **0 resultados**. Grep de `console.log`/`// TODO`: **0 resultados**.
+
+**Qué necesita saber el Agente D:**
+- Las 4 máquinas nuevas ya tienen `icon` mapeado en `icons.js` — `ShopView`/`AutomationView` deberían
+  renderizarlas sin cambios de código (mismo patrón que las 8 automatizaciones previas).
+- El nodo `escanerTrampas` sigue el mismo esquema `effects: [{type, ...}]` que el resto del árbol
+  de prestigio — `PrestigeView.js` (agrupación visual en 5 ramas del Agente 3) probablemente
+  necesite que alguien lo agregue a `TREE_LAYOUT` para que aparezca en su rama correcta (cuelga de
+  `instintoCarronero`, que a su vez cuelga de `suerteAncestral`); si `TREE_LAYOUT` no lo tiene
+  mapeado, revisar cómo se comporta el fallback (nodo huérfano vs. crash) — no lo miré porque
+  `PrestigeView.js` es UI, fuera de mi bloque.
+- `a34`/`a35` (Ojo Biónico, Basura Primordial) dependen de `trapsDiscarded`/`ownedContainers` que
+  ya expone el `GameState` (el Agente A los agregó/ya existían) — no debería requerir cambios de UI
+  más allá de que la vista de Logros ya itera `achievements.json` genéricamente.
+- El toast/modal de descarte de trampa (R5 del roadmap: "no debe dispararse al bootear con un save
+  que ya tenía `trapsDiscarded > 0`") es tarea de UI del Agente D — no toqué `UIManager.js` ni
+  `store.js`.
+- Verificar a 375px que la tarjeta del nodo Escáner de Trampas (nivel máx. 3, costo alto) no
+  rompe el layout de `.prestige-tree` — no lo probé a ese ancho específico, solo confirmé que
+  aparece en el DOM.
+
+**Estado del DoD:**
+```
+[x] npm test → 260/260 verde
+[x] npm run test:e2e → 43/43 verde
+[x] npm run dev + jugar → las 4 máquinas aparecen en Automatización con su costo real; el nodo
+    Escáner aparece en Prestigio colgando de Instinto de Carroñero (verificado con Playwright,
+    save seedeado con dinero/llaves/prestigio altos)
+[x] git commit → "feat(data): ronda 15 — máquinas del robot, nodo Escáner de Trampas y
+    rebalanceo de logros (a1-a35)" (e74d3ef)
+```
+
+## Ronda 15 — Agente D (UI + e2e)
+
+### Qué hice
+- **`apps/game/src/i18n/es.js` / `en.js`**: clave nueva `automation.trapDiscarded` (mismo valor
+  español en ambos, sección AutomationView — la traducción real es la ronda 16), tal como pide
+  D1.
+- **`apps/game/src/ui/UIManager.js`**: en `render(state)`, guardo `this.lastTrapsDiscarded` y
+  disparo `this.toast.push(t('automation.trapDiscarded'))` solo cuando `state.trapsDiscarded`
+  sube respecto del render anterior. En el primer render (`this.lastTrapsDiscarded === undefined`)
+  solo guardo el valor sin mostrar toast — evita el bug R5 del roadmap (un save que ya traía
+  `trapsDiscarded > 0` no debe disparar el toast al bootear). La UI solo LEE el contador, cero
+  economía nueva en la capa de presentación.
+- **`apps/game/e2e/ronda15-contenido.spec.js`** (nuevo, 4 tests, patrón de seed de
+  `ronda14-regression.spec.js`):
+  1. Contenedores por prestigio: `prestigeCount: 6` + los 12 contenedores previos (ids derivados
+     de `containers.json`, nunca hardcodeados por posición — regla R3) poseídos → "Chatarrería de
+     Titanes" comprable, "Naufragio Temporal" bloqueado con `Se desbloquea con el Prestigio 7.`.
+  2. Comprar Servobrazos Reforzados desde Automatización → badge "Activo" + `#money` cambia
+     (polling con `not.toHaveText`, regla 8).
+  3. `prestigeKeys: 70` + los 3 nodos previos de la rama (`capitalInicial`/`suerteAncestral`/
+     `instintoCarronero`) ya a nivel 1 → comprar el Escáner de Trampas 3 veces → badge "Máximo" y
+     `#keys-value` termina en "5" (70 − 65).
+  4. `totalMoneyEarned: 1e12 - 1` con el logro `a28` (id resuelto dinámicamente desde
+     `achievements.json` por `cond.type`/`cond.value`, no hardcodeado) excluido de
+     `achievementsUnlocked` sembrado + un escarbado gratis de `tachoVereda` → celebración con
+     "Billonario Galáctico" visible.
+  - DECISIÓN (ya prevista por D2 del roadmap): el descarte de trampas del Escáner NO tiene e2e
+    propio — RNG no determinista en el navegador. Cubierto por
+    `packages/engine/tests/ronda15-robot.test.js` caso 5 (Agente A) y por la verificación manual
+    del Agente E.
+- No hizo falta tocar `PrestigeView.js`: desde la Fase 3/Agente 8 el árbol de prestigio deriva su
+  layout dinámicamente de `requires` (`buildTreeLayout`) — el nodo `escanerTrampas` que agregó el
+  Agente C aparece solo, sin necesitar un `TREE_LAYOUT` estático (la preocupación que dejó C en su
+  handoff ya no aplica; el archivo cambió de forma en una fase anterior).
+- No hizo falta tocar `ShopView.js`/`AutomationView.js`: ambas ya leían la data genéricamente
+  (`allContainers`/`data.automations`), así que los 4 contenedores y las 4 máquinas nuevas
+  renderizan sin cambios de código, tal como esperaban los handoffs de B y C.
+
+### Verificado
+- `npm test` → **260/260 verdes** (nada de `packages/engine` tocado en este bloque).
+- `npm run test:e2e` → **47/47 verdes** (43 previos + los 4 nuevos de `ronda15-contenido.spec.js`).
+- `node --check` sobre los 4 archivos tocados/nuevos → sin errores de sintaxis.
+- Verificación manual con un script descartable de Playwright (seed con dinero/llaves/prestigio
+  altos, los 16 contenedores poseídos, todos los logros pre-desbloqueados): capturas a 375px de
+  Contenedores/Automatización/Prestigio — cero errores de consola, ninguna tarjeta desborda el
+  viewport (incluida `vertederoBigBang` con `slots: 8`, riesgo R4 del roadmap), el árbol de
+  prestigio cae a la lista simple de una columna sin romperse. Script y capturas borrados tras la
+  verificación (no quedaron en el repo).
+- `grep` de emojis (rango Unicode `\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`) y de
+  `console.log`/`// TODO` sobre los 4 archivos tocados → **0 resultados**.
+- `git status --porcelain` tras el commit: limpio, ningún archivo suelto del script de
+  verificación quedó trackeado.
+
+### Qué necesita saber el Agente E (auditor)
+- El toast de descarte (`UIManager.js`) es la única lógica nueva de esta fase fuera de datos i18n
+  y el spec de e2e — vale la pena que la auditoría confirme especialmente el caso de saves viejos
+  con `trapsDiscarded > 0` ya seedeado (R5), aunque no tiene e2e por el motivo de RNG explicado
+  arriba.
+- Checklist manual pendiente para E (D3/roadmap 15.E4): comprar las 4 máquinas y ver el robot
+  acelerar de verdad (tiempos de procesamiento más cortos), prestigiar con el nodo Escáner
+  comprado y ver el toast de descarte aparecer en un contenedor de trampa alta (no forzable
+  determinísticamente, requiere jugar varias rondas o forzar RNG a mano).
+- Formato de números grandes (riesgo R8 del roadmap): `formatMoney`/`formatNumber` ya cubren
+  hasta cuatrillones (`Qa`, ver Agente 1) — los $1e18 de `vertederoBigBang` se vieron en pantalla
+  como `$1.00Qa` en la verificación manual, sin notación científica cruda.
+
+### Estado del DoD (Agente D)
+```
+[x] npm test && npm run test:e2e → todo verde; e2e = 47 (43 + 4)
+[x] git commit → 393722a, rama feat/contenido-ronda15,
+    "test(e2e): ronda 15 — contenido nuevo cubierto + toast de descarte"
+[x] Handoff escrito (este bloque)
+```
+
+## Ronda 15 — Agente E (auditor Verif&Audit.md)
+
+**Rol:** auditoría adversarial del diff completo de la ronda (`git diff main...HEAD`, commits de
+A-D: `9b1ca62`..`df54ddd`) siguiendo Verif&Audit.md — OWASP/XSS vía data nueva, NaN/Infinity,
+pools vacíos, límites, hardcoding, deuda — más la checklist manual de 15.E4 y los riesgos R1-R8.
+
+### 🔴 CRÍTICO / ALTO RIESGO
+Ninguno. La superficie atacable real (el save) quedó bien cubierta: `trapsDiscarded` entra a
+`REQUIRED_FIELDS` como `number` y el loop genérico de finitud de la auditoría post-14 rechaza
+NaN/Infinity gratis; la migración v5→v6 rellena `0` y un save v6 sin el campo se rechaza (no
+hay camino que lo deje `undefined`). Cero sinks nuevos state→innerHTML: el toast usa `t()` con
+clave estática y `Toast.push` renderiza con `textContent`. Importmap/CSP intactos.
+
+### 🟡 CORREGIDO — la tasa offline ignoraba las máquinas del robot (`fd2a375`)
+`automationTick` procesa con `getEffectiveDigTime(..., isAuto=true)` y acelera el decremento con
+`getAutoSpeedMult`, pero `estimateAutomationRatePerSecond` (systems/offline.js) seguía estimando
+con el tiempo efectivo MANUAL y velocidad 1: las 4 máquinas nuevas (hasta $145M en total) no
+aportaban NADA al progreso offline — el robot "trabajaba más lento" con el juego cerrado que
+abierto, contradiciendo §4.5 (la estimación debe reflejar la tasa automática real) y §4.7.
+Fix en el engine (isAuto=true + `× getAutoSpeedMult`), 3 tests de regresión en
+`ronda15-robot.test.js` (RED confirmado antes del fix: la tasa daba 0.97 ignorando máquinas en
+vez de 1.2125), contrato actualizado en PLAN.md §4.7 (documento maestro primero). El descarte
+del Escáner NO necesita cambio offline: `expectedContainerValue` ya modela la trampa como
+"cero ganancia sin castigo", que es exactamente lo que hace el descarte.
+
+### 🔵 CORREGIDO — toast de descarte tras reemplazo del state + e2e del guard R5 (`8195420`)
+- `UIManager` comparaba `trapsDiscarded` contra el render anterior sin importar si el objeto de
+  estado era OTRO: `store.actions.importSave`/`resetGame` reemplazan `state`, y un import con
+  `trapsDiscarded` mayor al de la sesión dispararía el toast sin que hubiera pasado nada. Hoy
+  `importSave` no tiene caller en la UI (el import por textarea se quitó en §11.1 y el save de
+  escritorio se resuelve ANTES de crear el store), así que era un camino latente — se endureció
+  antes de que una ronda futura lo reactive: el toast solo se evalúa entre renders del MISMO
+  objeto de estado.
+- El guard R5 ("bootear con `trapsDiscarded > 0` no dispara el toast") no tenía cobertura
+  automatizada (el Agente D descartó el e2e por el RNG del descarte, pero el caso del BOOT es
+  100% determinista): `apps/game/e2e/audit-ronda15.spec.js` lo cubre. **Verifiqué que falla con
+  el guard saboteado** — y esa verificación encontró un falso verde: `toHaveCount(0)` auto-
+  reintenta hasta cumplirse, y como el toast expira solo a los 3.8s, la assertion "esperaba" a
+  que desapareciera y pasaba igual con el bug puesto. El spec usa `count()` inmediato en un
+  momento fijado. Anotado en el napkin; **mismo patrón latente pre-existente en
+  `ronda12-regression.spec.js:83,88`** (fuera del diff de esta ronda — queda documentado acá
+  para la ronda 17 de pulido, no lo toqué).
+
+### 🔵 EVALUADO Y DECIDIDO NO TOCAR (para que nadie lo "arregle" por error)
+- `getAutoSpeedMult(state, data)` se llama por slot dentro del loop de `automationTick`
+  (podría izarse fuera): son ≤4 slots × un scan de 12 máquinas por segundo — irrelevante.
+- `trapsDiscarded` negativo pasa la validación de save: misma política pre-existente de TODOS
+  los contadores (`trapsHit`, etc.) e inofensivo (no se muestra en UI; el toast solo dispara en
+  incrementos; el logro simplemente no desbloquea).
+- Tests de balance re-anclados por B/C: revisados uno por uno — derivan topes de la data real
+  (ratio ×10-×16, 15% del costo del árbol) en vez de debilitar números a ciegas. Correcto.
+- R7: a20/a21 se endurecen solos con 16 contenedores / 12 máquinas — intencional, intacto.
+
+### ✅ Verificado
+- Data: pools de los 16 contenedores cubren TODAS sus `categorias` (R2), `valorBase` finitos y
+  positivos, sin pools huérfanos; 168 claves de ícono resuelven vía `hasIcon()` (0 en fallback);
+  35 logros con ids únicos y cond types existentes en `CONDITION_EVALUATORS` (R1); 12 máquinas
+  con costos estrictamente ascendentes; 13 nodos con `requires` válidos (`escanerTrampas` cuelga
+  de `instintoCarronero`).
+- `npm test` → **263/263 verdes** (260 de A-D + 3 de la auditoría). `npm run test:e2e` →
+  **48/48 verdes** (47 + 1 de la auditoría). `node --check` sobre los archivos tocados → ok.
+- Barridos en 0 sobre el diff: `console.log`, `// TODO`, emojis (`\x{1F300}-\x{1FAFF}`/
+  `\x{2600}-\x{27BF}`), hex sueltos.
+- Checklist manual 15.E4 (Playwright real contra `npm run dev`, scripts descartables en el
+  scratchpad de la sesión, no versionados):
+  - **El robot acelera de verdad**: slot de Depósito Abandonado avanza 4.78%/s sin máquinas y
+    17.45%/s con las 4 compradas (ratio 3.65×, teórico 3.85× = Fuerza 2.2 clampeada 0.88/0.4 ×
+    velocidad 1.75). Las 4 se compraron por UI y quedaron "Activo". Ojo: una máquina de Fuerza
+    comprada a mitad de un slot NO acorta ese slot en curso (el `totalTime` se fija al crearlo)
+    — solo los slots nuevos; la velocidad sí aplica al vuelo (así lo define §4.7).
+  - **Toast de descarte real**: con Escáner nivel 3 + robot + máquinas sobre Depósito
+    Abandonado, "El robot descartó un contenedor con trampa." apareció a los ~26s. Cero
+    errores de consola.
+  - **375px**: Tienda/Automatización/Prestigio con todo el contenido nuevo — `scrollWidth`
+    375 = `clientWidth` 375 en las tres (sin overflow), capturas revisadas. `$2e18` se muestra
+    como `$2000.00Qa` (R8: sin notación científica).
+
+### ✅ Veredicto final
+El diff de la ronda 15 es apto para mergear: sin vulnerabilidades explotables ni hardcodeo, con
+la única inconsistencia real (economía offline vs. máquinas del robot) corregida en el engine
+con regresión. Los dos commits de auditoría (`fd2a375`, `8195420`) cierran la ronda.
+
+### Estado del DoD (Agente E)
+```
+✅ npm test                    → 263/263 verdes
+✅ npm run test:e2e            → 48/48 verdes
+✅ 🔴/🟡 arreglados en commits audit: propios, con test de regresión c/u
+✅ Checklist manual 15.E4 jugando (aceleración medida, toast visto, 375px sin overflow)
+✅ Handoff escrito (este bloque)
+✅ Push de feat/contenido-ronda15 + link de PR para el usuario
+```

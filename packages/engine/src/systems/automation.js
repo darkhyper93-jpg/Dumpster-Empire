@@ -2,7 +2,15 @@
  * Sistema de automatización: mejoras de un solo uso, cola y procesamiento en paralelo (§2.7).
  */
 
-import { getContainerCost, getParallelAutoSlots, getQueueMax, getEffectiveDigTime } from '../economy.js';
+import {
+  getContainerCost,
+  getParallelAutoSlots,
+  getQueueMax,
+  getEffectiveDigTime,
+  getAutoSpeedMult,
+  getAutoTrapDiscardChance,
+  registerContainerDig,
+} from '../economy.js';
 import { isContainerUnlocked, rollContainerResult, applyContainerResult } from './containers.js';
 
 /**
@@ -91,7 +99,7 @@ export function automationTick(state, dtSeconds, allContainers, itemsData, data,
   const parallelSlots = getParallelAutoSlots(state, data);
   for (let i = state.autoProcessing.length - 1; i >= 0; i--) {
     const slot = state.autoProcessing[i];
-    slot.remaining -= dtSeconds;
+    slot.remaining -= dtSeconds * getAutoSpeedMult(state, data);
     if (slot.remaining <= 0) {
       const container = allContainers.find((c) => c.id === slot.containerId);
       // DECISIÓN: el containerId viene de un save (input externo). Si referencia un contenedor
@@ -100,7 +108,14 @@ export function automationTick(state, dtSeconds, allContainers, itemsData, data,
       // TypeError cada segundo y dejaba la partida inutilizable (CLAUDE.md: nada de bloqueos).
       if (container) {
         const result = rollContainerResult(state, container, true, itemsData, data, random);
-        applyContainerResult(state, container, result, true, data);
+        // Ronda 15 (PLAN.md §4.7): el Escáner de Trampas descarta el contenedor trampeado — sin
+        // castigo ni loot; el contenedor ya pagado se pierde y el escarbado cuenta para su nivel.
+        if (result.isTrap && random() < getAutoTrapDiscardChance(state, data)) {
+          registerContainerDig(state, container);
+          state.trapsDiscarded++;
+        } else {
+          applyContainerResult(state, container, result, true, data);
+        }
       }
       state.autoProcessing.splice(i, 1); // el slot se consume exista o no el contenedor
     }
@@ -112,7 +127,8 @@ export function automationTick(state, dtSeconds, allContainers, itemsData, data,
     // Mismo motivo: un id huérfano en la cola se descarta sin encolar, no tumba el tick.
     if (!container) continue;
     // PLAN.md §11.2: el ritmo real de escarbado depende de Resistencia/Fuerza, no del digTime crudo.
-    const effectiveTime = getEffectiveDigTime(state, container, data);
+    // isAuto=true (ronda 15, PLAN.md §4.7): suma la Fuerza extra de las máquinas del robot.
+    const effectiveTime = getEffectiveDigTime(state, container, data, true);
     state.autoProcessing.push({ containerId: nextId, totalTime: effectiveTime, remaining: effectiveTime });
   }
 

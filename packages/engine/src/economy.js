@@ -323,6 +323,50 @@ export function getOfflineCapSeconds(state, data) {
 }
 
 /**
+ * Multiplicador de Fuerza de Escarbado extra del robot (ronda 15, PLAN.md §4.7). Solo automatización.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getAutoDigPowerMult(state, data) {
+  let mult = 1;
+  for (const { automationId, effect } of automationEffectsOfType(data, 'autoDigPowerPercent')) {
+    if (state.automationOwned[automationId]) mult += effect.percent;
+  }
+  return mult;
+}
+
+/**
+ * Multiplicador de velocidad de procesamiento del robot (ronda 15, PLAN.md §4.7). Solo automatización.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getAutoSpeedMult(state, data) {
+  let mult = 1;
+  for (const { automationId, effect } of automationEffectsOfType(data, 'autoSpeedPercent')) {
+    if (state.automationOwned[automationId]) mult += effect.percent;
+  }
+  return mult;
+}
+
+/**
+ * Probabilidad (0..1) de que el robot descarte un contenedor cuyo roll dio trampa (ronda 15,
+ * PLAN.md §4.7). Vive en el árbol de prestigio: `automationOwned` se resetea al prestigiar y
+ * las Llaves son la moneda permanente.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getAutoTrapDiscardChance(state, data) {
+  let chance = 0;
+  for (const { nodeId, effect } of prestigeEffectsOfType(data, 'trapDiscardChancePerNivel')) {
+    chance += prestigeLevel(state, nodeId) * effect.percentPerNivel;
+  }
+  return Math.min(1, chance);
+}
+
+/**
  * Costo de un contenedor, con los descuentos de prestigio (Negociador / Portal Estable) aplicados.
  * @param {GameState} state
  * @param {Object} container
@@ -493,10 +537,13 @@ export function registerContainerDig(state, container) {
  * @param {GameState} state
  * @param {Object} container
  * @param {EngineData} data
+ * @param {boolean} [isAuto] - ronda 15 (PLAN.md §4.7): suma la Fuerza extra del robot
+ *   (getAutoDigPowerMult), solo en automatización. Default false: no cambia el comportamiento
+ *   de los llamadores existentes (escarbado manual, resto de la suite).
  * @returns {number}
  */
-export function getDigRate(state, container, data) {
-  const digPowerMult = getDigPowerMult(state, data);
+export function getDigRate(state, container, data, isAuto = false) {
+  const digPowerMult = getDigPowerMult(state, data) * (isAuto ? getAutoDigPowerMult(state, data) : 1);
   // AJUSTE (ronda 7, PLAN.md §11.2): ritmo = clamp(Fuerza/resistencia, 0.3, 1.5). Antes el
   // ritmo se topeaba en 1 (la sobre-Fuerza no daba nada) y el piso era 0.15: en la práctica
   // todos los contenedores ya dominados se sentían idénticos. Ahora superar la resistencia
@@ -511,10 +558,11 @@ export function getDigRate(state, container, data) {
  * @param {GameState} state
  * @param {Object} container
  * @param {EngineData} data
+ * @param {boolean} [isAuto] - ver getDigRate.
  * @returns {number}
  */
-export function getEffectiveDigTime(state, container, data) {
-  return container.digTime / getDigRate(state, container, data);
+export function getEffectiveDigTime(state, container, data, isAuto = false) {
+  return container.digTime / getDigRate(state, container, data, isAuto);
 }
 
 // ---------------------------------------------------------------------------
@@ -598,8 +646,10 @@ function expectedNetValueAtLuck(state, container, itemsData, data, luck) {
  * @returns {number}
  */
 export function getRecommendedLuck(state, container, itemsData, data) {
-  // AJUSTE (ronda 10/11): tope de búsqueda 800 — las metas de los contenedores de prestigio superan 500.
-  const MAX_LUCK_SEARCH = 800;
+  // AJUSTE (ronda 15): tope de búsqueda 1500 (antes 800) — los 4 contenedores nuevos de
+  // prestigio 6-9 (chatarreriaTitanes..vertederoBigBang) recomiendan hasta ~950, continuando
+  // la misma progresión de ~15% por tier que ya venía de la ronda 10/11.
+  const MAX_LUCK_SEARCH = 1500;
   const neutral = freshState();
   for (let luck = 0; luck <= MAX_LUCK_SEARCH; luck++) {
     if (expectedNetValueAtLuck(neutral, container, itemsData, data, luck) >= 0) return luck;
