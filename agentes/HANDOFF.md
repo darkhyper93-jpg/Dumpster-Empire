@@ -3840,3 +3840,87 @@ Recién ahí creé `feat/i18n-ronda16` desde `main` actualizado.
     "feat(i18n): ronda 16 — traducción completa al inglés (UI + data)"
 [x] Handoff escrito (este bloque)
 ```
+
+## Ronda 16 — Agente D: e2e de i18n + boot bilingüe
+
+### Qué hice
+- **`apps/game/index.html:44`**: `Cargando Dumpster Empire…` → `Cargando… / Loading…` (único
+  texto visible antes de que cargue el JS y aplique el idioma real).
+- **`apps/game/e2e/ronda16-i18n.spec.js`** (nuevo, 3 tests):
+  1. `test.use({ locale: 'en-US' })` (describe anidado, no pisa el `locale: 'es-ES'` global de
+     `playwright.config.js`) → partida nueva: `#title-play-btn` dice "Play", los 6 tabs dan
+     exactamente `['Dig','Containers','Automation','Achievements','Prestige','Index']`, la
+     Tienda contiene "Cost:" y NO "Costo:", y el save recién persistido en `localStorage` ya
+     trae `language:"en"` (cubre boot bilingüe end-to-end, no solo la UI).
+  2. Locale es-ES (el global): arranca en español (`Escarbar`), cambia a inglés desde el
+     `<select>` de Ajustes (con `blur()` antes de despachar — R-16.4), verifica el cambio EN
+     VIVO (`Dig`, `<html lang="en">`) sin recargar, y que sobrevive a un `reload()`.
+  3. Migración v6→v7: arma a mano (vía `freshState()` + overrides, no JSON literal manual —
+     ver AJUSTE abajo) un save con `saveVersion: 6` y `itemsFoundByItem.tachoVereda` indexado
+     por el NOMBRE español real (`'Lata aplastada'`, de `items.json`), lo siembra con
+     `addInitScript`, bootea, y verifica en el Índice la tarjeta revelada con
+     "Encontrado: 3". Dispara una acción inocua (`toggle-sound`) para forzar el próximo
+     `persist()` y verifica el `localStorage` migrado: `itemsFoundByItem.tachoVereda['can-crushed'] === 3`
+     y la clave española ya no existe.
+- No toqué código de plomería/traducción (A/B/C ya cerraron esas tareas) ni `es.js`/`en.js`/
+  `data-en.js`/`playwright.config.js`.
+
+### AJUSTE (decisión no trivial)
+- El roadmap sugiere armar el save v6 de la tarea 3 como "JSON literal a mano". En la práctica
+  se construye desde `freshState()` (que ya trae el esquema v7 completo) + overrides de
+  `saveVersion` e `itemsFoundByItem`, serializado con `JSON.stringify` — no un objeto tipeado
+  a mano campo por campo. Motivo: `REQUIRED_FIELDS` de `save.js` exige TODOS los campos del
+  esquema actual con su tipo (incluida finitud), y `migrate()` decide qué backfillear
+  exclusivamente por `saveVersion` (no por ausencia de campo) — omitir a mano un campo v6 real
+  (p. ej. `trapsDiscarded`) rechaza el save entero (`validateSave` → `deserializeState` →
+  `store.loadState()` cae a `freshState()` y el test de migración quedaría probando la nada).
+  Partir de `freshState()` da un save "v6" válido en todo lo demás y deja que la migración v6→v7
+  sea la única diferencia real bajo prueba.
+- Descubierto en la primera corrida local: intenté `delete raw.trapsDiscarded` pensando que un
+  v6 "real" de antes de la ronda 15 no lo tendría — pero un save YA etiquetado `saveVersion: 6`
+  SÍ pasó por la migración v5→v6 que agrega ese campo; borrarlo rompe la validación. Se sacó el
+  `delete` antes de commitear.
+
+### Verificado
+- `npm test` → **285/285 verdes** (sin tests nuevos de Vitest — esta tarea es 100% e2e).
+- `npx playwright test --list` → **51 tests en 14 archivos** (48 previos de B/C + 3 nuevos; el
+  roadmap anticipaba "47+3=50" pero el conteo real tras B/C ya era 48 — conteos indicativos
+  per PLAN.md §0, no se hardcodeó ninguno en el spec).
+- `npx playwright test --workers=1` (dos corridas completas) → **51/51 verdes** en ambas.
+- La corrida por defecto (paralela) tiró 1 falla intermitente en
+  `ronda15-contenido.spec.js:128` (test 4, logro "Billonario Galáctico"), reproducido con el
+  mismo patrón que ya documentó el Agente C para `ronda14-regression.spec.js`: corrido en
+  aislamiento (`npx playwright test apps/game/e2e/ronda15-contenido.spec.js --workers=1`) da
+  **4/4 verdes** — flake de contención entre workers, preexistente, no relacionado con este
+  diff (2 archivos tocados: 1 spec nuevo + 1 línea de texto en `index.html`).
+- `node --check` sobre el spec nuevo → sin errores.
+- Barridos sobre el diff: `console.log`/`// TODO` → 0; emojis → 0 (texto plano en
+  `index.html`).
+- No se hizo verificación manual adicional en navegador: los 3 escenarios que pedía el DoD
+  (boot en inglés por locale, switch en vivo persistente, migración v6→v7 visible en el
+  Índice) quedan cubiertos por los propios e2e, que corren en un Chromium real contra el juego
+  servido por HTTP — no hay diferencia de fidelidad con un playtest manual para esta tarea
+  puntual (a diferencia de B/C, que sí tocaron código de runtime nuevo sin cobertura e2e
+  todavía en el momento de escribirlo).
+
+### Qué necesita saber el Agente E (auditor)
+- El glosario fijo de la traducción (Llaves de Ciudad → City Keys, etc.) está documentado en
+  `ROADMAPv3.md` §16.C y en el handoff de C — no repetido acá.
+- Los 3 tests nuevos son el único lugar del repo que arma un save v6 a mano; si algún día se
+  agrega v8, revisar que `saveV6ConItemPorNombre()` (en el spec) siga generando algo que
+  `validateSave` acepte como v6 legítimo (ver AJUSTE arriba).
+- El flake de `ronda15-contenido.spec.js:128` bajo carga paralela sigue sin investigarse a
+  fondo (documentado también por C para `ronda14-regression.spec.js`) — no es de esta ronda,
+  pero si el auditor corre la suite en paralelo y ve un rojo ahí, es ese flake conocido:
+  confirmar con `--workers=1` o el archivo aislado antes de reportarlo como regresión.
+
+### Estado del DoD (Agente D)
+```
+[x] npm test → 285/285 verde (sin tests nuevos de Vitest, tarea 100% e2e)
+[x] npm run test:e2e → 51/51 verde con --workers=1 (dos corridas; flake de contención
+    preexistente en ronda15-contenido.spec.js:128 bajo paralelismo, no relacionado)
+[x] apps/game/index.html:44 con el texto bilingüe corto
+[x] git commit → 6f73b38, rama feat/i18n-ronda16,
+    "test(e2e): ronda 16 — i18n cubierto (detección, switch, migración v7)"
+[x] Handoff escrito (este bloque)
+```
