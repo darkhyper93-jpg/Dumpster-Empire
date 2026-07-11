@@ -63,6 +63,14 @@ export function createStore(ctx) {
   // manipulados, antes de que lleguen a automationTick.
   const containerIds = new Set(allContainers.map((c) => c.id));
 
+  // Ronda 16: mapa `containerId -> { nombreEspañol -> id }` construido desde la data TODAVÍA en
+  // español (antes de cualquier applyDataLanguage) — lo usa la migración v6->v7 de itemsFoundByItem
+  // para remapear claves de saves viejos sin perder la colección.
+  const itemNameToId = {};
+  for (const [containerId, pool] of Object.entries(itemsData.containers)) {
+    itemNameToId[containerId] = Object.fromEntries(pool.map((it) => [it.name, it.id]));
+  }
+
   let state = loadState();
   let pendingDig = null;
   let offlineSummary = null;
@@ -89,7 +97,7 @@ export function createStore(ctx) {
   function loadState() {
     const raw = ctx.initialSaveText !== undefined ? ctx.initialSaveText : localStorage.getItem(SAVE_KEY);
     if (!raw) return freshState();
-    const result = deserializeState(raw, containerIds);
+    const result = deserializeState(raw, containerIds, itemNameToId);
     return result.ok ? result.state : freshState();
   }
 
@@ -245,7 +253,7 @@ export function createStore(ctx) {
     },
 
     importSave(text) {
-      const result = engineImportSave(text, containerIds);
+      const result = engineImportSave(text, containerIds, itemNameToId);
       if (result.ok) {
         state = result.state;
         pendingDig = null;

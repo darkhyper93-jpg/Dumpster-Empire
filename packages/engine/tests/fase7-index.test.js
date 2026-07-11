@@ -7,20 +7,20 @@ import containers from '../../../apps/game/src/data/containers.json';
 const tachoVereda = containers.find((c) => c.id === 'tachoVereda');
 
 describe('PLAN.md §11.5 — tracking de hallazgos por ítem (itemsFoundByItem)', () => {
-  it('applyContainerResult cuenta cada ítem hallado por nombre, agrupado por contenedor', () => {
+  it('applyContainerResult cuenta cada ítem hallado por id, agrupado por contenedor', () => {
     const state = freshState();
     const result = {
       isTrap: false,
       items: [
-        { icon: 'can-crushed', name: 'Lata aplastada', categoria: 'common', value: 1 },
-        { icon: 'can-crushed', name: 'Lata aplastada', categoria: 'common', value: 1 },
-        { icon: 'banana-peel', name: 'Cáscara de banana', categoria: 'common', value: 1 },
+        { id: 'can-crushed', icon: 'can-crushed', name: 'Lata aplastada', categoria: 'common', value: 1 },
+        { id: 'can-crushed', icon: 'can-crushed', name: 'Lata aplastada', categoria: 'common', value: 1 },
+        { id: 'banana-peel', icon: 'banana-peel', name: 'Cáscara de banana', categoria: 'common', value: 1 },
       ],
       moneyDelta: 3,
     };
     applyContainerResult(state, tachoVereda, result, false, {});
-    expect(state.itemsFoundByItem.tachoVereda['Lata aplastada']).toBe(2);
-    expect(state.itemsFoundByItem.tachoVereda['Cáscara de banana']).toBe(1);
+    expect(state.itemsFoundByItem.tachoVereda['can-crushed']).toBe(2);
+    expect(state.itemsFoundByItem.tachoVereda['banana-peel']).toBe(1);
   });
 
   it('no mezcla contadores entre contenedores distintos', () => {
@@ -29,19 +29,19 @@ describe('PLAN.md §11.5 — tracking de hallazgos por ítem (itemsFoundByItem)'
     applyContainerResult(
       state,
       tachoVereda,
-      { isTrap: false, items: [{ icon: 'x', name: 'Item A', categoria: 'common', value: 1 }], moneyDelta: 1 },
+      { isTrap: false, items: [{ id: 'item-a', icon: 'x', name: 'Item A', categoria: 'common', value: 1 }], moneyDelta: 1 },
       false,
       {}
     );
     applyContainerResult(
       state,
       otro,
-      { isTrap: false, items: [{ icon: 'y', name: 'Item A', categoria: 'common', value: 1 }], moneyDelta: 1 },
+      { isTrap: false, items: [{ id: 'item-a', icon: 'y', name: 'Item A', categoria: 'common', value: 1 }], moneyDelta: 1 },
       false,
       {}
     );
-    expect(state.itemsFoundByItem.tachoVereda['Item A']).toBe(1);
-    expect(state.itemsFoundByItem.contenedorBarrio['Item A']).toBe(1);
+    expect(state.itemsFoundByItem.tachoVereda['item-a']).toBe(1);
+    expect(state.itemsFoundByItem.contenedorBarrio['item-a']).toBe(1);
   });
 });
 

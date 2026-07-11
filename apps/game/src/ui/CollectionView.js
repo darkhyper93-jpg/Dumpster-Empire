@@ -73,7 +73,7 @@ export const CollectionView = {
 
     const cards = pool
       .map((item) => {
-        const foundCount = Number(foundInContainer[item.name]) || 0;
+        const foundCount = Number(foundInContainer[item.id]) || 0;
         const rarity = itemsData.rarities.find((r) => r.id === item.categoria);
         const categoriaWeight = weights[item.categoria] || 0;
         const itemProb = countByCategoria[item.categoria] ? categoriaWeight / countByCategoria[item.categoria] : 0;

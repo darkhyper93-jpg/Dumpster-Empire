@@ -52,36 +52,42 @@
   "containers": {
     "tachoVereda": [
       {
+        "id": "can-crushed",
         "icon": "can-crushed",
         "name": "Lata aplastada",
         "valorBase": 2.2,
         "categoria": "common"
       },
       {
+        "id": "banana-peel",
         "icon": "banana-peel",
         "name": "Cáscara de banana",
         "valorBase": 2.2,
         "categoria": "common"
       },
       {
+        "id": "cigarette-butt",
         "icon": "cigarette-butt",
         "name": "Colilla de cigarrillo",
         "valorBase": 2.2,
         "categoria": "common"
       },
       {
+        "id": "chip-bag",
         "icon": "chip-bag",
         "name": "Bolsa de papas vacía",
         "valorBase": 2.2,
         "categoria": "common"
       },
       {
+        "id": "cork-bottle",
         "icon": "cork-bottle",
         "name": "Corcho de botella",
         "valorBase": 2.2,
         "categoria": "common"
       },
       {
+        "id": "napkin-used",
         "icon": "napkin-used",
         "name": "Servilleta usada",
         "valorBase": 2.2,
@@ -90,42 +96,49 @@
     ],
     "contenedorBarrio": [
       {
+        "id": "newspaper-old",
         "icon": "newspaper-old",
         "name": "Periódico viejo",
         "valorBase": 1.8,
         "categoria": "common"
       },
       {
+        "id": "shoe-odd",
         "icon": "shoe-odd",
         "name": "Zapato sin par",
         "valorBase": 3.7,
         "categoria": "common"
       },
       {
+        "id": "bottle-plastic",
         "icon": "bottle-plastic",
         "name": "Botella plástica",
         "valorBase": 1.8,
         "categoria": "common"
       },
       {
+        "id": "chair-broken",
         "icon": "chair-broken",
         "name": "Silla rota",
         "valorBase": 8.2,
         "categoria": "reusable"
       },
       {
+        "id": "lamp-old",
         "icon": "lamp-old",
         "name": "Lámpara vieja",
         "valorBase": 6.4,
         "categoria": "reusable"
       },
       {
+        "id": "suitcase-worn",
         "icon": "suitcase-worn",
         "name": "Maleta gastada",
         "valorBase": 8.2,
         "categoria": "reusable"
       },
       {
+        "id": "mirror-cracked",
         "icon": "mirror-cracked",
         "name": "Espejo trizado",
         "valorBase": 6.4,
@@ -134,42 +147,49 @@
     ],
     "containerIndustrial": [
       {
+        "id": "bike-rusty",
         "icon": "bike-rusty",
         "name": "Bicicleta oxidada",
         "valorBase": 13.7,
         "categoria": "reusable"
       },
       {
+        "id": "radio-antique",
         "icon": "radio-antique",
         "name": "Radio antigua",
         "valorBase": 10.2,
         "categoria": "reusable"
       },
       {
+        "id": "fan-old",
         "icon": "fan-old",
         "name": "Ventilador viejo",
         "valorBase": 10.2,
         "categoria": "reusable"
       },
       {
+        "id": "copper-cable",
         "icon": "copper-cable",
         "name": "Cable de cobre",
         "valorBase": 10.2,
         "categoria": "electronics"
       },
       {
+        "id": "motherboard",
         "icon": "motherboard",
         "name": "Placa madre",
         "valorBase": 15.4,
         "categoria": "electronics"
       },
       {
+        "id": "phone-old",
         "icon": "phone-old",
         "name": "Teléfono viejo",
         "valorBase": 17.1,
         "categoria": "electronics"
       },
       {
+        "id": "console-broken",
         "icon": "console-broken",
         "name": "Consola rota",
         "valorBase": 20.5,
@@ -178,42 +198,49 @@
     ],
     "depositoAbandonado": [
       {
+        "id": "camera-analog",
         "icon": "camera-analog",
         "name": "Cámara analógica",
         "valorBase": 34.1,
         "categoria": "electronics"
       },
       {
+        "id": "tv-crt",
         "icon": "tv-crt",
         "name": "Televisor CRT",
         "valorBase": 43.2,
         "categoria": "electronics"
       },
       {
+        "id": "floppy-disk",
         "icon": "floppy-disk",
         "name": "Disquete raro",
         "valorBase": 31.1,
         "categoria": "electronics"
       },
       {
+        "id": "pocket-watch",
         "icon": "pocket-watch",
         "name": "Reloj de bolsillo",
         "valorBase": 55.4,
         "categoria": "antiques"
       },
       {
+        "id": "porcelain-vase",
         "icon": "porcelain-vase",
         "name": "Jarrón de porcelana",
         "valorBase": 61.4,
         "categoria": "antiques"
       },
       {
+        "id": "coin-old",
         "icon": "coin-old",
         "name": "Moneda vieja",
         "valorBase": 37.1,
         "categoria": "antiques"
       },
       {
+        "id": "candelabrum",
         "icon": "candelabrum",
         "name": "Candelabro",
         "valorBase": 52.3,
@@ -222,42 +249,49 @@
     ],
     "mudanzaMansion": [
       {
+        "id": "antique-book",
         "icon": "antique-book",
         "name": "Libro antiguo",
         "valorBase": 69,
         "categoria": "antiques"
       },
       {
+        "id": "typewriter",
         "icon": "typewriter",
         "name": "Máquina de escribir",
         "valorBase": 102,
         "categoria": "antiques"
       },
       {
+        "id": "ivory-figurine",
         "icon": "ivory-figurine",
         "name": "Estatuilla de marfil",
         "valorBase": 87.2,
         "categoria": "antiques"
       },
       {
+        "id": "war-helmet",
         "icon": "war-helmet",
         "name": "Casco de guerra",
         "valorBase": 139,
         "categoria": "historic"
       },
       {
+        "id": "map-antique",
         "icon": "map-antique",
         "name": "Mapa antiguo",
         "valorBase": 115,
         "categoria": "historic"
       },
       {
+        "id": "military-medal",
         "icon": "military-medal",
         "name": "Medalla militar",
         "valorBase": 129,
         "categoria": "historic"
       },
       {
+        "id": "uniform-historic",
         "icon": "uniform-historic",
         "name": "Uniforme histórico",
         "valorBase": 102,
@@ -266,42 +300,49 @@
     ],
     "galeriaLiquidacion": [
       {
+        "id": "dagger-ceremonial",
         "icon": "dagger-ceremonial",
         "name": "Daga ceremonial",
         "valorBase": 214,
         "categoria": "historic"
       },
       {
+        "id": "photo-historic",
         "icon": "photo-historic",
         "name": "Fotografía histórica",
         "valorBase": 110,
         "categoria": "historic"
       },
       {
+        "id": "regiment-flag",
         "icon": "regiment-flag",
         "name": "Bandera de regimiento",
         "valorBase": 159,
         "categoria": "historic"
       },
       {
+        "id": "oil-painting",
         "icon": "oil-painting",
         "name": "Cuadro al óleo",
         "valorBase": 339,
         "categoria": "art"
       },
       {
+        "id": "bronze-sculpture",
         "icon": "bronze-sculpture",
         "name": "Escultura de bronce",
         "valorBase": 400,
         "categoria": "art"
       },
       {
+        "id": "engraving-original",
         "icon": "engraving-original",
         "name": "Grabado original",
         "valorBase": 246,
         "categoria": "art"
       },
       {
+        "id": "tapestry-antique",
         "icon": "tapestry-antique",
         "name": "Tapiz antiguo",
         "valorBase": 214,
@@ -310,42 +351,49 @@
     ],
     "bovedaPerdida": [
       {
+        "id": "vase-decorative",
         "icon": "vase-decorative",
         "name": "Vasija decorativa",
         "valorBase": 356,
         "categoria": "art"
       },
       {
+        "id": "sketch-master",
         "icon": "sketch-master",
         "name": "Boceto de maestro",
         "valorBase": 238,
         "categoria": "art"
       },
       {
+        "id": "ritual-mask",
         "icon": "ritual-mask",
         "name": "Máscara ritual",
         "valorBase": 396,
         "categoria": "art"
       },
       {
+        "id": "crown-lost",
         "icon": "crown-lost",
         "name": "Corona perdida",
         "valorBase": 1030,
         "categoria": "relics"
       },
       {
+        "id": "amulet-sacred",
         "icon": "amulet-sacred",
         "name": "Amuleto sagrado",
         "valorBase": 793,
         "categoria": "relics"
       },
       {
+        "id": "scroll-arcane",
         "icon": "scroll-arcane",
         "name": "Pergamino arcano",
         "valorBase": 631,
         "categoria": "relics"
       },
       {
+        "id": "scepter-royal",
         "icon": "scepter-royal",
         "name": "Cetro real",
         "valorBase": 1110,
@@ -354,42 +402,49 @@
     ],
     "containerExtradimensional": [
       {
+        "id": "idol-jade",
         "icon": "idol-jade",
         "name": "Ídolo de jade",
         "valorBase": 643,
         "categoria": "relics"
       },
       {
+        "id": "relic-sealed",
         "icon": "relic-sealed",
         "name": "Reliquia sellada",
         "valorBase": 750,
         "categoria": "relics"
       },
       {
+        "id": "legendary-sword",
         "icon": "legendary-sword",
         "name": "Espada legendaria",
         "valorBase": 1020,
         "categoria": "relics"
       },
       {
+        "id": "fusion-core",
         "icon": "fusion-core",
         "name": "Núcleo de fusión",
         "valorBase": 2030,
         "categoria": "future"
       },
       {
+        "id": "quantum-chip",
         "icon": "quantum-chip",
         "name": "Chip cuántico",
         "valorBase": 1700,
         "categoria": "future"
       },
       {
+        "id": "neural-implant",
         "icon": "neural-implant",
         "name": "Implante neural",
         "valorBase": 1900,
         "categoria": "future"
       },
       {
+        "id": "stellar-fragment",
         "icon": "stellar-fragment",
         "name": "Fragmento estelar",
         "valorBase": 2710,
@@ -398,42 +453,49 @@
     ],
     "convoyFantasma": [
       {
+        "id": "cargo-manifest",
         "icon": "cargo-manifest",
         "name": "Manifiesto de carga",
         "valorBase": 138200,
         "categoria": "historic"
       },
       {
+        "id": "ghost-lantern",
         "icon": "ghost-lantern",
         "name": "Farol del convoy",
         "valorBase": 190000,
         "categoria": "historic"
       },
       {
+        "id": "route-compass",
         "icon": "route-compass",
         "name": "Brújula de ruta",
         "valorBase": 259200,
         "categoria": "historic"
       },
       {
+        "id": "sealed-strongbox",
         "icon": "sealed-strongbox",
         "name": "Caja fuerte sellada",
         "valorBase": 164100,
         "categoria": "relics"
       },
       {
+        "id": "captain-ring",
         "icon": "captain-ring",
         "name": "Anillo del capitán",
         "valorBase": 216000,
         "categoria": "relics"
       },
       {
+        "id": "cursed-cargo",
         "icon": "cursed-cargo",
         "name": "Carga maldita",
         "valorBase": 276400,
         "categoria": "relics"
       },
       {
+        "id": "phantom-bell",
         "icon": "phantom-bell",
         "name": "Campana fantasma",
         "valorBase": 362800,
@@ -442,42 +504,49 @@
     ],
     "criptaColeccionista": [
       {
+        "id": "framed-forgery",
         "icon": "framed-forgery",
         "name": "Falsificación enmarcada",
         "valorBase": 1673000,
         "categoria": "art"
       },
       {
+        "id": "marble-bust",
         "icon": "marble-bust",
         "name": "Busto de mármol",
         "valorBase": 2231000,
         "categoria": "art"
       },
       {
+        "id": "lost-masterpiece",
         "icon": "lost-masterpiece",
         "name": "Obra maestra perdida",
         "valorBase": 3161000,
         "categoria": "art"
       },
       {
+        "id": "burial-mask",
         "icon": "burial-mask",
         "name": "Máscara funeraria",
         "valorBase": 1859000,
         "categoria": "relics"
       },
       {
+        "id": "grail-replica",
         "icon": "grail-replica",
         "name": "Réplica del grial",
         "valorBase": 2510000,
         "categoria": "relics"
       },
       {
+        "id": "saint-reliquary",
         "icon": "saint-reliquary",
         "name": "Relicario del santo",
         "valorBase": 3347000,
         "categoria": "relics"
       },
       {
+        "id": "collector-heart",
         "icon": "collector-heart",
         "name": "El corazón del coleccionista",
         "valorBase": 4463000,
@@ -486,42 +555,49 @@
     ],
     "estacionOrbital": [
       {
+        "id": "heat-shield",
         "icon": "heat-shield",
         "name": "Escudo térmico",
         "valorBase": 4764000,
         "categoria": "relics"
       },
       {
+        "id": "zero-g-tool",
         "icon": "zero-g-tool",
         "name": "Herramienta de gravedad cero",
         "valorBase": 6519000,
         "categoria": "relics"
       },
       {
+        "id": "cosmonaut-log",
         "icon": "cosmonaut-log",
         "name": "Bitácora del cosmonauta",
         "valorBase": 8776000,
         "categoria": "relics"
       },
       {
+        "id": "orbital-gyro",
         "icon": "orbital-gyro",
         "name": "Giroscopio orbital",
         "valorBase": 5266000,
         "categoria": "future"
       },
       {
+        "id": "plasma-cell",
         "icon": "plasma-cell",
         "name": "Celda de plasma",
         "valorBase": 7021000,
         "categoria": "future"
       },
       {
+        "id": "ai-core-salvaged",
         "icon": "ai-core-salvaged",
         "name": "Núcleo de IA rescatado",
         "valorBase": 9528000,
         "categoria": "future"
       },
       {
+        "id": "station-heart",
         "icon": "station-heart",
         "name": "Reactor de la estación",
         "valorBase": 12540000,
@@ -530,42 +606,49 @@
     ],
     "vertederoDivino": [
       {
+        "id": "titan-bolt",
         "icon": "titan-bolt",
         "name": "Tornillo de titán",
         "valorBase": 35050000,
         "categoria": "future"
       },
       {
+        "id": "chrono-shard",
         "icon": "chrono-shard",
         "name": "Esquirla de cronos",
         "valorBase": 44790000,
         "categoria": "future"
       },
       {
+        "id": "ambrosia-flask",
         "icon": "ambrosia-flask",
         "name": "Frasco de ambrosía",
         "valorBase": 56470000,
         "categoria": "future"
       },
       {
+        "id": "olympus-circuit",
         "icon": "olympus-circuit",
         "name": "Circuito del olimpo",
         "valorBase": 70100000,
         "categoria": "future"
       },
       {
+        "id": "godling-idol",
         "icon": "godling-idol",
         "name": "Ídolo de un dios menor",
         "valorBase": 85680000,
         "categoria": "future"
       },
       {
+        "id": "thunder-coil",
         "icon": "thunder-coil",
         "name": "Bobina del trueno",
         "valorBase": 105200000,
         "categoria": "future"
       },
       {
+        "id": "creation-seed",
         "icon": "creation-seed",
         "name": "Semilla de creación",
         "valorBase": 132400000,
@@ -574,42 +657,49 @@
     ],
     "chatarreriaTitanes": [
       {
+        "id": "rivet-colossal",
         "icon": "rivet-colossal",
         "name": "Remache colosal",
         "valorBase": 659668000,
         "categoria": "relics"
       },
       {
+        "id": "chain-titanic",
         "icon": "chain-titanic",
         "name": "Eslabón de cadena titánica",
         "valorBase": 841862000,
         "categoria": "relics"
       },
       {
+        "id": "anvil-titan",
         "icon": "anvil-titan",
         "name": "Yunque agrietado de titán",
         "valorBase": 1061752000,
         "categoria": "relics"
       },
       {
+        "id": "gear-colossus",
         "icon": "gear-colossus",
         "name": "Engranaje de coloso",
         "valorBase": 1319337000,
         "categoria": "future"
       },
       {
+        "id": "piston-seismic",
         "icon": "piston-seismic",
         "name": "Pistón sísmico",
         "valorBase": 1608334000,
         "categoria": "future"
       },
       {
+        "id": "core-starforge",
         "icon": "core-starforge",
         "name": "Núcleo de forja estelar",
         "valorBase": 1985287000,
         "categoria": "future"
       },
       {
+        "id": "heart-automaton",
         "icon": "heart-automaton",
         "name": "Corazón de autómata titán",
         "valorBase": 2487892000,
@@ -618,42 +708,49 @@
     ],
     "naufragioTemporal": [
       {
+        "id": "compass-reversed",
         "icon": "compass-reversed",
         "name": "Brújula que gira al revés",
         "valorBase": 38135909000,
         "categoria": "historic"
       },
       {
+        "id": "map-extinct",
         "icon": "map-extinct",
         "name": "Mapa de rutas extintas",
         "valorBase": 48756036000,
         "categoria": "historic"
       },
       {
+        "id": "figurehead-ghost",
         "icon": "figurehead-ghost",
         "name": "Mascarón de proa fantasmal",
         "valorBase": 61307095000,
         "categoria": "historic"
       },
       {
+        "id": "hourglass-frozen",
         "icon": "hourglass-frozen",
         "name": "Reloj de arena congelado",
         "valorBase": 76271819000,
         "categoria": "relics"
       },
       {
+        "id": "anchor-lostsea",
         "icon": "anchor-lostsea",
         "name": "Ancla de un mar que no existe",
         "valorBase": 93167475000,
         "categoria": "relics"
       },
       {
+        "id": "chronometer-eternal",
         "icon": "chronometer-eternal",
         "name": "Cronómetro del capitán eterno",
         "valorBase": 114407728000,
         "categoria": "relics"
       },
       {
+        "id": "helm-time",
         "icon": "helm-time",
         "name": "Timón del tiempo",
         "valorBase": 143854443000,
@@ -662,42 +759,49 @@
     ],
     "archivoMultiverso": [
       {
+        "id": "portrait-alternate",
         "icon": "portrait-alternate",
         "name": "Autorretrato de otro vos",
         "valorBase": 434583743000,
         "categoria": "art"
       },
       {
+        "id": "score-silent",
         "icon": "score-silent",
         "name": "Partitura de una realidad muda",
         "valorBase": 554712582000,
         "categoria": "art"
       },
       {
+        "id": "sculpture-impossible",
         "icon": "sculpture-impossible",
         "name": "Escultura de geometría imposible",
         "valorBase": 696040629000,
         "categoria": "art"
       },
       {
+        "id": "tome-unhappened",
         "icon": "tome-unhappened",
         "name": "Tomo de historias que no pasaron",
         "valorBase": 869167485000,
         "categoria": "relics"
       },
       {
+        "id": "key-infinite",
         "icon": "key-infinite",
         "name": "Llave de infinitas puertas",
         "valorBase": 1059960348000,
         "categoria": "relics"
       },
       {
+        "id": "mirror-timelines",
         "icon": "mirror-timelines",
         "name": "Espejo de líneas temporales",
         "valorBase": 1303751228000,
         "categoria": "relics"
       },
       {
+        "id": "catalog-multiverse",
         "icon": "catalog-multiverse",
         "name": "Catálogo del multiverso",
         "valorBase": 1635872137000,
@@ -706,42 +810,49 @@
     ],
     "vertederoBigBang": [
       {
+        "id": "dust-firststar",
         "icon": "dust-firststar",
         "name": "Polvo de la primera estrella",
         "valorBase": 1037274501000,
         "categoria": "future"
       },
       {
+        "id": "bubble-void",
         "icon": "bubble-void",
         "name": "Burbuja de vacío primordial",
         "valorBase": 1320167547000,
         "categoria": "future"
       },
       {
+        "id": "fragment-horizon",
         "icon": "fragment-horizon",
         "name": "Fragmento de horizonte",
         "valorBase": 1661996644000,
         "categoria": "future"
       },
       {
+        "id": "echo-bigbang",
         "icon": "echo-bigbang",
         "name": "Eco del estallido inicial",
         "valorBase": 2068655397000,
         "categoria": "future"
       },
       {
+        "id": "atom-primordial",
         "icon": "atom-primordial",
         "name": "Átomo primigenio embotellado",
         "valorBase": 2528356597000,
         "categoria": "future"
       },
       {
+        "id": "spark-genesis",
         "icon": "spark-genesis",
         "name": "Chispa de génesis",
         "valorBase": 3105929898000,
         "categoria": "future"
       },
       {
+        "id": "relic-dayzero",
         "icon": "relic-dayzero",
         "name": "Resto del día cero",
         "valorBase": 3901566590000,

@@ -17,7 +17,9 @@
 // digSensitivity (slider de sensibilidad) y language (base de i18n es/en).
 // AJUSTE (ronda 15): v6 agrega trapsDiscarded (contador de contenedores con trampa que el
 // robot descartó vía el nodo de prestigio "Escáner de Trampas", PLAN.md §4.7).
-export const SAVE_VERSION = 6;
+// AJUSTE (ronda 16): v7 cambia la clave de `itemsFoundByItem` de nombre-español a id estable
+// de ítem (PLAN.md §16), para que la colección sobreviva a la traducción.
+export const SAVE_VERSION = 7;
 
 // AJUSTE (auditoría post-ronda 14): rango de diseño de `digSensitivity`, exportado como única
 // fuente de verdad. Antes el 0.5–1.5 estaba repetido como número mágico en save.js (validación),
@@ -51,7 +53,8 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  * @property {number} itemsFoundCount
  * @property {Object<string, number>} itemsFoundByCategory
  * @property {Object<string, Object<string, number>>} itemsFoundByItem - contador por contenedor
- *   y nombre de ítem (`state.itemsFoundByItem[containerId][itemName]`), para el INDEX (PLAN.md §11.5)
+ *   e id de ítem (`state.itemsFoundByItem[containerId][itemId]`), para el INDEX (PLAN.md §11.5).
+ *   Ronda 16: la clave es el id estable del ítem, no su nombre traducible (PLAN.md §16).
  * @property {number} categoryFragments
  * @property {number} trapsHit
  * @property {number} trapsDiscarded - contenedores con trampa descartados por el robot (PLAN.md §4.7)

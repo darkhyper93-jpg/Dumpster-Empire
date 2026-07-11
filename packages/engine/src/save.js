@@ -179,9 +179,12 @@ const REQUIRED_FIELDS = {
  * Migra un objeto de guardado de una versión anterior a la actual. v1 es la primera versión,
  * así que hoy es una función identidad; queda el mecanismo listo para futuros bumps de esquema.
  * @param {Object} raw
+ * @param {Object<string, Object<string, string>>} [itemNameToId] - mapa `containerId -> { nombreEspañol -> id }`
+ *   usado por la migración v6->v7 para remapear las claves de `itemsFoundByItem`. Si se omite,
+ *   las claves quedan tal cual (compat: saves ya en v7 no lo necesitan).
  * @returns {Object}
  */
-function migrate(raw) {
+function migrate(raw, itemNameToId) {
   let migrated = raw;
   if (migrated.saveVersion < 1) {
     migrated = { ...freshState(), ...migrated, saveVersion: 1 };
@@ -231,6 +234,19 @@ function migrate(raw) {
   if (migrated.saveVersion < 6) {
     migrated = { ...migrated, trapsDiscarded: 0, saveVersion: 6 };
   }
+  // v6 -> v7 (ronda 16): itemsFoundByItem pasa de nombre-español a id de ítem como clave, para
+  // que la colección sobreviva a la traducción. Claves desconocidas pasan tal cual (idempotente).
+  if (migrated.saveVersion < 7) {
+    const remapped = {};
+    for (const [containerId, byItem] of Object.entries(migrated.itemsFoundByItem || {})) {
+      const nameMap = (itemNameToId && itemNameToId[containerId]) || {};
+      remapped[containerId] = {};
+      for (const [key, count] of Object.entries(byItem)) {
+        remapped[containerId][nameMap[key] || key] = count;
+      }
+    }
+    migrated = { ...migrated, itemsFoundByItem: remapped, saveVersion: 7 };
+  }
   return migrated;
 }
 
@@ -240,9 +256,11 @@ function migrate(raw) {
  * @param {Set<string> | Array<string>} [validContainerIds] - si se pasa, se filtran de
  *   `autoQueue`/`autoProcessing` los ids de contenedor que no estén en este conjunto (limpieza de
  *   referencias huérfanas de saves viejos/manipulados). Si se omite, no se filtra (compat).
+ * @param {Object<string, Object<string, string>>} [itemNameToId] - ver migrate(). Necesario solo
+ *   para migrar saves v6 o anteriores; saves ya en v7 no lo requieren.
  * @returns {{ valid: true, data: Object } | { valid: false, error: string }}
  */
-export function validateSave(candidate, validContainerIds) {
+export function validateSave(candidate, validContainerIds, itemNameToId) {
   if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
     return { valid: false, error: 'El guardado no es un objeto JSON válido.' };
   }
@@ -252,7 +270,7 @@ export function validateSave(candidate, validContainerIds) {
   if (candidate.saveVersion > SAVE_VERSION) {
     return { valid: false, error: `saveVersion ${candidate.saveVersion} es más nueva que la soportada (${SAVE_VERSION}).` };
   }
-  const migrated = migrate(candidate);
+  const migrated = migrate(candidate, itemNameToId);
   for (const [field, type] of Object.entries(REQUIRED_FIELDS)) {
     if (typeof migrated[field] !== type) {
       return { valid: false, error: `Campo inválido o faltante: ${field}` };
@@ -290,16 +308,17 @@ export function serializeState(state) {
  * nunca modifica el estado en curso.
  * @param {string} raw
  * @param {Set<string> | Array<string>} [validContainerIds] - ver validateSave.
+ * @param {Object<string, Object<string, string>>} [itemNameToId] - ver migrate().
  * @returns {{ ok: true, state: import('./state.js').GameState } | { ok: false, error: string }}
  */
-export function deserializeState(raw, validContainerIds) {
+export function deserializeState(raw, validContainerIds, itemNameToId) {
   let parsed;
   try {
     parsed = JSON.parse(raw);
   } catch {
     return { ok: false, error: 'El guardado no es JSON válido.' };
   }
-  const result = validateSave(parsed, validContainerIds);
+  const result = validateSave(parsed, validContainerIds, itemNameToId);
   if (!result.valid) return { ok: false, error: result.error };
   return { ok: true, state: result.data };
 }
@@ -321,9 +340,10 @@ export function exportSave(state) {
  * Rechaza el import (sin tocar la partida en curso) si el texto no decodifica a un save válido.
  * @param {string} encoded
  * @param {Set<string> | Array<string>} [validContainerIds] - ver validateSave.
+ * @param {Object<string, Object<string, string>>} [itemNameToId] - ver migrate().
  * @returns {{ ok: true, state: import('./state.js').GameState } | { ok: false, error: string }}
  */
-export function importSave(encoded, validContainerIds) {
+export function importSave(encoded, validContainerIds, itemNameToId) {
   let json;
   try {
     json =
@@ -333,5 +353,5 @@ export function importSave(encoded, validContainerIds) {
   } catch {
     return { ok: false, error: 'El texto no es un guardado en base64 válido.' };
   }
-  return deserializeState(json, validContainerIds);
+  return deserializeState(json, validContainerIds, itemNameToId);
 }
