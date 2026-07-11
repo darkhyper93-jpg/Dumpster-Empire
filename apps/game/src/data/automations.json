@@ -74,6 +74,19 @@
     ]
   },
   {
+    "id": "servobrazosReforzados",
+    "name": "Servobrazos Reforzados",
+    "icon": "servo-arm",
+    "cost": 150000,
+    "desc": "+40% Fuerza de Escarbado del robot (no afecta tu escarbado manual).",
+    "effects": [
+      {
+        "type": "autoDigPowerPercent",
+        "percent": 0.4
+      }
+    ]
+  },
+  {
     "id": "plantaReciclaje",
     "name": "Planta de Reciclaje",
     "icon": "recycling-plant",
@@ -87,6 +100,19 @@
           "reusable"
         ],
         "percent": 0.2
+      }
+    ]
+  },
+  {
+    "id": "chipOverclock",
+    "name": "Chip Overclockeado",
+    "icon": "chip-overclock",
+    "cost": 800000,
+    "desc": "+25% velocidad de procesamiento del robot.",
+    "effects": [
+      {
+        "type": "autoSpeedPercent",
+        "percent": 0.25
       }
     ]
   },
@@ -121,6 +147,32 @@
       {
         "type": "unlocksContainer",
         "containerId": "containerExtradimensional"
+      }
+    ]
+  },
+  {
+    "id": "servobrazosTitanio",
+    "name": "Servobrazos de Titanio",
+    "icon": "servo-arm-titanium",
+    "cost": 25000000,
+    "desc": "+80% adicional de Fuerza de Escarbado del robot.",
+    "effects": [
+      {
+        "type": "autoDigPowerPercent",
+        "percent": 0.8
+      }
+    ]
+  },
+  {
+    "id": "nucleoCuantico",
+    "name": "Núcleo Cuántico",
+    "icon": "core-quantum",
+    "cost": 120000000,
+    "desc": "+50% adicional de velocidad de procesamiento del robot.",
+    "effects": [
+      {
+        "type": "autoSpeedPercent",
+        "percent": 0.5
       }
     ]
   }

@@ -370,6 +370,18 @@ const ICON_MAP = {
   'atom-primordial': 'atomPrimordial',
   'spark-genesis': 'sparkGenesis',
   'relic-dayzero': 'relicDayzero',
+
+  // Ronda 15 — Agente C: máquinas del robot + nodo Escáner de Trampas.
+  // DECISIÓN: servo-arm/servo-arm-titanium reusan 'steelArm' (mismo brazo mecánico del nodo de
+  // prestigio Brazos de Acero) — se diferencian por color de rareza/contexto de tarjeta.
+  'servo-arm': 'steelArm',
+  'servo-arm-titanium': 'steelArm',
+  // DECISIÓN: chip-overclock reusa 'quantumChip' (mismo chip que el ítem quantum-chip).
+  'chip-overclock': 'quantumChip',
+  // DECISIÓN: core-quantum reusa 'olympusCircuit' (núcleo con líneas de energía radiales).
+  'core-quantum': 'olympusCircuit',
+  // DECISIÓN: scanner-trap reusa 'radar' (mismo símbolo de detección que metal-detector/eagle-eye).
+  'scanner-trap': 'radar',
 };
 
 /**

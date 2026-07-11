@@ -168,9 +168,13 @@ Progresión de herramientas, calcada de la curva manual→automático del juego 
 3. **Detector de metales** (mejora Suerte en Electrónica)
 4. **Robot Clasificador Básico** — equivalente al "Auto Scratcher": escarba contenedores solo, sin que el jugador interactúe, pero **no puede espiar antes de comprometerse**, por lo que sufre más trampas que el jugador manual (igual trade-off que el original).
 5. **Cinta Transportadora** — permite encolar contenedores para que el Robot los procese en cadena.
-6. **Planta de Reciclaje** — multiplica el valor de venta de Basura común y Reutilizables automáticamente.
-7. **Centro de Subastas** — vende automáticamente Arte y Reliquias al mejor precio del mercado simulado (con fluctuación aleatoria ±20%, ver 4.4).
-8. **Red de Drones** (estructura late-game) — procesa contenedores extradimensionales sin supervisión.
+6. **Servobrazos Reforzados** (ronda 15) — +40% Fuerza de Escarbado del robot (solo automatización, ver 4.7).
+7. **Planta de Reciclaje** — multiplica el valor de venta de Basura común y Reutilizables automáticamente.
+8. **Chip Overclockeado** (ronda 15) — +25% velocidad de procesamiento del robot (ver 4.7).
+9. **Centro de Subastas** — vende automáticamente Arte y Reliquias al mejor precio del mercado simulado (con fluctuación aleatoria ±20%, ver 4.4).
+10. **Red de Drones** (estructura late-game) — procesa contenedores extradimensionales sin supervisión.
+11. **Servobrazos de Titanio** (ronda 15) — +80% adicional de Fuerza de Escarbado del robot (ver 4.7).
+12. **Núcleo Cuántico** (ronda 15) — +50% adicional de velocidad de procesamiento del robot (ver 4.7).
 
 Regla de balance: la automatización siempre debe ser **más lenta en ganancia por segundo que jugar manualmente de forma óptima**, pero permite progreso mientras el jugador está ausente (offline progress, ver 4.5). Esto es lo que hace que el juego siga siendo "incremental" y no solo un *idler* pasivo.
 
@@ -181,7 +185,7 @@ Regla de balance: la automatización siempre debe ser **más lenta en ganancia p
   - Llaves de Ciudad obtenidas (fórmula en sección 4.3).
   - Mejoras permanentes compradas con Llaves (árbol de prestigio).
   - Una nueva "ciudad" desbloqueada con multiplicador base de valor más alto y nuevo set visual (cambia la paleta de fondo del juego).
-- Árbol de mejoras permanentes (mínimo 12 nodos): bonus inicial de dinero al empezar, Suerte base +X%, desbloqueo de Contenedor extradimensional, reducción de probabilidad de trampa global, multiplicador de progreso offline, slot extra de contenedor automático simultáneo, etc.
+- Árbol de mejoras permanentes (13 nodos desde ronda 15): bonus inicial de dinero al empezar, Suerte base +X%, desbloqueo de Contenedor extradimensional, reducción de probabilidad de trampa global, multiplicador de progreso offline, slot extra de contenedor automático simultáneo, y (ronda 15) **Escáner de Trampas** — el robot descarta contenedores trampeados en vez de sufrir el castigo, con `min(1, nivel * 0.34)` de probabilidad (nivel máx. 3), colgando de Instinto de Carroñero. Costo alto a propósito (≈65 Llaves los 3 niveles, ver 4.7): es la mejora más cara del árbol después de completarlo entero.
 - Cada prestigio sucesivo debe sentirse notablemente más rápido que el anterior (es el "one more run" hook).
 
 ---
