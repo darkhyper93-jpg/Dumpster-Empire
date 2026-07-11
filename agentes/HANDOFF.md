@@ -4020,3 +4020,53 @@ diccionarios no abren sinks nuevos. Sin refactorización obligatoria pendiente.
 [x] Manual: switch en vivo ida y vuelta, save en otro idioma manda, 375px, cero errores
 [x] HANDOFF actualizado (este bloque) + push de la rama + link de PR para el usuario
 ```
+
+## Ronda 17 — Agente único: pulido menor (rama `chore/pulido-ronda17`)
+
+### Qué hice (las 6 tareas de RONDA 17 de ROADMAPv3.md, commit `a5e6dff`)
+1. **Tabbar mobile (auditoría 11)**: `#tabbar` gana `order: 1` + `margin-top: auto` en
+   `styles/layout.css`. El bug reportado (Escarbar activa a 375px → `#tab-content` oculto, sin
+   ningún `flex:1` visible, tabbar flotando a media pantalla) tenía un hermano no reportado: en
+   las pestañas de contenido el tabbar quedaba pegado DEBAJO del topbar, porque el `<nav>` va
+   antes de `#tab-content` en el DOM — y el tabbar es una barra INFERIOR por diseño (border-top,
+   esquinas superiores redondeadas, sombra hacia arriba, "tabbar inferior" en DESARROLLO.md §6).
+   `order:1` lo manda al final del flex del shell (todas las pestañas) y `margin-top:auto` lo
+   ancla al fondo cuando no hay flex:1 visible (caso Escarbar). Desktop intacto: con
+   `grid-template-areas`, `order` no afecta a items con área asignada y el margen resuelve a 0
+   (fila `nav` es `auto`). Verificado en runtime: 375px × 6 pestañas → tabbar bottom = 667/667
+   en todas, overflow-x 0; 1280px → tabbar en y=88 (idéntico a antes); cero errores de consola.
+2. **`apps/desktop/electron-builder.yml:1`**: comentario `^24.x` → `^26` (lo pineado real es
+   `electron-builder ^26.15.3` en `apps/desktop/package.json`, DESARROLLO.md §3 dice `^26.x`).
+3. **Docs archivados**: `git mv` de los 11 docs de rondas viejas a `agentes/archivo/`
+   (ReporteDeEstado, PUNTOS_A_MEJORAR 1-5, PLAN_PAM3, AdjLuck, ContainerLevels, RONDA14-PLAN,
+   RoadmapV2). En la raíz quedan solo PLAN.md, DESARROLLO.md, CLAUDE.md, README.md,
+   Verif&Audit.md, ROADMAPv3.md y LICENSE. Referencias revisadas: todas las menciones en
+   código/tests son por NOMBRE en comentarios (contexto histórico, sin ruta raíz), siguen
+   resolviendo por búsqueda — cero referencias funcionales, no actualicé ninguna.
+4. **`npm audit`**: `found 0 vulnerabilities` — nada que aplicar.
+5. **Barridos**: `console.log` en apps/packages → 0; `// TODO` → solo los 3 `TODO(usuario)` de
+   `tools/steam/*.vdf` (esperados); emojis (rangos `\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`)
+   en data/UI → 0. Sin cambios.
+6. **Extra (deuda explícita de la auditoría 15, diferida "para la ronda 17 de pulido")**:
+   `ronda12-regression.spec.js:83,88` — los chequeos de ausencia del toast viejo de "Logro
+   desbloqueado" usaban `expect(...).toHaveCount(0)`, que auto-reintenta: con un toast que
+   expira solo (~3.8s) la assertion "esperaba" a que desapareciera y pasaba AUNQUE el bug lo
+   mostrara. Ahora usan `count()` inmediato en momento fijado. **Verificado saboteando**:
+   reintroduje el toast en UIManager → el test falló (Received: 2) → revertido → 4/4 verdes.
+
+### Estado del DoD (Agente único, ronda 17)
+```
+[x] npm test → 292/292 verde (24 archivos, sin cambios de conteo: la ronda no toca engine)
+[x] npm run test:e2e → 51/51 verde (corrida completa post-cambios)
+[x] Runtime 375px con las 6 pestañas (tabbar anclado, sin overflow) + 1280px sin cambios,
+    cero errores de consola/página (script de Playwright descartable en el scratchpad)
+[x] git commit → a5e6dff, rama chore/pulido-ronda17
+[x] Handoff escrito (este bloque)
+[ ] Push + PR: el usuario crea el PR con el link del push (regla dura §1.3)
+```
+
+### Qué necesita saber la ronda 18
+- No quedó nada pendiente de la 17. Las notas diferidas por auditorías previas (patrón
+  `toHaveCount(0)`, docs viejos en la raíz) quedaron saldadas en esta ronda.
+- Los conteos baseline para la 18: 292 unit / 51 e2e / `SAVE_VERSION = 7`. Recordá que los
+  conteos son indicativos (regla §0): recontá desde la data al generar la tabla de logros.
