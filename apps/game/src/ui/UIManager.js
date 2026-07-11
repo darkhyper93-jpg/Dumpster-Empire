@@ -186,11 +186,14 @@ export class UIManager {
     setMasterVolume(state.volume);
     this.digCanvas.setSensitivity(state.digSensitivity);
     // Ronda 15 (R5 del roadmap): toast cuando el robot descarta un contenedor trampeado (nodo
-    // Escáner de Trampas). Se guarda el contador SIN mostrar toast en el primer render — si no,
-    // un save que ya traía trapsDiscarded > 0 dispararía el toast solo con bootear.
-    if (this.lastTrapsDiscarded !== undefined && state.trapsDiscarded > this.lastTrapsDiscarded) {
+    // Escáner de Trampas). Solo se compara contra el render anterior del MISMO objeto de estado:
+    // en el primer render y cada vez que el store lo reemplaza (importSave/resetGame devuelven
+    // un objeto nuevo) se re-basea sin toast — un save que ya traía trapsDiscarded > 0 no debe
+    // disparar el toast al bootear ni al importarse (AJUSTE: auditoría ronda 15).
+    if (this.lastTrapsState === state && state.trapsDiscarded > this.lastTrapsDiscarded) {
       this.toast.push(t('automation.trapDiscarded'));
     }
+    this.lastTrapsState = state;
     this.lastTrapsDiscarded = state.trapsDiscarded;
     this.renderTopbar(state);
     // PLAN.md §11.9 / PUNTOS_A_MEJORAR_2.md §3: la visibilidad de dig-area/quick-upgrades por
