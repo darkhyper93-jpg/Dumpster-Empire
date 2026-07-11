@@ -33,9 +33,21 @@ export const SettingsView = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
-    if (!container.dataset.bound) {
-      container.dataset.bound = 'true';
+    // AJUSTE (ronda 16): marca de bind con nombre de vista (boundSettings) — #tab-content es
+    // compartido entre vistas y una marca genérica le robaría el listener a la próxima vista
+    // que use la misma (ya pasó con los tabs del Índice, ver napkin/R-16.5).
+    if (!container.dataset.boundSettings) {
+      container.dataset.boundSettings = 'true';
       container.addEventListener('click', (evt) => onClick(evt, container, store));
+      container.addEventListener('change', (evt) => {
+        const select = evt.target.closest('[data-action="set-language"]');
+        if (!select) return;
+        // El guard de UIManager.renderTabContent NO re-renderiza mientras un SELECT tiene
+        // foco (R-16.4): sin este blur, la vista quedaría en el idioma viejo hasta el
+        // próximo click. Blur ANTES de despachar, siempre.
+        select.blur();
+        store.actions.setLanguage(select.value);
+      });
       // El volumen se despacha en 'input' (arrastre en vivo), no en 'click'. Mientras el slider
       // está enfocado, UIManager.renderTabContent NO re-renderiza (evita cortar el arrastre), así
       // que el % del label se actualiza a mano acá; el volumen real sí se aplica en cada 'input'
@@ -75,6 +87,15 @@ export const SettingsView = {
       // si el rango de diseño cambia, cambia en un solo lugar (state.js) y la UI lo sigue.
       `<input class="settings-volume-slider" type="range" id="sensitivity-slider" data-action="set-sensitivity"` +
       ` min="${DIG_SENSITIVITY_MIN * 100}" max="${DIG_SENSITIVITY_MAX * 100}" step="5" value="${sensitivityPct}" />` +
+      `</section>` +
+      // Los labels de las opciones son endónimos fijos a propósito (cada idioma se nombra a sí
+      // mismo): no pasan por t() porque no deben cambiar con el idioma activo.
+      `<section class="settings-block">` +
+      `<label class="settings-volume-label" for="language-select">${t('settings.language')}</label>` +
+      `<select id="language-select" data-action="set-language">` +
+      `<option value="es"${state.language === 'es' ? ' selected' : ''}>Español</option>` +
+      `<option value="en"${state.language === 'en' ? ' selected' : ''}>English</option>` +
+      `</select>` +
       `</section>` +
       `<section class="settings-block">` +
       `<button type="button" data-action="reset-game">${

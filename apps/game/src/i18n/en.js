@@ -108,6 +108,7 @@ export default {
   'settings.sound': 'Sonido: {state}',
   'settings.volume': 'Volumen: {pct}%',
   'settings.sensitivity': 'Sensibilidad de escarbado: {pct}%',
+  'settings.language': 'Idioma',
   'settings.resetConfirm': '¿Seguro? Tocá de nuevo para confirmar',
   'settings.resetButton': 'Reiniciar partida',
 

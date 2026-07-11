@@ -27,6 +27,17 @@ export function getLanguage() {
 }
 
 /**
+ * Idioma inicial para una partida NUEVA a partir del locale del navegador (es-* → es; resto en).
+ * Pura a propósito (R-16.8): recibe el valor por parámetro y nunca toca `navigator`, así es
+ * testeable en Node — el caller (main.js) le pasa `globalThis.navigator?.language`.
+ * @param {string | undefined} navLang - típicamente navigator.language
+ * @returns {string}
+ */
+export function resolveInitialLanguage(navLang) {
+  return typeof navLang === 'string' && navLang.toLowerCase().startsWith('es') ? 'es' : 'en';
+}
+
+/**
  * Traduce una clave del diccionario activo e interpola `{param}` con `params.param`.
  * NO sanitiza el resultado: los `params` que vengan de `state` siguen las reglas de siempre
  * antes de llegar a `innerHTML` (números con `Number(x) || 0`, strings resueltos contra data
