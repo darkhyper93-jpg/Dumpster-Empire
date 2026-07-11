@@ -3672,3 +3672,104 @@ Recién ahí creé `feat/i18n-ronda16` desde `main` actualizado.
     "feat(engine): ronda 16 — ids estables de ítems y save v7 (colección sobrevive a la traducción)"
 [x] Handoff escrito (este bloque)
 ```
+
+## Ronda 16 — Agente B (plomería de idioma)
+
+### Qué hice
+- **`playwright.config.js`**: `locale: 'es-ES'` en `use:` — PRIMERO que todo (R-16.1): sin eso,
+  la detección de idioma nueva booteaba los 48 e2e existentes en inglés y morían todos.
+- **`apps/game/src/i18n/i18n.js`**: `resolveInitialLanguage(navLang)` exportada — pura, recibe
+  el locale por parámetro (R-16.8: ningún módulo toca `navigator`; el caller le pasa
+  `globalThis.navigator?.language`).
+- **`apps/game/src/i18n/dataI18n.js`** (nuevo): `initDataLocalization(loaded)` captura el
+  baseline español (mapas `id → string` de todos los campos de display) y
+  `applyDataLanguage(loaded, lang)` pisa in-place: `'en'` desde data-en.js con fallback al
+  baseline por clave faltante (nunca un hueco); cualquier otro valor restaura el español.
+  Aplicar sin init previo LANZA Error a propósito (orden de boot roto = R-16.3, mejor ruidoso).
+- **`apps/game/src/i18n/data-en.js`** (nuevo): esqueleto GENERADO por script de Node desde la
+  data real (no a mano) — 16 containers, 87 ítems por pool, 8 rarities, 35 achievements,
+  12 automations `{name, desc}`, 13 prestigeTree `{name, desc}`, 4 upgrades. Valores todavía
+  en ESPAÑOL a propósito: la traducción real es la tarea 16.C.
+- **`apps/game/src/store.js`**: acción `setLanguage(lang)` (valida contra
+  `SUPPORTED_LANGUAGES` del engine, ignora en silencio lo demás — mismo allow-list que
+  save.js); `resetGame` copia `language` del estado saliente (DECISIÓN: resetear la partida
+  no cambia el idioma de la UI).
+- **`apps/game/src/main.js`**: orden de boot NUEVO — detección por `navigator.language` SOLO
+  en partida nueva (sin initialSaveText ni localStorage); `initDataLocalization` DESPUÉS de
+  `createStore` (que ya construyó `itemNameToId` con nombres españoles) y ANTES del primer
+  `applyDataLanguage`; `document.documentElement.lang` sincronizado; `UIManager` ahora recibe
+  `loaded` como 3er argumento del constructor (DECISIÓN: lo mínimo — render() necesita
+  re-aplicar el overlay sobre el MISMO objeto que localizó main.js).
+- **`apps/game/src/ui/UIManager.js`**: sync de idioma en `render(state)` (mismo patrón que el
+  sync de audio/sensibilidad): si `getLanguage() !== state.language` → setLanguage +
+  applyDataLanguage + `documentElement.lang` + `refreshStaticTexts()`. Ese método nuevo
+  re-ejecuta `injectTabIcons()`, re-asigna el texto de `dig.abandon` y borra
+  `dataset.iconReady` de los nodos del Topbar para que el próximo Topbar.render los
+  reconstruya con el idioma nuevo. Cubre también R-16.10 (save importado con otro idioma).
+- **`apps/game/src/ui/SettingsView.js`**: bloque nuevo con `<select id="language-select">`
+  (labels "Español"/"English" son endónimos fijos a propósito — NO se traducen); listener
+  `change` en el bind-once propio con `evt.target.blur()` ANTES de despachar (R-16.4: el
+  guard de SELECT de UIManager se tragaría el re-render). AJUSTE: la marca de bind pasó de
+  `dataset.bound` (genérica, #tab-content es compartido) a `dataset.boundSettings` (R-16.5 /
+  napkin; ninguna otra vista leía `bound`, cambio inocuo).
+- **`apps/game/styles/components.css`**: regla `.settings-block select` calcada del select
+  recesado del target del robot — solo tokens.
+- **`es.js` / `en.js`**: clave nueva `'settings.language': 'Idioma'` (el valor inglés real es
+  de 16.C). Ni una letra del copy español existente cambió (regla dura 11).
+- **`apps/game/tests/ronda16-i18n.test.js`** (nuevo, 16 tests): resolveInitialLanguage
+  ('es'/'es-AR'/'ES-mx' → es; 'en-US'/'pt-BR'/undefined/null/''/42 → en); paridad DINÁMICA
+  es/en (mismas claves y mismos `{params}` por clave vía regex, cero conteos hardcodeados);
+  paridad de ids data-en.js ↔ data real EN AMBAS direcciones (por colección, incluidos los
+  pools de ítems uno a uno); overlay: aplica por id con fallback, ida y vuelta sin pérdida,
+  idempotencia, idioma basura cae al baseline, throw sin init.
+
+### Verificado
+- `npm test` → **285/285 verdes** (269 de A + 16 nuevos).
+- `npm run test:e2e` → **48/48 verdes** — siguen asertando copy español gracias al locale.
+- `node --check` sobre los 11 archivos JS tocados/nuevos → sin errores.
+- Barridos en 0 sobre el diff (incluidos los untracked): emojis
+  (`\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`), `console.log`, `// TODO`.
+- **Verificación manual en runtime** (scripts descartables de Playwright en el scratchpad de
+  la sesión, no versionados; server propio en :5199, apagado al terminar). Como en.js y
+  data-en.js son placeholders idénticos al español, el switch no sería visible a ojo: se
+  interceptaron esos DOS módulos por HTTP (`page.route`) con una string cambiada por lado
+  ("Containers-TEST" / "Street Bin TEST" / "Crushed Can TEST") para probar el pipeline
+  completo de verdad. 22/22 checks OK en 3 escenarios:
+  1. locale es-ES, partida nueva → bootea español; el select cambia tabs + tienda EN VIVO sin
+     recargar; `<html lang>` sigue; el save persiste `"language":"en"`; recarga mantiene
+     inglés; volver a 'es' restaura el baseline exacto.
+  2. locale en-US, partida nueva → detección automática: bootea directo en inglés y el save
+     nuevo ya persiste `en`.
+  3. save v7 sembrado con `language:'en'` + ítem encontrado por id, locale es-ES → el save
+     manda sobre el locale; el Índice muestra el nombre del ítem con el overlay aplicado
+     (nombres de ítems cubiertos, tal como pide el DoD).
+  Cero errores de consola en los 3 escenarios. Además: Ajustes a 375px sin overflow
+  (scrollWidth 375 = clientWidth 375) con el selector visible.
+
+### Qué necesita saber el Agente C (traducción real — SOLO diccionarios)
+- Tocás únicamente VALORES en `en.js` (~103 con `settings.language`) y `data-en.js` (~230
+  strings). Las claves/ids NO se tocan: los tests de paridad de
+  `apps/game/tests/ronda16-i18n.test.js` te van a marcar cualquier id agregado/perdido y
+  cualquier `{param}` que difiera del español (`achievements.rewardKeys` usa `{plural}`,
+  `automation.calloutInactive` lleva `<strong>{name}</strong>`, `dig.rateHint` empieza con
+  espacio — conservalos exactos).
+- Los labels "Español"/"English" del select en SettingsView.js son endónimos fijos: NO son
+  claves de diccionario, no los toques.
+- `data-en.js`: automations y prestigeTree son `{ name, desc }`; el resto mapas `id → string`.
+  El fallback al español existe (una clave que borres no rompe, cae al baseline), pero el test
+  de paridad la detecta igual — no dependas del fallback.
+- Para VER tus traducciones jugando: `npm run dev`, partida nueva con DevTools →
+  `localStorage.clear()` y un navegador en inglés, o simplemente el selector de Ajustes. Ya no
+  hace falta el truco de interceptar módulos (con traducciones reales el cambio se ve solo).
+- El copy español es INTOCABLE (regla dura 11) — es.js y los JSON de data quedan como están.
+
+### Estado del DoD (Agente B)
+```
+[x] npm test → 285/285 verde (269 previos + 16 nuevos)
+[x] npm run test:e2e → 48/48 verde (siguen en español por el locale es-ES)
+[x] Manual: selector cambia tabs/tienda/ítems del Índice en vivo, persiste al recargar,
+    detección en-US, save manda sobre locale, 375px sin overflow, cero errores de consola
+[x] git commit → 2e09539, rama feat/i18n-ronda16,
+    "feat(ui): ronda 16 — plomería de idioma (detección, selector, overlay de data)"
+[x] Handoff escrito (este bloque)
+```
