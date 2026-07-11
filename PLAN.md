@@ -287,6 +287,10 @@ con la Suerte y en late-game perder era irrelevante).
     Pega más fuerte contra contenedores de alta `resistencia` (el ritmo clampa 0.3–1.5).
   - `autoSpeedPercent` (máquinas): multiplicador plano de velocidad de procesamiento;
     `remaining` decrece a razón de `dt × (1 + Σ percent)`. Aplica también a slots ya en curso.
+  - Los dos efectos de máquinas alimentan también la **estimación de tasa del progreso offline**
+    (§4.5): `estimateAutomationRatePerSecond` usa el tiempo efectivo con `isAuto=true` y
+    multiplica por la velocidad del robot — el robot trabaja al mismo ritmo con el juego abierto
+    o cerrado (auditoría ronda 15).
   - `trapDiscardChancePerNivel` (nodo de prestigio, se paga con Llaves): al completarse un slot
     cuyo roll dio trampa, con probabilidad `min(1, nivel × percentPerNivel)` el robot DESCARTA
     el contenedor: no hay castigo ni loot, el contenedor se pierde (ya se pagó), cuenta para el

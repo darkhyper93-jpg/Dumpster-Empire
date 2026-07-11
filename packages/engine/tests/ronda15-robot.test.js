@@ -15,6 +15,7 @@ import {
 } from '../src/economy.js';
 import { automationTick } from '../src/systems/automation.js';
 import { checkAchievements } from '../src/systems/achievements.js';
+import { estimateAutomationRatePerSecond, expectedContainerValue } from '../src/systems/offline.js';
 import upgrades from '../../../apps/game/src/data/upgrades.json';
 
 // Stub mínimo: solo lo que necesitan los tests de esta ronda, sin depender de que B/C ya
@@ -219,5 +220,65 @@ describe('checkAchievements — cond types nuevos (trapsDiscardedAtLeast, contai
     ];
     const unlocked = checkAchievements(state, achievementsData, ctx);
     expect(unlocked).toEqual(['aTest2']);
+  });
+});
+
+// AJUSTE (auditoría ronda 15): la tasa offline (§4.5) tiene que reflejar las máquinas del robot
+// (§4.7) — automationTick procesa con isAuto=true y getAutoSpeedMult, pero la estimación offline
+// usaba el tiempo efectivo MANUAL y velocidad 1: las máquinas compradas no hacían nada offline.
+describe('AUDITORÍA ronda 15 — el offline respeta las máquinas del robot (§4.5 × §4.7)', () => {
+  // probTrampaBase 0: con la trampa segura del stubContainer (probTrampaBase 1) el valor
+  // esperado del contenedor es 0 y la tasa da 0 haya o no máquinas — no se podría medir nada.
+  const offlineContainer = { ...stubContainer, id: 'offlineStub', probTrampaBase: 0 };
+  const offlineItemsData = {
+    containers: {
+      offlineStub: [{ icon: 'artifact', name: 'Item Offline', categoria: 'common', valorBase: 10 }],
+    },
+    rarities: itemsDataStub.rarities,
+  };
+  // getParallelAutoSlots parte de 0 (en la data real el slot base lo aporta el efecto
+  // `parallelSlots` del Robot Clasificador): el stub necesita su propia máquina de slots
+  // para que la tasa no dé 0. No se agrega al robotStub compartido para no alterar los
+  // escenarios de automationTick de arriba.
+  const offlineData = {
+    ...data,
+    automations: [...automationsStub, { id: 'slotStub', name: 'Slot Stub', effects: [{ type: 'parallelSlots', flat: 1 }] }],
+  };
+
+  function offlineState() {
+    const state = stateWithRobot();
+    state.automationOwned.slotStub = true;
+    state.money = offlineContainer.costoInicial; // bestAffordableUnlockedContainer lo elige
+    return state;
+  }
+
+  it('sin máquinas, la tasa offline es la de siempre (regresión: nada cambia para saves viejos)', () => {
+    const state = offlineState();
+    const rate = estimateAutomationRatePerSecond(state, [offlineContainer], offlineItemsData, offlineData);
+    const expected =
+      expectedContainerValue(state, offlineContainer, offlineItemsData, offlineData) /
+      getEffectiveDigTime(state, offlineContainer, offlineData);
+    expect(rate).toBeCloseTo(expected);
+    expect(rate).toBeGreaterThan(0);
+  });
+
+  it('con Motor de Velocidad I (+25%), la tasa offline es exactamente 1.25× la base', () => {
+    const base = estimateAutomationRatePerSecond(offlineState(), [offlineContainer], offlineItemsData, offlineData);
+    const state = offlineState();
+    state.automationOwned.velocidadMotor1 = true;
+    const faster = estimateAutomationRatePerSecond(state, [offlineContainer], offlineItemsData, offlineData);
+    expect(faster).toBeCloseTo(base * 1.25);
+  });
+
+  it('con Motor de Fuerza I (+40%), la tasa offline usa el tiempo efectivo isAuto=true (igual que automationTick)', () => {
+    const base = estimateAutomationRatePerSecond(offlineState(), [offlineContainer], offlineItemsData, offlineData);
+    const state = offlineState();
+    state.automationOwned.fuerzaMotor1 = true;
+    const faster = estimateAutomationRatePerSecond(state, [offlineContainer], offlineItemsData, offlineData);
+    expect(faster).toBeGreaterThan(base);
+    const expected =
+      expectedContainerValue(state, offlineContainer, offlineItemsData, offlineData) /
+      getEffectiveDigTime(state, offlineContainer, offlineData, true);
+    expect(faster).toBeCloseTo(expected);
   });
 });
