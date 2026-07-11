@@ -80,12 +80,18 @@ test.describe('Dumpster Empire — regresión ronda 12 (celebraciones)', () => {
     await seed(page, preBarrioSave());
     await entrarAlJuego(page);
     await completarEscarbadoDelTacho(page);
-    await expect(page.locator('.toast').filter({ hasText: 'Logro desbloqueado' })).toHaveCount(0);
+    // AJUSTE (ronda 17, deuda de la auditoría 15): `expect(...).toHaveCount(0)` auto-reintenta
+    // hasta cumplirse, y como un toast expira solo (~3.8s) la assertion "esperaba" a que
+    // desapareciera y pasaba AUNQUE el toast viejo hubiera aparecido (falso verde). El chequeo
+    // de ausencia va con `count()` inmediato en un momento fijado: recién desbloqueado el logro
+    // (línea de arriba) y recién cerrada la última celebración (abajo), ambos dentro de la vida
+    // del toast. Verificado que falla reintroduciendo el toast viejo (sabotaje en UIManager).
+    expect(await page.locator('.toast').filter({ hasText: 'Logro desbloqueado' }).count()).toBe(0);
     // Cierra las celebraciones encoladas y vuelve a chequear tras la interacción.
     while (await page.locator('[data-action="close-celebration"]').isVisible().catch(() => false)) {
       await page.locator('[data-action="close-celebration"]').click();
     }
-    await expect(page.locator('.toast').filter({ hasText: 'Logro desbloqueado' })).toHaveCount(0);
+    expect(await page.locator('.toast').filter({ hasText: 'Logro desbloqueado' }).count()).toBe(0);
   });
 
   test('3: comprar el barrio desbloquea el Industrial y celebra "¡Contenedor nuevo!"', async ({ page }) => {

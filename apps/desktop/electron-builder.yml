@@ -1,4 +1,4 @@
-# electron-builder ^24.x (versión pineada, DESARROLLO.md §3). Se corre desde la raíz del
+# electron-builder ^26 (versión pineada, DESARROLLO.md §3). Se corre desde la raíz del
 # monorepo con:  npx electron-builder --config apps/desktop/electron-builder.yml --win|--mac|--linux
 #
 # DECISIÓN: `directories.app: apps/desktop` porque ese es el paquete de Electron real
