@@ -3773,3 +3773,70 @@ Recién ahí creé `feat/i18n-ronda16` desde `main` actualizado.
     "feat(ui): ronda 16 — plomería de idioma (detección, selector, overlay de data)"
 [x] Handoff escrito (este bloque)
 ```
+
+## Ronda 16 — Agente C: traducción real (SOLO diccionarios, cero código)
+
+### Qué hice
+- **`apps/game/src/i18n/en.js`**: traduje los 103 valores (los 100 originales de ronda 14 +
+  `settings.language` de la B) a inglés casual de idle game, en segunda persona. Conservé
+  EXACTOS: todos los `{params}`, el HTML embebido de `automation.calloutInactive`
+  (`<strong>{name}</strong>`), y el espacio inicial de `dig.rateHint` (`' · Dig rate: ...'`).
+  `achievements.rewardKeys` usa `{amount} City Key{plural}` (el `{plural}` inglés funciona
+  igual: `s`/vacío, tal como anticipó el handoff de B).
+- **`apps/game/src/i18n/data-en.js`**: traduje TODOS los valores (16 contenedores, 87 ítems
+  repartidos en sus 16 pools, 8 rarezas, 35 logros, 12 automatizaciones `{name, desc}`,
+  13 nodos de prestigio `{name, desc}`, 4 mejoras) — cero código, solo strings. Nombres de
+  ítems con inventiva equivalente donde el literal sonaba forzado (p. ej. "Autorretrato de
+  otro vos" → "Self-Portrait of Another You", "El corazón del coleccionista" →
+  "The collector's heart"). No toqué ninguna clave/id: son las que generó el script de B.
+- **Glosario fijo aplicado** (documentado en ROADMAPv3.md §16.C, respetado en todo el
+  diccionario): Llaves de Ciudad → City Keys; Escarbar → Dig; Fuerza de Escarbado → Dig Power;
+  Área de Búsqueda → Search Area; Suerte → Luck; Contenedor → Container; Trampa → Trap;
+  Prestigio → Prestige; Mejora → Upgrade; Basura Común → Common Junk.
+- No toqué `es.js` ni ningún JSON de `apps/game/src/data/` (regla dura 11: copy español
+  intocable — los 43+ e2e existentes lo asertan).
+
+### Verificado
+- `npm test` → **285/285 verdes** (paridad dinámica es/en y data-en/data real pasa con
+  traducciones reales, no solo con el placeholder de B).
+- `npm run test:e2e` con `--workers=1` → **48/48 verdes**. La corrida por defecto (paralela)
+  tira 1 falla intermitente en `ronda14-regression.spec.js` (test 1: modal de celebración
+  intercepta el click al tab de Automatización, timeout de Playwright) — confirmé que es
+  flake de contención entre workers, NO relacionado con este diff: el mismo test pasa solo
+  (`npx playwright test apps/game/e2e/ronda14-regression.spec.js` → 3/3 verdes) y la suite
+  completa pasa 48/48 con `--workers=1`. Diff de esta tarea son solo 2 archivos de
+  diccionario, cero código — no hay superficie para afectar timing de UI.
+- `grep console.log|TODO` sobre los 2 archivos tocados → 0.
+- **Verificación manual en runtime** (Playwright descartable en el scratchpad de la sesión,
+  server propio `npx serve . -l 5199`, apagado al terminar; sin tocar el save real del
+  jugador): partida nueva con locale `en-US` → bootea directo en inglés, tabs
+  `['Dig','Containers','Automation','Achievements','Prestige','Index']`, la tienda muestra
+  "Cost:" y CERO "Costo:" en pantalla, cero errores de consola. Partida nueva con locale
+  `es-ES` → tabs siguen exactos
+  `['Escarbar','Contenedores','Automatización','Logros','Prestigio','Índice']` (copy español
+  byte a byte intacto), cero errores de consola.
+
+### Qué necesita saber el Agente D (e2e + boot bilingüe)
+- Los textos ancla en inglés que probablemente uses: tabs (`Dig`/`Containers`/`Automation`/
+  `Achievements`/`Prestige`/`Index`), `titleScreen.play` → "Play", `shop.cost` → "Cost: {label}"
+  (empieza con "Cost:" tal como pide la tarea D1 del roadmap).
+- `apps/game/index.html:44` (`Cargando Dumpster Empire…`) SIGUE en español — es tarea tuya
+  (D1) cambiarlo al texto bilingüe corto.
+- El save v6→v7 sembrado a mano en tu test de migración necesita el NOMBRE español real de un
+  ítem de `tachoVereda` (p. ej. `'Lata aplastada'` para `can-crushed`) — la clave inglesa NO
+  se usa ahí, la migración mapea por nombre español (itemNameToId se construye desde la data
+  pristina, ver R-16.3 del handoff de B).
+- No quedó ningún string en español visible al jugar en inglés (verificado manualmente en las
+  vistas Tienda y Tabs; D cubre el resto de vistas en su e2e).
+
+### Estado del DoD (Agente C)
+```
+[x] npm test → 285/285 verde (paridad real, sin conteos hardcodeados)
+[x] npm run test:e2e → 48/48 verde con --workers=1 (flake de contención documentado, no
+    relacionado con este diff — diff son 2 archivos de diccionario, cero código)
+[x] Manual: inglés sin string español visible (tabs, tienda), español intacto, cero errores
+    de consola en ambos locales
+[x] git commit → 9e6e669, rama feat/i18n-ronda16,
+    "feat(i18n): ronda 16 — traducción completa al inglés (UI + data)"
+[x] Handoff escrito (este bloque)
+```
