@@ -295,6 +295,17 @@ body {
 
 #tabbar {
   display: flex;
+  /* AJUSTE (ronda 17, auditoría 11): el tabbar es una barra INFERIOR (border-top, esquinas
+     superiores redondeadas, sombra hacia arriba, "tabbar inferior" en DESARROLLO.md §6) pero
+     en mobile no quedaba abajo: con la pestaña Escarbar activa, UIManager oculta #tab-content
+     (el único flex:1 del shell) y el tabbar flotaba a media pantalla en 375px; en las demás
+     pestañas quedaba pegado DEBAJO del topbar (el <nav> va antes de #tab-content en el DOM).
+     `order:1` lo manda al final del flex del shell y `margin-top:auto` lo ancla al fondo
+     cuando no hay ningún flex:1 visible que empuje (caso Escarbar). En desktop (>=1024px) el
+     shell es grilla con grid-template-areas: `order` no afecta a items con área asignada y el
+     margen resuelve a 0 (la fila 'nav' es `auto`, sin espacio libre) — verificado a 1280px. */
+  order: 1;
+  margin-top: auto;
   overflow-x: auto;
   border-top: 4px solid var(--bg-surface-highest);
   background: var(--bg-2);
