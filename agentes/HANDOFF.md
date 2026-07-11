@@ -3494,3 +3494,95 @@ validación de save (riesgo medio) y 5 hardcodeos/edge cases (calidad).
     "test(e2e): ronda 15 — contenido nuevo cubierto + toast de descarte"
 [x] Handoff escrito (este bloque)
 ```
+
+## Ronda 15 — Agente E (auditor Verif&Audit.md)
+
+**Rol:** auditoría adversarial del diff completo de la ronda (`git diff main...HEAD`, commits de
+A-D: `9b1ca62`..`df54ddd`) siguiendo Verif&Audit.md — OWASP/XSS vía data nueva, NaN/Infinity,
+pools vacíos, límites, hardcoding, deuda — más la checklist manual de 15.E4 y los riesgos R1-R8.
+
+### 🔴 CRÍTICO / ALTO RIESGO
+Ninguno. La superficie atacable real (el save) quedó bien cubierta: `trapsDiscarded` entra a
+`REQUIRED_FIELDS` como `number` y el loop genérico de finitud de la auditoría post-14 rechaza
+NaN/Infinity gratis; la migración v5→v6 rellena `0` y un save v6 sin el campo se rechaza (no
+hay camino que lo deje `undefined`). Cero sinks nuevos state→innerHTML: el toast usa `t()` con
+clave estática y `Toast.push` renderiza con `textContent`. Importmap/CSP intactos.
+
+### 🟡 CORREGIDO — la tasa offline ignoraba las máquinas del robot (`fd2a375`)
+`automationTick` procesa con `getEffectiveDigTime(..., isAuto=true)` y acelera el decremento con
+`getAutoSpeedMult`, pero `estimateAutomationRatePerSecond` (systems/offline.js) seguía estimando
+con el tiempo efectivo MANUAL y velocidad 1: las 4 máquinas nuevas (hasta $145M en total) no
+aportaban NADA al progreso offline — el robot "trabajaba más lento" con el juego cerrado que
+abierto, contradiciendo §4.5 (la estimación debe reflejar la tasa automática real) y §4.7.
+Fix en el engine (isAuto=true + `× getAutoSpeedMult`), 3 tests de regresión en
+`ronda15-robot.test.js` (RED confirmado antes del fix: la tasa daba 0.97 ignorando máquinas en
+vez de 1.2125), contrato actualizado en PLAN.md §4.7 (documento maestro primero). El descarte
+del Escáner NO necesita cambio offline: `expectedContainerValue` ya modela la trampa como
+"cero ganancia sin castigo", que es exactamente lo que hace el descarte.
+
+### 🔵 CORREGIDO — toast de descarte tras reemplazo del state + e2e del guard R5 (`8195420`)
+- `UIManager` comparaba `trapsDiscarded` contra el render anterior sin importar si el objeto de
+  estado era OTRO: `store.actions.importSave`/`resetGame` reemplazan `state`, y un import con
+  `trapsDiscarded` mayor al de la sesión dispararía el toast sin que hubiera pasado nada. Hoy
+  `importSave` no tiene caller en la UI (el import por textarea se quitó en §11.1 y el save de
+  escritorio se resuelve ANTES de crear el store), así que era un camino latente — se endureció
+  antes de que una ronda futura lo reactive: el toast solo se evalúa entre renders del MISMO
+  objeto de estado.
+- El guard R5 ("bootear con `trapsDiscarded > 0` no dispara el toast") no tenía cobertura
+  automatizada (el Agente D descartó el e2e por el RNG del descarte, pero el caso del BOOT es
+  100% determinista): `apps/game/e2e/audit-ronda15.spec.js` lo cubre. **Verifiqué que falla con
+  el guard saboteado** — y esa verificación encontró un falso verde: `toHaveCount(0)` auto-
+  reintenta hasta cumplirse, y como el toast expira solo a los 3.8s, la assertion "esperaba" a
+  que desapareciera y pasaba igual con el bug puesto. El spec usa `count()` inmediato en un
+  momento fijado. Anotado en el napkin; **mismo patrón latente pre-existente en
+  `ronda12-regression.spec.js:83,88`** (fuera del diff de esta ronda — queda documentado acá
+  para la ronda 17 de pulido, no lo toqué).
+
+### 🔵 EVALUADO Y DECIDIDO NO TOCAR (para que nadie lo "arregle" por error)
+- `getAutoSpeedMult(state, data)` se llama por slot dentro del loop de `automationTick`
+  (podría izarse fuera): son ≤4 slots × un scan de 12 máquinas por segundo — irrelevante.
+- `trapsDiscarded` negativo pasa la validación de save: misma política pre-existente de TODOS
+  los contadores (`trapsHit`, etc.) e inofensivo (no se muestra en UI; el toast solo dispara en
+  incrementos; el logro simplemente no desbloquea).
+- Tests de balance re-anclados por B/C: revisados uno por uno — derivan topes de la data real
+  (ratio ×10-×16, 15% del costo del árbol) en vez de debilitar números a ciegas. Correcto.
+- R7: a20/a21 se endurecen solos con 16 contenedores / 12 máquinas — intencional, intacto.
+
+### ✅ Verificado
+- Data: pools de los 16 contenedores cubren TODAS sus `categorias` (R2), `valorBase` finitos y
+  positivos, sin pools huérfanos; 168 claves de ícono resuelven vía `hasIcon()` (0 en fallback);
+  35 logros con ids únicos y cond types existentes en `CONDITION_EVALUATORS` (R1); 12 máquinas
+  con costos estrictamente ascendentes; 13 nodos con `requires` válidos (`escanerTrampas` cuelga
+  de `instintoCarronero`).
+- `npm test` → **263/263 verdes** (260 de A-D + 3 de la auditoría). `npm run test:e2e` →
+  **48/48 verdes** (47 + 1 de la auditoría). `node --check` sobre los archivos tocados → ok.
+- Barridos en 0 sobre el diff: `console.log`, `// TODO`, emojis (`\x{1F300}-\x{1FAFF}`/
+  `\x{2600}-\x{27BF}`), hex sueltos.
+- Checklist manual 15.E4 (Playwright real contra `npm run dev`, scripts descartables en el
+  scratchpad de la sesión, no versionados):
+  - **El robot acelera de verdad**: slot de Depósito Abandonado avanza 4.78%/s sin máquinas y
+    17.45%/s con las 4 compradas (ratio 3.65×, teórico 3.85× = Fuerza 2.2 clampeada 0.88/0.4 ×
+    velocidad 1.75). Las 4 se compraron por UI y quedaron "Activo". Ojo: una máquina de Fuerza
+    comprada a mitad de un slot NO acorta ese slot en curso (el `totalTime` se fija al crearlo)
+    — solo los slots nuevos; la velocidad sí aplica al vuelo (así lo define §4.7).
+  - **Toast de descarte real**: con Escáner nivel 3 + robot + máquinas sobre Depósito
+    Abandonado, "El robot descartó un contenedor con trampa." apareció a los ~26s. Cero
+    errores de consola.
+  - **375px**: Tienda/Automatización/Prestigio con todo el contenido nuevo — `scrollWidth`
+    375 = `clientWidth` 375 en las tres (sin overflow), capturas revisadas. `$2e18` se muestra
+    como `$2000.00Qa` (R8: sin notación científica).
+
+### ✅ Veredicto final
+El diff de la ronda 15 es apto para mergear: sin vulnerabilidades explotables ni hardcodeo, con
+la única inconsistencia real (economía offline vs. máquinas del robot) corregida en el engine
+con regresión. Los dos commits de auditoría (`fd2a375`, `8195420`) cierran la ronda.
+
+### Estado del DoD (Agente E)
+```
+✅ npm test                    → 263/263 verdes
+✅ npm run test:e2e            → 48/48 verdes
+✅ 🔴/🟡 arreglados en commits audit: propios, con test de regresión c/u
+✅ Checklist manual 15.E4 jugando (aceleración medida, toast visto, 375px sin overflow)
+✅ Handoff escrito (este bloque)
+✅ Push de feat/contenido-ronda15 + link de PR para el usuario
+```
