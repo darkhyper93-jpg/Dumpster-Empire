@@ -3586,3 +3586,89 @@ con regresión. Los dos commits de auditoría (`fd2a375`, `8195420`) cierran la 
 ✅ Handoff escrito (este bloque)
 ✅ Push de feat/contenido-ronda15 + link de PR para el usuario
 ```
+
+## Ronda 16 — Agente A (engine): ids estables de ítems + save v7
+
+### Nota previa: ronda 15 mergeada a main
+ROADMAPv3.md exige que la ronda 16 no arranque sin la 15 mergeada en `main` (la traducción cubre
+contenido que crea la 15). Verifiqué con `git merge-base --is-ancestor` que NO lo estaba (main
+seguía en `bee7534`, el commit del propio ROADMAPv3). Le pregunté al usuario cómo proceder;
+eligió mergear primero. Hice `git switch main && git merge --no-ff feat/contenido-ronda15`
+(merge limpio, sin conflictos), `npm test` → 263/263 verde, y `git push origin main` (`08c11d3`).
+Recién ahí creé `feat/i18n-ronda16` desde `main` actualizado.
+
+### Qué hice
+- **`apps/game/src/data/items.json`**: los 87 ítems (16 contenedores) ganan `id` como primer
+  campo = su `icon` (script de Node, no a mano). Verificado: `id`s únicos dentro de cada pool
+  (el comando de validación de la tarea A1 del roadmap → `OK ids únicos por pool`).
+- **`packages/engine/src/systems/containers.js`**: `rollContainerResult` agrega `id: pick.id` al
+  ítem pusheado; `alreadyFound`/`seenInThisRoll` ahora comparan por `pick.id` (antes por
+  `pick.name`, que iba a romperse en cuanto `en.js`/`data-en.js` tradujeran el nombre).
+  `applyContainerResult` indexa `byContainer[item.id]` en vez de `byContainer[item.name]`.
+  Typedef `DigResult` documenta `id: string` en cada item.
+- **`apps/game/src/ui/CollectionView.js:76`**: `foundInContainer[item.name]` →
+  `foundInContainer[item.id]` (línea 92 sigue mostrando `item.name`: el display es traducible,
+  la clave de persistencia no).
+- **`packages/engine/src/state.js`**: `SAVE_VERSION` 6 → 7 con su `AJUSTE (ronda 16)`; typedef de
+  `itemsFoundByItem` documenta que ahora es "por id de ítem".
+- **`packages/engine/src/save.js`**: `migrate(raw, itemNameToId)` gana el bloque v6→v7 (remapea
+  claves español→id vía el mapa `containerId -> { nombreEspañol -> id }`, claves desconocidas
+  pasan tal cual — idempotente); `validateSave`/`deserializeState`/`importSave` enhebran el
+  parámetro `itemNameToId` como 3er argumento opcional (mismo patrón que `validContainerIds`).
+- **`apps/game/src/store.js`**: antes de `loadState()` arma `itemNameToId` desde `itemsData`
+  (todavía en español — se ejecuta antes de que exista overlay de idioma, la ronda 16.B lo
+  reusará); lo pasa a `deserializeState` (línea de `loadState`) y a `engineImportSave` (acción
+  `importSave`).
+- **`apps/game/e2e/ronda14-regression.spec.js`**: el seed de `itemsFoundByItem` de
+  `tachoAgotadoSave()` pasa de nombres (`item.name`) a ids (`item.id`) — el save sembrado sale de
+  `freshState()` v7 directo, no pasa por `migrate()`.
+- **`packages/engine/tests/fase7-index.test.js`**: los dos tests de `applyContainerResult` de la
+  Fase 7 construían `DigResult.items` a mano sin `id` — les agregué el campo (`can-crushed`,
+  `banana-peel`, `item-a`) y las aserciones ahora comparan por id, no por nombre.
+- **`packages/engine/tests/ronda16-i18n-save.test.js`** (nuevo, RED→GREEN): 6 casos — save v6 con
+  claves español migra a ids con `itemNameToId`; clave desconocida pasa tal cual; doble migración
+  idempotente; ida y vuelta v7 sin pérdida (`exportSave`/`importSave`); sin `itemNameToId` las
+  claves quedan como están (compat); `deserializeState` completo con `itemNameToId`.
+
+### Verificado
+- `npm test` → **269/269 verdes** (263 previos de la ronda 15 + 6 nuevos de
+  `ronda16-i18n-save.test.js`; los 2 de `fase7-index.test.js` reescritos siguen contando en el
+  total, no sumaron).
+- `npm run test:e2e` → **48/48 verdes** (sin cambios de conteo: la ronda 16.A no toca UI de e2e
+  más allá del seed reescrito de la 14).
+- `node --check` sobre los 5 archivos de código tocados (`store.js`, `CollectionView.js`,
+  `save.js`, `state.js`, `containers.js`) → sin errores de sintaxis.
+- Verificación manual en runtime (`npx serve . -l 5173`, script descartable de Playwright, no
+  versionado): seedeé un save v6 real con `itemsFoundByItem: { tachoVereda: { 'Lata aplastada':
+  3 } }` en `localStorage`, boot del juego, cerré el modal de celebración (logros por el dinero
+  sembrado) y entré al Índice — la tarjeta "Lata aplastada" mostró "Encontrado: 3" (la migración
+  v6→v7 resolvió `'Lata aplastada'` → `'can-crushed'` en memoria vía `itemNameToId` y
+  `CollectionView` la encontró por `item.id`). Cero errores de consola. `localStorage` seguía con
+  la forma pre-migración porque no hubo ninguna acción que disparara `persist()` tras el boot —
+  comportamiento esperado, no un bug (la migración vive en memoria hasta el próximo guardado).
+- Barridos en 0 sobre el diff: `console.log`, `// TODO`, emojis (rango
+  `\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`).
+
+### Qué necesita saber el Agente B (plomería de idioma)
+- `itemNameToId` ya vive en `store.js` (construido ANTES de `loadState()`), pero la ronda 16.B
+  tiene que asegurarse de construirlo/usarlo con la data TODAVÍA en español — es decir, antes de
+  llamar a `applyDataLanguage` por primera vez (R-16.3 del roadmap). Ahora mismo no hay overlay
+  de idioma, así que no hay riesgo de orden todavía; en cuanto B agregue `initDataLocalization`/
+  `applyDataLanguage`, verificar que sigan corriendo DESPUÉS de que `itemNameToId` ya se calculó.
+- No toqué `main.js` ni `i18n/` — ninguno de esos módulos existe aún, son tarea de B.
+- `DigResult.items[].id` ya viaja hasta `DigCanvas.js`/`UIManager.js`/`CelebrationModal.js` sin
+  que yo tocara esos archivos (siguen usando `.name` solo para mostrar, nunca como clave) — R-16.9
+  del roadmap ("el snapshot de DigResult usa id para decidir, name solo para mostrar") ya se
+  cumple desde este bloque.
+- El grep obligatorio de R-16.2 (`itemsFoundByItem` en `apps`/`packages`) lo corrí: los únicos
+  accesos son los que dejé listados arriba (`store.js`, `save.js`, `state.js`, `containers.js`,
+  `CollectionView.js`) más comentarios/typedefs. Ningún otro archivo de UI o engine lo toca.
+
+### Estado del DoD (Agente A, ronda 16)
+```
+[x] npm test → 269/269 verde (263 previos + 6 nuevos)
+[x] npm run test:e2e → 48/48 verde (sin cambio de conteo, tarea de A no toca UI)
+[x] git commit → 597350a, rama feat/i18n-ronda16,
+    "feat(engine): ronda 16 — ids estables de ítems y save v7 (colección sobrevive a la traducción)"
+[x] Handoff escrito (este bloque)
+```
