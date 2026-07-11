@@ -3312,3 +3312,111 @@ validación de save (riesgo medio) y 5 hardcodeos/edge cases (calidad).
 ✅ git commit                  → da61049, rama feat/contenido-ronda15
 ✅ Handoff escrito (este bloque)
 ```
+
+---
+
+## Agente C (ronda 15 — máquinas del robot + nodo Escáner + rebalanceo de logros)
+
+**Qué hice:**
+- `apps/game/src/data/automations.json`: 4 máquinas nuevas insertadas manteniendo el array
+  ordenado por `cost` ascendente — `servobrazosReforzados` ($150.000, entre Cinta Transportadora
+  y Planta de Reciclaje), `chipOverclock` ($800.000, entre Planta de Reciclaje y Centro de
+  Subastas), `servobrazosTitanio` ($25.000.000) y `nucleoCuantico` ($120.000.000), estas dos
+  últimas al final tras Red de Drones. Los cuatro usan los efectos `autoDigPowerPercent`/
+  `autoSpeedPercent` que dejó el Agente A en `economy.js`/`systems/automation.js`.
+- `apps/game/src/data/prestigeTree.json`: nodo `escanerTrampas` (Escáner de Trampas) al final,
+  `costoBase: 8`, `factorCrecimiento: 2.2`, `nivelMaximo: 3` (≈65 Llaves los 3 niveles — el nodo
+  más caro después de completar el árbol entero, por pedido explícito del usuario), colgando de
+  `instintoCarronero`. Efecto `trapDiscardChancePerNivel: 0.34`.
+- `apps/game/src/data/achievements.json`: reescritura completa del array — rebalanceo de
+  recompensas de `a1`-`a27` tal cual la tabla del roadmap (dinero baja en los hitos tempranos que
+  antes castigaban el esfuerzo, sube fuerte en los hitos de esfuerzo real y en las Llaves de
+  hitos duros) más 8 logros nuevos `a28`-`a35` (Billonario Galáctico, Fortuna Cósmica, Cincuenta
+  Mil Objetos, Ciudadano del Multiverso, Cicatrices de Guerra, Ejército de Robots, Ojo Biónico,
+  Basura Primordial). `a34`/`a35` usan los cond types `trapsDiscardedAtLeast`/
+  `containerOwnedAtLeast` que el Agente A ya había dejado en `CONDITION_EVALUATORS` — verifiqué
+  que existían antes de commitear (riesgo R1 del roadmap) para no crashear `evaluateCondition`.
+- `apps/game/src/icons/icons.js`: 5 claves nuevas en `ICON_MAP` (`servo-arm`,
+  `servo-arm-titanium`, `chip-overclock`, `core-quantum`, `scanner-trap`), todas reusando formas
+  (`SHAPES`) ya existentes en el archivo con su comentario `// DECISIÓN:` — `steelArm` (brazo
+  mecánico, ya usado por el nodo Brazos de Acero), `quantumChip` (ya usado por el ítem
+  quantum-chip), `olympusCircuit` (núcleo con líneas radiales) y `radar` (ya usado por Detector de
+  Metales/Instinto de Carroñero). Cero shapes nuevas: el vocabulario existente ya cubría el
+  concepto de cada clave.
+- `PLAN.md`: actualicé §2.7 (lista de automatización, ahora 12 ítems con las 4 máquinas nuevas en
+  su posición real) y §2.8 (mención del nodo Escáner de Trampas, árbol pasa de "mínimo 12" a "13
+  nodos"). No toqué §4.7 (las fórmulas del robot) porque el Agente A ya las había documentado ahí.
+- `packages/engine/tests/fase9-balance.test.js`: el rebalanceo de logros rompió 2 tests de Fase 9
+  que asumían el alcance viejo del juego (antes de las rondas 10-15, cuando el umbral de Prestigio
+  de $1.000M todavía era representativo del final del juego). Los arreglé sin parchear el número
+  a ciegas:
+  - "suma de Llaves de logros comparable a una tanda de Prestigio" comparaba contra un tope fijo
+    de 60 Llaves. Con 35 logros el total es 122. Verifiqué que el árbol de Prestigio completo
+    (13 nodos) cuesta 1.588 Llaves (confirma el "1.523 llaves" que mencionaba el roadmap antes de
+    sumar `escanerTrampas`, +65). Cambié el test para que derive el tope de la data real: la suma
+    de Llaves de logros no puede superar el 15% del costo total del árbol (122/1588 ≈ 7.7%,
+    cómodo). Así el test vuelve a ser una salvaguarda real en vez de un número mágico desactualizado.
+  - "ningún logro individual de dinero regala más de 1% del umbral de Prestigio" usaba
+    `toBeLessThan` estricto; `a8`/`a33` ahora valen exactamente `10.000.000` = 1% de $1.000M, el
+    borde exacto que pide el nuevo principio de balance del roadmap ("los hitos de dinero pagan
+    ~10% de SU PROPIO umbral"). Cambié a `toBeLessThanOrEqual` — el techo global sigue existiendo
+    (ningún logro es desproporcionado), solo dejó de ser una desigualdad estricta que un valor
+    intencional en el borde iba a romper para siempre.
+
+**Decisiones (`// AJUSTE:` en el código, resumidas acá):**
+```
+// AJUSTE: los 2 tests de fase9-balance.test.js que fallaron tras el rebalanceo de logros medían
+// contra supuestos de alcance de Fase 9 (umbral de Prestigio $1.000M como "final del juego"), que
+// ronda 10-15 dejaron obsoletos (el juego ahora llega a Prestigio 9 y $1e18 en contenedores). No
+// bajé el rebalanceo de logros para hacer pasar los tests viejos: actualicé los tests para que
+// deriven sus topes de la data real (costo total del árbol de Prestigio) en vez de una constante
+// fija, siguiendo el principio "no hardcodear/no aproximar" de CLAUDE.md.
+```
+
+**Verificado:**
+- `npm test`: **260/260 verde** (226 previos de A/B + los que agregó A en ronda15-robot.test.js +
+  los 2 de fase9-balance.test.js reescritos).
+- `npm run test:e2e`: **43/43 verde** (nada de UI se tocó en este bloque).
+- `node --check apps/game/src/icons/icons.js`: sin errores de sintaxis.
+- Validación de orden: `automations.json` queda ordenado 50 → 300 → 800 → 2000 → 45000 → 150000
+  (servobrazosReforzados) → 220000 → 800000 (chipOverclock) → 1600000 → 9000000 → 25000000
+  (servobrazosTitanio) → 120000000 (nucleoCuantico) — costos estrictamente ascendentes.
+- `prestigeTree.json` tiene 13 nodos, `escanerTrampas` al final con `requires: ["instintoCarronero"]`.
+- `achievements.json` tiene 35 entradas (`a1`-`a35`), sin duplicar `id`.
+- Verificación manual con un script descartable de Playwright (seedeando `localStorage` con
+  dinero/llaves/prestigio altos y recargando): pestaña Automatización muestra las 4 máquinas
+  nuevas con sus nombres reales, pestaña Prestigio muestra "Escáner de Trampas", pestaña Logros
+  muestra los nuevos ids — cero errores de consola. Script borrado tras la verificación (no quedó
+  en el repo).
+- Grep de emojis (rango Unicode `\x{1F300}-\x{1FAFF}`/`\x{2600}-\x{27BF}`) sobre los 4 JSON tocados
+  e `icons.js`: **0 resultados**. Grep de `console.log`/`// TODO`: **0 resultados**.
+
+**Qué necesita saber el Agente D:**
+- Las 4 máquinas nuevas ya tienen `icon` mapeado en `icons.js` — `ShopView`/`AutomationView` deberían
+  renderizarlas sin cambios de código (mismo patrón que las 8 automatizaciones previas).
+- El nodo `escanerTrampas` sigue el mismo esquema `effects: [{type, ...}]` que el resto del árbol
+  de prestigio — `PrestigeView.js` (agrupación visual en 5 ramas del Agente 3) probablemente
+  necesite que alguien lo agregue a `TREE_LAYOUT` para que aparezca en su rama correcta (cuelga de
+  `instintoCarronero`, que a su vez cuelga de `suerteAncestral`); si `TREE_LAYOUT` no lo tiene
+  mapeado, revisar cómo se comporta el fallback (nodo huérfano vs. crash) — no lo miré porque
+  `PrestigeView.js` es UI, fuera de mi bloque.
+- `a34`/`a35` (Ojo Biónico, Basura Primordial) dependen de `trapsDiscarded`/`ownedContainers` que
+  ya expone el `GameState` (el Agente A los agregó/ya existían) — no debería requerir cambios de UI
+  más allá de que la vista de Logros ya itera `achievements.json` genéricamente.
+- El toast/modal de descarte de trampa (R5 del roadmap: "no debe dispararse al bootear con un save
+  que ya tenía `trapsDiscarded > 0`") es tarea de UI del Agente D — no toqué `UIManager.js` ni
+  `store.js`.
+- Verificar a 375px que la tarjeta del nodo Escáner de Trampas (nivel máx. 3, costo alto) no
+  rompe el layout de `.prestige-tree` — no lo probé a ese ancho específico, solo confirmé que
+  aparece en el DOM.
+
+**Estado del DoD:**
+```
+[x] npm test → 260/260 verde
+[x] npm run test:e2e → 43/43 verde
+[x] npm run dev + jugar → las 4 máquinas aparecen en Automatización con su costo real; el nodo
+    Escáner aparece en Prestigio colgando de Instinto de Carroñero (verificado con Playwright,
+    save seedeado con dinero/llaves/prestigio altos)
+[x] git commit → "feat(data): ronda 15 — máquinas del robot, nodo Escáner de Trampas y
+    rebalanceo de logros (a1-a35)" (e74d3ef)
+```
