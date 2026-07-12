@@ -41,6 +41,17 @@ export default {
   // Round 19 (PLAN.md §4.20): manual no-trap dig streak, visible from streak >= 2.
   'dig.streak': 'Streak: {count}',
 
+  // Round 20 (PLAN.md §4.22): Energy pill + spying on slots.
+  'dig.energyLabel': 'Energy: {current}/{max}',
+  'dig.spyButton': 'Spy (−{cost} Energy)',
+  'dig.spyDisabledNoEnergy': 'Not enough Energy to spy',
+  'dig.spyResultTrap': 'Trap!',
+  'dig.spyResultCategory': 'It\'s: {categoria}',
+  // Round 20 (PLAN.md §4.24): Vault Against the Clock (hard timer) and Dark Basement (mask).
+  'dig.timedRemaining': 'Time left: {seconds}s',
+  'dig.timedExpired': 'Time\'s up: you lost "{name}" with no money penalty.',
+  'dig.darkHint': 'You can only see near your pointer.',
+
   // AchievementsView.js
   'achievements.empty': 'No achievements configured.',
   'achievements.rewardKeys': '{amount} City Key{plural}',
@@ -116,6 +127,16 @@ export default {
   'settings.resetButton': 'Reset game',
   // Round 19: haptic vibration toggle, same pattern as settings.sound.
   'settings.vibration': 'Vibration: {state}',
+
+  // Round 20 (PLAN.md §4.23): dig tool selector, same pattern as AutomationView.
+  'tools.title': 'Digging tools',
+  'tools.buyFor': 'Buy for {amount}',
+  'tools.equip': 'Equip',
+  'tools.equipped': 'Equipped',
+  'tools.manos': 'Bare hands',
+  'tools.palaAncha': 'Wide Shovel',
+  'tools.pincelFino': "Archaeologist's Brush",
+  'tools.guanteHidraulico': 'Hydraulic Glove',
 
   // Statistics (round 19, PLAN.md §5.4) — Settings subview, no new engine logic.
   'stats.title': 'Statistics',

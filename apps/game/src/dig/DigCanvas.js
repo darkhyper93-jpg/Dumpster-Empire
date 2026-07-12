@@ -30,6 +30,7 @@ import {
   getPositions,
   getRevealed,
   getStrokes,
+  rollTrapHintGrade,
 } from './digRevealModel.js';
 
 const CANVAS_WIDTH = 600;
@@ -70,11 +71,16 @@ export class DigCanvas {
    *   onObjectRevealed?: (entry: {name: string, categoria?: string, isTrap: boolean}, posPct: {xPct: number, yPct: number}) => void,
    * }} callbacks
    * @param {Array<{id:string, colorToken:string}>} [rarities] - para colorear ítems/íconos por rareza (§2.5).
+   * @param {{hintProb: number}} [trapsData] - `data/traps.json` (ronda 20, PLAN.md §4.24). Sin
+   *   esto (llamadores previos a la ronda 20) el indicio visual de grado queda deshabilitado —
+   *   mismo patrón de gate opcional que `data.traps` en el engine.
    */
-  constructor(host, callbacks, rarities = []) {
+  constructor(host, callbacks, rarities = [], trapsData = null) {
     this.host = host;
     this.callbacks = callbacks;
     this.rarities = rarities;
+    this.trapsData = trapsData;
+    this.trapHintGrade = null;
 
     this.bottomCanvas = document.createElement('canvas');
     this.topCanvas = document.createElement('canvas');
@@ -175,6 +181,15 @@ export class DigCanvas {
     // contenido actual (PUNTOS_A_MEJORAR_2.md §1).
     this.digGeneration = (this.digGeneration || 0) + 1;
 
+    // PLAN.md §4.24 (ronda 20): indicio visual de grado, cosmético — se decide UNA vez acá
+    // (nunca leyendo píxeles) y el canvas solo lo pinta en drawTopLayer(). `digResult.trapGrade`
+    // solo existe si `data.traps` llegó al roll del engine; `this.trapsData` solo si el dueño de
+    // este DigCanvas lo pasó al constructor — sin cualquiera de los dos, no se muestra nada.
+    this.trapHintGrade =
+      digResult.isTrap && this.trapsData
+        ? rollTrapHintGrade(digResult.trapGrade, this.trapsData.hintProb)
+        : null;
+
     this.entries = digResult.isTrap
       ? [{ icon: 'artifact', name: t('dig.trapEntryName'), colorHex: this.resolveCssColor('--trap'), isTrap: true }]
       : digResult.items.map((item) => ({
@@ -214,6 +229,7 @@ export class DigCanvas {
     this.completed = false;
     this.model = null;
     this.entries = [];
+    this.trapHintGrade = null;
     this.idlePrompt.hidden = true;
     stopScratchSound();
     this.input.cancel();
@@ -303,6 +319,31 @@ export class DigCanvas {
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.fillStyle = ctx.createPattern(this.getDirtTexture(), 'repeat');
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    this.drawTrapHint(ctx);
+  }
+
+  /**
+   * Indicio visual del grado de trampa (PLAN.md §4.24): ícono tenue sobre la suciedad, en el
+   * centro del canvas. Puramente decorativo — no participa del modelo de revelado, así que
+   * borrarlo con el gesto normal de rascado no cambia nada del completado.
+   * @param {CanvasRenderingContext2D} ctx
+   */
+  drawTrapHint(ctx) {
+    if (!this.trapHintGrade) return;
+    const iconImg = getIconImage(`hint-${this.trapHintGrade}`, { size: 64, color: '#f4ede1' });
+    const draw = () => {
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.drawImage(iconImg, CANVAS_WIDTH / 2 - 32, CANVAS_HEIGHT / 2 - 32, 64, 64);
+      ctx.restore();
+    };
+    if (iconImg.complete && iconImg.naturalWidth > 0) {
+      draw();
+    } else {
+      iconImg.addEventListener('load', () => {
+        if (this.active && this.trapHintGrade) draw();
+      }, { once: true });
+    }
   }
 
   /**

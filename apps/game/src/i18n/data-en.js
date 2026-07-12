@@ -25,6 +25,8 @@ export default {
     naufragioTemporal: 'Temporal Shipwreck',
     archivoMultiverso: 'Multiverse Archive',
     vertederoBigBang: 'Big Bang Dump',
+    bovedaContrarreloj: 'Vault Against the Clock',
+    sotanoSinLuz: 'Lightless Basement',
   },
   items: {
     tachoVereda: {
@@ -170,6 +172,24 @@ export default {
       'spark-genesis': 'Genesis Spark',
       'relic-dayzero': 'Remnant of Day Zero',
     },
+    bovedaContrarreloj: {
+      'clock-countdown': 'Rusty countdown clock',
+      'vault-door-ajar': 'Vault door left ajar',
+      'ledger-burnt': 'Burnt ledger',
+      'key-timelock': 'Time-lock key',
+      'seal-wax-ancient': 'Ancient wax seal',
+      'coin-uncounted': 'A coin that was never counted',
+      'gem-frozen-time': 'Gem frozen in time',
+    },
+    sotanoSinLuz: {
+      'painting-unseen': 'Painting nobody saw',
+      'sketch-blind': 'Sketch drawn blind',
+      'sculpture-shadow': 'Sculpture carved in shadow',
+      'lantern-extinguished': 'Lantern that went out on its own',
+      'eye-glass-dark': 'Lens that sees in the dark',
+      'key-blackened': 'Blackened key',
+      'relic-unlit': 'A relic never lit',
+    },
   },
   rarities: {
     common: 'Common Junk',
@@ -220,6 +240,9 @@ export default {
     a36: 'Streak of Ten',
     a37: 'Perfect Streak',
     a38: 'Legendary Streak',
+    a39: 'All-Seeing Eye',
+    a40: 'Nine Lives',
+    a41: 'Full Arsenal',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },

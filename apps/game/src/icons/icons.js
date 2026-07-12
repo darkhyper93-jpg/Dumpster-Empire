@@ -150,6 +150,22 @@ const SHAPES = {
   atomPrimordial: '<circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="9" ry="3.5"/><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(120 12 12)"/>',
   sparkGenesis: '<path d="M13 2 7 13h4l-2 9 8-13h-5z"/>',
   relicDayzero: '<circle cx="12" cy="12" r="8"/><line x1="12" y1="12" x2="12" y2="5"/><line x1="12" y1="12" x2="16" y2="14"/><path d="M4 4l4 4M20 4l-4 4M4 20l4-4M20 20l-4-4" stroke-dasharray="1 2"/>',
+
+  // Ronda 20 — Agente B: contenedores con mecánica propia + indicios de grado de trampa +
+  // herramientas de escarbado (PLAN.md §4.24).
+  vaultTimed: '<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="5"/><line x1="12" y1="12" x2="12" y2="9"/><line x1="12" y1="12" x2="14.5" y2="13.5"/>',
+  basementDark: '<path d="M4 21V10l8-6 8 6v11"/><line x1="4" y1="21" x2="20" y2="21"/><circle cx="12" cy="15" r="3" stroke-dasharray="1.4 1.4"/>',
+  clockCountdown: '<circle cx="12" cy="13" r="7"/><line x1="12" y1="13" x2="12" y2="8"/><line x1="12" y1="13" x2="15" y2="15"/><line x1="9" y1="3" x2="15" y2="3"/><line x1="12" y1="3" x2="12" y2="6"/>',
+  waxSeal: '<circle cx="12" cy="12" r="7"/><path d="M12 7l1.5 3 3 .5-2.2 2 .5 3-2.8-1.5-2.8 1.5 .5-3-2.2-2 3-.5z"/>',
+  gemFrozenTime: '<path d="M12 2l6 6-6 14-6-14z"/><circle cx="12" cy="9" r="2" stroke-dasharray="1 1.2"/><line x1="6" y1="8" x2="18" y2="8"/>',
+  lanternExtinguished: '<path d="M9 4h6l1 3H8z"/><rect x="7" y="7" width="10" height="10" rx="1"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="9" y1="17" x2="9" y2="20"/><line x1="15" y1="17" x2="15" y2="20"/><line x1="8" y1="8" x2="16" y2="16"/><line x1="16" y1="8" x2="8" y2="16"/>',
+  eyeGlassDark: '<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z" stroke-dasharray="1.4 1.4"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="12" x2="16" y2="16"/>',
+  shovelWide: '<line x1="12" y1="3" x2="12" y2="14"/><path d="M9.3 4a3 3 0 0 1 5.4 0"/><path d="M7 14h10l-2 6a3 3 0 0 1-6 0z"/>',
+  brushFine: '<path d="M16 3l5 5-9 9-5-5z"/><path d="M12 12c-3 1-4 4-5 9 3-2 6-3 9-5z"/>',
+  gloveHydraulic: '<path d="M6 22V11a2 2 0 0 1 4 0v3"/><path d="M10 22V8a2 2 0 0 1 4 0v6"/><path d="M14 22V9a2 2 0 0 1 4 0v6c0 4-2 7-6 7z"/><line x1="17" y1="3" x2="17" y2="9"/><rect x="15.5" y="1" width="3" height="3" rx="0.5"/>',
+  waterStain: '<path d="M12 4c3 2 6 6 6 10a6 6 0 0 1-12 0c0-4 3-8 6-10z" stroke-dasharray="2 2"/><path d="M12 10c1.5 1 3 3 3 5a3 3 0 0 1-6 0c0-2 1.5-4 3-5z" stroke-dasharray="1 1.4"/>',
+  crackedGround: '<path d="M2 16h4l2-5 2 7 2-4 2 6h4"/><line x1="8" y1="11" x2="6" y2="14"/><line x1="16" y1="18" x2="18" y2="21"/>',
+  clawMarks: '<line x1="5" y1="3" x2="10" y2="21"/><line x1="10" y1="2" x2="14" y2="22"/><line x1="15" y1="3" x2="19" y2="21"/>',
 };
 
 /** Mapea cada clave `icon` de la data (items/containers/upgrades/automations/prestigeTree/achievements) a una forma. */
@@ -382,6 +398,44 @@ const ICON_MAP = {
   'core-quantum': 'olympusCircuit',
   // DECISIÓN: scanner-trap reusa 'radar' (mismo símbolo de detección que metal-detector/eagle-eye).
   'scanner-trap': 'radar',
+
+  // Ronda 20 — Agente B: contenedores con mecánica propia + sus 14 ítems.
+  'vault-timed': 'vaultTimed',
+  'basement-dark': 'basementDark',
+  'clock-countdown': 'clockCountdown',
+  // DECISIÓN: vault-door-ajar reusa 'vault' (misma puerta blindada que bank-vault/vault-lost).
+  'vault-door-ajar': 'vault',
+  // DECISIÓN: ledger-burnt reusa 'logbook' (mismo libro de registro que cosmonaut-log).
+  'ledger-burnt': 'logbook',
+  // DECISIÓN: key-timelock/key-blackened reusan 'key' (misma llave, se diferencian por color de rareza).
+  'key-timelock': 'key',
+  'key-blackened': 'key',
+  'seal-wax-ancient': 'waxSeal',
+  // DECISIÓN: coin-uncounted reusa 'coin' (misma moneda que coin-old).
+  'coin-uncounted': 'coin',
+  'gem-frozen-time': 'gemFrozenTime',
+  // DECISIÓN: painting-unseen reusa 'painting' (mismo cuadro que oil-painting/portrait-alternate).
+  'painting-unseen': 'painting',
+  // DECISIÓN: sketch-blind reusa 'sketch' (mismo boceto que sketch-master).
+  'sketch-blind': 'sketch',
+  // DECISIÓN: sculpture-shadow reusa 'statue' (misma escultura que bronze-sculpture).
+  'sculpture-shadow': 'statue',
+  'lantern-extinguished': 'lanternExtinguished',
+  'eye-glass-dark': 'eyeGlassDark',
+  // DECISIÓN: relic-unlit reusa 'sealedRelic' (misma reliquia sellada que relic-sealed).
+  'relic-unlit': 'sealedRelic',
+
+  // Ronda 20 — Agente B: indicios visuales de grado de trampa (PLAN.md §4.24).
+  'hint-leve': 'waterStain',
+  'hint-normal': 'crackedGround',
+  'hint-grave': 'clawMarks',
+
+  // Ronda 20 — Agente B: herramientas de escarbado.
+  // DECISIÓN: hands-bare reusa 'hand' (mismas manos que el nodo de prestigio hand-spread).
+  'hands-bare': 'hand',
+  'shovel-wide': 'shovelWide',
+  'brush-fine': 'brushFine',
+  'glove-hydraulic': 'gloveHydraulic',
 };
 
 /**

@@ -67,6 +67,26 @@ export function rollIsTrap(probTrampaEfectiva, random = Math.random) {
   return random() < probTrampaEfectiva;
 }
 
+/** Orden de evaluación acumulativa de rollTrapGrade — fijo, no depende del orden de claves del JSON. */
+const TRAP_GRADE_ORDER = ['leve', 'normal', 'grave'];
+
+/**
+ * §4.21 — roll secundario e independiente del grado de una trampa ya confirmada. NUNCA cambia
+ * la probabilidad de caer en trampa (eso lo decide rollIsTrap antes); solo decide cuánto duele.
+ * @param {{ leve: number, normal: number, grave: number }} gradosProb - data/traps.json, suman 1
+ * @param {() => number} [random]
+ * @returns {'leve' | 'normal' | 'grave'}
+ */
+export function rollTrapGrade(gradosProb, random = Math.random) {
+  const r = random();
+  let cumulative = 0;
+  for (const grade of TRAP_GRADE_ORDER) {
+    cumulative += gradosProb[grade];
+    if (r < cumulative) return grade;
+  }
+  return 'grave'; // fallback de punto flotante (cumulative ligeramente < 1 por redondeo)
+}
+
 /**
  * §4.4 — recalcula la fluctuación de mercado si pasaron 60s desde la última vez.
  * @param {number} marketFluctuation

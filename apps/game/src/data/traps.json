@@ -1,0 +1,5 @@
+{
+  "gradosProb": { "leve": 0.4, "normal": 0.45, "grave": 0.15 },
+  "gravePenaltyMult": 2,
+  "hintProb": 0.6
+}

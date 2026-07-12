@@ -858,6 +858,108 @@
         "valorBase": 3901566590000,
         "categoria": "future"
       }
+    ],
+    "bovedaContrarreloj": [
+      {
+        "id": "clock-countdown",
+        "icon": "clock-countdown",
+        "name": "Reloj de cuenta regresiva oxidado",
+        "valorBase": 412476178266,
+        "categoria": "historic"
+      },
+      {
+        "id": "vault-door-ajar",
+        "icon": "vault-door-ajar",
+        "name": "Puerta de bóveda entreabierta",
+        "valorBase": 526558598978,
+        "categoria": "historic"
+      },
+      {
+        "id": "ledger-burnt",
+        "icon": "ledger-burnt",
+        "name": "Libro contable carbonizado",
+        "valorBase": 662369372554,
+        "categoria": "historic"
+      },
+      {
+        "id": "key-timelock",
+        "icon": "key-timelock",
+        "name": "Llave de cerradura temporal",
+        "valorBase": 358130110307,
+        "categoria": "relics"
+      },
+      {
+        "id": "seal-wax-ancient",
+        "icon": "seal-wax-ancient",
+        "name": "Sello de cera milenario",
+        "valorBase": 437545823718,
+        "categoria": "relics"
+      },
+      {
+        "id": "coin-uncounted",
+        "icon": "coin-uncounted",
+        "name": "Moneda que nunca se contó",
+        "valorBase": 537363462114,
+        "categoria": "relics"
+      },
+      {
+        "id": "gem-frozen-time",
+        "icon": "gem-frozen-time",
+        "name": "Gema atrapada en el tiempo",
+        "valorBase": 675456324388,
+        "categoria": "relics"
+      }
+    ],
+    "sotanoSinLuz": [
+      {
+        "id": "painting-unseen",
+        "icon": "painting-unseen",
+        "name": "Cuadro que nadie vio",
+        "valorBase": 1438534201338,
+        "categoria": "art"
+      },
+      {
+        "id": "sketch-blind",
+        "icon": "sketch-blind",
+        "name": "Boceto hecho a ciegas",
+        "valorBase": 1833588984373,
+        "categoria": "art"
+      },
+      {
+        "id": "sculpture-shadow",
+        "icon": "sculpture-shadow",
+        "name": "Escultura tallada en sombra",
+        "valorBase": 2307447861391,
+        "categoria": "art"
+      },
+      {
+        "id": "lantern-extinguished",
+        "icon": "lantern-extinguished",
+        "name": "Farol que se apagó solo",
+        "valorBase": 1762265785226,
+        "categoria": "relics"
+      },
+      {
+        "id": "eye-glass-dark",
+        "icon": "eye-glass-dark",
+        "name": "Lente que ve en lo oscuro",
+        "valorBase": 2153471360237,
+        "categoria": "relics"
+      },
+      {
+        "id": "key-blackened",
+        "icon": "key-blackened",
+        "name": "Llave ennegrecida",
+        "valorBase": 2645080345131,
+        "categoria": "relics"
+      },
+      {
+        "id": "relic-unlit",
+        "icon": "relic-unlit",
+        "name": "Reliquia jamás iluminada",
+        "valorBase": 3323724530317,
+        "categoria": "relics"
+      }
     ]
   }
 }

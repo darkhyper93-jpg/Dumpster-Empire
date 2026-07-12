@@ -64,8 +64,13 @@ describe('§4.2 costo de contenedores: precio FIJO (ronda 6, sin crecimiento por
   it('los contenedores agregados después del tier 12 mantienen costos crecientes (~×10-×16 por tier)', () => {
     // Ronda 15: en vez de hardcodear los costos exactos, se deriva la relación de la data —
     // cada contenedor nuevo debe costar entre 10x y 16x el anterior, continuando la curva.
-    for (let i = 12; i < containers.length; i++) {
-      const ratio = containers[i].costoInicial / containers[i - 1].costoInicial;
+    // AJUSTE (ronda 20): filtra los `fueraDeCadena` (Bóveda a Contrarreloj, Sótano Sin Luz) — van
+    // al final del array pero son contenido lateral interpolado entre naufragioTemporal y
+    // vertederoBigBang (PLAN.md §4.24), no el siguiente tier de la cadena principal; su costo no
+    // tiene por qué mantener la razón ×10-16 respecto al ÚLTIMO elemento del array.
+    const chain = containers.slice(0, 12).concat(containers.slice(12).filter((c) => !c.fueraDeCadena));
+    for (let i = 12; i < chain.length; i++) {
+      const ratio = chain[i].costoInicial / chain[i - 1].costoInicial;
       expect(ratio).toBeGreaterThanOrEqual(10);
       expect(ratio).toBeLessThanOrEqual(16);
     }

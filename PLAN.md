@@ -298,6 +298,88 @@ con la Suerte y en late-game perder era irrelevante).
     Vive en el árbol de prestigio y no en máquinas porque `automationOwned` se resetea al
     prestigiar y las Llaves son la moneda permanente.
 
+### 4.21 Grados de trampa (ronda 20)
+
+Al salir trampa (roll de §4.6 sin cambios — el grado NUNCA altera la probabilidad de caer),
+un roll secundario e independiente decide el grado, con constantes en `data/traps.json`
+(`gradosProb: { leve, normal, grave }`, suman 1):
+
+```
+grado ~ { leve: 0.40, normal: 0.45, grave: 0.15 }
+penaTrampa(leve)   = 0
+penaTrampa(normal) = penaTrampa (§4.6, sin cambios)
+penaTrampa(grave)  = penaTrampa (§4.6) * gravePenaltyMult   (gravePenaltyMult = 2, data/traps.json)
+```
+
+El descarte del robot (Escáner de Trampas, §4.7) se decide ANTES del grado — el robot descarta
+por `result.isTrap`, nunca llega a rollear/pagar un grado. El corte de la racha de escarbado
+(§4.20) sigue el mismo criterio de siempre: cualquier grado de trampa manual la corta a 0.
+
+### 4.22 Energía y espionaje (ronda 20)
+
+Constantes en `data/energy.json`: `{ energiaMax: 3, msPorPunto: 90000, costoEspiar: 1 }`
+(AJUSTE: 3 usos, 1 cada 90s — decisión táctica para que espiar sea un recurso escaso, no un
+hábito).
+
+```
+energia = min(energiaMax, energia + floor(clampedElapsedMs(now, energiaAt) / msPorPunto))
+```
+
+`clampedElapsedMs` (packages/engine/src/time.js, §3.3 de ROADMAPv4) nunca regenera si el reloj
+del sistema retrocede. Espiar cuesta `costoEspiar` puntos de Energía y revela la categoría (no
+el ítem exacto) de un slot no revelado del contenedor en curso, o "TRAMPA" si el roll de ese
+contenedor ya salió trampa — el roll ocurre íntegro al iniciar el escarbado (`rollContainerResult`),
+así que espiar es una lectura pura del resultado ya calculado, sin RNG adicional. Espiar y
+ABANDONAR es el counterplay intencional a la trampa: el contenedor ya pagado se pierde igual,
+así que no es gratis. Si el playtest muestra abuso (evitar toda trampa relevante), se ajusta
+`costoEspiar` o `energiaMax` en `data/energy.json` — nunca la fórmula.
+
+### 4.23 Herramientas de escarbado (ronda 20)
+
+Modifican SOLO el pincel del escarbado manual — `radioPincel × radioMult`,
+`ritmo × ritmoMult` — nunca `getLuck` ni `itemSaleValue`. Constantes en `data/tools.json`:
+
+| id | costo | radioMult | ritmoMult |
+|---|---|---|---|
+| `manos` (inicial) | 0 | 1.0 | 1.0 |
+| `palaAncha` | 75000 | 1.6 | 0.7 |
+| `pincelFino` | 250000 | 0.6 | 1.8 |
+| `guanteHidraulico` | 5000000 | 1.3 | 1.3 |
+
+Solo una herramienta equipada a la vez (`state.equippedTool`); comprar no equipa automáticamente.
+
+### 4.24 Indicios visuales y contenedores con mecánica propia (ronda 20, Agente B)
+
+- **Indicio visual de grado de trampa**: `hintProb: 0.6` en `data/traps.json`. Al iniciar un
+  escarbado que salió trampa (con `data.traps` presente), un roll independiente decide si se
+  muestra un indicio visual del grado (`leve` → manchas de humedad, `normal` → grietas, `grave`
+  → marcas de garras) pintado en la capa superior del canvas. El indicio es cosmético (no
+  garantiza nada, solo sugiere): vive en el estado del dig en curso (`DigCanvas`, función pura
+  `rollTrapHintGrade` de `digRevealModel.js`), nunca se decide leyendo píxeles del canvas.
+- **Contenedores con mecánica propia** (`containers.json`, campo `mode` opcional, default
+  `"normal"` — los 16 contenedores existentes no lo declaran y no cambian):
+  - `bovedaContrarreloj` (`mode: "timed"`, `requiresPrestigeCount: 7`): `digTime` es límite
+    duro; si no se completa a tiempo, el contenedor se pierde SIN castigo de dinero (pero
+    cuenta para el nivel, igual que una trampa leve). Loot ×1.3.
+  - `sotanoSinLuz` (`mode: "dark"`, `requiresPrestigeCount: 8`): solo se ve un radio alrededor
+    del puntero durante el escarbado (máscara puramente visual, el modelo de revelado no
+    cambia). Loot ×1.4.
+  - Ambos van **fuera de la cadena de desbloqueo** (`fueraDeCadena: true`): no exigen poseer el
+    contenedor anterior del array, solo su `requiresPrestigeCount` — sin este campo, la regla de
+    cadena actual (posición N exige poseer N-1) los dejaría bloqueados hasta el prestigio 9
+    (`vertederoBigBang`, que va después en el array). `isContainerUnlocked` es el único punto
+    del engine que lo respeta (ROADMAPv4 §3.5.2).
+  - `mechanicValueMult` (multiplicador de valor, 1.3/1.4): compensa el riesgo/dificultad de la
+    mecánica propia. Se aplica al valor final del ítem junto a `getLevelValueMult`
+    (`getMechanicValueMult(container)` en `economy.js`, default 1 — neutro para los 16
+    contenedores existentes). Valores de `costoInicial`/`digTime`/`resistencia`/
+    `areaRecomendada`/`trapPenaltyMult`/`levelUpDigsBase`/`probTrampaBase` interpolados entre
+    `naufragioTemporal` (tier 14, prestigio 7) y `vertederoBigBang` (tier 16, prestigio 9) por
+    interpolación geométrica (costos/resistencia/área) o lineal (el resto), con `t = 0.33` para
+    la Bóveda y `t = 0.67` para el Sótano — mismo criterio para los 14 ítems de sus pools.
+  - El timer visible de la Bóveda y la máscara de oscuridad del Sótano (interacción/UI) son
+    tarea de 20.C: acá solo se define la data y el gate de desbloqueo.
+
 ---
 
 ## 5. UI / UX

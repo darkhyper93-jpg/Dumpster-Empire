@@ -32,6 +32,7 @@ export {
   digsNeededForNextLevel,
   getLevelRarityShift,
   getLevelValueMult,
+  getMechanicValueMult,
   getDigRate,
   getEffectiveDigTime,
   getAutoDigPowerMult,
@@ -41,9 +42,24 @@ export {
   getRecommendedLuck,
   getRecommendedDigPower,
   getRecommendedArea,
+  regenEnergy,
+  spendEnergyToSpy,
+  getToolRadiusMult,
+  getToolRhythmMult,
+  registerContainerDig,
 } from './economy.js';
 
-export { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluctuation, categoryWeights } from './rng.js';
+export { clampedElapsedMs, localDayStamp } from './time.js';
+
+export {
+  rollCategory,
+  rollItem,
+  rollItemVariance,
+  rollIsTrap,
+  rollTrapGrade,
+  refreshMarketFluctuation,
+  categoryWeights,
+} from './rng.js';
 
 export {
   validateSave,
@@ -54,9 +70,17 @@ export {
   SUPPORTED_LANGUAGES,
 } from './save.js';
 
-export { isContainerUnlocked, buyContainer, rollContainerResult, applyContainerResult } from './systems/containers.js';
+export {
+  isContainerUnlocked,
+  buyContainer,
+  rollContainerResult,
+  applyContainerResult,
+  spySlot,
+} from './systems/containers.js';
 
 export { nextUpgradeCost, buyUpgrade } from './systems/upgrades.js';
+
+export { buyTool, equipTool } from './systems/tools.js';
 
 export {
   buyAutomation,

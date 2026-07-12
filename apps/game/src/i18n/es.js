@@ -42,6 +42,17 @@ export default {
   // Ronda 19 (PLAN.md §4.20): racha de escarbado manual sin trampa, visible desde racha >= 2.
   'dig.streak': 'Racha: {count}',
 
+  // Ronda 20 (PLAN.md §4.22): píldora de Energía + espionaje de slots.
+  'dig.energyLabel': 'Energía: {current}/{max}',
+  'dig.spyButton': 'Espiar (−{cost} Energía)',
+  'dig.spyDisabledNoEnergy': 'Te falta Energía para espiar',
+  'dig.spyResultTrap': '¡Trampa!',
+  'dig.spyResultCategory': 'Es: {categoria}',
+  // Ronda 20 (PLAN.md §4.24): Bóveda a Contrarreloj (timer duro) y Sótano Sin Luz (máscara).
+  'dig.timedRemaining': 'Tiempo restante: {seconds}s',
+  'dig.timedExpired': 'Se acabó el tiempo: perdiste "{name}" sin castigo de dinero.',
+  'dig.darkHint': 'Solo ves lo que está cerca de tu puntero.',
+
   // AchievementsView.js
   'achievements.empty': 'No hay logros configurados.',
   'achievements.rewardKeys': '{amount} llave{plural} de Ciudad',
@@ -117,6 +128,16 @@ export default {
   'settings.resetButton': 'Reiniciar partida',
   // Ronda 19: toggle de vibración táctil, mismo patrón que settings.sound.
   'settings.vibration': 'Vibración: {state}',
+
+  // Ronda 20 (PLAN.md §4.23): selector de herramienta de escarbado, mismo patrón que AutomationView.
+  'tools.title': 'Herramientas de escarbado',
+  'tools.buyFor': 'Comprar por {amount}',
+  'tools.equip': 'Equipar',
+  'tools.equipped': 'Equipada',
+  'tools.manos': 'Manos curtidas',
+  'tools.palaAncha': 'Pala Ancha',
+  'tools.pincelFino': 'Pincel de Arqueólogo',
+  'tools.guanteHidraulico': 'Guante Hidráulico',
 
   // Estadísticas (ronda 19, PLAN.md §5.4) — subvista de Ajustes, sin engine nuevo.
   'stats.title': 'Estadísticas',

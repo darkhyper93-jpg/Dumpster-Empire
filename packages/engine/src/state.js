@@ -21,7 +21,9 @@
 // de ítem (PLAN.md §16), para que la colección sobreviva a la traducción.
 // AJUSTE (ronda 19): v8 agrega digStreak/bestDigStreak (racha de escarbado manual sin trampa,
 // PLAN.md §4.20) y vibrationOn (toggle de vibración táctil, PLAN.md §5.4).
-export const SAVE_VERSION = 8;
+// AJUSTE (ronda 20): v9 agrega energy/energyAt (PLAN.md §4.22), equippedTool/toolsOwned
+// (PLAN.md §4.23) y spiesUsed/gravesHit (contadores de logros de la ronda 20).
+export const SAVE_VERSION = 9;
 
 // AJUSTE (auditoría post-ronda 14): rango de diseño de `digSensitivity`, exportado como única
 // fuente de verdad. Antes el 0.5–1.5 estaba repetido como número mágico en save.js (validación),
@@ -76,6 +78,13 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  *   se resetea a 0 al caer en trampa, sube +1 por escarbado manual exitoso. Solo manual.
  * @property {number} bestDigStreak - racha máxima histórica alcanzada, para logros ocultos.
  * @property {boolean} vibrationOn - toggle de vibración táctil (trampa/hallazgo máximo), ronda 19.
+ * @property {number} energy - Energía actual para espiar (PLAN.md §4.22, ronda 20), 0..energiaMax.
+ * @property {number} energyAt - epoch ms de la última regeneración de Energía computada.
+ * @property {string} equippedTool - id de la herramienta de escarbado equipada (PLAN.md §4.23);
+ *   siempre una clave presente en `toolsOwned`.
+ * @property {Object<string, boolean>} toolsOwned - herramientas de escarbado ya compradas.
+ * @property {number} spiesUsed - cantidad total de veces que se espió un slot (logro ronda 20).
+ * @property {number} gravesHit - cantidad de trampas de grado grave sufridas (logro oculto ronda 20).
  */
 
 /**
@@ -117,5 +126,11 @@ export function freshState() {
     digStreak: 0,
     bestDigStreak: 0,
     vibrationOn: true,
+    energy: 3,
+    energyAt: 0,
+    equippedTool: 'manos',
+    toolsOwned: { manos: true },
+    spiesUsed: 0,
+    gravesHit: 0,
   };
 }

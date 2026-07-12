@@ -12,15 +12,18 @@ import {
   getFragmentMult,
   getLevelRarityShift,
   getLevelValueMult,
+  getMechanicValueMult,
   getTrapPenalty,
   registerContainerDig,
   itemSaleValue,
 } from '../economy.js';
-import { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluctuation } from '../rng.js';
+import { rollCategory, rollItem, rollItemVariance, rollIsTrap, rollTrapGrade, refreshMarketFluctuation } from '../rng.js';
 
 /**
  * @typedef {Object} DigResult
  * @property {boolean} isTrap
+ * @property {'leve' | 'normal' | 'grave'} [trapGrade] - solo si isTrap y data.traps existía en
+ *   el momento del roll (PLAN.md §4.21, ronda 20). Ausente = tratar como "normal" (compat).
  * @property {Array<{ id: string, icon: string, name: string, categoria: string, value: number, isFirstRareFind: boolean }>} items
  * @property {number} moneyDelta
  */
@@ -35,6 +38,12 @@ import { rollCategory, rollItem, rollItemVariance, rollIsTrap, refreshMarketFluc
 export function isContainerUnlocked(state, container, allContainers) {
   if (container.requiresPrestigeCount && state.prestigeCount < container.requiresPrestigeCount) return false;
   if (container.requiresAutomationId && !state.automationOwned[container.requiresAutomationId]) return false;
+  // PLAN.md §4.24 (ronda 20): los contenedores con mecánica propia (Bóveda a Contrarreloj,
+  // Sótano Sin Luz) van al final del array pero gatean por prestigio 7/8 — la regla de cadena
+  // de abajo ("poseer el contenedor anterior") los dejaría bloqueados hasta el prestigio 9
+  // (vertederoBigBang, que va justo antes). fueraDeCadena los exime de esa regla; su único
+  // desbloqueo es requiresPrestigeCount (ya evaluado arriba).
+  if (container.fueraDeCadena) return true;
   const index = allContainers.findIndex((c) => c.id === container.id);
   if (index <= 0) return true;
   const previous = allContainers[index - 1];
@@ -78,6 +87,14 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
 
   const trapProb = getEffectiveTrapProbability(state, container, isAuto, data);
   if (rollIsTrap(trapProb, random)) {
+    // PLAN.md §4.21 (ronda 20): el grado es un roll SEGUNDO e independiente, nunca afecta la
+    // probabilidad de trampa de arriba. `data.traps` es opcional a propósito (mismo patrón que
+    // `data.streak` en getLuck, ronda 19): los llamadores previos a esta ronda no lo pasan, y
+    // sin él no se consume un random() extra — el comportamiento y la secuencia de RNG de los
+    // ~300 tests previos a la ronda 20 quedan bit a bit idénticos.
+    if (data.traps) {
+      return { isTrap: true, trapGrade: rollTrapGrade(data.traps.gradosProb, random), items: [], moneyDelta: 0 };
+    }
     return { isTrap: true, items: [], moneyDelta: 0 };
   }
 
@@ -109,7 +126,9 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
         fluctuacionMercado: state.marketFluctuation,
         sellMult: getSellMult(state, categoria, data),
         depthValueMult,
-      }) * levelValueMult;
+      }) *
+      levelValueMult *
+      getMechanicValueMult(container);
     const alreadyFound =
       Boolean(state.itemsFoundByItem?.[container.id]?.[pick.id]) || seenInThisRoll.has(pick.id);
     const isFirstRareFind = categoria === rarest && !alreadyFound;
@@ -134,8 +153,21 @@ export function applyContainerResult(state, container, result, isAuto, data) {
   registerContainerDig(state, container);
 
   if (result.isTrap) {
-    // PLAN.md §11.2/§4.6: el castigo escala con el tier del contenedor, suavizado por Suerte.
-    const penalty = Math.min(state.money, getTrapPenalty(state, container, data));
+    // PLAN.md §4.21 (ronda 20): el grado modula el castigo base de §11.2/§4.6 — leve no castiga
+    // (solo se pierde el contenedor), normal es el castigo de siempre, grave lo duplica
+    // (gravePenaltyMult de data/traps.json). Sin trapGrade (compat con llamadores previos a la
+    // ronda 20) se comporta exactamente como "normal".
+    const basePenalty = getTrapPenalty(state, container, data);
+    let penalty;
+    if (result.trapGrade === 'leve') {
+      penalty = 0;
+    } else if (result.trapGrade === 'grave') {
+      penalty = basePenalty * (data.traps?.gravePenaltyMult ?? 2);
+      state.gravesHit++;
+    } else {
+      penalty = basePenalty;
+    }
+    penalty = Math.min(state.money, penalty);
     state.money -= penalty;
     state.trapsHit++;
     // PLAN.md §4.20 (ronda 19): la racha es SOLO de escarbado manual — el robot ni la sube ni
@@ -168,4 +200,17 @@ export function applyContainerResult(state, container, result, isAuto, data) {
     state.bestDigStreak = Math.max(state.bestDigStreak, state.digStreak);
   }
   return { moneyDelta: total, trapPenalty: 0 };
+}
+
+/**
+ * §4.22 (ronda 20) — espiar un slot: lectura PURA de un DigResult ya calculado por
+ * rollContainerResult (el roll ocurre íntegro al iniciar el escarbado). No consume RNG: solo
+ * revela lo que ya se decidió, nunca decide nada nuevo.
+ * @param {DigResult} digResult
+ * @param {number} slotIndex
+ * @returns {{ isTrap: true } | { isTrap: false, categoria: string }}
+ */
+export function spySlot(digResult, slotIndex) {
+  if (digResult.isTrap) return { isTrap: true };
+  return { isTrap: false, categoria: digResult.items[slotIndex].categoria };
 }
