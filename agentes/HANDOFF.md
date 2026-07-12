@@ -4285,3 +4285,143 @@ panel de Steamworks, prueba en Deck física y Cloud entre 2 máquinas — RELEAS
   gateado por `!isAuto`, no por el grado).
 - `data.streak` es opcional en `getLuck` — si algún test nuevo de la ronda 20 sí necesita el
   bonus de racha, tiene que pasar `streak` en su `data` (import de `apps/game/src/data/streak.json`).
+
+## Ronda 20 — Agente A: engine (grados de trampa, energía/espionaje, herramientas) (rama `feat/dig-ronda20`, save v9)
+
+### Qué hice
+
+1. **PLAN.md primero**: agregué §4.21 (grados de trampa), §4.22 (energía y espionaje) y §4.23
+   (herramientas de escarbado) a la sección 4, con las fórmulas literales tal cual las trae
+   ROADMAPv4.md 20.A. Nota: §4.20 (racha, ronda 19) sigue sin existir físicamente en PLAN.md —
+   solo se menciona en HANDOFF.md; no lo toqué porque es scope de la ronda 19, no de esta tarea.
+2. **Data nueva** (`apps/game/src/data/`): `traps.json` (`gradosProb: {leve:0.4, normal:0.45,
+   grave:0.15}`, `gravePenaltyMult: 2`), `energy.json` (`{energiaMax:3, msPorPunto:90000,
+   costoEspiar:1}`), `tools.json` (las 4 herramientas de la tabla del roadmap, con `name` en
+   español — la traducción a `data-en.js`/wiring de UI queda para el agente de 20.C, que es
+   quien toca copy; el test de paridad ronda16 no escanea `tools.json` así que no rompe nada
+   dejarlo sin wire todavía).
+3. **`packages/engine/src/time.js` nuevo** (ROADMAPv4 §3.3, módulo transversal para TODA la
+   v4): `clampedElapsedMs(now, since)` (nunca negativo, 0 si algún operando no es finito) y
+   `localDayStamp(now)` (implementada ya, aunque la usa recién la ronda 23 — es el contrato de
+   §3.3 completo, no solo la mitad que necesitaba esta ronda).
+4. **Grados de trampa** (`rng.js` + `systems/containers.js`): `rollTrapGrade(gradosProb,
+   random)` nuevo en rng.js (roll acumulativo leve→normal→grave, orden fijo por array, no por
+   claves de objeto). `rollContainerResult` adjunta `result.trapGrade` SOLO si `data.traps`
+   existe (mismo patrón opcional que `data.streak` de la ronda 19): sin `data.traps`, no se
+   consume un `random()` extra y el comportamiento es bit a bit idéntico al pre-ronda-20 — esto
+   es lo que mantiene los ~300 tests/57 e2e previos verdes sin tocarlos (R20.1).
+   `applyContainerResult`: leve → sin castigo de dinero (pero SÍ cuenta para el nivel del
+   contenedor y corta la racha manual, contrato §3.5.1); normal → castigo actual sin cambios;
+   grave → castigo × `gravePenaltyMult` (default 2 si `data.traps` faltara), clamp a `money`, y
+   suma `state.gravesHit`. Sin `trapGrade` en el resultado (llamador viejo) se trata como
+   "normal" — mismo número que salía antes.
+5. **Energía y espionaje** (`economy.js` + `systems/containers.js`): `regenEnergy(state,
+   energyData, now)` regenera por `clampedElapsedMs`, topeada en `energiaMax`, y avanza
+   `energyAt` solo por el tiempo ya "cobrado" en puntos (el remanente fraccional no se pierde
+   entre ticks). Con reloj hacia atrás, no muta nada. `spendEnergyToSpy(state, energyData)`
+   descuenta `costoEspiar` y suma `spiesUsed`, o falla sin mutar si no alcanza. `spySlot(digResult,
+   slotIndex)` en containers.js es una lectura PURA del `DigResult` ya calculado por
+   `rollContainerResult` (el roll de todo el contenedor ocurre íntegro al iniciar el escarbado,
+   `store.js` línea ~162) — espiar no dispara RNG nuevo, solo revela `categoria` o `{isTrap:true}`.
+6. **Herramientas** (`systems/tools.js` nuevo + `economy.js`): `buyTool`/`equipTool` (solo se
+   puede equipar una ya poseída; comprar no equipa). `getToolRadiusMult`/`getToolRhythmMult`
+   leen `data.tools` (opcional, default 1.0/1.0 sin él) — verificado con test explícito que NO
+   tocan `getLuck` ni `itemSaleValue` ni el valor de `getAreaMult`/`getDigRate` (la composición
+   pincel-real × multiplicador-de-herramienta la hace la UI en 20.C, este agente solo expone
+   los dos getters).
+7. **Save v9**: `freshState()` gana `energy:3, energyAt:0, equippedTool:'manos',
+   toolsOwned:{manos:true}, spiesUsed:0, gravesHit:0`. Migración v8→v9 en `save.js` backfillea
+   los seis con esos defaults. `REQUIRED_FIELDS` + `toolsOwned` sumado a `BOOLEAN_MAP_FIELDS`.
+   `validateDeepContent`: `energy`/`spiesUsed`/`gravesHit` enteros ≥ 0 (mismo patrón que
+   `digStreak` de la ronda 19); `equippedTool` debe ser un string presente en `toolsOwned` con
+   valor `true` (un save con `equippedTool` huérfano se rechaza, no se "lava").
+8. **Barrel `index.js`**: reexporta todo lo nuevo (`clampedElapsedMs`, `localDayStamp`,
+   `rollTrapGrade`, `regenEnergy`, `spendEnergyToSpy`, `spySlot`, `buyTool`, `equipTool`,
+   `getToolRadiusMult`, `getToolRhythmMult`).
+9. **Tests**: `packages/engine/tests/ronda20-dig-profundo.test.js` (29 casos, RED→GREEN):
+   relojes seguros, proporciones de grado con random sembrado, R20.1 (piso del 3% intacto),
+   castigo leve/normal/grave + clamp + gravesHit, compat sin `trapGrade`, robot no toca racha
+   en ningún grado, regen de energía (cap, reloj atrás, remanente fraccional), espiar
+   descuenta/revela sin RNG, herramientas (compra/equipo/multiplicadores/no tocan luck ni
+   valor), migración v9 completa + rechazos.
+
+### Decisiones no triviales
+
+- **`data.traps`/`data.tools` opcionales, gate explícito** (no un default silencioso dentro de
+  la fórmula): es el mismo patrón que `data.streak` de la ronda 19, documentado ahí mismo en
+  economy.js. Sin este gate, agregar el roll de grado hubiera consumido un `random()` extra en
+  CADA trampa de los tests/e2e existentes que siembran secuencias de `random` fijas, corriendo
+  el resto de sus valores sembrados un lugar y rompiendo aserciones no relacionadas con esta
+  ronda. Verificado: los 340 tests y 57 e2e corren sin tocarse.
+- **`localDayStamp` implementada ya, aunque nadie la llama hasta la ronda 23**: el roadmap
+  declara `time.js` como módulo transversal único para TODO sistema con reloj futuro (§3.3). Es
+  trivial y ya tiene tests; dejar el módulo "a medias" solo para no adelantar trabajo hubiera
+  significado que la ronda 23 tuviera que acordarse de completarlo — riesgo mayor que el costo
+  de escribir 8 líneas ya cubiertas por tests.
+- **`tools.json` con `name` en español pero SIN wiring a `data-en.js`/`dataI18n.js`**: el test
+  de paridad de la ronda 16 (`apps/game/tests/ronda16-i18n.test.js`) escanea categorías fijas
+  (containers/items/rarities/achievements/automations/prestigeTree/upgrades) y NO incluye
+  `tools`, así que no hay riesgo de romperlo dejándolo para 20.C (que es quien toca el
+  selector de herramienta y su copy es+en, por roadmap).
+- **No agregué logros nuevos** (`spiesUsedAtLeast`, `gravesHitAtLeast`, `allToolsOwned`) ni
+  tocué `achievements.json`/`CONDITION_EVALUATORS`: el roadmap los lista explícitamente bajo
+  20.C, no 20.A. `state.spiesUsed`/`state.gravesHit` ya están en el save y listos para que ese
+  agente los use sin tocar el engine de nuevo.
+- **No toqué `containers.json`/`items.json`/`icons.js`** (Bóveda a Contrarreloj, Sótano Sin
+  Luz, indicios visuales): son 20.B. Tampoco `automation.js`: el descarte del robot ya
+  chequeaba `result.isTrap` antes de `applyContainerResult`, así que "el descarte aplica ANTES
+  del grado" (contrato de la ronda) se cumple sin cambios — el robot nunca llega a ver
+  `trapGrade`.
+
+### Estado del DoD (Agente A, ronda 20)
+```
+[x] PLAN.md §4.21-4.23 primero
+[x] Tests RED antes de implementar (ronda20-dig-profundo.test.js, 29 casos)
+[x] npm test → 340/340 verde (311 previos + 29 nuevos)
+[x] npm run test:e2e → 57/57 verde, SIN tocar ningún spec existente (R18)
+[x] Manual 375px + 1440px: boot limpio, cero errores de consola, migración v8->v9 verificada
+    sobre un save real de localStorage (saveVersion queda en 9 tras el boot)
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit (51cc832)
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (quedan 20.B y 20.C) — no corresponde
+    todavía, según la regla de ramas del roadmap.
+```
+
+### Qué necesita saber la ronda 20.B (data + canvas)
+
+- **Baselines nuevos**: 340 unit / 57 e2e / `SAVE_VERSION = 9` (conteos indicativos, regla §0).
+- `data/traps.json` YA EXISTE con `{ gradosProb, gravePenaltyMult }` — sumale `hintProb: 0.6`
+  al mismo archivo para los indicios visuales (no crear uno nuevo).
+- `Bóveda a Contrarreloj`/`Sótano Sin Luz` van con `mode: "timed"`/`"dark"` y
+  `fueraDeCadena: true` en `containers.json`, como pide el roadmap — `isContainerUnlocked`
+  (systems/containers.js) todavía NO respeta `fueraDeCadena` (no lo toqué, no era mi tarea);
+  hace falta un cambio ahí para que esos dos contenedores no queden bloqueados hasta prestigio 9.
+- El modelo del `DigResult` (`result.trapGrade`) ya está disponible para que el canvas decida
+  qué indicio pintar (leve/normal/grave) — LEE el modelo, nunca pixeles, como pide la regla dura
+  del napkin citada en el roadmap.
+- Íconos de herramientas (4)/indicios (3)/contenedores nuevos (2) + sus 14 ítems: todavía no
+  existen en `icons.js`, quedan para vos.
+
+### Qué necesita saber la ronda 20.C (UI + e2e + auditoría)
+
+- `state.energy`/`state.equippedTool`/`state.toolsOwned`/`state.spiesUsed`/`state.gravesHit`
+  ya están en el save (v9) y validados; `regenEnergy`/`spendEnergyToSpy`/`spySlot` (containers.js)
+  y `buyTool`/`equipTool` (systems/tools.js) están listos para que el store los llame — hoy
+  ningún call site de `apps/game/src/store.js` los usa todavía (ese wiring es tuyo).
+- Para que el pincel real cambie con la herramienta equipada, componé en la UI:
+  `getAreaMult(state, data) * getToolRadiusMult(state, data)` y
+  `getDigRate(state, container, data) * getToolRhythmMult(state, data)` — el engine
+  deliberadamente NO los multiplica adentro de `getAreaMult`/`getDigRate` (ver test "las
+  herramientas nunca tocan getLuck ni itemSaleValue" en `ronda20-dig-profundo.test.js`).
+- Para pasar `data.traps`/`data.tools` reales a `rollContainerResult`/`getToolRadiusMult`/etc.,
+  sumalos al objeto `data` que arma `apps/game/src/store.js` (import de `traps.json`/`tools.json`),
+  igual que ya se hizo con `streak.json` en la ronda 19 — sin ese wiring, el engine sigue
+  degradando limpio al comportamiento pre-ronda-20 (gate opcional, ver arriba).
+- Logros pendientes (van en `achievements.json`, ids consecutivos desde `a39`):
+  `spiesUsedAtLeast` (50, visible), `gravesHitAtLeast` (10, oculto — el campo ya se llama
+  `state.gravesHit`), `allToolsOwned` (evalúa `state.toolsOwned` contra las 4 de `tools.json`,
+  necesita un `CONDITION_EVALUATORS` nuevo en `systems/achievements.js`, patrón
+  `allAutomationsOwned`).
+- Timer de la Bóveda: usar el delta del loop de juego (determinismo por tiempo real,
+  CLAUDE.md), NO `setTimeout` — es tarea de 20.B/C, no toqué nada de eso.
