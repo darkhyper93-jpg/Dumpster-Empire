@@ -524,6 +524,18 @@ export function getLevelValueMult(state, container) {
 }
 
 /**
+ * Multiplicador de valor de contenedores con mecánica propia (PLAN.md §4.24, ronda 20):
+ * Bóveda a Contrarreloj / Sótano Sin Luz declaran `mechanicValueMult` en containers.json como
+ * compensación por su riesgo (contrarreloj) o dificultad (oscuridad). Neutro (1) si el
+ * contenedor no lo define — los 16 contenedores previos a la ronda 20 no se tocan.
+ * @param {Object} container
+ * @returns {number}
+ */
+export function getMechanicValueMult(container) {
+  return container.mechanicValueMult || 1;
+}
+
+/**
  * Registra un escarbado (trampa o no) contra el progreso de nivel de un contenedor, y sube de
  * nivel si corresponde. Se llama una vez por resolución de contenedor (ver systems/containers.js).
  * @param {GameState} state

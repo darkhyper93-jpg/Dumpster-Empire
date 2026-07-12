@@ -6,6 +6,7 @@ import automations from '../src/data/automations.json';
 import upgrades from '../src/data/upgrades.json';
 import prestigeTree from '../src/data/prestigeTree.json';
 import achievements from '../src/data/achievements.json';
+import tools from '../src/data/tools.json';
 
 describe('icons — cero pentágono de fallback en la data real (ronda 14)', () => {
   it('todo ítem de items.json tiene un ícono dedicado', () => {
@@ -45,6 +46,18 @@ describe('icons — cero pentágono de fallback en la data real (ronda 14)', () 
   it('todo logro de achievements.json tiene un ícono dedicado', () => {
     for (const a of achievements) {
       expect(hasIcon(a.icon), `falta ícono para logro "${a.icon}"`).toBe(true);
+    }
+  });
+
+  it('toda herramienta de tools.json tiene un ícono dedicado (ronda 20)', () => {
+    for (const tool of tools) {
+      expect(hasIcon(tool.icon), `falta ícono para herramienta "${tool.icon}"`).toBe(true);
+    }
+  });
+
+  it('los 3 indicios de grado de trampa tienen ícono dedicado (ronda 20, PLAN.md §4.24)', () => {
+    for (const grade of ['leve', 'normal', 'grave']) {
+      expect(hasIcon(`hint-${grade}`), `falta ícono para indicio "hint-${grade}"`).toBe(true);
     }
   });
 

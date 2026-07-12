@@ -4425,3 +4425,126 @@ panel de Steamworks, prueba en Deck física y Cloud entre 2 máquinas — RELEAS
   `allAutomationsOwned`).
 - Timer de la Bóveda: usar el delta del loop de juego (determinismo por tiempo real,
   CLAUDE.md), NO `setTimeout` — es tarea de 20.B/C, no toqué nada de eso.
+
+## Ronda 20 — Agente B: data + canvas (indicios + mecánicas especiales) (rama `feat/dig-ronda20`, save v9 sin cambios)
+
+### Qué hice
+
+1. **PLAN.md primero**: agregué §4.24 (indicios visuales de grado de trampa, contenedores con
+   mecánica propia, `mechanicValueMult`, `fueraDeCadena`) tal como lo pide 20.B del roadmap.
+2. **`data/traps.json`**: sumé `hintProb: 0.6`.
+3. **Indicio visual de grado de trampa** (`apps/game/src/dig/digRevealModel.js` +
+   `apps/game/src/dig/DigCanvas.js`): `rollTrapHintGrade(trapGrade, hintProb, random)` nuevo,
+   pura y testeada — decide UNA vez si se muestra el indicio (napkin: nunca se lee el canvas
+   para decidir nada). `DigCanvas` ahora acepta un 4to parámetro opcional `trapsData` en el
+   constructor (default `null`); en `start()` calcula `this.trapHintGrade` a partir de
+   `digResult.trapGrade` (solo existe si `data.traps` llegó al roll del engine) y
+   `this.trapsData.hintProb`. Si se decide mostrarlo, `drawTopLayer()` pinta el ícono
+   `hint-leve/normal/grave` centrado sobre la suciedad, a alpha 0.35 (cosmético, no forma parte
+   del modelo de revelado). **Sin wiring de `data.traps` en `store.js`/`UIManager.js` (eso es
+   20.C, según dejó dicho el Agente A en su handoff), el indicio queda deshabilitado en el juego
+   real hoy** — mismo patrón de gate opcional que toda la ronda. Lo que sí queda listo y
+   verificado por tests: la función de decisión (unit, sin DOM) y el wiring de `DigCanvas` para
+   que 20.C solo tenga que pasarle `store.ctx.data.traps` al construirlo.
+4. **Contenedores con mecánica propia** (`containers.json`, al final del array):
+   - `bovedaContrarreloj` (`mode: "timed"`, prestigio 7, `mechanicValueMult: 1.3`)
+   - `sotanoSinLuz` (`mode: "dark"`, prestigio 8, `mechanicValueMult: 1.4`)
+   - Ambos con `fueraDeCadena: true`. `costoInicial`/`digTime`/`resistencia`/`areaRecomendada`/
+     `trapPenaltyMult`/`levelUpDigsBase`/`probTrampaBase` interpolados entre `naufragioTemporal`
+     (tier 14) y `vertederoBigBang` (tier 16) — geométrico para costo/resistencia/área, lineal
+     para el resto — con `t=0.33`/`t=0.67`.
+   - 14 ítems nuevos en `items.json` (7 por contenedor), valorBase calculado interpolando el
+     **valor efectivo** (`valorBase × multiplicadorRareza`) entre los pools de esos mismos dos
+     tiers y despejando el `valorBase` según la categoría real asignada — necesario porque
+     interpolar el `valorBase` crudo (sin pesar por rareza) dejaba los dos contenedores
+     profundamente no rentables incluso a Suerte 1500 (lo detectó `fase9-balance.test.js`,
+     RED real, no cosmético). Con el fix: Suerte recomendada 929/930, en línea con el resto de
+     la progresión (naufragio 740, archivo 831, bigbang 920).
+5. **`isContainerUnlocked`** (`packages/engine/src/systems/containers.js`): respeta
+   `fueraDeCadena` — si está, el contenedor NO exige poseer el anterior del array, solo su
+   `requiresPrestigeCount`. Único cambio permitido por el roadmap (§3.5.2).
+6. **`getMechanicValueMult(container)`** nuevo en `economy.js` (default 1, exportado desde el
+   barrel). `rollContainerResult` lo multiplica junto a `levelValueMult` al calcular el valor
+   final de cada ítem — sin tocar `getLuck` ni la probabilidad de trampa.
+7. **Íconos** (`icons.js`): 2 contenedores (`vault-timed`, `basement-dark`), 14 ítems (varios
+   reusan formas existentes con comentario `DECISIÓN`, siguiendo el patrón ya establecido en el
+   archivo), 3 indicios (`hint-leve/normal/grave`, formas nuevas: manchas de humedad, grietas,
+   marcas de garras) y 4 herramientas (`tools.json` ganó el campo `icon` que Agente A no había
+   agregado; `hands-bare` reusa `hand`, el resto son formas nuevas).
+8. **i18n**: `data-en.js` ganó `containers.bovedaContrarreloj/sotanoSinLuz` y sus 14 ítems
+   (el test de paridad de la ronda 16 lo exige). Copy de herramientas/indicios queda para 20.C
+   (no lo escanea el test de paridad, mismo criterio que dejó Agente A con `tools.json`).
+9. **Tests RED antes de implementar**:
+   - `packages/engine/tests/ronda20b-mecanica-contenedores.test.js` (nuevo): existencia de
+     `mode`/`fueraDeCadena`/`mechanicValueMult`, que los 16 contenedores previos NO los declaran,
+     `fueraDeCadena` desbloquea sin poseer el anterior, la cadena normal sigue intacta, pools de
+     7 ítems por categoría, `getMechanicValueMult` neutro sin el campo, `rollContainerResult`
+     aplica el multiplicador.
+   - `apps/game/tests/digRevealModel.test.js`: 3 tests nuevos de `rollTrapHintGrade`.
+   - `apps/game/tests/icons.test.js`: cobertura de íconos de `tools.json` y de los 3 indicios.
+   - Ajusté 2 tests globales pre-existentes que asumían que TODO el array de `containers.json`
+     sigue una progresión estrictamente creciente índice a índice
+     (`packages/engine/tests/economy.test.js` y `fase9-balance.test.js`, 3 asserts): ahora
+     filtran `fueraDeCadena` antes de comparar contra el elemento anterior del array, con
+     comentario `AJUSTE` explicando por qué (los dos nuevos son contenido lateral interpolado
+     entre naufragio/bigbang, no el siguiente tier de la cadena principal). No se tocó ninguna
+     fórmula, solo el alcance de esas comparaciones.
+
+### Decisiones no triviales
+
+- **El indicio visual NO se activa en el juego real todavía**: requiere que 20.C pase
+  `store.ctx.data.traps` como 4to argumento a `new DigCanvas(...)` en `UIManager.js` y sume
+  `traps` al objeto `data` de `store.js` (ya pendiente para 20.C desde el handoff de Agente A,
+  por la wiring de `data.traps`/`data.tools`). Construí el wiring de `DigCanvas` para que ese
+  cambio sea de una sola línea; no toqué `UIManager.js`/`store.js` para no adelantar trabajo de
+  20.C.
+- **Interpolar valor efectivo (valorBase × rareza) en vez de valorBase crudo**: el primer intento
+  (interpolar `valorBase` directo entre naufragio/bigbang) rompió `fase9-balance.test.js` con los
+  dos contenedores nuevos no rentables ni a Suerte 1500 — el motivo real es que bigbang usa
+  categoría `future` (mult ×6000) y mis contenedores usan `historic/relics/art` (mult ×120-1500);
+  interpolar el crudo sin pesar por rareza subestimaba el valor real esperado. Documentado en
+  PLAN.md §4.24.
+- **`mechanicValueMult` sí lo implementé** (no es solo data muerta): sin aplicarlo en el engine,
+  el campo de `containers.json` no significaría nada y el balance de "Loot +30%/+40%" del
+  roadmap quedaría sin cumplir. Es un cambio de una línea en `rollContainerResult`, acotado al
+  campo que yo mismo introduje — no toqué energía/espionaje/herramientas (eso ya está en
+  `economy.js`/`systems/tools.js` de Agente A, intacto).
+- **No toqué `UIManager.js`, `store.js` ni `main.js`**: el timer visible de la Bóveda, la máscara
+  de oscuridad del Sótano, el selector de herramienta, la píldora de Energía y el botón "Espiar"
+  son UI de 20.C explícitamente (roadmap 20.C ítem 1). Verifiqué que los 57 e2e existentes siguen
+  verdes sin tocar ningún spec (R18).
+
+### Estado del DoD (Agente B, ronda 20)
+```
+[x] PLAN.md §4.24 primero
+[x] Tests RED antes de implementar (ronda20b-mecanica-contenedores.test.js + extensiones a
+    digRevealModel.test.js/icons.test.js)
+[x] npm test → 360/360 verde (340 previos de Agente A + 20 nuevos/ajustados)
+[x] npm run test:e2e → 57/57 verde, SIN tocar ningún spec existente (R18)
+[x] Manual: smoke.spec.js (parte del e2e run) confirma boot sin errores de consola a 375/1280/1440
+    con la data nueva cargada; 18 contenedores, 125 ítems, iconos/i18n sin huecos
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (queda 20.C) — no corresponde todavía.
+```
+
+### Qué necesita saber la ronda 20.C (UI + e2e + auditoría)
+
+- **Baselines nuevos**: 360 unit / 57 e2e / `SAVE_VERSION = 9` (sin cambios, indicativo, regla §0).
+- `data/traps.json` ya tiene `hintProb: 0.6`. Para que el indicio visual de grado se vea en el
+  juego real: sumá `traps` (y `tools`) al objeto `data` que arma `store.js` (ya lo dejó pendiente
+  Agente A) y pasá `store.ctx.data.traps` como 4to argumento a `new DigCanvas(...)` en
+  `UIManager.js` (línea ~75-83). Sin eso, `DigCanvas` sigue funcionando exactamente igual que
+  antes de la ronda 20 (gate opcional).
+- `containers.json` tiene 18 contenedores: los 16 de siempre + `bovedaContrarreloj` (prestigio 7,
+  `mode: "timed"`) + `sotanoSinLuz` (prestigio 8, `mode: "dark"`), ambos `fueraDeCadena: true` y
+  ya desbloqueables solo por prestigio (`isContainerUnlocked` los respeta). El timer duro de la
+  Bóveda (perder sin castigo si no se completa a tiempo) y la máscara de oscuridad del Sótano son
+  UI/interacción — el modelo de revelado no cambia para ninguno de los dos casos (napkin: el
+  modelo sigue siendo la única fuente de verdad del completado).
+- Íconos de las 4 herramientas, 2 contenedores nuevos, 14 ítems y 3 indicios YA existen en
+  `icons.js` — no hace falta agregar ninguno para lo que resta.
+- `tools.json` ahora tiene campo `icon` (no lo tenía cuando Agente A lo creó).
+- Logros pendientes (`spiesUsedAtLeast`, `gravesHitAtLeast`, `allToolsOwned`) siguen 100% tarea
+  de 20.C, sin cambios respecto a lo que dejó Agente A.

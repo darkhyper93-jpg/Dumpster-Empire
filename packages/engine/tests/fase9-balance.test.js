@@ -120,19 +120,28 @@ describe('PLAN.md §11.2 — el escarbado cuesta esfuerzo y escala con el tier',
     }
   });
 
-  it('la resistencia requerida crece con el tier (orden de PLAN.md §2.6)', () => {
-    for (let i = 1; i < containers.length; i++) {
-      expect(containers[i].resistencia).toBeGreaterThanOrEqual(containers[i - 1].resistencia);
+  // AJUSTE (ronda 20): filtra los contenedores `fueraDeCadena` (Bóveda a Contrarreloj, Sótano
+  // Sin Luz) — van al final del array pero son contenido lateral gateado por prestigio 7/8, no
+  // el siguiente tier de la cadena principal (que sigue terminando en vertederoBigBang,
+  // prestigio 9); su resistencia interpolada entre naufragioTemporal y vertederoBigBang no tiene
+  // por qué seguir creciendo respecto al ÚLTIMO elemento del array (PLAN.md §4.24).
+  it('la resistencia requerida crece con el tier (orden de PLAN.md §2.6, cadena principal)', () => {
+    const chain = containers.filter((c) => !c.fueraDeCadena);
+    for (let i = 1; i < chain.length; i++) {
+      expect(chain[i].resistencia).toBeGreaterThanOrEqual(chain[i - 1].resistencia);
     }
   });
 });
 
 describe('PLAN.md §11.2 — trampas más caras por tier, nunca injustas', () => {
-  it('el castigo de trampa crece monotónicamente con el tier del contenedor', () => {
+  // AJUSTE (ronda 20): mismo criterio que la resistencia arriba — los `fueraDeCadena` no
+  // continúan el castigo del último tier de la cadena principal (PLAN.md §4.24).
+  it('el castigo de trampa crece monotónicamente con el tier del contenedor (cadena principal)', () => {
     const state = freshState();
-    for (let i = 1; i < containers.length; i++) {
-      expect(getTrapPenalty(state, containers[i], data)).toBeGreaterThanOrEqual(
-        getTrapPenalty(state, containers[i - 1], data)
+    const chain = containers.filter((c) => !c.fueraDeCadena);
+    for (let i = 1; i < chain.length; i++) {
+      expect(getTrapPenalty(state, chain[i], data)).toBeGreaterThanOrEqual(
+        getTrapPenalty(state, chain[i - 1], data)
       );
     }
   });

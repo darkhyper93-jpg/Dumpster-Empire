@@ -13,6 +13,7 @@ import {
   getRevealed,
   getStrokes,
   REVEAL_COVERAGE,
+  rollTrapHintGrade,
 } from '../src/dig/digRevealModel.js';
 
 /** LCG determinista para inyectar como `random` (mismo seed → mismas posiciones). */
@@ -194,5 +195,23 @@ describe('completado — SOLO al revelar todos los objetos (PUNTOS_A_MEJORAR_5 �
   it('REVEAL_COVERAGE está en un rango jugable (documentado en el módulo)', () => {
     expect(REVEAL_COVERAGE).toBeGreaterThan(0.4);
     expect(REVEAL_COVERAGE).toBeLessThan(0.9);
+  });
+});
+
+describe('rollTrapHintGrade — indicio visual de grado de trampa (ronda 20, PLAN.md §4.24)', () => {
+  it('sin trapGrade (no es trampa, o data.traps no llegó al roll) nunca muestra indicio', () => {
+    expect(rollTrapHintGrade(undefined, 0.6, () => 0)).toBeNull();
+    expect(rollTrapHintGrade(null, 1, () => 0)).toBeNull();
+  });
+
+  it('con trapGrade, muestra el grado cuando random() cae bajo hintProb', () => {
+    expect(rollTrapHintGrade('grave', 0.6, () => 0.59)).toBe('grave');
+    expect(rollTrapHintGrade('leve', 0.6, () => 0.6)).toBeNull();
+    expect(rollTrapHintGrade('normal', 0.6, () => 0.99)).toBeNull();
+  });
+
+  it('hintProb 0 nunca muestra indicio; hintProb 1 siempre lo muestra', () => {
+    expect(rollTrapHintGrade('grave', 0, () => 0)).toBeNull();
+    expect(rollTrapHintGrade('grave', 1, () => 0.999999)).toBe('grave');
   });
 });

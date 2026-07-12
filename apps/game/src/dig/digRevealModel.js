@@ -251,3 +251,19 @@ export function getStrokes(model) {
     radius: s.radius,
   }));
 }
+
+/**
+ * Indicio visual del grado de trampa (PLAN.md §4.24, ronda 20). REGLA DURA (napkin): el indicio
+ * se DECIDE acá (estado del dig en curso), nunca leyendo píxeles del canvas — `DigCanvas` solo
+ * pinta el resultado de esta función. Cosmético únicamente: no cambia el grado real ni el
+ * castigo, solo sugiere qué tan grave puede ser.
+ * @param {'leve'|'normal'|'grave'|undefined} trapGrade - `undefined` si el dig no es trampa, o
+ *   si `data.traps` no estaba disponible en el roll (compat, ver systems/containers.js).
+ * @param {number} hintProb - `data/traps.json` → `hintProb` (0.6 en el balance actual).
+ * @param {() => number} [random]
+ * @returns {'leve'|'normal'|'grave'|null} el grado a pintar, o null si no toca mostrar nada.
+ */
+export function rollTrapHintGrade(trapGrade, hintProb, random = Math.random) {
+  if (!trapGrade) return null;
+  return random() < hintProb ? trapGrade : null;
+}

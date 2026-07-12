@@ -12,6 +12,7 @@ import {
   getFragmentMult,
   getLevelRarityShift,
   getLevelValueMult,
+  getMechanicValueMult,
   getTrapPenalty,
   registerContainerDig,
   itemSaleValue,
@@ -37,6 +38,12 @@ import { rollCategory, rollItem, rollItemVariance, rollIsTrap, rollTrapGrade, re
 export function isContainerUnlocked(state, container, allContainers) {
   if (container.requiresPrestigeCount && state.prestigeCount < container.requiresPrestigeCount) return false;
   if (container.requiresAutomationId && !state.automationOwned[container.requiresAutomationId]) return false;
+  // PLAN.md §4.24 (ronda 20): los contenedores con mecánica propia (Bóveda a Contrarreloj,
+  // Sótano Sin Luz) van al final del array pero gatean por prestigio 7/8 — la regla de cadena
+  // de abajo ("poseer el contenedor anterior") los dejaría bloqueados hasta el prestigio 9
+  // (vertederoBigBang, que va justo antes). fueraDeCadena los exime de esa regla; su único
+  // desbloqueo es requiresPrestigeCount (ya evaluado arriba).
+  if (container.fueraDeCadena) return true;
   const index = allContainers.findIndex((c) => c.id === container.id);
   if (index <= 0) return true;
   const previous = allContainers[index - 1];
@@ -119,7 +126,9 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
         fluctuacionMercado: state.marketFluctuation,
         sellMult: getSellMult(state, categoria, data),
         depthValueMult,
-      }) * levelValueMult;
+      }) *
+      levelValueMult *
+      getMechanicValueMult(container);
     const alreadyFound =
       Boolean(state.itemsFoundByItem?.[container.id]?.[pick.id]) || seenInThisRoll.has(pick.id);
     const isFirstRareFind = categoria === rarest && !alreadyFound;

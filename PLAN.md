@@ -348,6 +348,38 @@ Modifican SOLO el pincel del escarbado manual — `radioPincel × radioMult`,
 
 Solo una herramienta equipada a la vez (`state.equippedTool`); comprar no equipa automáticamente.
 
+### 4.24 Indicios visuales y contenedores con mecánica propia (ronda 20, Agente B)
+
+- **Indicio visual de grado de trampa**: `hintProb: 0.6` en `data/traps.json`. Al iniciar un
+  escarbado que salió trampa (con `data.traps` presente), un roll independiente decide si se
+  muestra un indicio visual del grado (`leve` → manchas de humedad, `normal` → grietas, `grave`
+  → marcas de garras) pintado en la capa superior del canvas. El indicio es cosmético (no
+  garantiza nada, solo sugiere): vive en el estado del dig en curso (`DigCanvas`, función pura
+  `rollTrapHintGrade` de `digRevealModel.js`), nunca se decide leyendo píxeles del canvas.
+- **Contenedores con mecánica propia** (`containers.json`, campo `mode` opcional, default
+  `"normal"` — los 16 contenedores existentes no lo declaran y no cambian):
+  - `bovedaContrarreloj` (`mode: "timed"`, `requiresPrestigeCount: 7`): `digTime` es límite
+    duro; si no se completa a tiempo, el contenedor se pierde SIN castigo de dinero (pero
+    cuenta para el nivel, igual que una trampa leve). Loot ×1.3.
+  - `sotanoSinLuz` (`mode: "dark"`, `requiresPrestigeCount: 8`): solo se ve un radio alrededor
+    del puntero durante el escarbado (máscara puramente visual, el modelo de revelado no
+    cambia). Loot ×1.4.
+  - Ambos van **fuera de la cadena de desbloqueo** (`fueraDeCadena: true`): no exigen poseer el
+    contenedor anterior del array, solo su `requiresPrestigeCount` — sin este campo, la regla de
+    cadena actual (posición N exige poseer N-1) los dejaría bloqueados hasta el prestigio 9
+    (`vertederoBigBang`, que va después en el array). `isContainerUnlocked` es el único punto
+    del engine que lo respeta (ROADMAPv4 §3.5.2).
+  - `mechanicValueMult` (multiplicador de valor, 1.3/1.4): compensa el riesgo/dificultad de la
+    mecánica propia. Se aplica al valor final del ítem junto a `getLevelValueMult`
+    (`getMechanicValueMult(container)` en `economy.js`, default 1 — neutro para los 16
+    contenedores existentes). Valores de `costoInicial`/`digTime`/`resistencia`/
+    `areaRecomendada`/`trapPenaltyMult`/`levelUpDigsBase`/`probTrampaBase` interpolados entre
+    `naufragioTemporal` (tier 14, prestigio 7) y `vertederoBigBang` (tier 16, prestigio 9) por
+    interpolación geométrica (costos/resistencia/área) o lineal (el resto), con `t = 0.33` para
+    la Bóveda y `t = 0.67` para el Sótano — mismo criterio para los 14 ítems de sus pools.
+  - El timer visible de la Bóveda y la máscara de oscuridad del Sótano (interacción/UI) son
+    tarea de 20.C: acá solo se define la data y el gate de desbloqueo.
+
 ---
 
 ## 5. UI / UX

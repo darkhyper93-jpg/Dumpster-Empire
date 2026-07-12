@@ -32,6 +32,7 @@ export {
   digsNeededForNextLevel,
   getLevelRarityShift,
   getLevelValueMult,
+  getMechanicValueMult,
   getDigRate,
   getEffectiveDigTime,
   getAutoDigPowerMult,
