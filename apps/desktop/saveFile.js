@@ -7,25 +7,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { app } = require('electron');
 const { readCloudSave, writeCloudSave } = require('./steam.js');
+// AUDITORÍA (ronda 18): extraído a su módulo (testeable sin Electron) y endurecido con
+// Number.isFinite — un `lastSavedAt: 1e999` (Infinity vía JSON.parse) ganaba la reconciliación.
+const { extractTimestamp } = require('./saveTimestamp.js');
 
 const SAVE_FILENAME = 'save.json';
 
 function savePath() {
   return path.join(app.getPath('userData'), SAVE_FILENAME);
-}
-
-/**
- * @param {string} text
- * @returns {number} `lastSavedAt` embebido en el guardado, o -1 si no parsea/no lo tiene.
- */
-function extractTimestamp(text) {
-  if (typeof text !== 'string' || text.length === 0) return -1;
-  try {
-    const parsed = JSON.parse(text);
-    return typeof parsed.lastSavedAt === 'number' ? parsed.lastSavedAt : -1;
-  } catch {
-    return -1;
-  }
 }
 
 function readLocalFile() {

@@ -65,6 +65,13 @@ function createWindow() {
       sandbox: true,
     },
   });
+  // AUDITORÍA (ronda 18, checklist de seguridad de Electron): el juego no abre ventanas ni
+  // navega jamás — cualquier intento (window.open / cambio de location inyectados si algún día
+  // se comprometiera el renderer) se bloquea de plano, en vez de abrir un browser con Node cerca.
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.webContents.on('will-navigate', (evt, url) => {
+    if (url !== GAME_URL) evt.preventDefault();
+  });
   mainWindow.loadURL(GAME_URL);
   mainWindow.on('closed', () => {
     mainWindow = null;
