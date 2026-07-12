@@ -83,6 +83,7 @@ Nuevas de v4:
 | % de completitud de colección visible | brainstorm | 19 | v8 |
 | Logros secretos/ocultos | brainstorm | 19 | v8 |
 | Vibración táctil (trampa/hallazgo épico) | postre PLAN.md | 19 | v8 |
+| Botón JUGAR estilo placa metálica (`reference/ui/JUGARBUTTON.png`) | usuario (2026-07-12) | 19 | — |
 | Trampas con grados + indicios visuales | postre PLAN.md | **20** | v9 |
 | Espiar un slot gastando Energía | postre PLAN.md | 20 | v9 |
 | Herramientas de escarbado equipables | brainstorm | 20 | v9 |
@@ -158,6 +159,30 @@ Cada ronda agrega los suyos AL FINAL de `achievements.json` (ids consecutivos `a
 15: dinero ≈ 10% del hito, llaves para hitos duros. La ronda 29 regenera la tabla de
 RELEASE.md con `node tools/steam/achievements-table.mjs` (el usuario re-registra en Steamworks).
 
+### 3.5 Contratos entre rondas (análisis de dependencias 2026-07-12 — respetarlos a rajatabla)
+
+El orden 19→29 se eligió por dependencia técnica; estos son los contratos exactos que lo
+sostienen. Si tu ronda rompe uno, detenete y reportá:
+
+1. La **racha** (19) se corta con trampa de CUALQUIER grado (20); los grados NO cambian la
+   probabilidad de trampa (§4.6 intacto).
+2. Los contenedores especiales de la 20 usan `fueraDeCadena: true` (ver 20.B) — único cambio
+   permitido a `isContainerUnlocked`.
+3. Los **legendarios** (21) se venden instantáneo SIEMPRE: jamás entran al inventario del
+   Puesto (22) ni los toca el robot vendedor; su persistencia es `legendariesFound` (vitrina).
+   El filtro de la 26 depende de esta regla.
+4. La 23 consume contadores creados por la 19 (`digStreak`) y la 22 (`stallSoldCount`,
+   `ordersFulfilledCount`); las misiones de puesto solo se generan con puesto desbloqueado.
+5. La 25 consume `totalKeysEarned` (creado y backfilleado en la 24) y crea `flotaFundadora`,
+   que consume la 26. La 26 además consume el inventario de la 22.
+6. Los contenedores **procedurales** (25) quedan FUERA de: INDEX, sets (21), % de completitud
+   (19) y generación de misiones (23). Solo existen para Tienda, escarbado y automatización.
+   (Sin esta regla, cada tier Eco sería un "set" nuevo → bonus infinito, bug de balance.)
+7. El arte ilustrado (28) cubre TODO ítem existente al ejecutarse; los procedurales reusan el
+   arte del pool del Big Bang. Por eso la 28 va después de la última ronda que crea ítems (25).
+8. La 27 desbloquea el tema `dorado` con los 8 legendarios (21) y `neonNocturno` con el logro
+   de 100 trampas (`a32`, ya existente).
+
 ---
 ---
 
@@ -171,9 +196,13 @@ RELEASE.md con `node tools/steam/achievements-table.mjs` (el usuario re-registra
   Solo escarbado manual (el robot no genera ni corta racha). Constantes en `data/streak.json`:
   `{ "rachaTramo": 5, "rachaBonusPorTramo": 1, "rachaMaxBonus": 5 }`
   (AJUSTE: +1 Suerte cada 5, cap +5 — sensible pero no rompe la curva de §4.4).
-- §5.4 gana: pantalla de Estadísticas (subvista de Ajustes o pestaña del INDEX — decidir por
-  espacio en el tabbar y documentar), % de completitud, logros ocultos ("???" hasta
-  desbloquear), toggle de vibración.
+- §5.4 gana: pantalla de Estadísticas (subvista de Ajustes o sección interna del INDEX —
+  NUNCA una pestaña nueva del tabbar: la única pestaña que agrega v4 es el Puesto, ronda 22),
+  % de completitud, logros ocultos ("???" hasta desbloquear), toggle de vibración.
+- §5.3 gana la spec del **botón JUGAR estilo placa metálica** (pedido del usuario 2026-07-12,
+  referencia `reference/ui/JUGARBUTTON.png`): placa verde oliva oscura con marco dorado
+  biselado doble (borde grueso + filete interior), 4 remaches en las esquinas del filete y el
+  texto en mayúsculas doradas con relieve.
 
 ## 19.2 Estado y save (v8)
 
@@ -201,6 +230,18 @@ backfillea los tres. `REQUIRED_FIELDS` + validación de contenido (`digStreak >=
 5. **e2e** (`ronda19-quickwins.spec.js`): racha visible tras 2 escarbados sin trampa (patrón
    `iniciarEscarbadoSinTrampa` de los helpers e2e); pantalla de stats muestra valores del
    seed; logro oculto aparece como "???" antes y con nombre después de desbloquear.
+6. **Botón JUGAR de la placa metálica** (referencia `reference/ui/JUGARBUTTON.png`):
+   reemplazar SOLO la piel de `.title-play-btn` (TitleScreen.js) — implementación 100% CSS
+   sobre el botón existente: gradientes + box-shadows en capas para la placa y el bisel
+   dorado, pseudo-elementos para el filete interior y los 4 remaches, texto con
+   `background-clip: text` + text-shadow para el embose dorado. El texto SIGUE siendo
+   `t('titleScreen.play')` (vivo, cambia por idioma — por eso el PNG no puede ir como asset
+   con el texto horneado). Colores: tokens de la paleta ámbar; si el verde oliva de la placa
+   no existe como token, se AGREGA a tokens.css (jamás un color suelto). Estados: hover/focus
+   (brillo del marco) y active (la placa se hunde — patrón "extruido" de CLAUDE.md §estilo).
+   OJO (skill verify del repo): la pantalla de título mide con unidades cqw/cqh su content
+   box — NO agregar padding a `.title-screen` ni mover el botón; solo cambia su piel.
+   Verificar la alineación con el arte a 375px y 1280px con screenshot contra la referencia.
 
 ## 19.4 Riesgos
 
@@ -238,6 +279,10 @@ HANDOFF + push + PR link
   "TRAMPA" si el roll ya salió trampa. `data/energy.json`:
   `{ "energiaMax": 3, "msPorPunto": 90000, "costoEspiar": 1 }`
   (AJUSTE: 3 usos, 1 cada 90s — decisión táctica sin spam).
+  Nota de balance: espiar y ABANDONAR es el counterplay intencional a la trampa — el
+  contenedor ya pagado se pierde igual, así que no es gratis. Si el playtest muestra abuso
+  (evitar toda trampa relevante), se sube `costoEspiar` o se baja `energiaMax` — constantes,
+  nunca la fórmula.
 - §4.23 **Herramientas**: modifican SOLO el pincel del escarbado —
   `radioPincel × radioMult`, `ritmo × ritmoMult` — nunca valor ni suerte. `data/tools.json`:
 
@@ -280,6 +325,13 @@ y revela); herramientas (multiplicadores llegan al modelo, comprar/equipar, no t
      ve un radio alrededor del puntero (máscara CSS/canvas encima, el modelo no cambia).
      Loot +40% (`mechanicValueMult: 1.4`).
    El campo `mode` es opcional (default `"normal"`): los 16 contenedores existentes no se tocan.
+   **Fuera de la cadena de desbloqueo**: ambos llevan `"fueraDeCadena": true` (campo nuevo
+   opcional) y `isContainerUnlocked` lo respeta — NO exigen poseer el contenedor anterior del
+   array. Sin esto habría un bug de diseño: van al final del array, después de
+   `vertederoBigBang` (`requiresPrestigeCount: 9`), y la regla de cadena actual ("poseer el
+   anterior") contradiría sus gates de prestigio 7/8 — quedarían bloqueados hasta el prestigio
+   9. Test de engine dedicado + confirmar que el e2e de cadena de la ronda 15
+   (`ronda15-contenido.spec.js`) sigue verde.
 3. Íconos: herramientas (4), indicios (3), contenedores (2) + sus 14 ítems, en icons.js.
 
 ## 20.C — UI + e2e + auditoría
@@ -386,6 +438,12 @@ el store contra legendaries.json — patrón `sanitizeContainerRefs`).
     condiciones → venta instantánea de siempre. **El loot jamás se pierde.**
   - `keepThreshold: 0` = puesto en pausa (default al comprar). El jugador lo setea en la UI
     ("guardá lo que valga $X o más").
+  - `rollContainerResult` expone en cada ítem `baseValue` (el MISMO cálculo con fluctuación 1)
+    además de `value` — la captura persiste `baseValue` (si guardara `value`, la fluctuación
+    del momento de hallazgo se aplicaría DOS veces al vender); el umbral compara contra
+    `value` (lo que valdría vendido ya).
+  - **Los legendarios (ronda 21) NUNCA se capturan**: venta instantánea siempre — su trofeo es
+    la vitrina (contrato §3.5.3; el filtro del robot vendedor de la ronda 26 depende de esto).
   - **El progreso offline usa SOLO venta instantánea** para el loot nuevo (el modal offline no
     gestiona inventario); el robot vendedor SÍ vende offline lo ya guardado (ver §4.28).
 - §4.26 **Precio de venta en el puesto**:
@@ -393,7 +451,9 @@ el store contra legendaries.json — patrón `sanitizeContainerRefs`).
   con `stallMultBase: 1.25`, `stallMultPorNivel: 0.05`, `stallNivelMax: 5` (costo de subir de
   nivel: `stallCost × 4^(nivel-1)`). La fluctuación se toma AL VENDER, no al guardar — esa es
   la mecánica de "negociación/timing" del postre de PLAN.md: guardar y vender cuando la
-  cotización está alta.
+  cotización está alta. Toda acción de venta (manual o del robot) REFRESCA primero la
+  fluctuación con el mismo helper del roll (`refreshMarketFluctuation`, rng.js) — si no, un
+  jugador que no escarba vendería para siempre con la cotización congelada.
 - §4.27 **Pedidos**: 2 activos, rotan cada `orderRotationMs: 1200000` (20 min, reloj clampeado
   §3.3) o al cumplirse. Un pedido = `{ npcId, categoria, cantidad (2-4), mult }` con
   `orderMult: 1.4` sobre `precioPuesto`. Generación con `random` inyectable sobre las
@@ -528,8 +588,10 @@ dura de forma y finitud), `missionsRolledAt: 0`, `missionsCompletedCount: 0`,
 Data (missions.json, dayNight.json, 3 logros: 10 misiones / 50 misiones (oculto) / primer
 evento aprovechado — cond `missionsCompletedAtLeast` + contador de eventos usados) →
 Engine (reroll; progreso por DELTAS contra snapshot tomado al rollear sobre los contadores
-existentes — `itemsFoundByCategory`, `digStreak`, `stallSoldCount`, etc. — nada de tracking
-paralelo; typedef del mecanismo) → tests RED (reroll con las 4 manipulaciones de reloj;
+existentes — `itemsFoundByCategory`, `stallSoldCount`, `totalMoneyEarned`, etc. — nada de
+tracking paralelo; typedef del mecanismo. EXCEPCIÓN `streakReach`: la racha sube Y baja, así
+que el delta no sirve — su progreso es el MÁXIMO `digStreak` observado desde el roll, actualizado
+en el mismo punto del engine que actualiza la racha) → tests RED (reroll con las 4 manipulaciones de reloj;
 recompensas escalan con el mejor contenedor del seed; evento expira; noche/día por hora
 inyectada) → UI (las misiones viven como sección del Puesto si está desbloqueado o de Logros
 si no — decidir por espacio y documentar; Chispa de quest-giver con retrato + diálogo;
@@ -548,6 +610,12 @@ misiones nuevas; seed de hoy → NO rerollea.
   inyectada FIJA de día (12:00) para no volverse flaky según cuándo corra CI.
 - R23.3 El evento muta el valor del roll: aplicarlo como multiplicador transitorio del store
   hacia `rollContainerResult`, NUNCA persistido.
+- R23.4 **Día/noche vuelve flaky cualquier e2e que corra de noche** (Suerte +3 y trampa +0.03
+  reales en el Chromium del test): los specs NUEVOS fijan la hora con `page.clock.install()`
+  (Playwright ≥ 1.45; el repo pinea ^1.61) a las 12:00. Además, AUDITAR los e2e EXISTENTES:
+  correr la suite completa una vez con `page.clock` simulando las 23:00 (fixture temporal) y
+  confirmar que ninguno depende de valores afectados; el que dependa, fija su hora en el spec.
+  Documentar el resultado de esa corrida en HANDOFF.
 
 ## 23.5 — DoD patrón estándar + verificación manual con el reloj del sistema cambiado a mano
 (documentar el resultado en HANDOFF).
@@ -581,6 +649,11 @@ misiones nuevas; seed de hoy → NO rerollea.
   Recompensas = effect types nuevos evaluados en los getters correspondientes
   (`challengeEffectsOfType(state, data)`, espejo de `automationEffectsOfType`). Un desafío
   completado no se repite (sin recompensa doble).
+  Nota dura sobre los goals de dinero: "de la run" = el contador POR RUN que ya alimenta la
+  fórmula de Llaves (§4.3) — verificá su nombre real en el engine ANTES de implementar; si la
+  fórmula usara un histórico y no existiera contador por run, se agrega en v13 (migración
+  backfill: 0). NO uses `totalMoneyEarned` a secas: es histórico y completaría el desafío al
+  instante en cualquier partida avanzada.
 - §4.35 **Nodos infinitos**: 3 nodos nuevos SIN `nivelMaximo` (el campo pasa a opcional:
   ausente = infinito — la UI ya muestra "Máximo" cuando existe):
   `codiciaEterna` (+2% valor de venta global/nivel, costoBase 20, factor 2.0),
@@ -591,6 +664,7 @@ misiones nuevas; seed de hoy → NO rerollea.
 
 `specialization: null` (string|null con allow-list — patrón `autoTargetContainerId`),
 `activeChallenge: null` (ídem), `challengesCompleted: []` (strings),
+`specializationsUsed: 0` (contador para su logro),
 `totalKeysEarned: number` — **la migración v13 lo backfillea** con
 `prestigeKeys + costoAcumulado(prestigeTreeLevels)` (computable desde la data del árbol; lo
 necesita la fórmula de Escrituras de la ronda 25). Nota: la migración necesita la data del
@@ -664,6 +738,11 @@ reflejado en un precio visible; desafío activo bloquea la compra de máquinas c
   `validContainerIds` acepta también el patrón `^bigbangPlus([1-9][0-9]?)$` con `n ≤ tope`
   (extender `sanitizeContainerRefs`/store con tests de ids hostiles: `bigbangPlus999`,
   `bigbangPlus01`, `bigbangPlus1e2`, `bigbangPlus-1`).
+- **Colección y misiones** (contrato §3.5.6): los tiers procedurales NO aparecen en el INDEX,
+  no cuentan para el % de completitud (19), no forman sets (21) y los generadores de misiones
+  (23) los EXCLUYEN al elegir contenedor objetivo. Sus hallazgos SÍ suman `itemsFoundCount` y
+  categorías (los logros siguen contando). Test que lo fije: poseer `bigbangPlus1` no cambia
+  el denominador del % ni crea un set nuevo.
 - **Sufijos** (regla CLAUDE.md: jamás notación científica cruda): extender el formateador a
   `K M B T Qa Qi Sx Sp Oc No Dc UDc DDc TDc QaDc QiDc` (1e3 … 1e48) con test de cada borde;
   el tope procedural se elige para que ningún número visible se quede sin sufijo.
