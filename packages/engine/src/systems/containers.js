@@ -138,6 +138,9 @@ export function applyContainerResult(state, container, result, isAuto, data) {
     const penalty = Math.min(state.money, getTrapPenalty(state, container, data));
     state.money -= penalty;
     state.trapsHit++;
+    // PLAN.md §4.20 (ronda 19): la racha es SOLO de escarbado manual — el robot ni la sube ni
+    // la corta (contrato §3.5.1: los grados de trampa de la ronda 20 también la cortan).
+    if (!isAuto) state.digStreak = 0;
     return { moneyDelta: 0, trapPenalty: penalty };
   }
   let total = 0;
@@ -157,6 +160,12 @@ export function applyContainerResult(state, container, result, isAuto, data) {
   }
   state.money += total;
   state.totalMoneyEarned += total;
-  if (isAuto) state.autoProcessedCount++;
+  if (isAuto) {
+    state.autoProcessedCount++;
+  } else {
+    // PLAN.md §4.20 (ronda 19): +1 de racha por escarbado manual exitoso (sin trampa).
+    state.digStreak++;
+    state.bestDigStreak = Math.max(state.bestDigStreak, state.digStreak);
+  }
   return { moneyDelta: total, trapPenalty: 0 };
 }

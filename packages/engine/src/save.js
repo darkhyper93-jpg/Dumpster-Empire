@@ -128,6 +128,14 @@ function validateDeepContent(migrated) {
   if (!SUPPORTED_LANGUAGES.includes(migrated.language)) {
     return `Contenido inválido en language: debe ser uno de ${SUPPORTED_LANGUAGES.join(', ')}.`;
   }
+  // AJUSTE (ronda 19): digStreak/bestDigStreak son enteros >= 0 (la finitud ya la cubre el loop
+  // de REQUIRED_FIELDS); acá se cubre el rango y que no sean fraccionarios (save manipulado).
+  if (!Number.isInteger(migrated.digStreak) || migrated.digStreak < 0) {
+    return 'Contenido inválido en digStreak: debe ser un entero >= 0.';
+  }
+  if (!Number.isInteger(migrated.bestDigStreak) || migrated.bestDigStreak < 0) {
+    return 'Contenido inválido en bestDigStreak: debe ser un entero >= 0.';
+  }
   // El chequeo de finitud de `volume` (y de todo campo numérico top-level) vive ahora en el
   // loop de REQUIRED_FIELDS de validateSave — ver AJUSTE de la auditoría post-ronda 14.
   return null;
@@ -180,6 +188,9 @@ const REQUIRED_FIELDS = {
   lastSavedAt: 'number',
   digSensitivity: 'number',
   language: 'string',
+  digStreak: 'number',
+  bestDigStreak: 'number',
+  vibrationOn: 'boolean',
 };
 // autoTargetContainerId NO va en REQUIRED_FIELDS: es unión `string|null` y `typeof null === 'object'`
 // rompería el chequeo de tipo; su validación de contenido vive en validateDeepContent().
@@ -276,6 +287,12 @@ function migrate(raw, itemNameToId) {
       // sin itemsFoundByItem válido se rechazaba; la migración no debe relajar eso).
       migrated = { ...migrated, saveVersion: 7 };
     }
+  }
+  // v7 -> v8 (ronda 19): agrega digStreak/bestDigStreak (racha de escarbado sin trampa) y
+  // vibrationOn (toggle de vibración táctil). Saves viejos arrancan en racha 0 y vibración
+  // encendida (comportamiento actual sin cambios visibles).
+  if (migrated.saveVersion < 8) {
+    migrated = { ...migrated, digStreak: 0, bestDigStreak: 0, vibrationOn: true, saveVersion: 8 };
   }
   return migrated;
 }

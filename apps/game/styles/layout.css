@@ -150,10 +150,69 @@ body {
   text-align: center;
 }
 
+/* Ronda 19 (reference/ui/JUGARBUTTON.png, pedido del usuario 2026-07-12): placa metálica verde
+   oliva con marco dorado biselado doble (borde + filete interior) y 4 remaches. 100% CSS — el
+   texto SIGUE siendo t('titleScreen.play') (vivo, cambia de idioma), por eso no puede ir como
+   imagen con el texto horneado. `::before` es el filete interior; `::after` son los 4 remaches
+   (radial-gradients, no requieren 4 nodos DOM). Ambos leen `--title-art-scale` (con fallback 1
+   para el estado de respaldo, donde esa variable no existe) para escalar igual que el botón real
+   cuando está anclado sobre el arte (ver la regla `#title-screen[data-bg='ready']` más abajo). */
 .title-play-btn {
   font-size: 1.2rem;
   padding: var(--space-3) var(--space-5);
   position: relative; /* por encima del arte absoluto en modo respaldo */
+  background: linear-gradient(180deg, var(--plate-olive) 0%, var(--plate-olive-dark) 100%);
+  color: var(--plate-gold);
+  border: 3px solid var(--plate-gold-dark);
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.65), 0 -1px 0 rgba(255, 217, 140, 0.35);
+  box-shadow:
+    0 0 0 3px var(--plate-gold),
+    0 6px 0 0 var(--plate-olive-dark),
+    inset 0 2px 4px rgba(255, 255, 255, 0.12);
+}
+
+.title-play-btn::before {
+  content: '';
+  position: absolute;
+  inset: calc(6px * var(--title-art-scale, 1));
+  border: calc(2px * var(--title-art-scale, 1)) solid var(--plate-gold-dark);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.title-play-btn::after {
+  content: '';
+  position: absolute;
+  inset: calc(6px * var(--title-art-scale, 1));
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle, var(--plate-gold-dark) 45%, transparent 48%),
+    radial-gradient(circle, var(--plate-gold-dark) 45%, transparent 48%),
+    radial-gradient(circle, var(--plate-gold-dark) 45%, transparent 48%),
+    radial-gradient(circle, var(--plate-gold-dark) 45%, transparent 48%);
+  background-size: calc(7px * var(--title-art-scale, 1)) calc(7px * var(--title-art-scale, 1));
+  background-position:
+    top calc(3px * var(--title-art-scale, 1)) left calc(3px * var(--title-art-scale, 1)),
+    top calc(3px * var(--title-art-scale, 1)) right calc(3px * var(--title-art-scale, 1)),
+    bottom calc(3px * var(--title-art-scale, 1)) left calc(3px * var(--title-art-scale, 1)),
+    bottom calc(3px * var(--title-art-scale, 1)) right calc(3px * var(--title-art-scale, 1));
+}
+
+.title-play-btn:hover:not(:disabled),
+.title-play-btn:focus-visible {
+  filter: brightness(1.12);
+}
+
+.title-play-btn:active:not(:disabled) {
+  /* La placa se "hunde": extrusión inferior de 6px a 2px, mismo lenguaje que .squishy-button. */
+  box-shadow:
+    0 0 0 3px var(--plate-gold),
+    0 2px 0 0 var(--plate-olive-dark),
+    inset 0 2px 4px rgba(0, 0, 0, 0.35);
 }
 
 /* Botón real calcado sobre el botón pintado en el arte, para que nunca se vean dos botones.

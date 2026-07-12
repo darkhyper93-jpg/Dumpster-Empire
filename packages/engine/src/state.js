@@ -19,7 +19,9 @@
 // robot descartó vía el nodo de prestigio "Escáner de Trampas", PLAN.md §4.7).
 // AJUSTE (ronda 16): v7 cambia la clave de `itemsFoundByItem` de nombre-español a id estable
 // de ítem (PLAN.md §16), para que la colección sobreviva a la traducción.
-export const SAVE_VERSION = 7;
+// AJUSTE (ronda 19): v8 agrega digStreak/bestDigStreak (racha de escarbado manual sin trampa,
+// PLAN.md §4.20) y vibrationOn (toggle de vibración táctil, PLAN.md §5.4).
+export const SAVE_VERSION = 8;
 
 // AJUSTE (auditoría post-ronda 14): rango de diseño de `digSensitivity`, exportado como única
 // fuente de verdad. Antes el 0.5–1.5 estaba repetido como número mágico en save.js (validación),
@@ -70,6 +72,10 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  * @property {string|null} autoTargetContainerId - contenedor fijo que compra el robot; null = Auto (el más caro afordable)
  * @property {number} digSensitivity - multiplicador del pincel de escarbado, rango 0.5–1.5
  * @property {string} language - idioma de la UI: 'es' | 'en'
+ * @property {number} digStreak - racha actual de escarbados manuales sin trampa (PLAN.md §4.20);
+ *   se resetea a 0 al caer en trampa, sube +1 por escarbado manual exitoso. Solo manual.
+ * @property {number} bestDigStreak - racha máxima histórica alcanzada, para logros ocultos.
+ * @property {boolean} vibrationOn - toggle de vibración táctil (trampa/hallazgo máximo), ronda 19.
  */
 
 /**
@@ -108,5 +114,8 @@ export function freshState() {
     autoTargetContainerId: null,
     digSensitivity: 1,
     language: 'es',
+    digStreak: 0,
+    bestDigStreak: 0,
+    vibrationOn: true,
   };
 }

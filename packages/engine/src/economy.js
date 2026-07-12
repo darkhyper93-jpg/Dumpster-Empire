@@ -117,6 +117,8 @@ export function trapProbability(probTrampaBaseDelContenedor, suerte) {
  * @property {Array<Object>} upgrades
  * @property {Array<Object>} automations
  * @property {Array<Object>} prestigeTree
+ * @property {{ rachaTramo: number, rachaBonusPorTramo: number, rachaMaxBonus: number }} [streak]
+ *   constantes de la racha de escarbado (data/streak.json, ronda 19). Opcional: ver getLuck.
  */
 
 function upgradeDef(data, id) {
@@ -162,6 +164,17 @@ export function getLuck(state, data) {
   }
   for (const { nodeId, effect } of prestigeEffectsOfType(data, 'statPercentFinal')) {
     if (effect.stat === 'luck') luck *= 1 + prestigeLevel(state, nodeId) * effect.percentPerNivel;
+  }
+  // AJUSTE (ronda 19, PLAN.md §4.20): bonus plano de racha de escarbado manual sin trampa, en
+  // tramos de `data.streak` (data/streak.json). `data.streak` es opcional: los tests/llamadores
+  // anteriores a esta ronda construyen `data` sin él y siempre corren con `state.digStreak === 0`
+  // (nadie más muta ese campo), así que omitir el bonus en ese caso no cambia ningún resultado.
+  if (data.streak) {
+    const bonus = Math.min(
+      data.streak.rachaMaxBonus,
+      Math.floor(state.digStreak / data.streak.rachaTramo) * data.streak.rachaBonusPorTramo
+    );
+    luck += bonus;
   }
   return luck;
 }

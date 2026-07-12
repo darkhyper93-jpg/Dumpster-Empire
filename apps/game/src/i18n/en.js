@@ -38,6 +38,8 @@ export default {
   'dig.trapEntryName': 'Trap!',
   'dig.trapRiskLine': 'Trap risk: {pct}%{hint}',
   'dig.rateHint': ' · Dig rate: {pct}% (raise Dig Power)',
+  // Round 19 (PLAN.md §4.20): manual no-trap dig streak, visible from streak >= 2.
+  'dig.streak': 'Streak: {count}',
 
   // AchievementsView.js
   'achievements.empty': 'No achievements configured.',
@@ -83,6 +85,8 @@ export default {
   'collection.probability': 'Probability: {pct}%',
   'collection.baseValue': 'Base value: {amount}',
   'collection.foundCount': 'Found: {count}',
+  // Round 19: completion % (PLAN.md §5.4), derived — never a new persisted counter.
+  'collection.completionGlobal': 'Global completion: {pct}%',
 
   // OfflineModal.js
   'offline.title': 'While you were away...',
@@ -110,6 +114,18 @@ export default {
   'settings.language': 'Language',
   'settings.resetConfirm': 'Are you sure? Tap again to confirm',
   'settings.resetButton': 'Reset game',
+  // Round 19: haptic vibration toggle, same pattern as settings.sound.
+  'settings.vibration': 'Vibration: {state}',
+
+  // Statistics (round 19, PLAN.md §5.4) — Settings subview, no new engine logic.
+  'stats.title': 'Statistics',
+  'stats.itemsFound': 'Items found: {count}',
+  'stats.trapsHit': 'Traps hit: {count}',
+  'stats.totalMoneyEarned': 'Total money earned: {amount}',
+  'stats.autoProcessed': 'Processed by robots: {count}',
+  'stats.bestStreak': 'Best streak: {count}',
+  'stats.completion': 'Collection completion: {pct}%',
+  'stats.maxLevelContainers': 'Containers at max level: {count}/{total}',
 
   // ShopView.js
   'shop.unlocksAtPrestige': 'Unlocks at Prestige {count}.',

@@ -217,6 +217,9 @@ export default {
     a33: 'Robot Army',
     a34: 'Bionic Eye',
     a35: 'Primordial Junk',
+    a36: 'Streak of Ten',
+    a37: 'Perfect Streak',
+    a38: 'Legendary Streak',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },

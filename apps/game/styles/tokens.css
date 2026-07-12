@@ -97,4 +97,12 @@
   --wood-surface: #3d2b1f;
   --scratch-a: #3c3427;
   --scratch-b: #261e13;
+
+  /* --- Placa del botón JUGAR (ronda 19, reference/ui/JUGARBUTTON.png): verde oliva oscuro con
+     marco dorado biselado — NO se reutiliza --olive (verde vívido de acentos secundarios, es
+     otro rol de color). Ver TitleScreen skin en components.css (.title-play-btn). */
+  --plate-olive: #3a4526;
+  --plate-olive-dark: #1f2814;
+  --plate-gold: #e0be6b;
+  --plate-gold-dark: #7d5e24;
 }

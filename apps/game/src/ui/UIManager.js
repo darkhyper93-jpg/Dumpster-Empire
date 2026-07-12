@@ -63,6 +63,8 @@ export class UIManager {
     this.digTrapHint = root.querySelector('#dig-trap-hint');
     this.digAbandonBtn = root.querySelector('#dig-abandon-btn');
     this.digContainerTitle = root.querySelector('#dig-container-title');
+    this.digStreakPillEl = root.querySelector('#dig-streak-pill');
+    this.lastRenderedStreak = 0;
     this.tabbarEl = root.querySelector('#tabbar');
     this.tabContentEl = root.querySelector('#tab-content');
     this.offlineModalEl = root.querySelector('#offline-modal');
@@ -154,9 +156,13 @@ export class UIManager {
   /** @param {import('@dumpster/engine').DigResult} result */
   playDigFeedback(result) {
     const { itemsData } = this.store.ctx;
+    const vibrationOn = this.store.getState().vibrationOn;
     if (result.isTrap) {
       playTrapThud();
       triggerTrapShake(this.root);
+      // PLAN.md §5.4 (ronda 19): vibración táctil en trampa. `navigator.vibrate` no existe en
+      // Electron/desktop ni en algunos navegadores — optional chaining lo vuelve no-op silencioso.
+      if (vibrationOn) globalThis.navigator?.vibrate?.(80);
       return;
     }
     let bestRarityIndex = 0;
@@ -171,6 +177,10 @@ export class UIManager {
     playFindPop(bestRarityIndex);
     spawnFindPop(this.digActiveEl, bestColorToken, bestRarityIndex);
     triggerRarityGlow(this.digRarityGlowEl, bestColorToken, 0.3 + bestRarityIndex * 0.1);
+    // Vibración corta en hallazgo de la categoría más rara del contenedor (PLAN.md §5.4).
+    if (vibrationOn && bestRarityIndex === itemsData.rarities.length - 1) {
+      globalThis.navigator?.vibrate?.(30);
+    }
   }
 
   updateDigProgress(fraction) {
@@ -230,6 +240,7 @@ export class UIManager {
     // (sidebar izquierdo con nav+lista · escarbado al centro · mejoras a la derecha, paneles fijos).
     this.shellEl.dataset.activeTab = this.activeTab;
     QuickUpgrades.render(this.quickUpgradesEl, state, this.store);
+    this.renderDigStreak(state);
     this.renderDigArea(state);
     this.renderTabContent(state);
     this.tutorial.render(state);
@@ -245,6 +256,26 @@ export class UIManager {
     for (const container of this.store.consumeNewContainerUnlocks()) {
       CelebrationModal.push(this.celebrationModalEl, { type: 'containerUnlock', container });
     }
+  }
+
+  /**
+   * Racha de escarbado manual (PLAN.md §4.20, ronda 19): visible desde racha >= 2, con un pop
+   * de juice (PLAN.md §5.2) cada vez que sube respecto del render anterior.
+   * @param {import('@dumpster/engine').GameState} state
+   */
+  renderDigStreak(state) {
+    const streak = state.digStreak;
+    this.digStreakPillEl.hidden = streak < 2;
+    if (streak >= 2) {
+      this.digStreakPillEl.textContent = t('dig.streak', { count: streak });
+      if (streak > this.lastRenderedStreak) {
+        this.digStreakPillEl.classList.remove('dig-streak-pill--pop');
+        // eslint-disable-next-line no-unused-expressions
+        this.digStreakPillEl.offsetWidth; // reinicia la animación CSS si ya estaba corriendo.
+        this.digStreakPillEl.classList.add('dig-streak-pill--pop');
+      }
+    }
+    this.lastRenderedStreak = streak;
   }
 
   renderDigArea(state) {

@@ -4189,3 +4189,99 @@ panel de Steamworks, prueba en Deck física y Cloud entre 2 máquinas — RELEAS
   regenerar la tabla si la data cambió: `node tools/steam/achievements-table.mjs`.
 - Baselines nuevos: **299 unit / 53 e2e / SAVE_VERSION = 7** (conteos indicativos, regla §0).
 - `dist/` quedó con la build de verificación (ignorada por git); borrarla es inocuo.
+
+---
+
+## Ronda 19 — Agente único: racha, estadísticas, completitud, logros ocultos, vibración, botón JUGAR (rama `feat/juice-ronda19`, save v8)
+
+### Qué hice
+
+1. **Racha de escarbado manual (PLAN.md §4.20, save v8)**: `data/streak.json` (`rachaTramo:5`,
+   `rachaBonusPorTramo:1`, `rachaMaxBonus:5`). `state.digStreak`/`bestDigStreak` nuevos;
+   `applyContainerResult` (systems/containers.js) sube +1 en escarbado manual exitoso, corta a 0
+   en trampa manual, y NUNCA la toca el robot (`isAuto`). `getLuck` (economy.js) suma el bonus
+   plano leyendo `data.streak` — **opcional a propósito**: los ~12 archivos de test previos a
+   esta ronda construyen `data` sin `streak` y siempre corren con `digStreak: 0`, así que omitir
+   el bonus cuando falta no cambió ningún resultado existente (R19.1 cumplido, verificado con
+   `npm test` completo sin tocar esos archivos).
+2. **Save v8**: migración v7→v8 en `save.js` backfillea `digStreak:0`, `bestDigStreak:0`,
+   `vibrationOn:true`; `REQUIRED_FIELDS` + `validateDeepContent` (enteros ≥ 0, un save con
+   `digStreak` negativo/fraccionario/`Infinity` se RECHAZA, no se lava).
+3. **Logro oculto (`digStreakAtLeast`, evalúa `bestDigStreak`)**: 3 nuevos en achievements.json —
+   `a36` racha 10 (visible), `a37` racha 25 (oculto), `a38` racha 50 (oculto, llaves). Además
+   marqué `hidden:true` en 3 logros existentes de trampas (`a25`, `a32`, `a34` — hitos sorpresa).
+   `AchievementsView.js` muestra `t('collection.hiddenName')` ("???") + ícono `locked` genérico
+   mientras `hidden && !unlocked`; al desbloquear se revela nombre/recompensa reales.
+4. **Estadísticas**: nueva sección dentro de `SettingsView.js` (subvista de Ajustes, NO pestaña
+   nueva — la única que agrega v4 es el Puesto de la ronda 22, regla §19.1). Deriva TODO del
+   estado existente (`itemsFoundCount`, `trapsHit`, `totalMoneyEarned`, `autoProcessedCount`,
+   `bestDigStreak`, contenedores en nivel máximo vía `getContainerLevel`/`CONTAINER_LEVEL_MAX`) —
+   cero engine nuevo, como pide el roadmap.
+5. **% de completitud**: helper nuevo `apps/game/src/collectionProgress.js`
+   (`getCollectionCompletion`), puramente derivado de `itemsFoundByItem` vs. los pools reales de
+   `itemsData` (nunca un contador paralelo). `CollectionView.js` lo usa para el header global
+   ("Completitud global: X%") y un badge de % en cada tab de contenedor. Nota dejada en el
+   comentario del helper (R19.3): los legendarios de la ronda 21 quedan FUERA de este cálculo
+   cuando existan (tienen su propio contador "Vitrina").
+6. **Vibración táctil**: `state.vibrationOn` + `store.actions.toggleVibration()` (mismo patrón
+   que `toggleSound`). En `UIManager.playDigFeedback`: `navigator.vibrate?.(80)` en trampa,
+   `navigator.vibrate?.(30)` en hallazgo de la categoría más rara del contenedor — ambos SOLO
+   si `vibrationOn`, y con optional chaining (no-op silencioso en Electron/navegadores sin API).
+   Toggle en Ajustes junto al de sonido.
+7. **Contador de racha en el escarbado**: `#dig-streak-pill` (index.html, dentro de `#dig-area`),
+   visible desde racha ≥ 2, con pop de juice (`UIManager.renderDigStreak`, clase
+   `.dig-streak-pill--pop`, reinicio de animación vía `offsetWidth`). Ojo: encontré el MISMO bug
+   de especificidad `[hidden]` vs. clase con `display` propio que ya documentaron los Agentes 3/5
+   — lo arreglé con `.dig-streak-pill[hidden] { display: none; }` explícito (si no, el pill
+   aparecía visible desde el arranque, con racha 0).
+8. **Botón JUGAR placa metálica** (`reference/ui/JUGARBUTTON.png`, pedido del usuario
+   2026-07-12): reskin 100% CSS de `.title-play-btn` en `layout.css` — gradiente verde oliva
+   oscuro + marco dorado biselado (`box-shadow` en capas) + `::before` (filete interior) +
+   `::after` (4 remaches vía `radial-gradient` en `background-image`, sin nodos DOM extra). El
+   texto sigue siendo `t('titleScreen.play')` (vivo). Tokens nuevos en `tokens.css`:
+   `--plate-olive`, `--plate-olive-dark`, `--plate-gold`, `--plate-gold-dark` (el `--olive`
+   existente es el verde vívido de acentos, otro rol — no se reutilizó). Todo el bevel/remaches
+   escala con `--title-art-scale` (fallback `1` para el estado de respaldo, donde esa variable no
+   existe) para que coincida en tamaño con el botón real anclado sobre el arte. Verificado con
+   capturas Playwright a 375px y 1280px contra la referencia: alineación y aspecto correctos en
+   ambos.
+9. **i18n**: todas las claves nuevas (`dig.streak`, `collection.completionGlobal`,
+   `settings.vibration`, `stats.*`) en `es.js` Y `en.js` con traducción real; `a36`-`a38` sumados
+   a `data-en.js` (el test de paridad de la ronda 16 lo exigió — RED antes de arreglarlo).
+10. **Tests**: `packages/engine/tests/ronda19-racha.test.js` (RED→GREEN): sube/corta/robot no
+    toca/bonus con cap/sin `data.streak` no rompe nada/logro oculto por `bestDigStreak`/migración
+    v8 con defaults/rechazo de `digStreak` inválido. `apps/game/e2e/ronda19-quickwins.spec.js` (4
+    tests): racha visible desde 2, stats con valores del seed, logro oculto "???"→nombre real.
+
+### Decisiones no triviales
+
+- El bonus de racha en `getLuck` solo se aplica si `data.streak` existe (ver punto 1) — evita
+  tocar los ~12 archivos de test previos a esta ronda que construyen `data` sin ese campo, sin
+  relajar ninguna validación real (todo estado real pasa por `main.js`, que SIEMPRE arma
+  `data.streak` desde `loaded.streak`).
+- Estadísticas vive en Ajustes, no en una vista propia ni en el INDEX: el roadmap ofrecía ambas
+  opciones y el INDEX ya tiene su propio header de % de completitud — mezclarlas hubiera hecho
+  esa vista más densa sin necesidad.
+
+### Estado del DoD (Agente único, ronda 19)
+```
+[x] npm test → 311/311 verde (299 previos + 12 de ronda19-racha.test.js)
+[x] npm run test:e2e → 57/57 verde (53 previos + 4 de ronda19-quickwins.spec.js)
+[x] Manual 375px + 1280px: racha visible al escarbar (con pop), stats navegable con valores
+    reales, "???" en logros ocultos hasta desbloquear, % de completitud en INDEX (global + por
+    tab), botón JUGAR con la placa metálica alineada sobre el arte en ambos anchos (capturas
+    Playwright revisadas contra reference/ui/JUGARBUTTON.png)
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[ ] Handoff (este bloque, en curso)
+[ ] Push de la rama + link de PR para el usuario (agente único = último agente de la ronda)
+```
+
+### Qué necesita saber la ronda 20
+- Baselines nuevos: **311 unit / 57 e2e / SAVE_VERSION = 8** (conteos indicativos, regla §0).
+- Contrato §3.5.1 respetado: la racha se corta con trampa de CUALQUIER grado — los grados de la
+  ronda 20 (leve/normal/grave) deben seguir llamando `applyContainerResult` con `isTrap:true`
+  para que el corte de racha siga funcionando sin tocar `containers.js` de nuevo (ya está
+  gateado por `!isAuto`, no por el grado).
+- `data.streak` es opcional en `getLuck` — si algún test nuevo de la ronda 20 sí necesita el
+  bonus de racha, tiene que pasar `streak` en su `data` (import de `apps/game/src/data/streak.json`).

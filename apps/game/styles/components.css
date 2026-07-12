@@ -159,6 +159,44 @@ button:hover:not(:disabled) {
   color: var(--fg-0);
 }
 
+/* --- Racha de escarbado (PLAN.md §4.20, ronda 19): pill flotante sobre #dig-area (que ya
+   tiene position:relative, ver layout.css), visible desde racha >= 2. */
+.dig-streak-pill {
+  position: absolute;
+  top: var(--space-2);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--amber-container);
+  color: var(--amber);
+  border-bottom: 2px solid var(--amber-dark);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+/* Mismo bug de especificidad `[hidden]` que ya documentó el Agente 3/5 (una clase con
+   `display` propio pisa el `display:none` del atributo `[hidden]` a igual especificidad,
+   porque el autor siempre gana sobre la hoja de estilos del user-agent) — acá aplica al pill
+   de racha, igual que `.dig-state[hidden]` en layout.css. */
+.dig-streak-pill[hidden] {
+  display: none;
+}
+
+.dig-streak-pill--pop {
+  animation: dig-streak-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes dig-streak-pop {
+  0% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.25); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
 /* AJUSTE (PUNTOS_A_MEJORAR_4 §3): `.prestige-tree` ya no participa de esta grilla genérica —
    su layout real vive más abajo (lista mobile-first + grilla de ramas por @container) y tenerlo
    acá era una regla muerta (pisada) que confundía. */
@@ -192,9 +230,18 @@ button:hover:not(:disabled) {
   margin-bottom: var(--space-3);
 }
 
-.settings-credits h3 {
+.settings-credits h3,
+.settings-stats h3 {
   margin: 0;
   font-size: 1rem;
+}
+
+/* Ronda 19 (PLAN.md §5.4): sección de Estadísticas, subvista de Ajustes. Deriva todo del
+   estado (ver SettingsView.renderStatsSection) — sin números sueltos ni engine nuevo. */
+.settings-stats p {
+  margin: 0;
+  color: var(--fg-1);
+  font-size: 0.9rem;
 }
 
 .settings-credits p {
@@ -701,6 +748,21 @@ textarea {
   background: var(--amber);
   color: var(--bg-0);
   opacity: 1;
+}
+
+/* Ronda 19 (PLAN.md §5.4): % de completitud por contenedor, dentro del pill de cada tab. */
+.index-container-tab-pct {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+/* Ronda 19: % de completitud global, arriba de los tabs del INDEX. */
+.index-completion-global {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--amber);
+  margin: 0 0 var(--space-2);
 }
 
 .index-grid {

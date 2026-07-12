@@ -283,6 +283,13 @@ export function createStore(ctx) {
       notify();
     },
 
+    /** Toggle de vibración táctil (trampa/hallazgo máximo), ronda 19 — mismo patrón que toggleSound. */
+    toggleVibration() {
+      state.vibrationOn = !state.vibrationOn;
+      persist();
+      notify();
+    },
+
     /**
      * Ajusta el volumen maestro de SFX (PUNTOS_A_MEJORAR_2.md §5). Se clampa 0..1 y se persiste
      * en el save junto a `soundOn`. La capa de audio (fx/audio.js) es la que lo aplica al mixer.
