@@ -46,6 +46,7 @@ export {
   spendEnergyToSpy,
   getToolRadiusMult,
   getToolRhythmMult,
+  registerContainerDig,
 } from './economy.js';
 
 export { clampedElapsedMs, localDayStamp } from './time.js';

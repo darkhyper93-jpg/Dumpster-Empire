@@ -21,6 +21,9 @@ const DATA_FILES = {
   prestigeTree: './data/prestigeTree.json',
   achievements: './data/achievements.json',
   streak: './data/streak.json',
+  traps: './data/traps.json',
+  energy: './data/energy.json',
+  tools: './data/tools.json',
 };
 
 async function loadData() {
@@ -78,6 +81,9 @@ async function boot() {
     automations: loaded.automations,
     prestigeTree: loaded.prestigeTree,
     streak: loaded.streak,
+    traps: loaded.traps,
+    energy: loaded.energy,
+    tools: loaded.tools,
   };
   const itemsData = loaded.items;
   const allContainers = loaded.containers;

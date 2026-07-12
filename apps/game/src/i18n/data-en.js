@@ -240,6 +240,9 @@ export default {
     a36: 'Streak of Ten',
     a37: 'Perfect Streak',
     a38: 'Legendary Streak',
+    a39: 'All-Seeing Eye',
+    a40: 'Nine Lives',
+    a41: 'Full Arsenal',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },

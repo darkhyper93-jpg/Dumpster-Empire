@@ -31,6 +31,14 @@ import {
   doPrestige as engineDoPrestige,
   checkAchievements,
   applyOfflineProgress,
+  regenEnergy,
+  spendEnergyToSpy,
+  spySlot,
+  buyTool as engineBuyTool,
+  equipTool as engineEquipTool,
+  registerContainerDig,
+  getToolRadiusMult,
+  getToolRhythmMult,
 } from '@dumpster/engine';
 
 export const SAVE_KEY = 'dumpsterEmpireSave';
@@ -77,6 +85,10 @@ export function createStore(ctx) {
   let offlineSummary = null;
   let newAchievements = [];
   let newContainerUnlocks = [];
+  // PLAN.md §4.24 (ronda 20): la Bóveda a Contrarreloj expira sola si no se completa a tiempo —
+  // se pierde SIN castigo (registerContainerDig ya cuenta el intento para el nivel). Cola tipo
+  // consumeNewAchievements/consumeNewContainerUnlocks para que la UI dispare su propio toast.
+  let timedDigExpirations = [];
   /** Ids desbloqueados según el estado actual (baseline para detectar novedades). */
   const unlockedIdsNow = () =>
     new Set(allContainers.filter((c) => isContainerUnlocked(state, c, allContainers)).map((c) => c.id));
@@ -119,6 +131,7 @@ export function createStore(ctx) {
     const unlockedIds = checkAchievements(state, achievementsData, {
       allContainers,
       allAutomations: data.automations,
+      allTools: data.tools || [],
     });
     if (unlockedIds.length) {
       newAchievements.push(...unlockedIds.map((id) => achievementsData.find((a) => a.id === id)));
@@ -166,12 +179,21 @@ export function createStore(ctx) {
       pendingDig = {
         container,
         result: digResult,
-        areaMult: getAreaMult(state, data),
+        // PLAN.md §4.23 (ronda 20): la herramienta equipada SOLO modifica el pincel manual
+        // (radio/ritmo) — nunca getLuck ni itemSaleValue (contrato del engine, ver economy.js).
+        areaMult: getAreaMult(state, data) * getToolRadiusMult(state, data),
         // AJUSTE (agentes/rework-escarbado-y-landing-prompt.md): el ritmo de escarbado (Resistencia
         // del contenedor vs. Fuerza del jugador, ya calculado por el engine para automatización/
         // offline) también viaja al canvas manual — la resistencia achica el pincel del gesto.
-        digRate: getDigRate(state, container, data),
+        digRate: getDigRate(state, container, data) * getToolRhythmMult(state, data),
         trapProb: getEffectiveTrapProbability(state, container, false, data),
+        // PLAN.md §4.22 (ronda 20): slots ya espiados en ESTE escarbado, `{ [index]: { isTrap } |
+        // { isTrap:false, categoria } }` — se resetea con cada `startManualDig` nuevo.
+        spiedSlots: {},
+        // PLAN.md §4.24 (ronda 20): límite DURO de tiempo solo para contenedores `mode: "timed"`
+        // (Bóveda a Contrarreloj) — `container.digTime` en segundos, decrementado por delta real
+        // del loop (tickDigTimer), nunca por setTimeout (R20.3).
+        timeRemaining: container.mode === 'timed' ? container.digTime : null,
       };
       if (state.tutorialStep === 2 && container.costoInicial > 0) state.tutorialStep = 3;
       persist();
@@ -211,6 +233,87 @@ export function createStore(ctx) {
       pendingDig = null;
       notify();
       return { ok: true };
+    },
+
+    /**
+     * Espía un slot del escarbado en curso ANTES de rascarlo (PLAN.md §4.22, ronda 20): revela
+     * su categoría (o "TRAMPA" si el roll ya salió trampa) a cambio de `costoEspiar` de Energía.
+     * `spySlot` es una lectura pura del `DigResult` ya calculado — no consume RNG nuevo.
+     * @param {number} slotIndex
+     * @returns {{ ok: true, reveal: {isTrap:boolean, categoria?:string} } | { ok: false, error: string }}
+     */
+    spyDigSlot(slotIndex) {
+      if (!pendingDig) return { ok: false, error: 'No hay escarbado en curso.' };
+      if (!data.energy) return { ok: false, error: 'Energía no disponible.' };
+      if (pendingDig.spiedSlots[slotIndex]) return { ok: false, error: 'Este slot ya fue espiado.' };
+      const result = spendEnergyToSpy(state, data.energy);
+      if (!result.ok) return result;
+      const reveal = spySlot(pendingDig.result, slotIndex);
+      pendingDig.spiedSlots[slotIndex] = reveal;
+      persist();
+      notify();
+      return { ok: true, reveal };
+    },
+
+    /**
+     * Tick de Energía por tiempo real (PLAN.md §4.22): regenera hasta `energiaMax`, clampeado
+     * por `clampedElapsedMs` (nunca por un reloj retrocedido). Se llama desde loop.js en cada
+     * tick lógico, independiente de la automatización (la Energía regenera aunque no haya robot).
+     */
+    tickEnergy() {
+      if (!data.energy) return;
+      const before = state.energy;
+      regenEnergy(state, data.energy, Date.now());
+      if (state.energy !== before) notify();
+    },
+
+    /**
+     * Cuenta atrás del límite DURO de la Bóveda a Contrarreloj (PLAN.md §4.24, mode: "timed"):
+     * por delta real del loop (R20.3, nunca `setTimeout`). Al llegar a 0 el contenedor se pierde
+     * SIN castigo de dinero — `registerContainerDig` ya cuenta el intento para el nivel, igual
+     * que cualquier escarbado resuelto.
+     * @param {number} dtSeconds
+     */
+    tickDigTimer(dtSeconds) {
+      if (!pendingDig || pendingDig.timeRemaining === null) return;
+      pendingDig.timeRemaining = Math.max(0, pendingDig.timeRemaining - dtSeconds);
+      if (pendingDig.timeRemaining <= 0) {
+        registerContainerDig(state, pendingDig.container);
+        timedDigExpirations.push({ containerName: pendingDig.container.name });
+        pendingDig = null;
+        persist();
+      }
+      notify();
+    },
+
+    /**
+     * Compra una herramienta de escarbado (PLAN.md §4.23, ronda 20). No la equipa.
+     * @param {string} toolId
+     */
+    buyTool(toolId) {
+      const tool = (data.tools || []).find((t) => t.id === toolId);
+      if (!tool) return { ok: false, error: 'Herramienta desconocida.' };
+      const result = engineBuyTool(state, tool);
+      if (result.ok) {
+        runAchievements();
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /**
+     * Equipa una herramienta ya poseída (PLAN.md §4.23, ronda 20). Solo modifica el pincel del
+     * escarbado manual (radio/ritmo) — nunca economía.
+     * @param {string} toolId
+     */
+    equipTool(toolId) {
+      const result = engineEquipTool(state, toolId);
+      if (result.ok) {
+        persist();
+        notify();
+      }
+      return result;
     },
 
     buyAutomation(automationId) {
@@ -381,6 +484,11 @@ export function createStore(ctx) {
     consumeNewContainerUnlocks() {
       const list = newContainerUnlocks;
       newContainerUnlocks = [];
+      return list;
+    },
+    consumeTimedDigExpirations() {
+      const list = timedDigExpirations;
+      timedDigExpirations = [];
       return list;
     },
     actions,
