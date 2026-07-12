@@ -23,6 +23,9 @@ export const AchievementsView = {
     const cards = achievementsData
       .map((a) => {
         const unlocked = state.achievementsUnlocked.includes(a.id);
+        // Ronda 19 (PLAN.md §5.4): los logros ocultos ("hidden": true) muestran "???" + ícono
+        // genérico hasta desbloquearse — no delatan la condición sorpresa por adelantado.
+        const isHiddenSecret = Boolean(a.hidden) && !unlocked;
         // PLAN.md §11.6: la recompensa la declara achievements.json (reward.type/amount);
         // acá solo se muestra, el engine ya la aplicó una sola vez al desbloquear.
         const rewardLabel =
@@ -31,9 +34,11 @@ export const AchievementsView = {
             : formatMoney(a.reward.amount);
         return (
           `<article class="achievement-card ${unlocked ? 'achievement-card--unlocked' : 'achievement-card--locked'}">` +
-          `<span class="achievement-card-icon">${iconMarkup(a.icon, { size: 26 })}</span>` +
-          `<h3>${a.name}</h3>` +
-          `<p class="achievement-card-reward">${iconMarkup(a.reward.type === 'keys' ? 'key' : 'money', { size: 16 })} ${rewardLabel}</p>` +
+          `<span class="achievement-card-icon">${iconMarkup(isHiddenSecret ? 'locked' : a.icon, { size: 26 })}</span>` +
+          `<h3>${isHiddenSecret ? t('collection.hiddenName') : a.name}</h3>` +
+          `<p class="achievement-card-reward">${iconMarkup(a.reward.type === 'keys' ? 'key' : 'money', { size: 16 })} ${
+            isHiddenSecret ? t('collection.hiddenName') : rewardLabel
+          }</p>` +
           `<span class="badge">${unlocked ? t('achievements.claimed') : t('achievements.pending')}</span>` +
           `</article>`
         );

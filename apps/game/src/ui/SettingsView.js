@@ -10,8 +10,9 @@
  * la UI) y se sumó el slider de sensibilidad de escarbado, calcado del de volumen.
  */
 
-import { DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX } from '@dumpster/engine';
+import { DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, formatMoney, formatNumber, getContainerLevel, CONTAINER_LEVEL_MAX } from '@dumpster/engine';
 import { t } from '../i18n/i18n.js';
+import { getCollectionCompletion } from '../collectionProgress.js';
 
 const local = {
   resetArmed: false,
@@ -75,6 +76,10 @@ export const SettingsView = {
       `<section class="settings-block">` +
       `<button type="button" data-action="toggle-sound">${t('settings.sound', { state: state.soundOn ? t('settings.on') : t('settings.off') })}</button>` +
       `</section>` +
+      `<section class="settings-block">` +
+      `<button type="button" data-action="toggle-vibration">${t('settings.vibration', { state: state.vibrationOn ? t('settings.on') : t('settings.off') })}</button>` +
+      `</section>` +
+      `${renderStatsSection(state, store)}` +
       `<section class="settings-block settings-volume">` +
       `<label class="settings-volume-label" for="volume-slider" data-volume-label>${t('settings.volume', { pct: volumePct })}</label>` +
       `<input class="settings-volume-slider" type="range" id="volume-slider" data-action="set-volume"` +
@@ -105,9 +110,44 @@ export const SettingsView = {
   },
 };
 
+/**
+ * Sección de Estadísticas (PLAN.md §5.4, ronda 19): deriva TODO de `state`/data existentes —
+ * no hay contador paralelo nuevo en el engine (ver ROADMAPv4.md §19.3).
+ * @param {import('@dumpster/engine').GameState} state
+ * @param {ReturnType<import('../store.js').createStore>} store
+ * @returns {string}
+ */
+function renderStatsSection(state, store) {
+  const { allContainers, itemsData } = store.ctx;
+  if (!allContainers.length) {
+    return `<section class="settings-block settings-stats"><p class="empty-state">${t('common.emptyContainers')}</p></section>`;
+  }
+  const { globalPct } = getCollectionCompletion(state, allContainers, itemsData);
+  const containersMaxed = allContainers.filter((c) => getContainerLevel(state, c.id) >= CONTAINER_LEVEL_MAX).length;
+  const rows = [
+    t('stats.itemsFound', { count: formatNumber(state.itemsFoundCount) }),
+    t('stats.trapsHit', { count: formatNumber(state.trapsHit) }),
+    t('stats.totalMoneyEarned', { amount: formatMoney(state.totalMoneyEarned) }),
+    t('stats.autoProcessed', { count: formatNumber(state.autoProcessedCount) }),
+    t('stats.bestStreak', { count: formatNumber(state.bestDigStreak) }),
+    t('stats.completion', { pct: Math.round(globalPct * 100) }),
+    t('stats.maxLevelContainers', { count: containersMaxed, total: allContainers.length }),
+  ];
+  return (
+    `<section class="settings-block settings-stats">` +
+    `<h3>${t('stats.title')}</h3>` +
+    rows.map((row) => `<p>${row}</p>`).join('') +
+    `</section>`
+  );
+}
+
 function onClick(evt, container, store) {
   if (evt.target.closest('[data-action="toggle-sound"]')) {
     store.actions.toggleSound();
+    return;
+  }
+  if (evt.target.closest('[data-action="toggle-vibration"]')) {
+    store.actions.toggleVibration();
     return;
   }
   if (evt.target.closest('[data-action="reset-game"]')) {

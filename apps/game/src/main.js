@@ -20,6 +20,7 @@ const DATA_FILES = {
   automations: './data/automations.json',
   prestigeTree: './data/prestigeTree.json',
   achievements: './data/achievements.json',
+  streak: './data/streak.json',
 };
 
 async function loadData() {
@@ -76,6 +77,7 @@ async function boot() {
     upgrades: loaded.upgrades,
     automations: loaded.automations,
     prestigeTree: loaded.prestigeTree,
+    streak: loaded.streak,
   };
   const itemsData = loaded.items;
   const allContainers = loaded.containers;

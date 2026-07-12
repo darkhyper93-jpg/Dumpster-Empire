@@ -10,6 +10,7 @@
 import { getLuck, getLevelRarityShift, categoryWeights, formatMoney } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { t } from '../i18n/i18n.js';
+import { getCollectionCompletion } from '../collectionProgress.js';
 
 /** Estado de presentación local (qué contenedor está seleccionado), no persistido. */
 let selectedContainerId = null;
@@ -46,15 +47,20 @@ export const CollectionView = {
     }
     const selected = allContainers.find((c) => c.id === selectedContainerId);
 
+    const { globalPct, perContainerPct } = getCollectionCompletion(state, allContainers, itemsData);
+
     const tabs = allContainers
       .map(
         (c) =>
           `<button type="button" class="index-container-tab ${c.id === selectedContainerId ? 'is-active' : ''}" ` +
-          `data-select-container="${c.id}">${iconMarkup(c.icon, { size: 18 })}<span>${c.name}</span></button>`
+          `data-select-container="${c.id}">${iconMarkup(c.icon, { size: 18 })}<span>${c.name}</span>` +
+          `<span class="index-container-tab-pct">${Math.round((perContainerPct[c.id] || 0) * 100)}%</span></button>`
       )
       .join('');
 
-    container.innerHTML = `<div class="index-container-tabs">${tabs}</div><div class="index-grid" id="index-grid"></div>`;
+    container.innerHTML =
+      `<p class="index-completion-global">${t('collection.completionGlobal', { pct: Math.round(globalPct * 100) })}</p>` +
+      `<div class="index-container-tabs">${tabs}</div><div class="index-grid" id="index-grid"></div>`;
 
     const grid = container.querySelector('#index-grid');
     const pool = itemsData.containers[selected.id] || [];

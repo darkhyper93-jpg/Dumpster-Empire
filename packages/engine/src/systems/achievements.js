@@ -15,6 +15,9 @@ const CONDITION_EVALUATORS = {
   allUpgradeLevelsAtLeast: (state, cond) => Object.values(state.upgradeLevels).every((level) => level >= cond.value),
   trapsDiscardedAtLeast: (state, cond) => state.trapsDiscarded >= cond.value,
   containerOwnedAtLeast: (state, cond) => (state.ownedContainers[cond.containerId] || 0) >= cond.value,
+  // Ronda 19 (PLAN.md §4.20): evalúa la racha MÁXIMA histórica, no la actual — así el logro
+  // queda ganado para siempre aunque la racha se corte después con una trampa.
+  digStreakAtLeast: (state, cond) => state.bestDigStreak >= cond.value,
 };
 
 /**

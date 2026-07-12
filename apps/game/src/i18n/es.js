@@ -39,6 +39,8 @@ export default {
   'dig.trapEntryName': '¡Trampa!',
   'dig.trapRiskLine': 'Riesgo de trampa: {pct}%{hint}',
   'dig.rateHint': ' · Ritmo de escarbado: {pct}% (subí Fuerza)',
+  // Ronda 19 (PLAN.md §4.20): racha de escarbado manual sin trampa, visible desde racha >= 2.
+  'dig.streak': 'Racha: {count}',
 
   // AchievementsView.js
   'achievements.empty': 'No hay logros configurados.',
@@ -84,6 +86,8 @@ export default {
   'collection.probability': 'Probabilidad: {pct}%',
   'collection.baseValue': 'Valor base: {amount}',
   'collection.foundCount': 'Encontrado: {count}',
+  // Ronda 19: % de completitud (PLAN.md §5.4), derivado — nunca un contador persistido nuevo.
+  'collection.completionGlobal': 'Completitud global: {pct}%',
 
   // OfflineModal.js
   'offline.title': 'Mientras no estabas...',
@@ -111,6 +115,18 @@ export default {
   'settings.language': 'Idioma',
   'settings.resetConfirm': '¿Seguro? Tocá de nuevo para confirmar',
   'settings.resetButton': 'Reiniciar partida',
+  // Ronda 19: toggle de vibración táctil, mismo patrón que settings.sound.
+  'settings.vibration': 'Vibración: {state}',
+
+  // Estadísticas (ronda 19, PLAN.md §5.4) — subvista de Ajustes, sin engine nuevo.
+  'stats.title': 'Estadísticas',
+  'stats.itemsFound': 'Objetos encontrados: {count}',
+  'stats.trapsHit': 'Trampas caídas: {count}',
+  'stats.totalMoneyEarned': 'Dinero total ganado: {amount}',
+  'stats.autoProcessed': 'Procesados por robots: {count}',
+  'stats.bestStreak': 'Mejor racha: {count}',
+  'stats.completion': 'Completitud de colección: {pct}%',
+  'stats.maxLevelContainers': 'Contenedores en nivel máximo: {count}/{total}',
 
   // ShopView.js
   'shop.unlocksAtPrestige': 'Se desbloquea con el Prestigio {count}.',
