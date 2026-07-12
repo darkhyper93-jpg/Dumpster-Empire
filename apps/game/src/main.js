@@ -11,6 +11,7 @@ import { UIManager } from './ui/UIManager.js';
 import { TitleScreen } from './ui/TitleScreen.js';
 import { setLanguage, resolveInitialLanguage, t } from './i18n/i18n.js';
 import { initDataLocalization, applyDataLanguage } from './i18n/dataI18n.js';
+import { extractLastSavedAt } from './saveTimestamp.js';
 
 const DATA_FILES = {
   items: './data/items.json',
@@ -43,20 +44,6 @@ function renderFatalError(app, message) {
 }
 
 /**
- * @param {string | null} text
- * @returns {number}
- */
-function lastSavedAtOf(text) {
-  if (!text) return -1;
-  try {
-    const parsed = JSON.parse(text);
-    return typeof parsed.lastSavedAt === 'number' ? parsed.lastSavedAt : -1;
-  } catch {
-    return -1;
-  }
-}
-
-/**
  * Fuera de Electron, `undefined` hace que `createStore` lea `localStorage` como siempre (ver
  * `store.js`). Dentro de Electron, `apps/desktop/main.js` ya reconcilió userData vs. Steam
  * Cloud (PLAN.md §6.3) — acá solo falta comparar contra `localStorage` del propio renderer
@@ -69,7 +56,7 @@ async function resolveInitialSaveText() {
   if (!bridge) return undefined;
   const fileText = await bridge.loadGame();
   const localText = localStorage.getItem(SAVE_KEY);
-  return lastSavedAtOf(localText) > lastSavedAtOf(fileText) ? localText : fileText;
+  return extractLastSavedAt(localText) > extractLastSavedAt(fileText) ? localText : fileText;
 }
 
 async function boot() {

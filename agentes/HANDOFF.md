@@ -4070,3 +4070,122 @@ diccionarios no abren sinks nuevos. Sin refactorización obligatoria pendiente.
   `toHaveCount(0)`, docs viejos en la raíz) quedaron saldadas en esta ronda.
 - Los conteos baseline para la 18: 292 unit / 51 e2e / `SAVE_VERSION = 7`. Recordá que los
   conteos son indicativos (regla §0): recontá desde la data al generar la tabla de logros.
+
+## Ronda 18 — Agente único: preparación de release (rama `chore/release-ronda18`)
+
+### Qué hice (las 4 tareas de RONDA 18 de ROADMAPv3.md)
+
+1. **`tools/steam/RELEASE.md`** (commit `799f758`): guía completa para el usuario — steamcmd,
+   estructura de los VDF y dónde van appId/depotIds (los 4 placeholders `480`), comandos de
+   build por plataforma y qué carpeta sube cada depot (`dist/win-unpacked/` /
+   `dist/linux-unpacked/`; a Steam va la carpeta unpacked, nunca el instalador NSIS),
+   `steamcmd +login +run_app_build`, launch options por SO, la **tabla de los 35 logros**
+   (API Name = id del engine), Steam Cloud (usa la **Cloud API**, no Auto-Cloud: solo hay que
+   habilitar cuota en el panel), `steam_appid.txt` (ahora en `.gitignore`, junto con
+   `tools/builder_output/`) y el checklist de Steam Deck.
+   DECISIÓN: la tabla se genera con `node tools/steam/achievements-table.mjs` (script
+   versionado en vez del "one-liner" literal del roadmap: el mapeo de condiciones legibles no
+   sobrevive al quoting de PowerShell en una línea; el comando para regenerar sigue siendo una
+   línea y recuenta desde la data — cero conteos hardcodeados).
+
+2. **Verificación real** (hardware: i5-9400F, 16 GB RAM, Windows 10 Pro 19045):
+   - Regla dura §1.2 respetada: TODA corrida de Electron fue con `--user-data-dir` a un dir
+     temporal (verificando `app.getPath('userData')` vía evaluate ANTES de jugar) + sha256 del
+     save real antes/después → **intacto** en las 3 corridas.
+   - `npm run desktop` (dev): bootea vía `dumpster://`, se juega de verdad (escarbado con
+     gestos de puntero sobre 3 objetos), autoguarda `save.json` v7 en userData a los ~15s, y
+     el cierre fuerza un último guardado (`lastSavedAt` sube en `before-quit`). Cero errores
+     de consola/página.
+   - `npm run build:win`: produce `dist/Dumpster Empire Setup 0.0.0.exe` + `win-unpacked/`
+     (electron-builder 26.15.3, game+engine en `resources/app/`). Instalado en silencio
+     (`/S /D=<dir>`), el **exe instalado** abre, juega y guarda igual que dev; desinstalado
+     en silencio después, sin restos en el registro (HKCU Uninstall limpio).
+
+3. **Auditoría global final** (Verif&Audit.md sobre el repo COMPLETO, no un diff) — reporte
+   abajo; los 3 🟡 arreglados en `b06aaa8` con tests de regresión RED-primero.
+
+### 🔴 CRÍTICO / ALTO RIESGO
+Ninguno encontrado.
+
+### 🟡 ADVERTENCIAS / RIESGO MEDIO (todas arregladas en `b06aaa8`)
+
+1. **La reconciliación de saves confiaba en `typeof === 'number'` para `lastSavedAt`.**
+   `JSON.parse` no produce NaN, pero un literal desbordado (`1e999`) SÍ parsea a **Infinity**:
+   un save de nube corrupto con ese timestamp ganaba la reconciliación local-vs-nube
+   (`apps/desktop/saveFile.js`) PARA SIEMPRE y `writeLocalFile(cloud)` pisaba el archivo local
+   bueno en cada boot — viola PLAN.md §6.3 ("nunca pisar en silencio una partida más
+   avanzada"). El mismo agujero existía en `lastSavedAtOf` de `apps/game/src/main.js`
+   (localStorage vs archivo). 3ª aparición de la clase "typeof no alcanza" del napkin, esta
+   vez FUERA del engine. Fix: extractores con `Number.isFinite` en módulos propios testeables
+   sin Electron (`apps/desktop/saveTimestamp.js` CJS + `apps/game/src/saveTimestamp.js` ESM
+   gemelo — la frontera CJS/ESM-buildless impide compartir uno solo sin build step), 7 tests.
+
+2. **Una falla de boot dejaba "Cargando…" eterno** (pantalla sin estado de error, contra
+   CLAUDE.md). Dos clases mudas: (a) el grafo de módulos no evalúa — archivo faltante en el
+   paquete, LA clase del bug de empaquetado de la ronda 13 ("ventana en blanco") —, boot()
+   nunca corre y ningún try/catch de main.js la ve; (b) excepción post-loadData dentro de
+   boot() → unhandled rejection. Fix: `apps/game/src/bootGuard.js` en su PROPIO
+   `<script type="module">` (grafo separado: sobrevive si el del juego muere), sin imports
+   (i18n puede ser justamente lo roto → mensaje bilingüe estático, detalle vía textContent,
+   sin sink de HTML). Solo actúa con `data-state="loading"`: un error con el juego andando no
+   lo tapa. e2e `ronda18-regression.spec.js` (2 tests): sabotaje por intercepción de red
+   (napkin: `route.fulfill` con fuente parcheada, jamás editando el repo), RED verificado
+   antes del fix. El importmap/CSP de index.html NO se tocó (regla dura §7): solo se agregó
+   el script tag del guard.
+
+3. **El BrowserWindow no restringía `window.open` ni la navegación** (checklist de seguridad
+   de Electron). El renderer es local, sandboxed y con CSP, pero en defensa en profundidad un
+   compromiso del renderer podía abrir ventanas nuevas o navegar el juego a una URL externa.
+   Fix en `apps/desktop/main.js`: `setWindowOpenHandler` con deny + `will-navigate` que solo
+   permite `GAME_URL`. Verificado en el Electron real: `window.open('https://example.com')`
+   devuelve null, `location.href` externo sigue en `dumpster://app/...`, 1 sola ventana.
+
+### 🔵 MEJORAS DE CALIDAD (no bloqueantes, documentadas y NO aplicadas)
+
+- `persist()` (store.js:107) no envuelve `localStorage.setItem` en try/catch: con quota
+  excedida o storage deshabilitado (modo privado de un navegador web), cada acción lanzaría.
+  Irrelevante para el target (Electron siempre tiene storage; web es solo dev) y el guardado
+  a archivo de Electron es independiente. Si algún día importa el modo web público, envolver.
+- `loadState()` cae a `freshState()` en silencio ante un save inválido (napkin lo documenta).
+  Mitigado por la triple redundancia (localStorage + userData + Cloud) y decisión de diseño
+  de rondas previas; para v1.1 podría avisarse al jugador antes de re-persistir.
+- Comentarios desactualizados corregidos en `799f758` (steam.js decía a1..a27; app_build.vdf
+  ubicaba `dist/` en apps/desktop/).
+
+### ✅ Veredicto Final
+**APTO PARA PRODUCCIÓN.** La superficie de input externo (save de localStorage, import
+base64, save.json de userData, archivo de Steam Cloud, protocolo dumpster://) valida o
+rechaza limpio en todas las capas; no hay secretos ni URLs internas hardcodeadas (barridos de
+api-key/token/password/http → solo xmlns y tokens CSS); npm audit → 0 vulnerabilidades; los
+errores al jugador van por textContent sin stack; Electron con sandbox + contextIsolation +
+CSP con hash + navegación bloqueada. Queda solo el checklist U1-U9 del usuario (appId real,
+panel de Steamworks, prueba en Deck física y Cloud entre 2 máquinas — RELEASE.md los guía).
+
+### Verificado (lo que NO encontré, con evidencia)
+- **Fugas**: cero credenciales/tokens/URLs internas en apps/packages/tools; el único http es
+  el xmlns de SVG. `steam_appid.txt` y `builder_output/` ahora ignorados por git.
+- **XSS**: sin regresiones del patrón `|| 0` en interpolaciones de estado (grep limpio); sin
+  eval/new Function/insertAdjacentHTML/document.write; CSP sigue sin 'unsafe-inline' de
+  scripts. Los sinks auditados en rondas 15/16 no cambiaron.
+- **Offline/reloj**: `Math.max(0, ...)` clampa un `lastSavedAt` futuro (sin ganancia negativa).
+- **IPC**: `save:write`/`achievement:set` degradan con try/catch (un payload no-string
+  devuelve false, no crashea el main process); pathGuard con tests sigue cubriendo traversal.
+
+### Estado del DoD (Agente único, ronda 18)
+```
+[x] npm test → 299/299 verde (26 archivos: 292 + 7 de auditoría)
+[x] npm run test:e2e → 53/53 verde (51 + 2 del guard de boot)
+[x] RELEASE.md completo (tabla de 35 logros generada desde la data, regenerable)
+[x] Verificación real: desktop dev + instalador NSIS instalado/jugado/desinstalado,
+    save real del jugador intacto (sha256 idéntico antes/después)
+[x] Auditoría global: veredicto APTO PARA PRODUCCIÓN (este bloque)
+[x] Commits: 799f758 (docs steam) + b06aaa8 (audit) + este HANDOFF
+[ ] Push + PR: el usuario crea el PR con el link del push (regla dura §1.3)
+```
+
+### Qué necesita saber quien siga
+- ROADMAPv3 queda COMPLETO (rondas 15-18). Lo que resta es 100% del usuario: U1-U9
+  (tools/steam/RELEASE.md los guía paso a paso). Al registrar los logros en Steamworks,
+  regenerar la tabla si la data cambió: `node tools/steam/achievements-table.mjs`.
+- Baselines nuevos: **299 unit / 53 e2e / SAVE_VERSION = 7** (conteos indicativos, regla §0).
+- `dist/` quedó con la build de verificación (ignorada por git); borrarla es inocuo.

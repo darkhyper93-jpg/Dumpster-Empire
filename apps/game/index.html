@@ -89,6 +89,9 @@
     <div id="celebration-modal" class="modal-overlay" hidden></div>
   </div>
 
+  <!-- bootGuard va ANTES y en su propio grafo de módulos: si el grafo de main.js no evalúa
+       (archivo faltante, sintaxis), el guard sobrevive y muestra el estado de error. -->
+  <script type="module" src="src/bootGuard.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

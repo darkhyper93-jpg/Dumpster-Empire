@@ -40,6 +40,9 @@ logs/
 tools/steam/.secret
 *.vdf.local
 steam_build_credentials
+# SteamPipe (tools/steam/RELEASE.md): appId de prueba junto al ejecutable y logs de steamcmd.
+steam_appid.txt
+tools/builder_output/
 
 .DS_Store
 Thumbs.db
