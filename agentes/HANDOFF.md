@@ -4548,3 +4548,160 @@ panel de Steamworks, prueba en Deck física y Cloud entre 2 máquinas — RELEAS
 - `tools.json` ahora tiene campo `icon` (no lo tenía cuando Agente A lo creó).
 - Logros pendientes (`spiesUsedAtLeast`, `gravesHitAtLeast`, `allToolsOwned`) siguen 100% tarea
   de 20.C, sin cambios respecto a lo que dejó Agente A.
+
+## Ronda 20 — Agente C: UI + e2e + auditoría (rama `feat/dig-ronda20`, save v9 sin cambios) — ÚLTIMO AGENTE DE LA RONDA
+
+### Qué hice
+
+1. **Wiring de data** (`main.js`/`store.js`): sumé `traps`/`energy`/`tools` a `DATA_FILES` y al
+   objeto `data` que arma `main.js` (mismo patrón que `streak` de la ronda 19) — con esto los
+   gates opcionales `data.traps`/`data.tools` de Agente A/B pasan de "deshabilitados en el juego
+   real" a activos: el roll de grado de trampa, la energía/espionaje y las herramientas ya
+   funcionan de punta a punta. `UIManager.js` pasa `store.ctx.data.traps` a `new DigCanvas(...)`
+   (4to argumento que Agente B había dejado listo) — el indicio visual de grado ya se pinta.
+2. **Store (`store.js`)**: acciones nuevas `spyDigSlot(slotIndex)` (gasta Energía, revela
+   categoría/TRAMPA vía `spySlot` del engine, guarda el resultado en `pendingDig.spiedSlots`),
+   `tickEnergy()` (regenera por `regenEnergy`, llamado desde `loop.js` en cada tick lógico,
+   SIN depender de `hasAutoDig` — la Energía regenera aunque no haya automatización),
+   `tickDigTimer(dtSeconds)` (cuenta atrás de `pendingDig.timeRemaining` SOLO si
+   `container.mode === 'timed'`; al llegar a 0 llama `registerContainerDig` — recién exportado
+   del barrel del engine — para que cuente para el nivel, sin castigo de dinero, y encola el
+   evento en `timedDigExpirations`/`consumeTimedDigExpirations()`, mismo patrón que
+   `consumeNewAchievements`), `buyTool`/`equipTool` (delegan a `systems/tools.js`).
+   `startManualDig` ahora compone `getAreaMult(state,data) * getToolRadiusMult(state,data)` y
+   `getDigRate(state,container,data) * getToolRhythmMult(state,data)` al armar `pendingDig`
+   (exactamente como pidió Agente A en su handoff) y siembra `spiedSlots: {}` /
+   `timeRemaining: container.mode==='timed' ? container.digTime : null`.
+3. **`loop.js`**: `logicTick()` ahora también llama `tickEnergy()` y `tickDigTimer(dtSeconds)` en
+   cada intervalo de 1s, junto a `tickAutomation` — por delta real, nunca `setTimeout` (R20.3).
+4. **UI de escarbado** (`index.html` + `UIManager.js` + `components.css`): píldora de Energía
+   (`#dig-energy-pill`, "Energía: n/máx", visible siempre en la vista de escarbado, con o sin
+   dig en curso); panel de espionaje (`#dig-spy-panel`, un botón "Espiar (−1 Energía)" por slot
+   — usa `container.slots`, no `result.items.length`, porque en una trampa ese array queda vacío
+   pero `spySlot` igual responde `{isTrap:true}` para cualquier índice — deshabilitado sin
+   Energía con tooltip "cuánto falta" vía `common.missingMoney`... no, vía
+   `dig.spyDisabledNoEnergy`; ya espiado muestra el resultado en vez del botón); timer de la
+   Bóveda (`#dig-timed-timer`, rojo, "Tiempo restante: Ns"); máscara del Sótano
+   (`#dig-dark-mask`, radial-gradient CSS puro que sigue el puntero/dedo vía `pointermove` sobre
+   `#dig-canvas-host` — PURAMENTE visual, nunca toca `digRevealModel.js`, el jugador puede
+   rascar a ciegas fuera del círculo). Toast nuevo cuando la Bóveda expira sola
+   (`dig.timedExpired`).
+5. **Selector de herramientas** (`SettingsView.js`): sección nueva bajo Estadísticas — lista las
+   4 de `tools.json` con ícono, nombre (vía clave i18n `tools.<id>`, NO el campo `name` del JSON
+   — ver decisión #2 abajo), botón Comprar/Equipar/badge "Equipada" (mismo patrón visual que
+   `AutomationView`).
+6. **Logros nuevos** (`achievements.json` a39-a41 + `systems/achievements.js` +
+   `data-en.js`): `spiesUsedAtLeast` (50, visible), `gravesHitAtLeast` (10, oculto),
+   `allToolsOwned` (las 4). `store.js` `runAchievements()` ahora pasa `allTools: data.tools || []`
+   al ctx de `checkAchievements`.
+7. **i18n**: claves reales es/en para energía, espionaje, timer, oscuridad y herramientas
+   (`es.js`/`en.js`) — verificado con `apps/game/tests/i18n.test.js` (paridad de claves) y
+   `ronda16-i18n.test.js` (paridad de ids de logros en `data-en.js`).
+8. **Tests RED→GREEN**: `packages/engine/tests/ronda20c-logros-espionaje.test.js` (8 casos: los
+   3 evaluadores nuevos + el caso "sin `ctx.allTools` nunca desbloquea" — un `.every()` sobre
+   array vacío da `true` por vacuidad, así que `allToolsOwned` exige `ctx.allTools?.length`
+   truthy primero, ver decisión #3) + `apps/game/e2e/ronda20-dig.spec.js` (4 casos: espiar
+   descuenta/revela; herramienta cambia el radio real medido con un toque idéntico
+   revelado/no-revelado; Bóveda expira sin castigo con `page.clock` — primera vez que se usa en
+   el repo, ver decisión #4; Sótano renderiza la máscara).
+
+### Decisiones no triviales
+
+1. **`registerContainerDig` exportado del barrel del engine** (`packages/engine/src/index.js`):
+   no era parte de la API pública hasta ahora (Agente A la dejó interna a `economy.js`). La
+   necesito para que expirar la Bóveda "cuente para el nivel" sin duplicar la fórmula en la UI
+   — es reexportar una función pura ya existente, no una fórmula nueva.
+2. **`tools.json` no pasa por el overlay de `dataI18n.js`** (confirmado por Agente A: el test de
+   paridad de la ronda 16 no lo escanea) — el nombre en pantalla de cada herramienta sale de una
+   clave `tools.<id>` en `es.js`/`en.js` (función `toolLabel()` en `SettingsView.js`), NUNCA del
+   campo `tool.name` del JSON (que queda fijo en español, uso interno). Mismo criterio aplicado
+   a los `dig.spy*`/`dig.energy*`/`dig.timed*`/`dig.dark*` — todos con traducción real, no
+   placeholder (regla 15 de ROADMAPv4 §1).
+3. **`allToolsOwned` exige `ctx.allTools` no vacío antes de evaluar** (`Boolean(ctx.allTools?.length) && ...every(...)`):
+   un `.every()` sobre `[]` es `true` por vacuidad — sin este guard, cualquier llamador que no
+   pasara `allTools` (todos los tests previos a esta ronda, que usan `{allContainers, allAutomations}`
+   sin el campo nuevo) hubiera desbloqueado el logro instantáneamente para cualquier estado. Lo
+   agarró un test RED explícito antes de tocar nada (`ronda19-racha.test.js` rompió al implementar
+   la versión ingenua con `(ctx.allTools || []).every(...)`).
+4. **Uso de `page.clock` (Playwright) por primera vez en el repo** para el test de expiración de
+   la Bóveda: el límite duro son 54s reales, inviable con un timeout de test normal. `page.clock.install()`
+   + `page.clock.fastForward(ms)` avanza los `setInterval` de `loop.js` como si pasara tiempo
+   real, sin tocar la arquitectura de producción (nada de `setTimeout` en el código de juego,
+   contrato R20.3 intacto). Nota para rondas futuras que necesiten timers largos en e2e (la 23
+   ya anticipa `page.clock` para día/noche, ver ROADMAPv4 §23.4): el `fastForward` necesita
+   milisegundos o `'mm:ss'`/`'hh:mm:ss'`, NUNCA `'Ns'` (probé con `'59s'` y tira
+   `Clock only understands numbers, 'mm:ss' and 'hh:mm:ss'`).
+5. **El timer de la Bóveda en el e2e se lee con un regex tolerante** (`/Tiempo restante: \d+s/`)
+   en vez del segundo exacto: `page.clock.install()` NO congela el tiempo, solo lo hace
+   controlable — el tiempo real que tarda el setup del test (boot, comprar el contenedor) ya
+   corrió un par de segundos antes de la primera lectura. Nada que ver con el motor: es una
+   particularidad de cómo Playwright modela el reloj.
+6. **El toque único (sin arrastre) para medir el radio de la herramienta usa Guante Hidráulico**
+   (radioMult 1.3 × ritmoMult 1.3), no Pala Ancha: la fórmula real de `eraseRadius()`
+   (`BASE * sqrt(areaMult) * digRate * sensitivity`) mete `radioMult` dentro de la raíz y
+   `ritmoMult` fuera de ella — Pala Ancha (1.6 / 0.7) da un radio NETO ligeramente MENOR al
+   default (√1.6×0.7 ≈ 0.885), aunque su nombre sugiera lo contrario; Guante Hidráulico da el
+   mayor incremento neto (√1.3×1.3 ≈ 1.48) de las 4, así que es la elección sin ambigüedad para
+   demostrar "el radio cambia". Esto no es un bug: es la composición que el propio Agente A
+   pidió explícitamente en su handoff (`getAreaMult()*getToolRadiusMult()`,
+   `getDigRate()*getToolRhythmMult()|), y el balance de qué herramienta se "siente" más grande
+   es una decisión de PLAN.md §4.23 que no me correspondía tocar en 20.C — lo dejo anotado acá
+   por si el playtest (que sí es alcance de una ronda futura o del usuario) quiere rebalancear
+   los multiplicadores para que coincidan con la intuición de los nombres.
+7. **No toqué `digRevealModel.js`/`DigCanvas.js` para las mecánicas de Bóveda/Sótano** más allá
+   de lo que ya dejó Agente B: el timer es contador de UI/store puro (no cambia el modelo de
+   revelado) y la máscara es un `<div>` CSS aparte con `pointer-events:none` que se dibuja
+   ENCIMA del canvas sin leerlo ni escribirlo — cumple la regla dura del napkin (nunca se decide
+   nada del completado leyendo/escribiendo la capa visual).
+
+### Auditoría (foco 20.C.3 del roadmap)
+
+- **`mode` desconocido no crashea**: verificado por inspección — `container.mode !== 'dark'` y
+  `container.mode === 'timed'` son comparaciones de igualdad simple (no un `switch`/`case` que
+  tire por `default`), así que cualquier valor de `mode` no reconocido (o ausente) cae
+  limpiamente a "no es timed, no es dark" sin excepción. No hace falta un test nuevo: ya lo
+  ejercitan los 16 contenedores previos a la ronda 20 (ninguno declara `mode`) en cada e2e
+  existente, que siguen los 61 verdes.
+- **Energía con reloj manipulado**: cubierto por los tests de Agente A (`regenEnergy` +
+  `clampedElapsedMs`, reloj atrás no regenera) — no repetí esa cobertura, solo la consumo desde
+  `store.tickEnergy()` sin lógica propia adicional que pudiera romperla.
+- **XSS**: revisé cada `innerHTML` nuevo (`SettingsView.renderToolsSection`,
+  `UIManager.renderSpyPanel`) — todo el contenido sale de `t()` (i18n), ids internos de
+  `tools.json`/`containers.json` (nunca interpolación de texto libre del jugador) y nombres de
+  rareza ya traducidos por `dataI18n.js`. Ningún dato de save/import llega a estos `innerHTML`.
+- **Save/engine boundary**: no agregué NINGÚN campo persistido nuevo — `spiedSlots` y
+  `timeRemaining` viven en `pendingDig` (closure de `store.js`, nunca pasa por
+  `serializeState`), así que no hace falta migración ni bump de `SAVE_VERSION` (sigue en 9).
+- **R18 (degrada limpio)**: los 61 e2e previos a esta ronda (incluida la suite completa de
+  ronda19) siguen verdes sin tocar ningún spec existente.
+
+### Estado del DoD (Agente C, ronda 20 — ÚLTIMO AGENTE)
+
+```
+[x] npm test → 373/373 verde (365 previos de A+B + 8 de ronda20c-logros-espionaje.test.js)
+[x] npm run test:e2e → 61/61 verde (57 previos + 4 de ronda20-dig.spec.js), SIN tocar ningún
+    spec existente (R18)
+[x] Manual 375px + 1440px: energía/espiar/herramientas verificados con capturas Playwright
+    (dig view, Ajustes con selector de herramientas, Bóveda con timer rojo, Sótano con máscara
+    de spotlight siguiendo el puntero) — capturas temporales, no comiteadas (solo verificación)
+[x] Cero console.log / TODO / emojis en los archivos tocados (grep del diff completo)
+[x] git commit (d536976)
+[x] HANDOFF (este bloque)
+[ ] Push de la rama + link de PR — pendiente, lo hago a continuación (soy el último agente)
+```
+
+### Qué necesita saber la ronda 21 (colección: sets, legendarios, vitrina)
+
+- **Baselines nuevos**: 373 unit / 61 e2e / `SAVE_VERSION = 9` (sin cambios respecto a Agente A,
+  regla §0 — recontar al ejecutar).
+- La ronda 20 quedó 100% cerrada: grados de trampa, energía/espionaje, herramientas y los 2
+  contenedores con mecánica están cableados de punta a punta en el juego real (no solo en el
+  engine). El contrato §3.5.3 (legendarios se venden instantáneo, nunca entran a ningún sistema
+  nuevo) sigue intacto — no hay nada de esta ronda que lo toque.
+- `state.gravesHit`/`state.spiesUsed`/`state.toolsOwned`/`state.equippedTool` están disponibles
+  para cualquier cond-evaluator futuro que la 21 necesite (no se tocan).
+- `achievements.json` termina en `a41` — la ronda 21 arranca sus logros nuevos en `a42` (recontar
+  el último real al ejecutar, no asumir).
+- `registerContainerDig` ya está en el barrel público del engine (`packages/engine/src/index.js`)
+  por si la 21 (o cualquier ronda futura) necesita registrar un intento de escarbado sin pasar
+  por `applyContainerResult` completo.
