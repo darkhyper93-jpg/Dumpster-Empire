@@ -20,7 +20,7 @@
 
 ## 0. Estado actual (2026-07-11, post-ronda 18, verificado contra el repo)
 
-- Rondas 1-18 (ROADMAPv3 completo) hechas; la 18 esperando merge. Baselines: `npm test` →
+- Rondas 1-18 (ROADMAPv3 completo) hechas y mergeadas en main. Baselines: `npm test` →
   **299 passed (26 archivos)**; `npm run test:e2e` → **53 passed**.
 - Data: **16 contenedores**, **111 ítems**, **35 logros** (`a1`..`a35`), **12 máquinas**,
   **13 nodos** de prestigio, **4 mejoras rápidas**, ~168 íconos, i18n es/en completo.
