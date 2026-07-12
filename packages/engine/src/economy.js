@@ -5,6 +5,7 @@
 
 import { categoryWeights } from './rng.js';
 import { freshState } from './state.js';
+import { clampedElapsedMs } from './time.js';
 
 /**
  * @typedef {import('./state.js').GameState} GameState
@@ -119,6 +120,10 @@ export function trapProbability(probTrampaBaseDelContenedor, suerte) {
  * @property {Array<Object>} prestigeTree
  * @property {{ rachaTramo: number, rachaBonusPorTramo: number, rachaMaxBonus: number }} [streak]
  *   constantes de la racha de escarbado (data/streak.json, ronda 19). Opcional: ver getLuck.
+ * @property {{ gradosProb: {leve:number,normal:number,grave:number}, gravePenaltyMult: number }} [traps]
+ *   constantes de grados de trampa (data/traps.json, ronda 20). Opcional: ver rollContainerResult.
+ * @property {Array<{id:string,costo:number,radioMult:number,ritmoMult:number}>} [tools]
+ *   herramientas de escarbado (data/tools.json, ronda 20). Opcional: ver getToolRadiusMult.
  */
 
 function upgradeDef(data, id) {
@@ -690,4 +695,74 @@ export function getRecommendedDigPower(state, container) {
  */
 export function getRecommendedArea(state, container) {
   return container.areaRecomendada || 1;
+}
+
+// ---------------------------------------------------------------------------
+// Energía y espionaje (PLAN.md §4.22, ronda 20). `energyData` es data/energy.json
+// ({ energiaMax, msPorPunto, costoEspiar }), inyectado (no vive en `EngineData` porque solo lo
+// necesitan estas dos funciones, no todo el resto del engine).
+// ---------------------------------------------------------------------------
+
+/**
+ * Regenera Energía por tiempo transcurrido real (PLAN.md §4.22), mutando el estado in place.
+ * Usa `clampedElapsedMs` (packages/engine/src/time.js, §3.3): nunca regenera si el reloj
+ * retrocede, y nunca truena con un `energyAt` no finito (save manipulado).
+ * @param {GameState} state
+ * @param {{ energiaMax: number, msPorPunto: number, costoEspiar: number }} energyData
+ * @param {number} now - epoch ms
+ * @returns {void}
+ */
+export function regenEnergy(state, energyData, now) {
+  const elapsed = clampedElapsedMs(now, state.energyAt);
+  const points = Math.floor(elapsed / energyData.msPorPunto);
+  if (points <= 0) return;
+  state.energy = Math.min(energyData.energiaMax, state.energy + points);
+  // Avanza energyAt solo por el tiempo ya "cobrado" en puntos: el remanente fraccional sigue
+  // contando para el próximo punto (sin esto, cada tick perdería hasta msPorPunto-1 ms de
+  // progreso acumulado).
+  state.energyAt = now - (elapsed % energyData.msPorPunto);
+}
+
+/**
+ * Gasta `costoEspiar` de Energía para espiar un slot (la revelación en sí es `spySlot`,
+ * systems/containers.js — lectura pura del DigResult ya calculado).
+ * @param {GameState} state
+ * @param {{ energiaMax: number, msPorPunto: number, costoEspiar: number }} energyData
+ * @returns {{ ok: true } | { ok: false, error: string }}
+ */
+export function spendEnergyToSpy(state, energyData) {
+  if (state.energy < energyData.costoEspiar) return { ok: false, error: 'No alcanza la Energía para espiar.' };
+  state.energy -= energyData.costoEspiar;
+  state.spiesUsed++;
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Herramientas de escarbado (PLAN.md §4.23, ronda 20). Modifican SOLO el pincel del escarbado
+// manual (radio y ritmo) — nunca getLuck ni itemSaleValue. `data.tools` es opcional (mismo
+// patrón que data.streak/data.traps): sin él, ambos multiplicadores son neutros (1.0).
+// ---------------------------------------------------------------------------
+
+function equippedToolDef(state, data) {
+  return data.tools?.find((t) => t.id === state.equippedTool);
+}
+
+/**
+ * Multiplicador de radio de pincel de la herramienta equipada.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getToolRadiusMult(state, data) {
+  return equippedToolDef(state, data)?.radioMult ?? 1;
+}
+
+/**
+ * Multiplicador de ritmo de escarbado de la herramienta equipada.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getToolRhythmMult(state, data) {
+  return equippedToolDef(state, data)?.ritmoMult ?? 1;
 }

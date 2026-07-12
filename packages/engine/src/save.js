@@ -19,7 +19,7 @@ const NUMERIC_MAP_FIELDS = [
 ];
 
 /** Mapa plano `id -> boolean` (compras de un solo uso). */
-const BOOLEAN_MAP_FIELDS = ['automationOwned'];
+const BOOLEAN_MAP_FIELDS = ['automationOwned', 'toolsOwned'];
 
 /** Arrays cuyos elementos deben ser strings (ids, no texto libre). */
 const STRING_ARRAY_FIELDS = ['achievementsUnlocked', 'autoQueue'];
@@ -136,6 +136,23 @@ function validateDeepContent(migrated) {
   if (!Number.isInteger(migrated.bestDigStreak) || migrated.bestDigStreak < 0) {
     return 'Contenido inválido en bestDigStreak: debe ser un entero >= 0.';
   }
+  // AJUSTE (ronda 20): energy/spiesUsed/gravesHit son enteros >= 0 por la misma razón que
+  // digStreak (ronda 19) — la finitud ya la cubre REQUIRED_FIELDS, acá se cubre el rango y que
+  // no sean fraccionarios. `energyAt` es un timestamp: solo necesita ser finito (ya cubierto).
+  if (!Number.isInteger(migrated.energy) || migrated.energy < 0) {
+    return 'Contenido inválido en energy: debe ser un entero >= 0.';
+  }
+  if (!Number.isInteger(migrated.spiesUsed) || migrated.spiesUsed < 0) {
+    return 'Contenido inválido en spiesUsed: debe ser un entero >= 0.';
+  }
+  if (!Number.isInteger(migrated.gravesHit) || migrated.gravesHit < 0) {
+    return 'Contenido inválido en gravesHit: debe ser un entero >= 0.';
+  }
+  // La herramienta equipada siempre tiene que ser una de las poseídas (isBooleanMap ya validó
+  // que toolsOwned es un mapa de booleanos arriba, en el loop de BOOLEAN_MAP_FIELDS).
+  if (typeof migrated.equippedTool !== 'string' || migrated.toolsOwned[migrated.equippedTool] !== true) {
+    return 'Contenido inválido en equippedTool: debe ser una herramienta presente en toolsOwned.';
+  }
   // El chequeo de finitud de `volume` (y de todo campo numérico top-level) vive ahora en el
   // loop de REQUIRED_FIELDS de validateSave — ver AJUSTE de la auditoría post-ronda 14.
   return null;
@@ -191,6 +208,12 @@ const REQUIRED_FIELDS = {
   digStreak: 'number',
   bestDigStreak: 'number',
   vibrationOn: 'boolean',
+  energy: 'number',
+  energyAt: 'number',
+  equippedTool: 'string',
+  toolsOwned: 'object',
+  spiesUsed: 'number',
+  gravesHit: 'number',
 };
 // autoTargetContainerId NO va en REQUIRED_FIELDS: es unión `string|null` y `typeof null === 'object'`
 // rompería el chequeo de tipo; su validación de contenido vive en validateDeepContent().
@@ -293,6 +316,22 @@ function migrate(raw, itemNameToId) {
   // encendida (comportamiento actual sin cambios visibles).
   if (migrated.saveVersion < 8) {
     migrated = { ...migrated, digStreak: 0, bestDigStreak: 0, vibrationOn: true, saveVersion: 8 };
+  }
+  // v8 -> v9 (ronda 20): agrega energy/energyAt (Energía de espionaje), equippedTool/toolsOwned
+  // (herramientas de escarbado) y spiesUsed/gravesHit (contadores de logros). Saves viejos
+  // arrancan con Energía llena, solo "manos" (herramienta inicial) equipada y contadores en 0
+  // (comportamiento actual sin cambios visibles).
+  if (migrated.saveVersion < 9) {
+    migrated = {
+      ...migrated,
+      energy: 3,
+      energyAt: 0,
+      equippedTool: 'manos',
+      toolsOwned: { manos: true },
+      spiesUsed: 0,
+      gravesHit: 0,
+      saveVersion: 9,
+    };
   }
   return migrated;
 }
