@@ -4705,3 +4705,200 @@ panel de Steamworks, prueba en Deck física y Cloud entre 2 máquinas — RELEAS
 - `registerContainerDig` ya está en el barrel público del engine (`packages/engine/src/index.js`)
   por si la 21 (o cualquier ronda futura) necesita registrar un intento de escarbado sin pasar
   por `applyContainerResult` completo.
+
+
+---
+
+## Ronda 21 — Limpieza: remoción de Energía/espionaje + fixes de UI (save v10) — agente único, ÚLTIMO AGENTE
+
+Rama `feat/limpieza-ronda21` desde main (post-ronda 20, PRs #18/#19 mergeados). Tarea completa
+en un solo agente: PLAN.md, save v10, engine, data, UI, i18n, dos fixes de UX, tests y DoD.
+
+### Baselines recontados al ejecutar
+
+- **Al empezar** (main, post-ronda 20): `npm test` → 365/365 (30 archivos). `npm run test:e2e`
+  → 61/61. `SAVE_VERSION = 9`. (El handoff de la ronda 20.C decía 373/61 — recontado acá salió
+  365/61; no investigué la discrepancia porque no es mi ronda, solo dejo anotado el número real
+  que vi yo, regla §0 "recontar siempre, nunca confiar en el handoff previo a ciegas".)
+- **Al terminar**: `npm test` → 365/365 (31 archivos: sumé `ronda21-migracion-v10.test.js` con
+  8 tests nuevos, pero neteé con los tests de espionaje que borré de `ronda20-dig-profundo.test.js`
+  y `ronda20c-logros-espionaje.test.js`). `npm run test:e2e` → 65/65 (61 previos, sin tocar
+  ningún spec existente salvo los 2 que rompía la remoción — ver abajo —, + 5 nuevos de
+  `ronda21-limpieza.spec.js`). `SAVE_VERSION = 10`.
+
+### 21.1 PLAN.md
+
+- §4.22 es tombstone: `"### 4.22 — (removido) Energía y espionaje: removido por decisión del
+  usuario 2026-07-14 (ronda 21 de ROADMAPv4)."` — NO renuméré §4.23/§4.24.
+- Reescribí las 3 menciones sueltas a espionaje que pedía el roadmap: la visión (§2.2, ya no dice
+  "el jugador puede espiar"), el trade-off del robot (§2.4, ahora "escarba a ciegas y sin
+  criterio, por lo que sufre más trampas..." — misma frase que reusé en el comentario de
+  `economy.js:getEffectiveTrapProbability` y en `automations.json`/`data-en.js` para el
+  Robot Clasificador Básico, que también mencionaba espiar) y el postre (tachado con `~~...~~`
+  y nota de "descartado, no reabrir").
+- §5.4: agregué el ítem 6 "Estadísticas (vista propia, header)" y una nota de que el selector de
+  herramientas vive en Escarbar — el documento no tenía antes una lista explícita de dónde vivía
+  cada subvista, así que lo dejé como adición, no como edición de una frase existente.
+
+### 21.2 Save v10 — la migración que borra campos (PRIMERA del repo)
+
+- `SAVE_VERSION = 10`. Migración `v9->v10` en `save.js` con destructuring-omit:
+  `const { energy, energyAt, spiesUsed, ...rest } = migrated;` — documenté el patrón inline
+  (comentario largo en `save.js`) porque **la ronda 27 lo va a reusar** para borrar
+  `autoTargetContainerId` (contrato §17 del roadmap).
+- `a39` se filtra de `achievementsUnlocked` en la misma migración
+  (`.filter((id) => id !== 'a39')`), con guard `Array.isArray` antes de filtrar (un save
+  corrupto con `achievementsUnlocked` no-array pasa intacto para que el rechazo de siempre lo
+  agarre más abajo, nunca lo "lava").
+- `gravesHit` (trampas graves) y `equippedTool`/`toolsOwned` (herramientas) NO se tocaron — son
+  sistemas de la ronda 20 que el roadmap pedía conservar explícitamente, aunque compartan el
+  mismo bloque `state.js`/`save.js` que la Energía.
+- Tests nuevos: `packages/engine/tests/ronda21-migracion-v10.test.js` (8 tests: SAVE_VERSION,
+  migración de un v9 real con energy/energyAt/spiesUsed puestos a mano, filtrado de `a39` con y
+  sin el logro presente, `gravesHit` sobrevive, round-trip serialize/deserialize, export/import
+  base64, `freshState()` sin los 3 campos).
+
+### 21.3 Engine — desmontaje completo
+
+- Borrados: `regenEnergy`/`spendEnergyToSpy` (economy.js, con el import ahora-inútil de
+  `clampedElapsedMs`), `spySlot` (systems/containers.js, era la última función del archivo),
+  reexports en `index.js`, evaluador `spiesUsedAtLeast` (systems/achievements.js).
+  `allToolsOwned`/`gravesHitAtLeast` quedaron intactos.
+- `packages/engine/tests/ronda20-dig-profundo.test.js`: borré el describe entero
+  `'§4.22 energía y espionaje'` (7 tests) y reescribí el describe de migración
+  (`v8 -> v9` → `v8 -> v10`, porque ahora encadena las dos migraciones) para que asertara
+  AUSENCIA de `energy`/`energyAt`/`spiesUsed` en vez de sus defaults.
+- `packages/engine/tests/ronda20c-logros-espionaje.test.js`: borré el describe de
+  `spiesUsedAtLeast` y cambié el test de "existen a39/a40/a41" por dos: uno que a40/a41 siguen
+  con sus cond types, y uno nuevo que confirma que `a39` NO existe (hueco permanente).
+
+### 21.4 Data
+
+- Borrado `apps/game/src/data/energy.json` y su entrada en `main.js` (`DATA_FILES.energy` +
+  `data.energy` del paquete armado en `boot()`).
+- `a39` fuera de `achievements.json` (no renuméré `a40`/`a41`, quedan con sus ids tal cual —
+  el hueco es permanente, documentado en el comentario del test de arriba).
+- Íconos huérfanos: `eye-wide` **NO se tocó** (lo sigue usando el nodo de prestigio "Visión
+  Periférica", `prestigeTree.json` — el grep de "confirmar que ningún otro consumidor lo usa" lo
+  salvó). `energy-crystal` sí se borró del registro de `icons.js` (alias sin consumidor real, era
+  parte de un pool "Items — futuro" que nunca se cableó a ningún ítem).
+
+### 21.5 UI — dos vistas nuevas, no una migración de código muerto
+
+Decisión de diseño no trivial (documentala si alguna ronda futura toca esta zona): en vez de
+"borrar la sección de Ajustes y listo", extraje `renderToolsSection`/`renderStatsSection` de
+`SettingsView.js` a **dos módulos nuevos** con la misma forma que el resto de las vistas
+(`render(container, state, store)`):
+
+- **`ToolsSection.js`**: se monta en `#dig-tools-section` (nuevo nodo en `index.html`, dentro de
+  `<main id="dig-area">`, DESPUÉS de `#dig-active`) y se renderiza en CADA `UIManager.render()`
+  (no condicionado a si hay un escarbado en curso — las herramientas tienen que verse siempre
+  que estás en la pestaña Escarbar, con o sin contenedor abierto). Mismos `data-action`
+  (`buy-tool`/`equip-tool`) y mismo handler que antes, solo que el `addEventListener` ahora se
+  bindea sobre `#dig-tools-section` con su propio guard `dataset.boundTools` (patrón
+  `dataset.boundSettings`/`dataset.boundStreak` de siempre — un guard por vista, nunca genérico).
+- **`StatsView.js`**: vive en `TAB_VIEWS` (`'estadisticas'`) igual que `SettingsView`
+  (`'ajustes'`), pero se abre por un botón nuevo del header (`#stats-btn`, al lado de
+  `#settings-btn`) en vez de una pestaña del tabbar — el tabbar no ganó una pestaña nueva (ya
+  tiene 6, el riesgo de espacio a 375px lo hereda la ronda 23 con el Puesto). El ícono
+  (`stats: 'chart'` en `icons.js`) reusa la forma de `chart-up` (mismo ícono que ya usan los
+  logros de racha) — no inventé una silueta nueva para un simple gráfico de barras.
+- `Topbar.js` ganó el mismo patrón `dataset.iconReady` que ya tenía `#settings-btn` para
+  `#stats-btn` — así `refreshStaticTexts()` (fix del idioma, ver abajo) lo re-traduce gratis sin
+  código nuevo, porque ya barre `[data-icon-ready]` dentro de `#topbar`.
+- `#dig-energy-pill`/`#dig-spy-panel` salieron de `index.html`; sus CSS (`.dig-energy-pill`,
+  `.dig-spy-panel`, `.dig-spy-btn`, `.dig-spy-result`) salieron de `components.css`; el handler
+  delegado de `spy-slot` salió de `bindStaticEvents()`; `renderDigEnergyPill`/`renderSpyPanel`/
+  `rarityLabel` salieron de `UIManager.js` completos (`rarityLabel` no tenía otro consumidor).
+
+### 21.6 Los tres fixes de UI del roadmap
+
+1. **Prompt en inglés**: `DigCanvas` ganó `refreshTexts()` (re-setea el `textContent` del `<p>`
+   dentro de `.dig-idle-prompt` con `t('dig.idlePrompt')`), llamado desde
+   `UIManager.refreshStaticTexts()` (mismo punto que ya re-traduce tabs/abandonar/topbar).
+   Cubierto por `ronda21-limpieza.spec.js` test 1 (arranca un escarbado en español, cambia el
+   idioma desde Ajustes SIN recargar, vuelve a Escarbar y confirma "Drag to dig").
+2. **Racha tapada**: la causa real (no era z-index bajo, era la POSICIÓN) — `.dig-streak-pill`
+   estaba centrada en `top: var(--space-2)`, el mismo rincón donde `.scavenge-card-label`
+   (el título del contenedor) pincha hacia arriba con `top: calc(-1 * var(--space-3))` — ambos
+   absolutos, centrados, casi en el mismo pixel; el título (pintado después en el DOM) tapaba la
+   píldora entera. Fix: la píldora se movió a la esquina superior DERECHA de `#dig-area`
+   (`right: var(--space-2)` en vez de `left:50%/translateX(-50%)`) y subió a `z-index:3` (por si
+   alguna vez vuelven a coincidir). Actualicé también el keyframe `dig-streak-pop` (sacé el
+   `translateX(-50%)` que ya no aplica). Verificado con Playwright real (screenshot 375px +
+   1440px) y con `ronda21-limpieza.spec.js` test 2 (boundingBox de la píldora vs. el título:
+   no se solapan en X).
+3. **Gesto táctil intacto** (R21.3 del roadmap): no toqué `touch-action:none` ni el
+   `#dig-canvas-host`/`.dig-canvas-layer` — el fix de la píldora es puramente CSS de
+   posicionamiento sobre un elemento que ya tenía `pointer-events` normales (no interactivo), no
+   hay riesgo de interferencia con el arrastre. Confirmado corriendo la suite completa de
+   escarbado (`ronda4/5/7/9/dig-regression`) sin tocar ninguno de esos specs.
+
+### e2e — qué toqué y por qué
+
+- `ronda19-quickwins.spec.js` test 2: cambié `#settings-btn` → `#stats-btn` (Estadísticas se
+  movió). Es el único cambio; el resto del spec sigue intacto.
+- `ronda20-dig.spec.js`: borré el test 1 completo (espiar). El test 2 (herramientas) ya no
+  navega a Ajustes para comprar/equipar — las herramientas están en Escarbar, donde el test ya
+  estaba parado tras abandonar el escarbado anterior, así que solo saqué el
+  `page.locator('#settings-btn').click()` y el comentario que lo explicaba.
+- `ronda21-limpieza.spec.js` (nuevo, 5 tests): prompt en inglés tras cambiar idioma sin recargar;
+  racha visible + sin solapar el título durante un escarbado activo; herramientas operables desde
+  Escarbar (compra + equipa Pala Ancha); Estadísticas desde el header con valores del seed;
+  Ajustes sin ninguno de los dos bloques (con el locator SCOPEADO a `#tab-content` — ojo, sin el
+  scope el test daba falso negativo porque `.settings-tools` vive en el DOM todo el tiempo dentro
+  de `#dig-area`, oculto por CSS vía `data-active-tab`, no por JS).
+
+### Grep de cierre (packages/, apps/game/src, apps/game/e2e)
+
+`energy|energia|espiar|spy` (case-insensitive) da 5 archivos, TODOS esperados:
+`ronda20-dig-profundo.test.js`/`ronda21-migracion-v10.test.js` (asertan AUSENCIA de los campos),
+`save.js`/`state.js` (comentarios de historial de migración — no se borran, documentan v9),
+`economy.js` (quedó UN comentario con "espiar" que reescribí a la frase nueva del robot). Cero
+restos en `apps/game/src` ni `apps/game/e2e` (verificado aparte, 0 archivos).
+
+### Riesgos que NO se materializaron (documentado igual, por si sirve)
+
+- R21.1 (migración que borra campos): cubierta con 8 tests dedicados, incluida la importación de
+  un "save v9 real" armado a mano con los 3 campos puestos explícitamente (no solo `freshState()`
+  con `saveVersion:9`, que ya no tiene los campos porque `freshState()` es SIEMPRE la versión
+  actual — el test arma el v9 a mano para simular el archivo real que dejó la ronda 20 en disco).
+- R21.2 (mover Tools/Stats rompe e2e de rondas 19/20): sí rompió — 2 tests (ver arriba), ambos
+  arreglados en la misma ronda, ninguno desactivado ni salteado.
+- R21.3 (fix de racha no debe interferir el gesto): no tocó el canvas ni sus listeners, solo CSS
+  de posición sobre un elemento no interactivo.
+
+### DoD
+
+```
+[x] npm test → 365/365 verde (31 archivos)
+[x] npm run test:e2e → 65/65 verde (61 previos intactos salvo los 2 rotos por el propio scope de
+    esta ronda, que se arreglaron acá + 5 nuevos)
+[x] Manual 375px + 1440px con Playwright real: prompt en inglés, racha visible sin tapar el
+    título durante un escarbado activo, herramientas en Escarbar, estadísticas desde el header,
+    Ajustes limpio de ambos bloques — capturas temporales, no comiteadas (solo verificación)
+[x] Grep de cierre sin restos de energía/espionaje fuera de comentarios de historial/tests
+[x] Cero console.log / TODO en los archivos tocados
+[x] git commit (100a746) — "feat: ronda 21 — remoción de energía/espionaje y fixes de UI (save v10)"
+[x] HANDOFF (este bloque)
+[ ] Push de la rama + link de PR — pendiente, lo hago a continuación (soy el único/último agente)
+```
+
+### Qué necesita saber la ronda 22 (colección: sets, legendarios, vitrina)
+
+- Baselines: 365 unit / 65 e2e / `SAVE_VERSION = 10`. Recontar igual al ejecutar (regla §0).
+- El engine quedó sin ningún rastro de Energía/espionaje: `data.energy` ya no existe en el
+  paquete de datos que arma `main.js`, así que cualquier código futuro que asuma su presencia
+  (no debería haber ninguno) fallaría rápido y explícito, no en silencio.
+- `state.gravesHit`/`state.toolsOwned`/`state.equippedTool` siguen disponibles tal cual los dejó
+  la ronda 20 — no los tocó nadie más que la migración v10 (que los deja pasar intactos).
+- `achievements.json` termina en `a41` (con el hueco permanente `a39`) — la ronda 22 arranca sus
+  logros nuevos en `a42` (recontar el último real al ejecutar, no asumir — regla §3.4).
+- El patrón de "migración que borra campos" (destructuring-omit + comentario largo en
+  `migrate()`, save.js líneas ~326-343) queda documentado ahí mismo para que la ronda 27 lo
+  reuse sin reinventarlo al borrar `autoTargetContainerId`.
+- Los dos módulos nuevos de UI (`ToolsSection.js`, `StatsView.js`) siguen el mismo contrato
+  `render(container, state, store)` que el resto de las vistas — si la ronda 22 necesita agregar
+  algo a Escarbar (ej. la sección "SET COMPLETO" de un contenedor), el patrón de montar un nodo
+  fijo en `index.html` + renderizarlo en cada `UIManager.render()` (como `#dig-tools-section`) es
+  el precedente a seguir si no encaja en `#tab-content`.
