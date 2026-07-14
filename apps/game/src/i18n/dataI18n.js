@@ -20,6 +20,7 @@ import dataEn from './data-en.js';
  * @property {Array<{id: string, name: string, desc: string}>} automations
  * @property {Array<{id: string, name: string, desc: string}>} prestigeTree
  * @property {Array<{id: string, name: string}>} achievements
+ * @property {{ legendaryChance: number, items: Array<{id: string, name: string}> }} legendaries
  */
 
 /** Baseline español capturado en init: mapas `id → string` por colección. */
@@ -45,6 +46,8 @@ export function initDataLocalization(loaded) {
     automations: Object.fromEntries(loaded.automations.map((a) => [a.id, { name: a.name, desc: a.desc }])),
     prestigeTree: Object.fromEntries(loaded.prestigeTree.map((n) => [n.id, { name: n.name, desc: n.desc }])),
     upgrades: Object.fromEntries(loaded.upgrades.map((u) => [u.id, u.label])),
+    // Ronda 22: legendarios de la Vitrina (data/legendaries.json), mismo criterio que items.
+    legendaries: Object.fromEntries(loaded.legendaries.items.map((l) => [l.id, l.name])),
   };
 }
 
@@ -91,4 +94,5 @@ export function applyDataLanguage(loaded, lang) {
     n.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
   }
   for (const u of loaded.upgrades) u.label = pick(dataEn.upgrades, baseline.upgrades, u.id);
+  for (const l of loaded.legendaries.items) l.name = pick(dataEn.legendaries, baseline.legendaries, l.id);
 }

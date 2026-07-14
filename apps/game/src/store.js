@@ -69,6 +69,14 @@ export function createStore(ctx) {
   // manipulados, antes de que lleguen a automationTick.
   const containerIds = new Set(allContainers.map((c) => c.id));
 
+  // Ronda 22 (PLAN.md §4.26): ids de legendarios que existen en la data actual — un save.js
+  // manipulado (o de una data renombrada) puede traer ids que ya no existen en legendaries.json;
+  // se filtran acá al cargar (patrón sanitizeContainerRefs), nunca dentro del engine.
+  const legendaryIds = new Set((data.legendaries?.items || []).map((l) => l.id));
+  function sanitizeLegendariesFound() {
+    state.legendariesFound = state.legendariesFound.filter((id) => legendaryIds.has(id));
+  }
+
   // Ronda 16: mapa `containerId -> { nombreEspañol -> id }` construido desde la data TODAVÍA en
   // español (antes de cualquier applyDataLanguage) — lo usa la migración v6->v7 de itemsFoundByItem
   // para remapear claves de saves viejos sin perder la colección.
@@ -78,6 +86,7 @@ export function createStore(ctx) {
   }
 
   let state = loadState();
+  sanitizeLegendariesFound();
   let pendingDig = null;
   let offlineSummary = null;
   let newAchievements = [];
@@ -129,6 +138,7 @@ export function createStore(ctx) {
       allContainers,
       allAutomations: data.automations,
       allTools: data.tools || [],
+      itemsData,
     });
     if (unlockedIds.length) {
       newAchievements.push(...unlockedIds.map((id) => achievementsData.find((a) => a.id === id)));
@@ -322,6 +332,7 @@ export function createStore(ctx) {
       const result = engineImportSave(text, containerIds, itemNameToId);
       if (result.ok) {
         state = result.state;
+        sanitizeLegendariesFound();
         pendingDig = null;
         runAchievements();
         persist();

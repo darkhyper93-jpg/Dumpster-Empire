@@ -228,6 +228,8 @@ describe('migración de save v8 -> v10 (encadena v9 y la remoción de energía d
 
   it('un save fresco (freshState) es válido tal cual', () => {
     expect(validateSave(freshState()).valid).toBe(true);
-    expect(SAVE_VERSION).toBe(10);
+    // AJUSTE (ronda 22): ya no se fija en 10 — SAVE_VERSION sigue subiendo con rondas futuras;
+    // lo que importa acá es que la migración v9->v10 de esta ronda 21 sigue intacta.
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(10);
   });
 });

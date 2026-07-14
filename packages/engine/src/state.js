@@ -28,7 +28,9 @@
 // vez de agregarlos (ver el patrón documentado en save.js, migración v9->v10). gravesHit y
 // equippedTool/toolsOwned NO se tocan: son de las trampas graves y de las herramientas de
 // escarbado, sistemas independientes que la ronda 21 conserva.
-export const SAVE_VERSION = 10;
+// AJUSTE (ronda 22): v11 agrega legendariesFound (PLAN.md §4.26) — ids de legendarios ya
+// encontrados, FUERA de itemsFoundByItem (la vitrina es su casa, no el INDEX de contenedores).
+export const SAVE_VERSION = 11;
 
 // AJUSTE (auditoría post-ronda 14): rango de diseño de `digSensitivity`, exportado como única
 // fuente de verdad. Antes el 0.5–1.5 estaba repetido como número mágico en save.js (validación),
@@ -87,6 +89,8 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  *   siempre una clave presente en `toolsOwned`.
  * @property {Object<string, boolean>} toolsOwned - herramientas de escarbado ya compradas.
  * @property {number} gravesHit - cantidad de trampas de grado grave sufridas (logro oculto ronda 20).
+ * @property {string[]} legendariesFound - ids de legendarios ya encontrados (PLAN.md §4.26,
+ *   ronda 22); FUERA de itemsFoundByItem — la vitrina es su única persistencia.
  */
 
 /**
@@ -131,5 +135,6 @@ export function freshState() {
     equippedTool: 'manos',
     toolsOwned: { manos: true },
     gravesHit: 0,
+    legendariesFound: [],
   };
 }

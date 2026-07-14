@@ -23,6 +23,8 @@ const DATA_FILES = {
   streak: './data/streak.json',
   traps: './data/traps.json',
   tools: './data/tools.json',
+  collectionSets: './data/collectionSets.json',
+  legendaries: './data/legendaries.json',
 };
 
 async function loadData() {
@@ -82,6 +84,8 @@ async function boot() {
     streak: loaded.streak,
     traps: loaded.traps,
     tools: loaded.tools,
+    collectionSets: loaded.collectionSets,
+    legendaries: loaded.legendaries,
   };
   const itemsData = loaded.items;
   const allContainers = loaded.containers;

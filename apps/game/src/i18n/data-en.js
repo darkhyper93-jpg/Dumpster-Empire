@@ -242,6 +242,10 @@ export default {
     a38: 'Legendary Streak',
     a40: 'Nine Lives',
     a41: 'Full Arsenal',
+    a42: 'First Legendary',
+    a43: 'Four Legends',
+    a44: 'Full Showcase',
+    a45: 'Complete Set',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },
@@ -292,5 +296,16 @@ export default {
     digPower: 'Dig Power',
     area: 'Search Area',
     capacity: 'Capacity',
+  },
+  // Ronda 22: legendarios de la Vitrina (data/legendaries.json).
+  legendaries: {
+    'legendary-first-can': 'The First Can',
+    'legendary-ghost-bike': 'The Ghost Bicycle',
+    'legendary-lit-core': 'The Lit Core',
+    'legendary-ageless-watch': 'The Ageless Watch',
+    'legendary-flood-anchor': 'The Flood Anchor',
+    'legendary-crystal-muse': 'The Crystal Muse',
+    'legendary-mother-relic': 'The Mother Relic',
+    'legendary-void-seed': 'The Void Seed',
   },
 };

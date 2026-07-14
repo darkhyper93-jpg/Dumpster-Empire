@@ -826,6 +826,72 @@ textarea {
   filter: grayscale(1);
 }
 
+/* Ronda 22 (PLAN.md §4.25): badge "SET COMPLETO" en la tarjeta de contenedor. */
+.index-set-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--bg-0);
+  background: var(--amber);
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-2);
+  align-self: center;
+}
+
+/* Ronda 22 (PLAN.md §4.26): Vitrina de Legendarios, al final del INDEX. */
+.showcase-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--bg-2);
+}
+
+.showcase-title {
+  font-family: var(--font-display);
+  color: var(--amber);
+  margin: 0 0 var(--space-1);
+}
+
+.showcase-count {
+  font-family: var(--font-mono);
+  color: var(--fg-1);
+  margin: 0 0 var(--space-2);
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.showcase-card {
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: center;
+  align-items: center;
+  box-shadow: var(--shadow-tactile);
+}
+
+.showcase-card--hidden {
+  opacity: 0.5;
+}
+
+.showcase-card--hidden .showcase-card-icon {
+  color: var(--fg-1);
+  filter: grayscale(1);
+}
+
+/* Bloom de rareza alta (PLAN.md §5.2): glow de color detrás del ícono, reusado por la Vitrina
+   y por la celebración de legendario — mismo criterio visual que triggerRarityGlow (fx/particles.js). */
+.showcase-card-icon,
+.celebration-icon--legendary {
+  color: var(--amber);
+  filter: drop-shadow(0 0 6px var(--amber)) drop-shadow(0 0 14px var(--amber));
+}
+
 /* --- Modales no bloqueantes (offline + celebraciones) --- */
 
 .modal-overlay {

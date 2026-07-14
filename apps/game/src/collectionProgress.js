@@ -4,8 +4,9 @@
  * persistido, para no poder desincronizarse del estado real (regla del engine, aplicada acá
  * porque es derivado de UI, no una fórmula de economía — ver ROADMAPv4.md §19.3).
  *
- * R19.3: los legendarios (ronda 21) todavía no existen; cuando lleguen, quedan FUERA de este
- * cálculo (tienen su propio contador "Vitrina X/8", contrato §3.5.3/21.3).
+ * R19.3: los legendarios (ronda 22, PLAN.md §4.26) quedan FUERA de este cálculo — nunca entran
+ * a `itemsFoundByItem` (contrato §3.5.3); tienen su propio contador "Vitrina X/8" en la Vitrina
+ * de CollectionView.js, derivado de `state.legendariesFound`.
  */
 
 /**
