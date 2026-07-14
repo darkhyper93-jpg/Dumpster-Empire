@@ -22,7 +22,6 @@ const DATA_FILES = {
   achievements: './data/achievements.json',
   streak: './data/streak.json',
   traps: './data/traps.json',
-  energy: './data/energy.json',
   tools: './data/tools.json',
 };
 
@@ -82,7 +81,6 @@ async function boot() {
     prestigeTree: loaded.prestigeTree,
     streak: loaded.streak,
     traps: loaded.traps,
-    energy: loaded.energy,
     tools: loaded.tools,
   };
   const itemsData = loaded.items;

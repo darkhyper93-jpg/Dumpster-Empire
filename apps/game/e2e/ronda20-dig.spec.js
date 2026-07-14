@@ -1,7 +1,8 @@
 /**
- * e2e (Playwright/Chromium) de la Ronda 20.C: espionaje de slots (Energía), herramientas de
- * escarbado (radio del pincel) y los dos contenedores con mecánica propia (Bóveda a Contrarreloj
- * / Sótano Sin Luz). Corre con el resto: `npm run test:e2e`.
+ * e2e (Playwright/Chromium) de la Ronda 20.C: herramientas de escarbado (radio del pincel) y los
+ * dos contenedores con mecánica propia (Bóveda a Contrarreloj / Sótano Sin Luz). El espionaje de
+ * slots (Energía) de esta ronda se removió en la ronda 21 — ver ronda21-limpieza.spec.js.
+ * Corre con el resto: `npm run test:e2e`.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -32,26 +33,7 @@ async function tocarPunto(page, box, pos) {
   await page.mouse.up();
 }
 
-test.describe('Dumpster Empire — ronda 20 (grados de trampa, energía/espionaje, herramientas, contenedores con mecánica)', () => {
-  test('1: espiar un slot descuenta Energía y revela su categoría (o TRAMPA)', async ({ page }) => {
-    const seeded = baseState();
-    await seed(page, serializeState(seeded));
-    await entrarAlJuego(page);
-
-    await expect(page.locator('#dig-energy-pill')).toHaveText('Energía: 3/3');
-
-    await iniciarEscarbado(page, 'tachoVereda');
-    const spyBtn = page.locator('[data-action="spy-slot"][data-index="0"]');
-    await expect(spyBtn).toBeEnabled();
-    await spyBtn.click();
-
-    // Descontó 1 punto de Energía (costoEspiar de data/energy.json).
-    await expect(page.locator('#dig-energy-pill')).toHaveText('Energía: 2/3');
-    // Reveló algo (categoría real o "¡Trampa!"), y el botón espiado ya no es un botón.
-    await expect(page.locator('[data-action="spy-slot"][data-index="0"]')).toHaveCount(0);
-    await expect(page.locator('.dig-spy-result').first()).toBeVisible();
-  });
-
+test.describe('Dumpster Empire — ronda 20 (grados de trampa, herramientas, contenedores con mecánica)', () => {
   test('2: la herramienta equipada cambia el radio real del pincel (mismo gesto, resultado distinto)', async ({
     page,
   }) => {
@@ -74,8 +56,8 @@ test.describe('Dumpster Empire — ronda 20 (grados de trampa, energía/espionaj
     await expect(page.locator('#dig-empty')).toBeVisible();
 
     // Equipar el Guante Hidráulico (radioMult 1.3 × ritmoMult 1.3, la combinación con mayor
-    // radio neto de pincel entre las 4 herramientas) desde Ajustes.
-    await page.locator('#settings-btn').click();
+    // radio neto de pincel entre las 4 herramientas). Ronda 21: la sección de herramientas se
+    // mudó de Ajustes a la vista Escarbar (donde ya estamos tras abandonar arriba).
     await cerrarCelebraciones(page);
     await page.locator('[data-action="buy-tool"][data-id="guanteHidraulico"]').click();
     await page.locator('[data-action="equip-tool"][data-id="guanteHidraulico"]').click();

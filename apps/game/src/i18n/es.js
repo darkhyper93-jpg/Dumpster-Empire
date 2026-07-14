@@ -7,6 +7,7 @@
 export default {
   // Topbar.js
   'topbar.settings': 'Ajustes',
+  'topbar.stats': 'Estadísticas',
 
   // tabs (index.html / UIManager.injectTabIcons — data-tab)
   'tabs.escarbar': 'Escarbar',
@@ -42,12 +43,6 @@ export default {
   // Ronda 19 (PLAN.md §4.20): racha de escarbado manual sin trampa, visible desde racha >= 2.
   'dig.streak': 'Racha: {count}',
 
-  // Ronda 20 (PLAN.md §4.22): píldora de Energía + espionaje de slots.
-  'dig.energyLabel': 'Energía: {current}/{max}',
-  'dig.spyButton': 'Espiar (−{cost} Energía)',
-  'dig.spyDisabledNoEnergy': 'Te falta Energía para espiar',
-  'dig.spyResultTrap': '¡Trampa!',
-  'dig.spyResultCategory': 'Es: {categoria}',
   // Ronda 20 (PLAN.md §4.24): Bóveda a Contrarreloj (timer duro) y Sótano Sin Luz (máscara).
   'dig.timedRemaining': 'Tiempo restante: {seconds}s',
   'dig.timedExpired': 'Se acabó el tiempo: perdiste "{name}" sin castigo de dinero.',

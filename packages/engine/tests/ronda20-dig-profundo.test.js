@@ -1,14 +1,14 @@
 /**
- * Ronda 20, Agente A (engine) — PLAN.md §4.21 (grados de trampa), §4.22 (energía/espionaje),
- * §4.23 (herramientas) y migración de save v8 -> v9.
+ * Ronda 20, Agente A (engine) — PLAN.md §4.21 (grados de trampa), §4.23 (herramientas).
+ * §4.22 (energía/espionaje) se removió en la ronda 21 (ver ronda21-migracion-v10.test.js) —
+ * la migración v8->v9->v10 abajo refleja que esos campos ya no sobreviven al load.
  */
 import { describe, it, expect } from 'vitest';
 import { freshState, SAVE_VERSION } from '../src/state.js';
 import { validateSave } from '../src/save.js';
 import { clampedElapsedMs, localDayStamp } from '../src/time.js';
 import { rollTrapGrade } from '../src/rng.js';
-import { rollContainerResult, applyContainerResult, spySlot } from '../src/systems/containers.js';
-import { regenEnergy, spendEnergyToSpy } from '../src/economy.js';
+import { rollContainerResult, applyContainerResult } from '../src/systems/containers.js';
 import { buyTool, equipTool } from '../src/systems/tools.js';
 import { getToolRadiusMult, getToolRhythmMult, getLuck, itemSaleValue, getAreaMult, getDigRate } from '../src/economy.js';
 import upgrades from '../../../apps/game/src/data/upgrades.json';
@@ -17,7 +17,6 @@ import automations from '../../../apps/game/src/data/automations.json';
 import prestigeTree from '../../../apps/game/src/data/prestigeTree.json';
 import itemsData from '../../../apps/game/src/data/items.json';
 import traps from '../../../apps/game/src/data/traps.json';
-import energyData from '../../../apps/game/src/data/energy.json';
 import tools from '../../../apps/game/src/data/tools.json';
 
 const barrio = containers.find((c) => c.id === 'contenedorBarrio');
@@ -141,73 +140,6 @@ describe('§4.21 grados de trampa', () => {
   });
 });
 
-describe('§4.22 energía y espionaje', () => {
-  it('regenEnergy suma floor(elapsed/msPorPunto), topeada en energiaMax', () => {
-    const state = freshState();
-    state.energy = 0;
-    state.energyAt = 0;
-    regenEnergy(state, energyData, energyData.msPorPunto * 2 + 100);
-    expect(state.energy).toBe(2);
-  });
-
-  it('regenEnergy no supera energiaMax aunque pase mucho tiempo', () => {
-    const state = freshState();
-    state.energy = 0;
-    state.energyAt = 0;
-    regenEnergy(state, energyData, energyData.msPorPunto * 50);
-    expect(state.energy).toBe(energyData.energiaMax);
-  });
-
-  it('regenEnergy NUNCA regenera si el reloj retrocede (now < energyAt)', () => {
-    const state = freshState();
-    state.energy = 0;
-    state.energyAt = 1_000_000;
-    regenEnergy(state, energyData, 500_000);
-    expect(state.energy).toBe(0);
-    expect(state.energyAt).toBe(1_000_000);
-  });
-
-  it('regenEnergy conserva el remanente fraccional (no pierde progreso entre ticks)', () => {
-    const state = freshState();
-    state.energy = 0;
-    state.energyAt = 0;
-    regenEnergy(state, energyData, energyData.msPorPunto - 1); // todavía no completa un punto
-    expect(state.energy).toBe(0);
-    expect(state.energyAt).toBe(0);
-    regenEnergy(state, energyData, energyData.msPorPunto); // ahora sí completa el primer punto
-    expect(state.energy).toBe(1);
-  });
-
-  it('spendEnergyToSpy descuenta costoEspiar y suma spiesUsed', () => {
-    const state = freshState();
-    state.energy = 3;
-    const result = spendEnergyToSpy(state, energyData);
-    expect(result.ok).toBe(true);
-    expect(state.energy).toBe(3 - energyData.costoEspiar);
-    expect(state.spiesUsed).toBe(1);
-  });
-
-  it('spendEnergyToSpy falla sin Energía suficiente y no muta el estado', () => {
-    const state = freshState();
-    state.energy = 0;
-    const result = spendEnergyToSpy(state, energyData);
-    expect(result.ok).toBe(false);
-    expect(state.energy).toBe(0);
-    expect(state.spiesUsed).toBe(0);
-  });
-
-  it('spySlot revela la categoría de un slot no-trampa ya rolleado, sin RNG adicional', () => {
-    const digResult = { isTrap: false, items: [{ id: 'x', categoria: 'rare' }, { id: 'y', categoria: 'common' }], moneyDelta: 0 };
-    expect(spySlot(digResult, 0)).toEqual({ isTrap: false, categoria: 'rare' });
-    expect(spySlot(digResult, 1)).toEqual({ isTrap: false, categoria: 'common' });
-  });
-
-  it('spySlot revela "TRAMPA" si el roll del contenedor ya salió trampa', () => {
-    const digResult = { isTrap: true, trapGrade: 'normal', items: [], moneyDelta: 0 };
-    expect(spySlot(digResult, 0)).toEqual({ isTrap: true });
-  });
-});
-
 describe('§4.23 herramientas de escarbado', () => {
   it('buyTool descuenta dinero y marca toolsOwned; falla sin dinero o si ya se posee', () => {
     const state = freshState();
@@ -265,30 +197,24 @@ describe('§4.23 herramientas de escarbado', () => {
   });
 });
 
-describe('migración de save v8 -> v9', () => {
-  it('un save v8 sin campos nuevos migra con defaults', () => {
+describe('migración de save v8 -> v10 (encadena v9 y la remoción de energía de la ronda 21)', () => {
+  it('un save v8 sin campos nuevos migra con defaults y sin energía/espionaje', () => {
     const v8 = { ...freshState(), saveVersion: 8 };
-    delete v8.energy;
-    delete v8.energyAt;
     delete v8.equippedTool;
     delete v8.toolsOwned;
-    delete v8.spiesUsed;
     delete v8.gravesHit;
     const result = validateSave(v8);
     expect(result.valid).toBe(true);
-    expect(result.data.energy).toBe(3);
-    expect(result.data.energyAt).toBe(0);
     expect(result.data.equippedTool).toBe('manos');
     expect(result.data.toolsOwned).toEqual({ manos: true });
-    expect(result.data.spiesUsed).toBe(0);
     expect(result.data.gravesHit).toBe(0);
     expect(result.data.saveVersion).toBe(SAVE_VERSION);
+    expect('energy' in result.data).toBe(false);
+    expect('energyAt' in result.data).toBe(false);
+    expect('spiesUsed' in result.data).toBe(false);
   });
 
-  it('rechaza energy negativo o fraccionario, y spiesUsed/gravesHit inválidos', () => {
-    expect(validateSave({ ...freshState(), energy: -1 }).valid).toBe(false);
-    expect(validateSave({ ...freshState(), energy: 1.5 }).valid).toBe(false);
-    expect(validateSave({ ...freshState(), spiesUsed: -1 }).valid).toBe(false);
+  it('rechaza gravesHit inválido', () => {
     expect(validateSave({ ...freshState(), gravesHit: Number.POSITIVE_INFINITY }).valid).toBe(false);
   });
 
@@ -302,6 +228,6 @@ describe('migración de save v8 -> v9', () => {
 
   it('un save fresco (freshState) es válido tal cual', () => {
     expect(validateSave(freshState()).valid).toBe(true);
-    expect(SAVE_VERSION).toBe(9);
+    expect(SAVE_VERSION).toBe(10);
   });
 });

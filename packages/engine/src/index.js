@@ -42,8 +42,6 @@ export {
   getRecommendedLuck,
   getRecommendedDigPower,
   getRecommendedArea,
-  regenEnergy,
-  spendEnergyToSpy,
   getToolRadiusMult,
   getToolRhythmMult,
   registerContainerDig,
@@ -75,7 +73,6 @@ export {
   buyContainer,
   rollContainerResult,
   applyContainerResult,
-  spySlot,
 } from './systems/containers.js';
 
 export { nextUpgradeCost, buyUpgrade } from './systems/upgrades.js';

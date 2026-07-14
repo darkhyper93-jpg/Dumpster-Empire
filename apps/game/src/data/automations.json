@@ -45,7 +45,7 @@
     "name": "Robot Clasificador Básico",
     "icon": "robot-sorter",
     "cost": 2000,
-    "desc": "Escarba contenedores solo, sin poder espiar antes (más riesgo de trampa).",
+    "desc": "Escarba contenedores solo, a ciegas y sin criterio (más riesgo de trampa).",
     "effects": [
       {
         "type": "enablesAutoDig"

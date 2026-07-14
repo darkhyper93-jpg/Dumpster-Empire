@@ -234,7 +234,6 @@ const ICON_MAP = {
   'quantum-chip': 'quantumChip',
   'neural-implant': 'implant',
   'drone-rescued': 'drone',
-  'energy-crystal': 'crystal',
   'stellar-fragment': 'shard',
 
   // Contenedores
@@ -298,6 +297,9 @@ const ICON_MAP = {
 
   // UI genérica (no viene de la data, se usa directo en las vistas)
   settings: 'settings',
+  // Ronda 21: botón de Estadísticas del header — reusa la forma de 'chart-up' (mismo ícono
+  // que ya usan los logros de racha), sin inventar una silueta nueva para un simple gráfico.
+  stats: 'chart',
   money: 'cashStack',
   keys: 'key',
   'touch-app': 'touchApp',

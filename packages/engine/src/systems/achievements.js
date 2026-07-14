@@ -18,8 +18,7 @@ const CONDITION_EVALUATORS = {
   // Ronda 19 (PLAN.md §4.20): evalúa la racha MÁXIMA histórica, no la actual — así el logro
   // queda ganado para siempre aunque la racha se corte después con una trampa.
   digStreakAtLeast: (state, cond) => state.bestDigStreak >= cond.value,
-  // Ronda 20 (PLAN.md §4.21-4.23): espionaje, trampas graves sobrevividas y las 4 herramientas.
-  spiesUsedAtLeast: (state, cond) => state.spiesUsed >= cond.value,
+  // Ronda 20 (PLAN.md §4.21, §4.23): trampas graves sobrevividas y las 4 herramientas.
   gravesHitAtLeast: (state, cond) => state.gravesHit >= cond.value,
   // ctx.allTools ausente (llamador previo a la ronda 20) nunca desbloquea este logro — un
   // `.every()` sobre array vacío daría "true" (falso positivo instantáneo), no un no-op.

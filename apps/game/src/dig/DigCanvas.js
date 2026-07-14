@@ -141,6 +141,16 @@ export class DigCanvas {
   }
 
   /**
+   * Re-traduce el prompt idle (ronda 21): el constructor lo setea UNA sola vez con `t()` y
+   * nunca lo volvía a tocar, así que un cambio de idioma dejaba el prompt en el idioma de boot
+   * hasta recargar. Llamado desde UIManager.refreshStaticTexts() (mismo patrón que los tabs).
+   */
+  refreshTexts() {
+    const p = this.idlePrompt.querySelector('p');
+    if (p) p.textContent = t('dig.idlePrompt');
+  }
+
+  /**
    * Sensibilidad del pincel de escarbado (ronda 14, settings persistidos). Clamp defensivo
    * propio: el store ya clampa al mismo rango antes de persistir, pero un save corrupto/antiguo
    * no debería poder hacer crecer el pincel más allá del rango de diseño (el rango vive en el

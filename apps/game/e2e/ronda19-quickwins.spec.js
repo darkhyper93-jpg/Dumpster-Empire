@@ -48,7 +48,7 @@ test.describe('Dumpster Empire — ronda 19 (racha, estadísticas, logros oculto
     await expect(streakPill).toHaveText('Racha: 2');
   });
 
-  test('2: la vista de Estadísticas (Ajustes) muestra los valores del seed', async ({ page }) => {
+  test('2: la vista de Estadísticas (header, desde ronda 21) muestra los valores del seed', async ({ page }) => {
     const seeded = baseState();
     seeded.itemsFoundCount = 321;
     seeded.trapsHit = 12;
@@ -58,7 +58,7 @@ test.describe('Dumpster Empire — ronda 19 (racha, estadísticas, logros oculto
     await seed(page, serializeState(seeded));
     await entrarAlJuego(page);
 
-    await page.locator('#settings-btn').click();
+    await page.locator('#stats-btn').click();
     await cerrarCelebraciones(page);
 
     const stats = page.locator('.settings-stats');

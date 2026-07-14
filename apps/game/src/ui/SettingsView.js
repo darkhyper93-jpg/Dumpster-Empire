@@ -10,22 +10,8 @@
  * la UI) y se sumó el slider de sensibilidad de escarbado, calcado del de volumen.
  */
 
-import { DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, formatMoney, formatNumber, getContainerLevel, CONTAINER_LEVEL_MAX } from '@dumpster/engine';
+import { DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX } from '@dumpster/engine';
 import { t } from '../i18n/i18n.js';
-import { getCollectionCompletion } from '../collectionProgress.js';
-import { iconMarkup } from '../icons/icons.js';
-
-/**
- * Nombre traducido de una herramienta (PLAN.md §4.23, ronda 20): `tools.json` no pasa por el
- * overlay de dataI18n.js (no lo escanea el test de paridad de la ronda 16 — ver HANDOFF del
- * Agente A), así que su nombre de pantalla sale de una clave `tools.<id>` en es.js/en.js en vez
- * del campo `name` (que queda en español fijo, uso interno/economía).
- * @param {string} toolId
- * @returns {string}
- */
-function toolLabel(toolId) {
-  return t(`tools.${toolId}`);
-}
 
 const local = {
   resetArmed: false,
@@ -92,8 +78,6 @@ export const SettingsView = {
       `<section class="settings-block">` +
       `<button type="button" data-action="toggle-vibration">${t('settings.vibration', { state: state.vibrationOn ? t('settings.on') : t('settings.off') })}</button>` +
       `</section>` +
-      `${renderStatsSection(state, store)}` +
-      `${renderToolsSection(state, store)}` +
       `<section class="settings-block settings-volume">` +
       `<label class="settings-volume-label" for="volume-slider" data-volume-label>${t('settings.volume', { pct: volumePct })}</label>` +
       `<input class="settings-volume-slider" type="range" id="volume-slider" data-action="set-volume"` +
@@ -124,73 +108,6 @@ export const SettingsView = {
   },
 };
 
-/**
- * Sección de Estadísticas (PLAN.md §5.4, ronda 19): deriva TODO de `state`/data existentes —
- * no hay contador paralelo nuevo en el engine (ver ROADMAPv4.md §19.3).
- * @param {import('@dumpster/engine').GameState} state
- * @param {ReturnType<import('../store.js').createStore>} store
- * @returns {string}
- */
-function renderStatsSection(state, store) {
-  const { allContainers, itemsData } = store.ctx;
-  if (!allContainers.length) {
-    return `<section class="settings-block settings-stats"><p class="empty-state">${t('common.emptyContainers')}</p></section>`;
-  }
-  const { globalPct } = getCollectionCompletion(state, allContainers, itemsData);
-  const containersMaxed = allContainers.filter((c) => getContainerLevel(state, c.id) >= CONTAINER_LEVEL_MAX).length;
-  const rows = [
-    t('stats.itemsFound', { count: formatNumber(state.itemsFoundCount) }),
-    t('stats.trapsHit', { count: formatNumber(state.trapsHit) }),
-    t('stats.totalMoneyEarned', { amount: formatMoney(state.totalMoneyEarned) }),
-    t('stats.autoProcessed', { count: formatNumber(state.autoProcessedCount) }),
-    t('stats.bestStreak', { count: formatNumber(state.bestDigStreak) }),
-    t('stats.completion', { pct: Math.round(globalPct * 100) }),
-    t('stats.maxLevelContainers', { count: containersMaxed, total: allContainers.length }),
-  ];
-  return (
-    `<section class="settings-block settings-stats">` +
-    `<h3>${t('stats.title')}</h3>` +
-    rows.map((row) => `<p>${row}</p>`).join('') +
-    `</section>`
-  );
-}
-
-/**
- * Sección de herramientas de escarbado (PLAN.md §4.23, ronda 20): comprar/equipar. Solo modifica
- * el pincel del escarbado manual (radio/ritmo) — la sección NO calcula ni muestra economía más
- * allá del costo de compra (que sale directo de `tools.json`, ya inyectado en `data.tools`).
- * @param {import('@dumpster/engine').GameState} state
- * @param {ReturnType<import('../store.js').createStore>} store
- * @returns {string}
- */
-function renderToolsSection(state, store) {
-  const tools = store.ctx.data.tools;
-  if (!tools || !tools.length) return '';
-  const rows = tools.map((tool) => {
-    const owned = Boolean(state.toolsOwned[tool.id]);
-    const equipped = state.equippedTool === tool.id;
-    let actionHtml;
-    if (equipped) {
-      actionHtml = `<span class="badge">${t('tools.equipped')}</span>`;
-    } else if (owned) {
-      actionHtml = `<button type="button" data-action="equip-tool" data-id="${tool.id}">${t('tools.equip')}</button>`;
-    } else {
-      const canAfford = state.money >= tool.costo;
-      const reason = canAfford ? '' : t('common.missingMoney', { amount: formatMoney(tool.costo - state.money) });
-      actionHtml =
-        `<button type="button" data-action="buy-tool" data-id="${tool.id}" ${canAfford ? '' : 'disabled'} title="${reason}">` +
-        `${tool.costo > 0 ? t('tools.buyFor', { amount: formatMoney(tool.costo) }) : t('common.free')}</button>`;
-    }
-    return `<div class="tool-row">${iconMarkup(tool.icon, { size: 20 })}<span class="tool-row-name">${toolLabel(tool.id)}</span>${actionHtml}</div>`;
-  });
-  return (
-    `<section class="settings-block settings-tools">` +
-    `<h3>${t('tools.title')}</h3>` +
-    rows.join('') +
-    `</section>`
-  );
-}
-
 function onClick(evt, container, store) {
   if (evt.target.closest('[data-action="toggle-sound"]')) {
     store.actions.toggleSound();
@@ -198,16 +115,6 @@ function onClick(evt, container, store) {
   }
   if (evt.target.closest('[data-action="toggle-vibration"]')) {
     store.actions.toggleVibration();
-    return;
-  }
-  const buyToolBtn = evt.target.closest('[data-action="buy-tool"]');
-  if (buyToolBtn && !buyToolBtn.disabled) {
-    store.actions.buyTool(buyToolBtn.dataset.id);
-    return;
-  }
-  const equipToolBtn = evt.target.closest('[data-action="equip-tool"]');
-  if (equipToolBtn) {
-    store.actions.equipTool(equipToolBtn.dataset.id);
     return;
   }
   if (evt.target.closest('[data-action="reset-game"]')) {
