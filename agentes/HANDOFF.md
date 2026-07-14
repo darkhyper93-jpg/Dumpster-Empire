@@ -5044,3 +5044,180 @@ Manual 375px + desktop con Playwright real (screenshots temporales, no comiteada
 - El patrón "función de módulo aparte que no es parte del objeto `View`" (`renderShowcase` en
   `CollectionView.js`) es el precedente a seguir si el Agente C de la 23 necesita una subsección
   dentro de una vista existente sin ensuciar el objeto principal con estado propio.
+## Ronda 23 — Agente A: engine (inventario, captura, venta, pedidos, robot vendedor) (rama `feat/puesto-ronda23`, save v12)
+
+### Qué hice
+
+1. **PLAN.md primero**: agregué §2.9 (concepto del Puesto de Chatarra), §4.27 (precio de venta),
+   §4.28 (pedidos) y §4.29 (robot vendedor), consecutivas a §4.26 (la ronda 22 no dejó tombstone,
+   así que siguen el número real del archivo, regla §3.6).
+2. **`apps/game/src/data/stall.json`** (constantes de §4.27-§4.29: `stallCost`, `stallMultBase`,
+   `stallMultPorNivel`, `stallNivelMax`, `stallCapacityBase`, `stallCapacityPorNivel`,
+   `orderRotationMs`, `orderMult`, `vendedorIntervalo`). Lo creé yo (Agente A) aunque 23.B también
+   lo menciona, mismo precedente que la ronda 20 (Agente A creó `traps.json`/`tools.json` porque
+   el engine los necesita para compilar y testear) — **23.B puede EXTENDER este archivo** (por
+   ejemplo con textos/ids de NPC si hiciera falta) pero no debería reemplazar las claves numéricas
+   que ya uso, o rompe mis tests.
+3. **Captura** (`systems/containers.js`): `rollContainerResult` ahora expone `item.baseValue` en
+   cada ítem (mismo cálculo que `value` pero con `fluctuacionMercado: 1` — incluye
+   `getLevelValueMult`/`getMechanicValueMult`/`getSetBonus`, así que ronda 22 los sets también
+   valen más en el puesto). `applyContainerResult` gana la lógica de captura: con
+   `data.stall` presente, `stallLevel >= 1`, `keepThreshold > 0`, `item.value >= keepThreshold` y
+   `inventory.length < capacidad(state,data)`, el ítem va a `state.inventory` (`{itemId,
+   containerId, categoria, baseValue}`) en vez de sumarse a `money`. Los contadores de colección
+   (`itemsFoundCount`/`itemsFoundByCategory`/`itemsFoundByItem`/`categoryFragments`) suben SIEMPRE
+   (se capture o no: encontrar es encontrar). Los **legendarios NUNCA pasan por la captura**
+   (`continue` antes del chequeo, contrato §3.5.3) — venta instantánea siempre. R23.2 cubierto con
+   test explícito: con `stallLevel: 0` (default) o `keepThreshold: 0`, el camino es bit a bit
+   idéntico al pre-ronda-23.
+4. **`packages/engine/src/systems/stall.js` nuevo**: `buyStall`/`upgradeStall` (costo
+   `stallCost × 4^(nivel-1)`, mismo `getStallUpgradeCost` sirve para la compra inicial con
+   `targetLevel: 1` y para subir de nivel), `setKeepThreshold` (valida finito >= 0),
+   `sellInventoryItem` (refresca la fluctuación con `refreshMarketFluctuation` ANTES de calcular
+   el precio — toda venta la refresca, PLAN.md §4.27), `stallVendorTick` (reloj clampeado §3.3 con
+   `state.stallVendorAt`, prioriza ítems que satisfacen un pedido activo, después el de mayor
+   `baseValue`), `applyOfflineStallSales` (vende sobre el inventario YA persistido a fluctuación
+   FIJA 1, sin tocar `state.marketFluctuation`), `rotateStallOrders` (genera 2 pedidos sobre
+   `ownedCategories` si no hay ninguno o pasó `orderRotationMs`; si falta alguno por debajo de 2,
+   completa sin reiniciar el reloj de rotación completa — reloj clampeado: con el reloj atrás, NO
+   rota).
+5. **`economy.js`**: `getStallCapacity`, `getStallUpgradeCost`, `stallSalePrice` (fórmula pura
+   §4.27), `getStallSalePrice` (getter, fluctuación como parámetro explícito — la venta offline
+   pasa `1`, no `state.marketFluctuation`), `hasStallVendor` (vive acá, no en `automation.js`
+   junto a `hasAutoDig`, para que `stall.js` la consulte sin crear un ciclo de imports con
+   `automation.js`, que sí importa `stallVendorTick` de `stall.js`).
+6. **`automation.js`**: `automationTick` llama a `stallVendorTick` ANTES del `return` temprano de
+   `hasAutoDig` — el robot vendedor es independiente del robot de escarbado (un jugador puede
+   tener uno sin el otro). `data.stall` opcional gatea la llamada.
+7. **`offline.js`**: `applyOfflineProgress` llama `applyOfflineStallSales` (a fluctuación 1) ANTES
+   de sumar `result.ganancia` (R23.3: primero el vendedor offline sobre el inventario persistido,
+   después el loot instantáneo — que nunca pasa por el inventario). El return ahora incluye
+   `stallEarnings` (campo aditivo, no rompe a nadie que ya desestructure `{ganancia,
+   segundosEfectivos}`).
+8. **Save v12**: `freshState()` gana `inventory: []`, `stallLevel: 0`, `keepThreshold: 0`,
+   `stallOrders: []`, `ordersRotatedAt: 0`, `stallVendorAt: 0` (timer nuevo, DECISIÓN: no estaba
+   listado explícito en el roadmap pero es necesario para el reloj clampeado del robot vendedor —
+   mismo patrón que `marketFluctuationAt`/`ordersRotatedAt`), `stallSoldCount: 0`,
+   `ordersFulfilledCount: 0`, `storySeen: []`. Migración v11→v12 aditiva (backfill de esos 9
+   campos). `validateDeepContent` gana `isValidInventory` (forma exacta + `baseValue` finito > 0 +
+   `INVENTORY_MAX_SAFETY: 200`, cota de seguridad exportada de `state.js`, NO acoplada a
+   `stallCapacityBase`/`stallNivelMax` de `data/stall.json` — save.js sigue agnóstico de datos de
+   balance) e `isValidStallOrders` (forma exacta + `progress <= cantidad`). `stallLevel` entero
+   >= 0, `keepThreshold`/`stallSoldCount`/`ordersFulfilledCount` con su rango.
+9. **Barrel `index.js`**: reexporta todo lo nuevo de `economy.js` y `systems/stall.js`.
+10. **Tests**: `packages/engine/tests/ronda23-puesto.test.js` (41 casos, TDD real — confirmé RED
+    con el import roto antes de crear `stall.js`): compra/nivel/capacidad, captura con las 6
+    variantes de umbral/capacidad/legendario/contadores, precio con fluctuación refrescada,
+    pedidos (generación/rotación clampeada/cumplimiento/mult), robot vendedor (prioridad,
+    intervalo, independiente de `hasAutoDig`, offline a fluctuación 1), migración v12 completa +
+    6 rechazos de save manipulado.
+11. `packages/engine/tests/ronda22-coleccion.test.js`: 2 asserts `.toBe(11)` sobre
+    `SAVE_VERSION`/`saveVersion` pasaron a `SAVE_VERSION`/`toBeGreaterThanOrEqual(11)` — mismo
+    AJUSTE documentado por la propia ronda 22 sobre el literal de la ronda 21 (no testeaban nada
+    específico de la ronda 22, era el número de versión que cualquier ronda siguiente iba a pisar).
+
+### Decisiones no triviales
+
+- **`stallVendorAt` es un campo nuevo no listado explícitamente en el roadmap** (que solo lista
+  `ordersRotatedAt` entre los relojes). Sin él, "vende cada `vendedorIntervalo` segundos" solo se
+  podía implementar como probabilidad `dt/intervalo` (como los eventos de la ronda 24) — decidí un
+  reloj real (mismo patrón que `marketFluctuationAt`) porque el roadmap describe un intervalo
+  determinístico, no probabilístico, y porque ya existe el precedente de timers persistidos
+  (`marketFluctuationAt`, `ordersRotatedAt`) — documentado en save.js/state.js con AJUSTE.
+- **`rotateStallOrders` NO se llama automáticamente desde `sellInventoryItem`**: cumplir un pedido
+  lo retira de `stallOrders` pero NO genera el reemplazo ahí mismo (esa función no tiene
+  `ownedCategories` a mano, y no quise que la venta dependa de la lista de contenedores). Actualicé
+  PLAN.md §4.28 para reflejar esto: el store/UI (23.C) debe llamar `rotateStallOrders` tras cada
+  venta (además de periódicamente) para reponer a 2 pedidos activos.
+- **`baseValue` del ítem incluye `getSetBonus`/`getLevelValueMult`/`getMechanicValueMult`** (todo
+  menos la fluctuación) — es la decisión que la ronda 22 dejó pendiente en su HANDOFF ("a definir
+  en 23.A"). Elegí incluirlos porque son multiplicadores permanentes del ítem en sí, no del timing
+  de mercado.
+- **No toqué `data/automations.json`** (la máquina `robotVendedor` con el efecto
+  `enablesStallVendor` es tarea de 23.B): mis tests de robot vendedor usan un `automationsStub`
+  inline (mismo patrón que `ronda15-robot.test.js`), documentado en el encabezado del test file.
+- **No generé `npcs.json`/`story.json`/`portraits.js`** (23.B) ni toqué la UI/tabbar (23.C): mi
+  scope es 23.A completo, nada más.
+
+### Verificación manual (375px + desktop)
+
+Booteé el juego real (Playwright temporal, borrado tras verificar — no se commitea) con un save
+v11 real en `localStorage`: migra a v12 sin errores de consola, `#money` muestra el valor
+esperado, en mobile-375 y desktop-1440. Sin wiring de UI todavía, no hay nada visible del Puesto
+(esperado: "el puesto y todo sistema nuevo degrada limpio", §1.18).
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test       → 426/426 verde (385 previos de la ronda 22 + 41 nuevos de ronda23-puesto.test.js)
+npm run test:e2e → 69/69 verde, SIN tocar ningún spec existente (el store/UI no consume nada
+                    nuevo todavía — wiring es de 23.C)
+```
+
+### Estado del DoD (Agente A, ronda 23)
+
+```
+[x] PLAN.md §2.9/§4.27-§4.29 primero
+[x] Tests RED antes de implementar (ronda23-puesto.test.js, 41 casos)
+[x] npm test → 426/426 verde
+[x] npm run test:e2e → 69/69 verde, sin tocar specs existentes
+[x] Manual 375px + desktop: boot limpio con save v11→v12, cero errores de consola
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (quedan 23.B, 23.C, 23.D, 23.E) — no
+    corresponde todavía, regla de ramas del roadmap.
+```
+
+### Qué necesita saber la ronda 23.B (data: NPCs, retratos, historia, textos)
+
+- `data/stall.json` YA EXISTE con las 9 constantes de §4.27-§4.29 — extendé, no reemplaces, esas
+  claves si necesitás sumar algo (por ejemplo textos/ids que Rita/Salomón usan).
+- La máquina `robotVendedor` en `automations.json` necesita el efecto
+  `{ type: 'enablesStallVendor' }` (nombre exacto, ya está consumido por `hasStallVendor` en
+  `economy.js` y por mis tests con un stub) — costo sugerido por el roadmap: `2000000`.
+- 3 logros sugeridos por el roadmap (`primer ítem guardado`, `25 pedidos cumplidos` →
+  `ordersFulfilledAtLeast` contra `state.ordersFulfilledCount`, `puesto nivel máximo` →
+  `stallLevelAtLeast` contra `state.stallLevel`) — ninguno de los dos cond-evaluators existe
+  todavía en `CONDITION_EVALUATORS` (`systems/achievements.js`), hace falta agregarlos ahí.
+- `npcId: 'salomon'` ya está hardcodeado en `randomOrder` (`systems/stall.js`) — si `npcs.json`
+  define otro id para el Turco Salomón, avisame o ajustalo vos mismo (es un string literal, un
+  solo lugar).
+
+### Qué necesita saber la ronda 23.C (UI: pestaña Puesto)
+
+- Todo lo del engine está listo y exportado desde `@dumpster/engine`: `buyStall`, `upgradeStall`,
+  `setKeepThreshold`, `sellInventoryItem`, `stallVendorTick`, `applyOfflineStallSales`,
+  `rotateStallOrders`, y los getters `getStallCapacity`, `getStallUpgradeCost`,
+  `getStallSalePrice`, `hasStallVendor`. Ningún call site de `apps/game/src/store.js` los usa
+  todavía — ese wiring es tuyo.
+- Para pasar `data.stall` real, sumalo al objeto `data` que arma `store.js`/`main.js` (import de
+  `stall.json`), igual que ya se hizo con `traps.json`/`streak.json` en rondas previas — sin ese
+  wiring, el engine sigue degradando limpio (gate opcional).
+- **Los presets del umbral** que pide el roadmap ("percentiles del mejor contenedor... calculados
+  por el engine, jamás en la UI") NO los implementé — no estaban en el scope explícito de "Estado
+  y save"/"Tests RED" de 23.A, y el roadmap los menciona bajo 23.C. Si los necesitás, son un getter
+  nuevo en `economy.js` (avisame si preferís que los agregue yo primero).
+- `rotateStallOrders` necesita `ownedCategories` (categorías de los contenedores que el jugador
+  POSEE, no todas las que existen) — derivalas de `containers.json` filtrando por
+  `state.ownedContainers[id] >= 1` y aplanando `container.categorias`.
+- El loop de automatización (`loop.js`) llama a `automationTick` — el robot vendedor ya vende solo
+  desde ahí (no hace falta un call site nuevo), pero necesitás llamar `rotateStallOrders`
+  periódicamente (y tras cada venta) desde algún lado del store/loop.
+
+### Qué necesita saber la ronda 23.D (e2e)
+
+- `state.inventory`/`state.stallOrders`/`state.stallLevel`/`state.keepThreshold` ya están
+  validados en el save (v12) — podés sembrarlos directo con `addInitScript` +
+  `serializeState(freshState())` mutado, patrón §1.9.
+- El robot vendedor necesita la automatización `robotVendedor` (23.B) comprada Y `data.stall`
+  wireado (23.C) para vender algo — si 23.C no llegó a wirear `automationTick`/`loop.js` a tiempo,
+  documentá la decisión de smoke-test como hizo la 15.D con las trampas (roadmap 23.D punto 4 ya
+  lo prevé).
+
+### Qué necesita saber la ronda 23.E (auditoría)
+
+- Foco sugerido por el roadmap ya cubierto en el engine: `inventory`/`stallOrders` con formas
+  exactas + `INVENTORY_MAX_SAFETY`, relojes clampeados (`ordersRotatedAt`/`stallVendorAt`) que
+  nunca rotan/venden con el reloj atrás. Falta auditar la capa de UI/store que agreguen 23.B/23.C
+  (interpolación de diálogos de NPC, XSS) — no es mío.

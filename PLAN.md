@@ -187,6 +187,25 @@ Regla de balance: la automatización siempre debe ser **más lenta en ganancia p
 - Árbol de mejoras permanentes (13 nodos desde ronda 15): bonus inicial de dinero al empezar, Suerte base +X%, desbloqueo de Contenedor extradimensional, reducción de probabilidad de trampa global, multiplicador de progreso offline, slot extra de contenedor automático simultáneo, y (ronda 15) **Escáner de Trampas** — el robot descarta contenedores trampeados en vez de sufrir el castigo, con `min(1, nivel * 0.34)` de probabilidad (nivel máx. 3), colgando de Instinto de Carroñero. Costo alto a propósito (≈65 Llaves los 3 niveles, ver 4.7): es la mejora más cara del árbol después de completarlo entero.
 - Cada prestigio sucesivo debe sentirse notablemente más rápido que el anterior (es el "one more run" hook).
 
+### 2.9 El Puesto de Chatarra (ronda 23)
+
+Un puesto físico que el jugador compra en la Tienda: convierte la venta instantánea (la de
+siempre, y que sigue siendo el default) en un sistema de inventario con timing de mercado.
+
+- **Compra**: `stallCost` en la Tienda, entre los tiers 4-5 de contenedor (~30-60 min de juego).
+- **Captura**: con el puesto comprado y un umbral (`keepThreshold`) fijado por el jugador (> 0),
+  cada objeto encontrado que valga `keepThreshold` o más se guarda en el inventario del puesto en
+  vez de venderse al toque — siempre que haya lugar. `keepThreshold: 0` (default al comprar) deja
+  el puesto en pausa: todo sigue vendiéndose instantáneo como hoy. **El loot jamás se pierde**: sin
+  espacio o por debajo del umbral, cae a la venta instantánea de siempre.
+- **Precio de venta en el puesto**: sube con el nivel del puesto y depende de la cotización del día
+  (fluctuación de mercado, ver 4.4) — vender cuando la cotización está alta paga más (ver 4.27).
+- **Pedidos**: Doña Rita compra lo que sea; El Turco Salomón pide categorías específicas por
+  cantidad y paga de más por cumplir (ver 4.28).
+- **Robot vendedor**: automatización que vende del inventario solo, incluso con el juego cerrado
+  (ver 4.29). Los **legendarios NUNCA entran al inventario del puesto**: se venden siempre
+  instantáneo, contrato irrevocable (ver 4.26).
+
 ---
 
 ## 3. CONTRATO DE EXPERIENCIA — RITMO ESPERADO
@@ -407,6 +426,50 @@ contenedores).
 - **Contrato §3.5.3 (irrevocable)**: los legendarios se venden SIEMPRE de forma instantánea, nunca
   entran al inventario de un puesto de venta futuro ni los toca ninguna automatización de venta;
   su persistencia es exclusivamente `legendariesFound`.
+
+### 4.27 Precio de venta en el Puesto de Chatarra (ronda 23)
+
+```
+precioPuesto = baseValue × fluctuacionMercadoActual × (stallMultBase + stallMultPorNivel × (stallLevel - 1))
+```
+
+`baseValue` es el MISMO cálculo de `itemSaleValue` que el roll normal (incluye rareza, Suerte,
+`getLevelValueMult`, `getMechanicValueMult` y `getSetBonus`), pero con `fluctuacionMercado: 1` — se
+persiste así en el inventario para no aplicar la fluctuación dos veces (una al hallar, otra al
+vender). La fluctuación real se toma **al vender**, no al guardar: es la mecánica de timing de
+mercado — guardar y vender cuando la cotización está alta. Toda venta (manual o del robot vendedor)
+refresca primero la fluctuación con `refreshMarketFluctuation` (rng.js, el mismo helper del roll),
+para que un jugador que no escarba no venda para siempre con la cotización congelada.
+
+Constantes (`data/stall.json`): `stallCost: 30000` (AJUSTE: entre los tiers 4-5 de contenedor,
+~30-60 min de juego), `stallMultBase: 1.25`, `stallMultPorNivel: 0.05`, `stallNivelMax: 5`. Costo de
+subir de nivel: `stallCost × 4^(nivel-1)` (con `nivel` el nivel de destino; comprar el puesto en sí
+es alcanzar el nivel 1, mismo costo `stallCost`). Capacidad del inventario:
+`stallCapacityBase: 12 + stallCapacityPorNivel: 6 × (stallLevel - 1)`.
+
+### 4.28 Pedidos del Puesto (ronda 23)
+
+2 pedidos activos a la vez, generados sobre las categorías de los contenedores **poseídos**
+(nunca se pide algo inalcanzable). Un pedido: `{ id, npcId: 'salomon', categoria, cantidad (2-4),
+mult: orderMult, progress }`. Vender un ítem cuya categoría coincide con un pedido activo con
+`progress < cantidad` paga `precioPuesto × orderMult` (`orderMult: 1.4`) y suma 1 a `progress`; al
+llegar a `cantidad` el pedido se cumple (se retira de `state.stallOrders` y se cuenta en
+`state.ordersFulfilledCount`). La reposición a 2 pedidos activos y la rotación completa cada
+`orderRotationMs: 1200000` (20 min, reloj clampeado §3.3, aunque no se haya cumplido nada) viven en
+`rotateStallOrders` — función aparte de la venta (el engine mantiene la venta de un ítem y la
+generación de pedidos como responsabilidades separadas); el llamador (store/UI, 23.C) invoca
+`rotateStallOrders` tras cada venta y periódicamente para completar el par.
+
+### 4.29 Robot vendedor (ronda 23)
+
+Automatización nueva (`data/automations.json`, efecto `enablesStallVendor`): cada
+`vendedorIntervalo: 20` s (reloj clampeado §3.3, mismo patrón que la fluctuación de mercado) vende 1
+ítem del inventario del puesto, con prioridad (1) ítems que satisfacen un pedido activo, (2) el de
+mayor `baseValue`. Vende a `precioPuesto` (con el mult del pedido si corresponde), refrescando la
+fluctuación como cualquier venta. **Offline**: dentro de `applyOfflineProgress`, vende sobre el
+inventario ya persistido a fluctuación fija 1 (sin timing gratis mientras el jugador duerme), ANTES
+de sumar la ganancia instantánea del loot generado offline (ese loot nunca pasa por el inventario:
+el modal offline no gestiona captura).
 
 ---
 

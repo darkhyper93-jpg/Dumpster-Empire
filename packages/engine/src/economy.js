@@ -127,6 +127,12 @@ export function trapProbability(probTrampaBaseDelContenedor, suerte) {
  *   constante del bonus por set completo (data/collectionSets.json, ronda 22). Opcional: ver getSetBonus.
  * @property {{ legendaryChance: number, items: Array<{id:string,name:string,icon:string,categoria:string,valorBase:number}> }} [legendaries]
  *   legendarios fuera de pool (data/legendaries.json, ronda 22). Opcional: ver rollContainerResult.
+ * @property {{ stallCost: number, stallMultBase: number, stallMultPorNivel: number, stallNivelMax: number,
+ *   stallCapacityBase: number, stallCapacityPorNivel: number, orderRotationMs: number, orderMult: number,
+ *   vendedorIntervalo: number }} [stall]
+ *   constantes del Puesto de Chatarra (data/stall.json, ronda 23). Opcional: ver getStallCapacity/
+ *   getStallUpgradeCost/getStallSalePrice — sin él, la captura nunca se activa (mismo patrón que
+ *   data.streak/data.traps/data.tools).
  */
 
 function upgradeDef(data, id) {
@@ -773,4 +779,79 @@ export function getToolRadiusMult(state, data) {
  */
 export function getToolRhythmMult(state, data) {
   return equippedToolDef(state, data)?.ritmoMult ?? 1;
+}
+
+// ---------------------------------------------------------------------------
+// El Puesto de Chatarra (PLAN.md §2.9, §4.27-§4.29, ronda 23). `data.stall` es opcional (mismo
+// patrón que data.streak/data.traps/data.tools): sin él, la captura nunca se activa (ver
+// applyContainerResult) y estos getters no deben llamarse (asumen `data.stall` presente).
+// ---------------------------------------------------------------------------
+
+/**
+ * §4.27 — capacidad del inventario del Puesto. 0 sin puesto comprado (stallLevel 0).
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getStallCapacity(state, data) {
+  if (state.stallLevel < 1) return 0;
+  return data.stall.stallCapacityBase + data.stall.stallCapacityPorNivel * (state.stallLevel - 1);
+}
+
+/**
+ * §4.27 — costo para alcanzar `targetLevel` (default: el siguiente al actual).
+ * costo(nivel) = stallCost × 4^(nivel-1). Comprar el puesto en sí es alcanzar el nivel 1: mismo
+ * costo `stallCost` (4^0 = 1), sin necesitar una fórmula separada para la compra inicial.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @param {number} [targetLevel]
+ * @returns {number}
+ */
+export function getStallUpgradeCost(state, data, targetLevel = state.stallLevel + 1) {
+  return Math.ceil(data.stall.stallCost * Math.pow(4, targetLevel - 1));
+}
+
+/**
+ * §4.27 — precio de venta literal de un ítem del inventario del Puesto.
+ * precioPuesto = baseValue × fluctuacionMercado × (stallMultBase + stallMultPorNivel × (stallLevel - 1))
+ * @param {{ baseValue: number, fluctuacionMercado: number, stallLevel: number, stallMultBase: number, stallMultPorNivel: number }} params
+ * @returns {number}
+ */
+export function stallSalePrice({ baseValue, fluctuacionMercado, stallLevel, stallMultBase, stallMultPorNivel }) {
+  return baseValue * fluctuacionMercado * (stallMultBase + stallMultPorNivel * (stallLevel - 1));
+}
+
+/**
+ * Getter de conveniencia sobre `stallSalePrice`, tomando las constantes de `data.stall` y el
+ * nivel del puesto de `state`. La fluctuación es un parámetro explícito (no siempre
+ * `state.marketFluctuation`: la venta offline usa fluctuación fija 1, PLAN.md §4.29).
+ * @param {GameState} state
+ * @param {{ baseValue: number }} item
+ * @param {EngineData} data
+ * @param {number} [fluctuacionMercado]
+ * @returns {number}
+ */
+export function getStallSalePrice(state, item, data, fluctuacionMercado = state.marketFluctuation) {
+  return stallSalePrice({
+    baseValue: item.baseValue,
+    fluctuacionMercado,
+    stallLevel: state.stallLevel,
+    stallMultBase: data.stall.stallMultBase,
+    stallMultPorNivel: data.stall.stallMultPorNivel,
+  });
+}
+
+/**
+ * ¿El jugador posee alguna automatización que habilite el robot vendedor del Puesto (PLAN.md
+ * §4.29, ronda 23)? Vive acá (no en systems/automation.js, donde vive `hasAutoDig`) para que
+ * `systems/stall.js` pueda consultarlo sin crear un ciclo de imports con automation.js (que sí
+ * llama a `stallVendorTick` de stall.js dentro de `automationTick`).
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {boolean}
+ */
+export function hasStallVendor(state, data) {
+  return automationEffectsOfType(data, 'enablesStallVendor').some(
+    ({ automationId }) => state.automationOwned[automationId]
+  );
 }

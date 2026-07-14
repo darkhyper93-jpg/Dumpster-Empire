@@ -3,7 +3,7 @@
  * y export/import en base64. Nunca corrompe la partida en curso ante un input inválido.
  */
 
-import { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, freshState } from './state.js';
+import { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, INVENTORY_MAX_SAFETY, freshState } from './state.js';
 
 /** Idiomas soportados por el módulo i18n (apps/game/src/i18n). Fuente de verdad del allow-list. */
 export const SUPPORTED_LANGUAGES = ['es', 'en'];
@@ -22,7 +22,7 @@ const NUMERIC_MAP_FIELDS = [
 const BOOLEAN_MAP_FIELDS = ['automationOwned', 'toolsOwned'];
 
 /** Arrays cuyos elementos deben ser strings (ids, no texto libre). */
-const STRING_ARRAY_FIELDS = ['achievementsUnlocked', 'autoQueue', 'legendariesFound'];
+const STRING_ARRAY_FIELDS = ['achievementsUnlocked', 'autoQueue', 'legendariesFound', 'storySeen'];
 
 /**
  * Valida que todo valor propio de `obj` sea un número finito.
@@ -83,6 +83,49 @@ function isValidAutoProcessing(arr) {
       slot.totalTime > 0 &&
       slot.remaining >= 0 &&
       slot.remaining <= slot.totalTime
+  );
+}
+
+/**
+ * Valida `inventory` (PLAN.md §2.9, ronda 23): array de ítems capturados por el Puesto de
+ * Chatarra, sin vender. `INVENTORY_MAX_SAFETY` rechaza un array absurdamente grande (save
+ * manipulado) sin acoplar save.js a la capacidad de diseño real (data/stall.json).
+ * @param {unknown} arr
+ * @returns {boolean}
+ */
+function isValidInventory(arr) {
+  if (!Array.isArray(arr) || arr.length > INVENTORY_MAX_SAFETY) return false;
+  return arr.every(
+    (item) =>
+      isPlainObject(item) &&
+      typeof item.itemId === 'string' &&
+      typeof item.containerId === 'string' &&
+      typeof item.categoria === 'string' &&
+      Number.isFinite(item.baseValue) &&
+      item.baseValue > 0
+  );
+}
+
+/**
+ * Valida `stallOrders` (PLAN.md §4.28, ronda 23): hasta 2 pedidos activos del Puesto.
+ * @param {unknown} arr
+ * @returns {boolean}
+ */
+function isValidStallOrders(arr) {
+  if (!Array.isArray(arr)) return false;
+  return arr.every(
+    (order) =>
+      isPlainObject(order) &&
+      typeof order.id === 'string' &&
+      typeof order.npcId === 'string' &&
+      typeof order.categoria === 'string' &&
+      Number.isInteger(order.cantidad) &&
+      order.cantidad > 0 &&
+      Number.isFinite(order.mult) &&
+      order.mult > 0 &&
+      Number.isInteger(order.progress) &&
+      order.progress >= 0 &&
+      order.progress <= order.cantidad
   );
 }
 
@@ -148,6 +191,25 @@ function validateDeepContent(migrated) {
   }
   // El chequeo de finitud de `volume` (y de todo campo numérico top-level) vive ahora en el
   // loop de REQUIRED_FIELDS de validateSave — ver AJUSTE de la auditoría post-ronda 14.
+  // AJUSTE (ronda 23, PLAN.md §2.9/§4.27-§4.29): inventory/stallOrders del Puesto de Chatarra.
+  if (!isValidInventory(migrated.inventory)) {
+    return 'Contenido inválido en inventory: debe ser un array de { itemId, containerId, categoria, baseValue > 0 }.';
+  }
+  if (!isValidStallOrders(migrated.stallOrders)) {
+    return 'Contenido inválido en stallOrders: debe ser un array de pedidos { id, npcId, categoria, cantidad, mult, progress }.';
+  }
+  if (!Number.isInteger(migrated.stallLevel) || migrated.stallLevel < 0) {
+    return 'Contenido inválido en stallLevel: debe ser un entero >= 0.';
+  }
+  if (!Number.isFinite(migrated.keepThreshold) || migrated.keepThreshold < 0) {
+    return 'Contenido inválido en keepThreshold: debe ser un número >= 0.';
+  }
+  if (!Number.isInteger(migrated.stallSoldCount) || migrated.stallSoldCount < 0) {
+    return 'Contenido inválido en stallSoldCount: debe ser un entero >= 0.';
+  }
+  if (!Number.isInteger(migrated.ordersFulfilledCount) || migrated.ordersFulfilledCount < 0) {
+    return 'Contenido inválido en ordersFulfilledCount: debe ser un entero >= 0.';
+  }
   return null;
 }
 
@@ -205,6 +267,15 @@ const REQUIRED_FIELDS = {
   toolsOwned: 'object',
   gravesHit: 'number',
   legendariesFound: 'object',
+  inventory: 'object',
+  stallLevel: 'number',
+  keepThreshold: 'number',
+  stallOrders: 'object',
+  ordersRotatedAt: 'number',
+  stallVendorAt: 'number',
+  stallSoldCount: 'number',
+  ordersFulfilledCount: 'number',
+  storySeen: 'object',
 };
 // autoTargetContainerId NO va en REQUIRED_FIELDS: es unión `string|null` y `typeof null === 'object'`
 // rompería el chequeo de tipo; su validación de contenido vive en validateDeepContent().
@@ -346,6 +417,24 @@ function migrate(raw, itemNameToId) {
   // encontrados). Saves viejos arrancan sin ninguno (comportamiento correcto: no existían).
   if (migrated.saveVersion < 11) {
     migrated = { ...migrated, legendariesFound: [], saveVersion: 11 };
+  }
+  // v11 -> v12 (ronda 23, PLAN.md §2.9/§4.27-§4.29): agrega el Puesto de Chatarra. Saves viejos
+  // arrancan sin puesto (stallLevel 0, comportamiento actual: todo se vende instantáneo, sin
+  // cambios visibles) e inventario/pedidos vacíos.
+  if (migrated.saveVersion < 12) {
+    migrated = {
+      ...migrated,
+      inventory: [],
+      stallLevel: 0,
+      keepThreshold: 0,
+      stallOrders: [],
+      ordersRotatedAt: 0,
+      stallVendorAt: 0,
+      stallSoldCount: 0,
+      ordersFulfilledCount: 0,
+      storySeen: [],
+      saveVersion: 12,
+    };
   }
   return migrated;
 }

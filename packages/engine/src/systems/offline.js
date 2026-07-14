@@ -20,6 +20,7 @@ import {
 } from '../economy.js';
 import { categoryWeights } from '../rng.js';
 import { bestAffordableUnlockedContainer, hasAutoDig } from './automation.js';
+import { applyOfflineStallSales } from './stall.js';
 
 function averageItemValue(state, container, categoria, itemsData, data, luck) {
   const rarity = itemsData.rarities.find((r) => r.id === categoria);
@@ -93,7 +94,7 @@ export function estimateAutomationRatePerSecond(state, allContainers, itemsData,
  * @param {Array<Object>} allContainers
  * @param {{ items: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
  * @param {import('../economy.js').EngineData} data
- * @returns {{ ganancia: number, segundosEfectivos: number }}
+ * @returns {{ ganancia: number, segundosEfectivos: number, stallEarnings: number }}
  */
 export function applyOfflineProgress(state, segundosAusente, allContainers, itemsData, data) {
   const gananciaAutomaticaPorSegundo = estimateAutomationRatePerSecond(state, allContainers, itemsData, data);
@@ -103,7 +104,11 @@ export function applyOfflineProgress(state, segundosAusente, allContainers, item
     factorOffline: getOfflineFactor(state, data),
     capSegundos: getOfflineCapSeconds(state, data),
   });
+  // R23.3 (ronda 23): PRIMERO el robot vendedor sobre el inventario del Puesto YA persistido
+  // (a fluctuación fija 1, PLAN.md §4.29), DESPUÉS la venta instantánea del loot offline nuevo
+  // (ese loot nunca pasa por el inventario: el modal offline no gestiona captura).
+  const stallEarnings = data.stall ? applyOfflineStallSales(state, data, result.segundosEfectivos) : 0;
   state.money += result.ganancia;
   state.totalMoneyEarned += result.ganancia;
-  return result;
+  return { ...result, stallEarnings };
 }

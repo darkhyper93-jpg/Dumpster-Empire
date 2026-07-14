@@ -183,8 +183,12 @@ describe('logros de sets/legendarios (a42-a45)', () => {
 });
 
 describe('save v11: legendariesFound', () => {
-  it('SAVE_VERSION es 11 y freshState trae legendariesFound: []', () => {
-    expect(SAVE_VERSION).toBe(11);
+  // AJUSTE (ronda 23): SAVE_VERSION pasó a 12 (Puesto de Chatarra) — este test de la ronda 22
+  // no validaba el número 11 en sí, sino que freshState()/la migración quedan en la versión
+  // ACTUAL tras agregar legendariesFound. Mismo AJUSTE que dejó documentado la ronda 22 sobre
+  // el literal de la ronda 21 (ver HANDOFF).
+  it('SAVE_VERSION es la actual y freshState trae legendariesFound: []', () => {
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(11);
     expect(freshState().legendariesFound).toEqual([]);
   });
 
@@ -194,7 +198,7 @@ describe('save v11: legendariesFound', () => {
     const result = validateSave(v10);
     expect(result.valid).toBe(true);
     expect(result.data.legendariesFound).toEqual([]);
-    expect(result.data.saveVersion).toBe(11);
+    expect(result.data.saveVersion).toBe(SAVE_VERSION);
   });
 
   it('rechaza legendariesFound que no es un array de strings', () => {

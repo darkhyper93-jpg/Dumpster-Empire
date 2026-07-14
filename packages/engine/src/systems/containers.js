@@ -14,6 +14,7 @@ import {
   getLevelValueMult,
   getMechanicValueMult,
   getSetBonus,
+  getStallCapacity,
   getTrapPenalty,
   registerContainerDig,
   itemSaleValue,
@@ -33,7 +34,9 @@ import {
  * @property {boolean} isTrap
  * @property {'leve' | 'normal' | 'grave'} [trapGrade] - solo si isTrap y data.traps existía en
  *   el momento del roll (PLAN.md §4.21, ronda 20). Ausente = tratar como "normal" (compat).
- * @property {Array<{ id: string, icon: string, name: string, categoria: string, value: number, isFirstRareFind: boolean, isLegendary?: boolean }>} items
+ * @property {Array<{ id: string, icon: string, name: string, categoria: string, value: number, baseValue: number, isFirstRareFind: boolean, isLegendary?: boolean }>} items
+ *   `baseValue` (ronda 23, PLAN.md §4.27): el mismo cálculo que `value` pero con fluctuación de
+ *   mercado 1 — es lo que persiste el Puesto de Chatarra al capturar un ítem (ver applyContainerResult).
  * @property {number} moneyDelta
  */
 
@@ -127,6 +130,7 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
     const pool = containerPool.filter((item) => item.categoria === categoria);
     const pick = rollItem(pool, random);
     const variance = rollItemVariance(random);
+    const itemMultipliers = levelValueMult * getMechanicValueMult(container) * getSetBonus(state, container, itemsData, data);
     const value =
       itemSaleValue({
         valorBaseObjeto: pick.valorBase * variance,
@@ -135,15 +139,23 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
         fluctuacionMercado: state.marketFluctuation,
         sellMult: getSellMult(state, categoria, data),
         depthValueMult,
-      }) *
-      levelValueMult *
-      getMechanicValueMult(container) *
-      getSetBonus(state, container, itemsData, data);
+      }) * itemMultipliers;
+    // PLAN.md §4.27 (ronda 23): el MISMO cálculo con fluctuación 1 — es lo que persiste el
+    // Puesto de Chatarra al capturar el ítem, para no aplicar la fluctuación dos veces al vender.
+    const baseValue =
+      itemSaleValue({
+        valorBaseObjeto: pick.valorBase * variance,
+        multiplicadorRareza: rarity.mult,
+        suerte: luck,
+        fluctuacionMercado: 1,
+        sellMult: getSellMult(state, categoria, data),
+        depthValueMult,
+      }) * itemMultipliers;
     const alreadyFound =
       Boolean(state.itemsFoundByItem?.[container.id]?.[pick.id]) || seenInThisRoll.has(pick.id);
     const isFirstRareFind = categoria === rarest && !alreadyFound;
     seenInThisRoll.add(pick.id);
-    items.push({ id: pick.id, icon: pick.icon, name: pick.name, categoria, value, isFirstRareFind });
+    items.push({ id: pick.id, icon: pick.icon, name: pick.name, categoria, value, baseValue, isFirstRareFind });
   }
 
   // PLAN.md §4.26 (ronda 22): roll de legendario, SOLO escarbado manual y SOLO si no cayó
@@ -157,6 +169,7 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
     );
     if (candidate) {
       const rarity = itemsData.rarities.find((r) => r.id === candidate.categoria);
+      const legendaryMultipliers = levelValueMult * getMechanicValueMult(container) * getSetBonus(state, container, itemsData, data);
       const value =
         itemSaleValue({
           valorBaseObjeto: candidate.valorBase,
@@ -165,16 +178,16 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
           fluctuacionMercado: state.marketFluctuation,
           sellMult: getSellMult(state, candidate.categoria, data),
           depthValueMult,
-        }) *
-        levelValueMult *
-        getMechanicValueMult(container) *
-        getSetBonus(state, container, itemsData, data);
+        }) * legendaryMultipliers;
       items[0] = {
         id: candidate.id,
         icon: candidate.icon,
         name: candidate.name,
         categoria: candidate.categoria,
         value,
+        // baseValue: nunca se usa (contrato §3.5.3: los legendarios NUNCA se capturan al
+        // inventario del Puesto), pero se calcula igual para que la forma del ítem sea uniforme.
+        baseValue: value,
         isFirstRareFind: false,
         isLegendary: true,
       };
@@ -223,13 +236,19 @@ export function applyContainerResult(state, container, result, isAuto, data) {
   }
   let total = 0;
   const fragmentCategories = ['antiques', 'art', 'relics', 'future'];
+  // PLAN.md §2.9 (ronda 23): captura del Puesto de Chatarra. `data.stall` opcional (patrón
+  // data.streak/data.traps/data.tools): sin él, o sin puesto comprado, o en pausa
+  // (keepThreshold 0), el camino es EXACTAMENTE el de siempre (R23.2, snapshot idéntico).
+  const captureEnabled = Boolean(data.stall) && state.stallLevel >= 1 && state.keepThreshold > 0;
+  const capacity = captureEnabled ? getStallCapacity(state, data) : 0;
   for (const item of result.items) {
-    total += item.value;
     // PLAN.md §4.26 (ronda 22, contrato §3.5.3): los legendarios están FUERA de los pools
     // normales — nunca entran a itemsFoundByItem/itemsFoundCount/itemsFoundByCategory (la
-    // vitrina, `legendariesFound`, es su única persistencia, sin duplicados).
+    // vitrina, `legendariesFound`, es su única persistencia, sin duplicados) NI al inventario
+    // del Puesto: se venden SIEMPRE instantáneo.
     if (item.isLegendary) {
       if (!state.legendariesFound.includes(item.id)) state.legendariesFound.push(item.id);
+      total += item.value;
       continue;
     }
     state.itemsFoundCount++;
@@ -241,6 +260,12 @@ export function applyContainerResult(state, container, result, isAuto, data) {
     byContainer[item.id] = (byContainer[item.id] || 0) + 1;
     if (fragmentCategories.includes(item.categoria)) {
       state.categoryFragments += 1 * getFragmentMult(state, data);
+    }
+    const captureEligible = captureEnabled && item.value >= state.keepThreshold && state.inventory.length < capacity;
+    if (captureEligible) {
+      state.inventory.push({ itemId: item.id, containerId: container.id, categoria: item.categoria, baseValue: item.baseValue });
+    } else {
+      total += item.value;
     }
   }
   state.money += total;
