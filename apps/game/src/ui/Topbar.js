@@ -17,6 +17,7 @@ export const Topbar = {
     const moneyEl = container.querySelector('#money');
     const keysEl = container.querySelector('#keys');
     const settingsBtn = container.querySelector('#settings-btn');
+    const statsBtn = container.querySelector('#stats-btn');
 
     if (moneyEl) {
       if (!moneyEl.dataset.iconReady) {
@@ -35,6 +36,10 @@ export const Topbar = {
     if (settingsBtn && !settingsBtn.dataset.iconReady) {
       settingsBtn.dataset.iconReady = 'true';
       settingsBtn.innerHTML = `${iconMarkup('settings')}<span class="sr-only">${t('topbar.settings')}</span>`;
+    }
+    if (statsBtn && !statsBtn.dataset.iconReady) {
+      statsBtn.dataset.iconReady = 'true';
+      statsBtn.innerHTML = `${iconMarkup('stats')}<span class="sr-only">${t('topbar.stats')}</span>`;
     }
   },
 };

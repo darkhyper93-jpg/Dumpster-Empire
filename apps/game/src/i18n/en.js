@@ -6,6 +6,7 @@
 export default {
   // Topbar.js
   'topbar.settings': 'Settings',
+  'topbar.stats': 'Stats',
 
   // tabs (index.html / UIManager.injectTabIcons — data-tab)
   'tabs.escarbar': 'Dig',
@@ -41,12 +42,6 @@ export default {
   // Round 19 (PLAN.md §4.20): manual no-trap dig streak, visible from streak >= 2.
   'dig.streak': 'Streak: {count}',
 
-  // Round 20 (PLAN.md §4.22): Energy pill + spying on slots.
-  'dig.energyLabel': 'Energy: {current}/{max}',
-  'dig.spyButton': 'Spy (−{cost} Energy)',
-  'dig.spyDisabledNoEnergy': 'Not enough Energy to spy',
-  'dig.spyResultTrap': 'Trap!',
-  'dig.spyResultCategory': 'It\'s: {categoria}',
   // Round 20 (PLAN.md §4.24): Vault Against the Clock (hard timer) and Dark Basement (mask).
   'dig.timedRemaining': 'Time left: {seconds}s',
   'dig.timedExpired': 'Time\'s up: you lost "{name}" with no money penalty.',

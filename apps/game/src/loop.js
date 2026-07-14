@@ -20,9 +20,8 @@ export function startLoop(store, ui) {
     const dtSeconds = (now - lastLogicTime) / 1000;
     lastLogicTime = now;
     store.actions.tickAutomation(dtSeconds);
-    // Ronda 20 (PLAN.md §4.22/§4.24): Energía regenera y el timer de la Bóveda corre siempre,
-    // sin depender de que el jugador tenga automatización comprada (a diferencia de tickAutomation).
-    store.actions.tickEnergy();
+    // Ronda 20 (PLAN.md §4.24): el timer de la Bóveda corre siempre, sin depender de que el
+    // jugador tenga automatización comprada (a diferencia de tickAutomation).
     store.actions.tickDigTimer(dtSeconds);
   }
   const logicInterval = setInterval(logicTick, LOGIC_TICK_INTERVAL_MS);

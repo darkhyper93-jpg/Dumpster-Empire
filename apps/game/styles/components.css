@@ -160,13 +160,18 @@ button:hover:not(:disabled) {
 }
 
 /* --- Racha de escarbado (PLAN.md §4.20, ronda 19): pill flotante sobre #dig-area (que ya
-   tiene position:relative, ver layout.css), visible desde racha >= 2. */
+   tiene position:relative, ver layout.css), visible desde racha >= 2.
+   AJUSTE (ronda 21, fix de UI): estaba centrada en `top: var(--space-2)`, el mismo rincón
+   donde `.scavenge-card-label` (layout.css) pincha por encima del borde de la tarjeta durante
+   un escarbado activo — el título del contenedor, pintado después en el DOM, la tapaba por
+   completo. Se mueve a la esquina superior derecha de `#dig-area` (fuera del área centrada del
+   título y del canvas) y sube su z-index por encima de la tarjeta (`.scavenge-card` es
+   `position:relative` sin z-index propio, o sea nivel 0 implícito). */
 .dig-streak-pill {
   position: absolute;
   top: var(--space-2);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
+  right: var(--space-2);
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -192,9 +197,9 @@ button:hover:not(:disabled) {
 }
 
 @keyframes dig-streak-pop {
-  0% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.25); }
-  100% { transform: translateX(-50%) scale(1); }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
 }
 
 /* AJUSTE (PUNTOS_A_MEJORAR_4 §3): `.prestige-tree` ya no participa de esta grilla genérica —
@@ -1023,48 +1028,6 @@ textarea {
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--fg-1);
-}
-
-/* --- Ronda 20 (PLAN.md §4.22): píldora de Energía y panel de espionaje --- */
-.dig-energy-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: var(--bg-2);
-  color: var(--amber);
-  border-bottom: 2px solid var(--amber-dark);
-  border-radius: var(--radius-full);
-  padding: var(--space-1) var(--space-3);
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 0.9rem;
-  align-self: center;
-}
-
-.dig-energy-pill[hidden] {
-  display: none;
-}
-
-.dig-spy-panel {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  justify-content: center;
-}
-
-.dig-spy-btn {
-  font-size: 0.8rem;
-  padding: var(--space-1) var(--space-2);
-}
-
-.dig-spy-result {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--bg-2);
-  color: var(--fg-1);
-  font-size: 0.8rem;
 }
 
 /* --- Ronda 20 (PLAN.md §4.24): timer duro de la Bóveda a Contrarreloj --- */

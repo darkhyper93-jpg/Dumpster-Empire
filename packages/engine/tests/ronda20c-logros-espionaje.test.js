@@ -1,7 +1,8 @@
 /**
- * Ronda 20.C — logros nuevos de espionaje/herramientas/trampas graves (PLAN.md §4.21-4.23):
- * `spiesUsedAtLeast`, `gravesHitAtLeast` y `allToolsOwned`. RED antes de sumar los
- * CONDITION_EVALUATORS correspondientes en systems/achievements.js.
+ * Ronda 20.C — logros nuevos de herramientas/trampas graves (PLAN.md §4.21, §4.23):
+ * `gravesHitAtLeast` y `allToolsOwned`. `spiesUsedAtLeast` (espionaje) se removió en la
+ * ronda 21 junto con el resto del sistema de Energía; el hueco `a39` queda documentado en
+ * achievements.json y en ROADMAPv4 §3.4 — no se reusa.
  */
 import { describe, it, expect } from 'vitest';
 import { freshState } from '../src/state.js';
@@ -10,17 +11,6 @@ import tools from '../../../apps/game/src/data/tools.json';
 import achievements from '../../../apps/game/src/data/achievements.json';
 
 const ctx = { allContainers: [], allAutomations: [], allTools: tools };
-
-describe('§4.22 logro spiesUsedAtLeast', () => {
-  it('se desbloquea cuando state.spiesUsed alcanza el umbral', () => {
-    const achievement = { id: 'test-spies', name: 'x', cond: { type: 'spiesUsedAtLeast', value: 50 } };
-    const state = freshState();
-    state.spiesUsed = 49;
-    expect(checkAchievements(state, [achievement], ctx)).toEqual([]);
-    state.spiesUsed = 50;
-    expect(checkAchievements(state, [achievement], ctx)).toEqual(['test-spies']);
-  });
-});
 
 describe('§4.21 logro gravesHitAtLeast', () => {
   it('se desbloquea cuando state.gravesHit alcanza el umbral', () => {
@@ -50,14 +40,16 @@ describe('§4.23 logro allToolsOwned', () => {
   });
 });
 
-describe('achievements.json — a39/a40/a41 (ronda 20.C)', () => {
-  it('existen y usan los cond types nuevos', () => {
-    const a39 = achievements.find((a) => a.id === 'a39');
+describe('achievements.json — a40/a41 (ronda 20.C) y el hueco a39 (ronda 21)', () => {
+  it('a40/a41 existen y usan los cond types nuevos', () => {
     const a40 = achievements.find((a) => a.id === 'a40');
     const a41 = achievements.find((a) => a.id === 'a41');
-    expect(a39.cond.type).toBe('spiesUsedAtLeast');
     expect(a40.cond.type).toBe('gravesHitAtLeast');
     expect(a40.hidden).toBe(true);
     expect(a41.cond.type).toBe('allToolsOwned');
+  });
+
+  it('a39 (espionaje) ya no existe — el hueco es permanente, nunca se reusa', () => {
+    expect(achievements.find((a) => a.id === 'a39')).toBeUndefined();
   });
 });

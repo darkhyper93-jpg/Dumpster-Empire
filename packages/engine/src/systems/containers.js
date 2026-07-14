@@ -201,16 +201,3 @@ export function applyContainerResult(state, container, result, isAuto, data) {
   }
   return { moneyDelta: total, trapPenalty: 0 };
 }
-
-/**
- * §4.22 (ronda 20) — espiar un slot: lectura PURA de un DigResult ya calculado por
- * rollContainerResult (el roll ocurre íntegro al iniciar el escarbado). No consume RNG: solo
- * revela lo que ya se decidió, nunca decide nada nuevo.
- * @param {DigResult} digResult
- * @param {number} slotIndex
- * @returns {{ isTrap: true } | { isTrap: false, categoria: string }}
- */
-export function spySlot(digResult, slotIndex) {
-  if (digResult.isTrap) return { isTrap: true };
-  return { isTrap: false, categoria: digResult.items[slotIndex].categoria };
-}

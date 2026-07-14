@@ -31,9 +31,6 @@ import {
   doPrestige as engineDoPrestige,
   checkAchievements,
   applyOfflineProgress,
-  regenEnergy,
-  spendEnergyToSpy,
-  spySlot,
   buyTool as engineBuyTool,
   equipTool as engineEquipTool,
   registerContainerDig,
@@ -187,9 +184,6 @@ export function createStore(ctx) {
         // offline) también viaja al canvas manual — la resistencia achica el pincel del gesto.
         digRate: getDigRate(state, container, data) * getToolRhythmMult(state, data),
         trapProb: getEffectiveTrapProbability(state, container, false, data),
-        // PLAN.md §4.22 (ronda 20): slots ya espiados en ESTE escarbado, `{ [index]: { isTrap } |
-        // { isTrap:false, categoria } }` — se resetea con cada `startManualDig` nuevo.
-        spiedSlots: {},
         // PLAN.md §4.24 (ronda 20): límite DURO de tiempo solo para contenedores `mode: "timed"`
         // (Bóveda a Contrarreloj) — `container.digTime` en segundos, decrementado por delta real
         // del loop (tickDigTimer), nunca por setTimeout (R20.3).
@@ -233,38 +227,6 @@ export function createStore(ctx) {
       pendingDig = null;
       notify();
       return { ok: true };
-    },
-
-    /**
-     * Espía un slot del escarbado en curso ANTES de rascarlo (PLAN.md §4.22, ronda 20): revela
-     * su categoría (o "TRAMPA" si el roll ya salió trampa) a cambio de `costoEspiar` de Energía.
-     * `spySlot` es una lectura pura del `DigResult` ya calculado — no consume RNG nuevo.
-     * @param {number} slotIndex
-     * @returns {{ ok: true, reveal: {isTrap:boolean, categoria?:string} } | { ok: false, error: string }}
-     */
-    spyDigSlot(slotIndex) {
-      if (!pendingDig) return { ok: false, error: 'No hay escarbado en curso.' };
-      if (!data.energy) return { ok: false, error: 'Energía no disponible.' };
-      if (pendingDig.spiedSlots[slotIndex]) return { ok: false, error: 'Este slot ya fue espiado.' };
-      const result = spendEnergyToSpy(state, data.energy);
-      if (!result.ok) return result;
-      const reveal = spySlot(pendingDig.result, slotIndex);
-      pendingDig.spiedSlots[slotIndex] = reveal;
-      persist();
-      notify();
-      return { ok: true, reveal };
-    },
-
-    /**
-     * Tick de Energía por tiempo real (PLAN.md §4.22): regenera hasta `energiaMax`, clampeado
-     * por `clampedElapsedMs` (nunca por un reloj retrocedido). Se llama desde loop.js en cada
-     * tick lógico, independiente de la automatización (la Energía regenera aunque no haya robot).
-     */
-    tickEnergy() {
-      if (!data.energy) return;
-      const before = state.energy;
-      regenEnergy(state, data.energy, Date.now());
-      if (state.energy !== before) notify();
     },
 
     /**

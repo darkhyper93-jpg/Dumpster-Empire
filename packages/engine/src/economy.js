@@ -5,7 +5,6 @@
 
 import { categoryWeights } from './rng.js';
 import { freshState } from './state.js';
-import { clampedElapsedMs } from './time.js';
 
 /**
  * @typedef {import('./state.js').GameState} GameState
@@ -407,7 +406,8 @@ export function getContainerCost(state, container, data) {
 
 /**
  * Probabilidad efectiva de trampa de un contenedor, componiendo la fórmula literal §4.6 con
- * las reducciones de prestigio y la penalización de automatización (no puede espiar antes).
+ * las reducciones de prestigio y la penalización de automatización (el robot escarba a ciegas
+ * y sin criterio, ver PLAN.md §2.3).
  * @param {GameState} state
  * @param {Object} container
  * @param {boolean} isAuto
@@ -707,46 +707,6 @@ export function getRecommendedDigPower(state, container) {
  */
 export function getRecommendedArea(state, container) {
   return container.areaRecomendada || 1;
-}
-
-// ---------------------------------------------------------------------------
-// Energía y espionaje (PLAN.md §4.22, ronda 20). `energyData` es data/energy.json
-// ({ energiaMax, msPorPunto, costoEspiar }), inyectado (no vive en `EngineData` porque solo lo
-// necesitan estas dos funciones, no todo el resto del engine).
-// ---------------------------------------------------------------------------
-
-/**
- * Regenera Energía por tiempo transcurrido real (PLAN.md §4.22), mutando el estado in place.
- * Usa `clampedElapsedMs` (packages/engine/src/time.js, §3.3): nunca regenera si el reloj
- * retrocede, y nunca truena con un `energyAt` no finito (save manipulado).
- * @param {GameState} state
- * @param {{ energiaMax: number, msPorPunto: number, costoEspiar: number }} energyData
- * @param {number} now - epoch ms
- * @returns {void}
- */
-export function regenEnergy(state, energyData, now) {
-  const elapsed = clampedElapsedMs(now, state.energyAt);
-  const points = Math.floor(elapsed / energyData.msPorPunto);
-  if (points <= 0) return;
-  state.energy = Math.min(energyData.energiaMax, state.energy + points);
-  // Avanza energyAt solo por el tiempo ya "cobrado" en puntos: el remanente fraccional sigue
-  // contando para el próximo punto (sin esto, cada tick perdería hasta msPorPunto-1 ms de
-  // progreso acumulado).
-  state.energyAt = now - (elapsed % energyData.msPorPunto);
-}
-
-/**
- * Gasta `costoEspiar` de Energía para espiar un slot (la revelación en sí es `spySlot`,
- * systems/containers.js — lectura pura del DigResult ya calculado).
- * @param {GameState} state
- * @param {{ energiaMax: number, msPorPunto: number, costoEspiar: number }} energyData
- * @returns {{ ok: true } | { ok: false, error: string }}
- */
-export function spendEnergyToSpy(state, energyData) {
-  if (state.energy < energyData.costoEspiar) return { ok: false, error: 'No alcanza la Energía para espiar.' };
-  state.energy -= energyData.costoEspiar;
-  state.spiesUsed++;
-  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------

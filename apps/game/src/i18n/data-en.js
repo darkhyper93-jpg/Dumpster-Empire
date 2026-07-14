@@ -240,7 +240,6 @@ export default {
     a36: 'Streak of Ten',
     a37: 'Perfect Streak',
     a38: 'Legendary Streak',
-    a39: 'All-Seeing Eye',
     a40: 'Nine Lives',
     a41: 'Full Arsenal',
   },
@@ -250,7 +249,7 @@ export default {
     detectorMetales: { name: 'Metal Detector', desc: '+10 global Luck.' },
     robotClasificador: {
       name: 'Basic Sorting Robot',
-      desc: 'Digs containers on its own, without being able to peek first (more trap risk).',
+      desc: 'Digs containers on its own, blindly and without judgment (more trap risk).',
     },
     cintaTransportadora: { name: 'Conveyor Belt', desc: '+3 automation queue slots.' },
     servobrazosReforzados: {

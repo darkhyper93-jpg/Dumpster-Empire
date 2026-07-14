@@ -16,6 +16,8 @@ import { AchievementsView } from './AchievementsView.js';
 import { PrestigeView } from './PrestigeView.js';
 import { CollectionView } from './CollectionView.js';
 import { SettingsView } from './SettingsView.js';
+import { StatsView } from './StatsView.js';
+import { ToolsSection } from './ToolsSection.js';
 import { Toast } from './Toast.js';
 import { Tutorial } from './Tutorial.js';
 import { OfflineModal } from './OfflineModal.js';
@@ -33,6 +35,7 @@ const TAB_VIEWS = {
   prestigio: PrestigeView,
   index: CollectionView,
   ajustes: SettingsView,
+  estadisticas: StatsView,
 };
 
 export class UIManager {
@@ -65,12 +68,11 @@ export class UIManager {
     this.digContainerTitle = root.querySelector('#dig-container-title');
     this.digStreakPillEl = root.querySelector('#dig-streak-pill');
     this.lastRenderedStreak = 0;
-    // Ronda 20 (PLAN.md §4.22/§4.24): píldora de Energía, panel de espionaje, timer de la
-    // Bóveda a Contrarreloj y máscara del Sótano Sin Luz.
-    this.digEnergyPillEl = root.querySelector('#dig-energy-pill');
-    this.digSpyPanelEl = root.querySelector('#dig-spy-panel');
+    // Ronda 20 (PLAN.md §4.24): timer de la Bóveda a Contrarreloj y máscara del Sótano Sin Luz.
     this.digTimedTimerEl = root.querySelector('#dig-timed-timer');
     this.digDarkMaskEl = root.querySelector('#dig-dark-mask');
+    // Ronda 21: las herramientas de escarbado se mudan de Ajustes a la vista Escarbar.
+    this.digToolsSectionEl = root.querySelector('#dig-tools-section');
     this.tabbarEl = root.querySelector('#tabbar');
     this.tabContentEl = root.querySelector('#tab-content');
     this.offlineModalEl = root.querySelector('#offline-modal');
@@ -118,17 +120,17 @@ export class UIManager {
       });
     }
 
+    // Ronda 21: Estadísticas pasa de subvista de Ajustes a vista propia abierta desde el header.
+    const statsBtn = this.root.querySelector('#stats-btn');
+    if (statsBtn) {
+      statsBtn.addEventListener('click', () => {
+        this.activeTab = 'estadisticas';
+        this.render(this.store.getState());
+      });
+    }
+
     this.digAbandonBtn.textContent = t('dig.abandon');
     this.digAbandonBtn.addEventListener('click', () => this.store.actions.abandonManualDig());
-
-    // Ronda 20 (PLAN.md §4.22): un botón "Espiar" por slot no revelado — delegación fija sobre
-    // el panel (se re-renderiza en cada render, el listener queda en el contenedor padre).
-    this.digSpyPanelEl.addEventListener('click', (evt) => {
-      const btn = evt.target.closest('[data-action="spy-slot"]');
-      if (!btn || btn.disabled) return;
-      const result = this.store.actions.spyDigSlot(Number(btn.dataset.index));
-      if (result.ok) this.render(this.store.getState());
-    });
 
     // Ronda 20 (PLAN.md §4.24, Sótano Sin Luz): máscara puramente visual que sigue el puntero
     // sobre la tarjeta de escarbado — nunca decide nada del modelo de revelado (napkin), solo
@@ -226,6 +228,7 @@ export class UIManager {
   refreshStaticTexts() {
     this.injectTabIcons();
     this.digAbandonBtn.textContent = t('dig.abandon');
+    this.digCanvas.refreshTexts();
     for (const el of this.topbarEl.querySelectorAll('[data-icon-ready]')) {
       delete el.dataset.iconReady;
     }
@@ -262,8 +265,8 @@ export class UIManager {
     this.shellEl.dataset.activeTab = this.activeTab;
     QuickUpgrades.render(this.quickUpgradesEl, state, this.store);
     this.renderDigStreak(state);
-    this.renderDigEnergyPill(state);
     this.renderDigArea(state);
+    ToolsSection.render(this.digToolsSectionEl, state, this.store);
     this.renderTabContent(state);
     this.tutorial.render(state);
 
@@ -283,21 +286,6 @@ export class UIManager {
     for (const expiration of this.store.consumeTimedDigExpirations()) {
       this.toast.push(t('dig.timedExpired', { name: expiration.containerName }));
     }
-  }
-
-  /**
-   * Píldora de Energía (PLAN.md §4.22, ronda 20): n/máx, visible en toda la vista de escarbado
-   * (con o sin escarbado en curso) para que el jugador planifique cuándo espiar.
-   * @param {import('@dumpster/engine').GameState} state
-   */
-  renderDigEnergyPill(state) {
-    const energyData = this.store.ctx.data.energy;
-    if (!energyData) {
-      this.digEnergyPillEl.hidden = true;
-      return;
-    }
-    this.digEnergyPillEl.hidden = false;
-    this.digEnergyPillEl.textContent = t('dig.energyLabel', { current: state.energy, max: energyData.energiaMax });
   }
 
   /**
@@ -331,7 +319,6 @@ export class UIManager {
       // decimos al jugador en vez de dejar que el arrastre lento se sienta como un bug.
       const rateHint = pending.digRate < 0.99 ? t('dig.rateHint', { pct: Math.round(pending.digRate * 100) }) : '';
       this.digTrapHint.textContent = t('dig.trapRiskLine', { pct: trapPct, hint: rateHint });
-      this.renderSpyPanel(state, pending);
       this.renderTimedTimer(pending);
       this.digDarkMaskEl.hidden = pending.container.mode !== 'dark';
       if (this.mountedDig !== pending) {
@@ -343,7 +330,6 @@ export class UIManager {
       this.digActiveEl.hidden = true;
       this.digEmptyEl.hidden = false;
       DigContainerPicker.render(this.digEmptyEl, state, this.store);
-      this.digSpyPanelEl.innerHTML = '';
       this.digTimedTimerEl.hidden = true;
       this.digDarkMaskEl.hidden = true;
       if (this.mountedDig !== null) {
@@ -351,44 +337,6 @@ export class UIManager {
         this.digCanvas.stop();
       }
     }
-  }
-
-  /**
-   * Panel de espionaje (PLAN.md §4.22, ronda 20): un botón por slot no espiado todavía —
-   * `spySlot` (engine) revela categoría o "TRAMPA" sin consumir RNG nuevo (el roll ya ocurrió
-   * íntegro al comprar el contenedor). Deshabilitado sin Energía, con tooltip de "cuánto falta"
-   * (CLAUDE.md).
-   * @param {import('@dumpster/engine').GameState} state
-   * @param {{container: Object, spiedSlots: Object}} pending
-   */
-  renderSpyPanel(state, pending) {
-    const energyData = this.store.ctx.data.energy;
-    const slots = pending.container.slots || 1;
-    const parts = [];
-    for (let i = 0; i < slots; i++) {
-      const spied = pending.spiedSlots[i];
-      if (spied) {
-        const label = spied.isTrap
-          ? t('dig.spyResultTrap')
-          : t('dig.spyResultCategory', { categoria: this.rarityLabel(spied.categoria) });
-        parts.push(`<span class="dig-spy-result">${label}</span>`);
-        continue;
-      }
-      const canAfford = Boolean(energyData) && state.energy >= energyData.costoEspiar;
-      const reason = canAfford ? '' : t('dig.spyDisabledNoEnergy');
-      parts.push(
-        `<button type="button" class="dig-spy-btn" data-action="spy-slot" data-index="${i}" ` +
-          `${canAfford ? '' : 'disabled'} title="${reason}">` +
-          `${t('dig.spyButton', { cost: energyData ? energyData.costoEspiar : 1 })}</button>`
-      );
-    }
-    this.digSpyPanelEl.innerHTML = parts.join('');
-  }
-
-  /** Nombre de rareza traducido (itemsData.rarities ya sigue el idioma activo, ver dataI18n.js). */
-  rarityLabel(categoriaId) {
-    const rarity = this.store.ctx.itemsData.rarities.find((r) => r.id === categoriaId);
-    return rarity ? rarity.name : categoriaId;
   }
 
   /**

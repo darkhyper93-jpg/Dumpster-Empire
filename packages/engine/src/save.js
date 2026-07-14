@@ -136,15 +136,8 @@ function validateDeepContent(migrated) {
   if (!Number.isInteger(migrated.bestDigStreak) || migrated.bestDigStreak < 0) {
     return 'Contenido inválido en bestDigStreak: debe ser un entero >= 0.';
   }
-  // AJUSTE (ronda 20): energy/spiesUsed/gravesHit son enteros >= 0 por la misma razón que
-  // digStreak (ronda 19) — la finitud ya la cubre REQUIRED_FIELDS, acá se cubre el rango y que
-  // no sean fraccionarios. `energyAt` es un timestamp: solo necesita ser finito (ya cubierto).
-  if (!Number.isInteger(migrated.energy) || migrated.energy < 0) {
-    return 'Contenido inválido en energy: debe ser un entero >= 0.';
-  }
-  if (!Number.isInteger(migrated.spiesUsed) || migrated.spiesUsed < 0) {
-    return 'Contenido inválido en spiesUsed: debe ser un entero >= 0.';
-  }
+  // AJUSTE (ronda 20): gravesHit es entero >= 0 por la misma razón que digStreak (ronda 19) —
+  // la finitud ya la cubre REQUIRED_FIELDS, acá se cubre el rango y que no sea fraccionario.
   if (!Number.isInteger(migrated.gravesHit) || migrated.gravesHit < 0) {
     return 'Contenido inválido en gravesHit: debe ser un entero >= 0.';
   }
@@ -208,11 +201,8 @@ const REQUIRED_FIELDS = {
   digStreak: 'number',
   bestDigStreak: 'number',
   vibrationOn: 'boolean',
-  energy: 'number',
-  energyAt: 'number',
   equippedTool: 'string',
   toolsOwned: 'object',
-  spiesUsed: 'number',
   gravesHit: 'number',
 };
 // autoTargetContainerId NO va en REQUIRED_FIELDS: es unión `string|null` y `typeof null === 'object'`
@@ -331,6 +321,24 @@ function migrate(raw, itemNameToId) {
       spiesUsed: 0,
       gravesHit: 0,
       saveVersion: 9,
+    };
+  }
+  // v9 -> v10 (ronda 21): remueve energy/energyAt/spiesUsed (Energía y espionaje removidos por
+  // decisión del usuario, 2026-07-14) y filtra el logro muerto `a39` de achievementsUnlocked.
+  // PRIMERA migración del repo que ELIMINA campos en vez de agregarlos: no alcanza con no
+  // setearlos (un save v9 real los trae puestos), hay que borrarlos explícitamente con
+  // destructuring-omit. Filtrar `a39` no es "lavar" un save inválido (patrón
+  // sanitizeContainerRefs: descartar una referencia muerta es limpieza, no relajar validación)
+  // — un save con basura real en otro campo se sigue rechazando igual más abajo. Precedente para
+  // la ronda 27, que reusa este patrón para borrar `autoTargetContainerId`.
+  if (migrated.saveVersion < 10) {
+    const { energy, energyAt, spiesUsed, ...rest } = migrated;
+    migrated = {
+      ...rest,
+      achievementsUnlocked: Array.isArray(migrated.achievementsUnlocked)
+        ? migrated.achievementsUnlocked.filter((id) => id !== 'a39')
+        : migrated.achievementsUnlocked,
+      saveVersion: 10,
     };
   }
   return migrated;

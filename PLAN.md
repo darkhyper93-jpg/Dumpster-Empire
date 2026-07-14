@@ -72,7 +72,6 @@ Escarbar contenedor → obtener objetos/dinero → comprar mejoras o contenedore
 Igual que en Scritchy Scratchy el jugador arrastra el cursor/dedo sobre la tarjeta para revelarla, en Dumpster Empire el jugador **arrastra el cursor/dedo sobre el contenedor** para apartar capas de basura y revelar lo que hay debajo. Técnicamente: un `<canvas>` con una capa "sucia" dibujada encima de los objetos, y `globalCompositeOperation = "destination-out"` para ir "borrando" la suciedad donde el usuario arrastra (idéntico patrón técnico que usan los juegos de rasca y gana en HTML5 canvas).
 
 Reglas del gesto:
-- El jugador puede **espiar** antes de comprometerse del todo (revelar parcialmente) — igual que en el juego de referencia, donde escarbar a mano permite ver qué hay antes de terminar, mientras que la automatización no.
 - Al revelar un porcentaje del área (configurable, por defecto 60%) el contenedor se considera "completado" y se entregan automáticamente los objetos restantes.
 - Cada contenedor tiene una probabilidad de contener una **"trampa"** (vidrio roto, objeto podrido, animal que muerde) que penaliza con pérdida de dinero o de tiempo — esto agrega la capa de riesgo/recompensa que hace interesante al juego de referencia.
 
@@ -166,7 +165,7 @@ Progresión de herramientas, calcada de la curva manual→automático del juego 
 1. **Guantes** (mejora pasiva de Fuerza de Escarbado, sin automatizar nada)
 2. **Carrito** (permite tener 2 contenedores abiertos a la vez)
 3. **Detector de metales** (mejora Suerte en Electrónica)
-4. **Robot Clasificador Básico** — equivalente al "Auto Scratcher": escarba contenedores solo, sin que el jugador interactúe, pero **no puede espiar antes de comprometerse**, por lo que sufre más trampas que el jugador manual (igual trade-off que el original).
+4. **Robot Clasificador Básico** — equivalente al "Auto Scratcher": escarba contenedores solo, a ciegas y sin criterio, por lo que sufre más trampas que el jugador manual (igual trade-off que el original).
 5. **Cinta Transportadora** — permite encolar contenedores para que el Robot los procese en cadena.
 6. **Servobrazos Reforzados** (ronda 15) — +40% Fuerza de Escarbado del robot (solo automatización, ver 4.7).
 7. **Planta de Reciclaje** — multiplica el valor de venta de Basura común y Reutilizables automáticamente.
@@ -315,24 +314,7 @@ El descarte del robot (Escáner de Trampas, §4.7) se decide ANTES del grado —
 por `result.isTrap`, nunca llega a rollear/pagar un grado. El corte de la racha de escarbado
 (§4.20) sigue el mismo criterio de siempre: cualquier grado de trampa manual la corta a 0.
 
-### 4.22 Energía y espionaje (ronda 20)
-
-Constantes en `data/energy.json`: `{ energiaMax: 3, msPorPunto: 90000, costoEspiar: 1 }`
-(AJUSTE: 3 usos, 1 cada 90s — decisión táctica para que espiar sea un recurso escaso, no un
-hábito).
-
-```
-energia = min(energiaMax, energia + floor(clampedElapsedMs(now, energiaAt) / msPorPunto))
-```
-
-`clampedElapsedMs` (packages/engine/src/time.js, §3.3 de ROADMAPv4) nunca regenera si el reloj
-del sistema retrocede. Espiar cuesta `costoEspiar` puntos de Energía y revela la categoría (no
-el ítem exacto) de un slot no revelado del contenedor en curso, o "TRAMPA" si el roll de ese
-contenedor ya salió trampa — el roll ocurre íntegro al iniciar el escarbado (`rollContainerResult`),
-así que espiar es una lectura pura del resultado ya calculado, sin RNG adicional. Espiar y
-ABANDONAR es el counterplay intencional a la trampa: el contenedor ya pagado se pierde igual,
-así que no es gratis. Si el playtest muestra abuso (evitar toda trampa relevante), se ajusta
-`costoEspiar` o `energiaMax` en `data/energy.json` — nunca la fórmula.
+### 4.22 — (removido) Energía y espionaje: removido por decisión del usuario 2026-07-14 (ronda 21 de ROADMAPv4).
 
 ### 4.23 Herramientas de escarbado (ronda 20)
 
@@ -455,6 +437,11 @@ anterior. Es el mejor diseño disponible y la fuente de verdad visual.
 3. Logros (grid con estado bloqueado/desbloqueado, mínimo 25 logros).
 4. Árbol de Prestigio (visualización tipo árbol o grid de nodos conectados, con botón grande de "Prestigiar" que muestra una preview de cuántas Llaves se obtendrían si se prestigiara ahora).
 5. Configuración (volumen, reset de partida con doble confirmación, exportar/importar guardado como texto).
+6. Estadísticas (vista propia, abierta desde un botón del header — no es subvista de Configuración
+   desde la ronda 21 de ROADMAPv4).
+
+El selector de herramientas de escarbado (§4.23) vive como sección de la vista Escarbar (no de
+Configuración) desde la ronda 21 de ROADMAPv4.
 
 ---
 
@@ -753,7 +740,7 @@ Misiones diarias/semanales: "encontrá 5 antigüedades hoy", dan dinero o llaves
 
 🧠 Mecánicas de decisión (le falta algo de "riesgo/recompensa" activo)
 
-Espiar antes de cavar ya existe implícito con robotClasificador que "no puede espiar". Se podría extender a mano: gastar una pequeña cantidad de "energía" para revelar 1 de los 3 slots antes de decidir si seguís o abandonás.
+~~Espiar antes de cavar gastando "energía" para revelar 1 de los 3 slots antes de decidir si seguís o abandonás.~~ Implementado en la ronda 20 y descartado ("es totalmente inútil") por decisión del usuario 2026-07-14 (ronda 21 de ROADMAPv4) — idea descartada, no reabrir.
 Trampas con grados: en vez de solo "trampa sí/no", que algunas trampas solo te hagan perder el ítem actual y otras te hagan perder tiempo/plata, con indicios visuales (grietas, olor, sonido) para que el jugador aprenda a leerlas.
 Negociación de venta: al vender, ofrecer "vender ahora" vs "guardar para el mercado" (ligado a marketFluctuation), agregando un mini-inventario temporal.
  
