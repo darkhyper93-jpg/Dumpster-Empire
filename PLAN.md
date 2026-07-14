@@ -362,6 +362,52 @@ Solo una herramienta equipada a la vez (`state.equippedTool`); comprar no equipa
   - El timer visible de la Bóveda y la máscara de oscuridad del Sótano (interacción/UI) son
     tarea de 20.C: acá solo se define la data y el gate de desbloqueo.
 
+### 4.25 Sets de colección (ronda 22)
+
+Completar el pool ENTERO de un contenedor (todos sus ítems presentes en
+`state.itemsFoundByItem[containerId]` con contador > 0) otorga, mientras siga completo, un bonus
+permanente al valor de venta de ESE contenedor:
+
+```
+multSet(contenedor) = 1 + setBonusPercent   (si el set está completo)
+multSet(contenedor) = 1                     (si no)
+```
+
+`setBonusPercent: 0.02` (AJUSTE: +2%, `data/collectionSets.json`) suma con `getLevelValueMult`
+(§11.3) — ambos son multiplicadores independientes sobre el valor final del ítem, ninguno
+reemplaza al otro. El estado de "set completo" es puramente derivado de `itemsFoundByItem` contra
+`itemsData.containers[id].length` (mismo criterio que `getCollectionCompletion`, ronda 19): sin
+campo nuevo persistido, no puede desincronizarse. `getSetBonus(state, container, itemsData)` en
+`economy.js` es la única fuente de este multiplicador; se aplica en el mismo punto de
+`rollContainerResult` donde ya se aplica `getMechanicValueMult`.
+
+### 4.26 Legendarios (ronda 22)
+
+1 ítem único por categoría de rareza (8 en total — una por cada entrada de `items.json.rarities`),
+FUERA de los pools normales de `items.json`. Viven en `data/legendaries.json`:
+`{ legendaryChance: number, items: [{ id, name, icon, categoria, valorBase }] }`, con
+`valorBase ≈ 40×` el mejor ítem normal de esa categoría (el de mayor `valorBase` entre todos los
+contenedores).
+
+- **Roll**: en `rollContainerResult`, tras resolver el slot 1 (y solo si el resultado NO fue
+  trampa), un roll independiente con `legendaryChance: 1/500` (constante en `legendaries.json`)
+  decide si aparece un legendario. Si sale y la categoría rolleada en el slot 1 coincide con la
+  `categoria` de algún legendario que el jugador **todavía no posee**
+  (`!state.legendariesFound.includes(id)`), ese legendario **reemplaza** el ítem del slot 1
+  (mismo `moneyDelta`, recalculado con el valor del legendario en vez del ítem normal). Un
+  legendario ya poseído nunca vuelve a salir (ni consume el roll de probabilidad si su categoría
+  no tiene legendario disponible: el roll de `legendaryChance` en sí siempre se consume desde
+  `random`, para que la secuencia de RNG sea estable, pero la sustitución solo ocurre si hay un
+  legendario elegible).
+- **Solo escarbado manual**: `isAuto` en `true` nunca rollea legendario — es el premio del
+  jugador activo, no del robot (mismo criterio que la racha de escarbado, §4.20).
+- **Persistencia**: `state.legendariesFound: string[]` (ids). Los legendarios NUNCA entran a
+  `itemsFoundByItem` (la vitrina es su casa, no el INDEX) y no cuentan para el % de completitud
+  de §5.4/ronda 19 — tienen su propio contador "Vitrina X/8".
+- **Contrato §3.5.3 (irrevocable)**: los legendarios se venden SIEMPRE de forma instantánea, nunca
+  entran al inventario de un puesto de venta futuro ni los toca ninguna automatización de venta;
+  su persistencia es exclusivamente `legendariesFound`.
+
 ---
 
 ## 5. UI / UX

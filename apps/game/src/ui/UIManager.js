@@ -157,6 +157,13 @@ export class UIManager {
       for (const item of result.items.filter((i) => i.isFirstRareFind)) {
         CelebrationModal.push(this.celebrationModalEl, { type: 'firstFind', item });
       }
+      // PLAN.md §4.26 (ronda 22): celebración especial de legendario, con su propia partícula
+      // dorada y sonido (juice obligatorio, CLAUDE.md §5.2) — nunca junto al firstFind del mismo
+      // ítem (el legendario reemplazó el slot 1 antes de llegar acá, así que es mutuamente
+      // excluyente con isFirstRareFind por construcción del engine).
+      for (const item of result.items.filter((i) => i.isLegendary)) {
+        CelebrationModal.push(this.celebrationModalEl, { type: 'legendary', item });
+      }
     }
   }
 

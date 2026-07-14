@@ -1,0 +1,61 @@
+{
+  "legendaryChance": 0.002,
+  "items": [
+    {
+      "id": "legendary-first-can",
+      "name": "La Primera Lata",
+      "icon": "legend-can",
+      "categoria": "common",
+      "valorBase": 148
+    },
+    {
+      "id": "legendary-ghost-bike",
+      "name": "La Bicicleta Fantasma",
+      "icon": "legend-bike",
+      "categoria": "reusable",
+      "valorBase": 548
+    },
+    {
+      "id": "legendary-lit-core",
+      "name": "El Núcleo Encendido",
+      "icon": "legend-core",
+      "categoria": "electronics",
+      "valorBase": 1728
+    },
+    {
+      "id": "legendary-ageless-watch",
+      "name": "El Reloj Que No Envejece",
+      "icon": "legend-watch",
+      "categoria": "antiques",
+      "valorBase": 4080
+    },
+    {
+      "id": "legendary-flood-anchor",
+      "name": "El Ancla del Diluvio",
+      "icon": "legend-anchor",
+      "categoria": "historic",
+      "valorBase": 26494774902160
+    },
+    {
+      "id": "legendary-crystal-muse",
+      "name": "La Musa de Cristal",
+      "icon": "legend-muse",
+      "categoria": "art",
+      "valorBase": 92297914455640
+    },
+    {
+      "id": "legendary-mother-relic",
+      "name": "La Reliquia Madre",
+      "icon": "legend-relic",
+      "categoria": "relics",
+      "valorBase": 132948981212680
+    },
+    {
+      "id": "legendary-void-seed",
+      "name": "La Semilla del Vacío",
+      "icon": "legend-seed",
+      "categoria": "future",
+      "valorBase": 156062663600000
+    }
+  ]
+}

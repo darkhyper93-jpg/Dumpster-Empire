@@ -4902,3 +4902,145 @@ restos en `apps/game/src` ni `apps/game/e2e` (verificado aparte, 0 archivos).
   algo a Escarbar (ej. la sección "SET COMPLETO" de un contenedor), el patrón de montar un nodo
   fijo en `index.html` + renderizarlo en cada `UIManager.render()` (como `#dig-tools-section`) es
   el precedente a seguir si no encaja en `#tab-content`.
+
+## Ronda 22 — Colección con dientes: sets, legendarios, vitrina (save v11)
+
+Agente único (1 agente, rama `feat/coleccion-ronda22` desde main, PR #21 ya mergeado). Cubre
+ROADMAPv4.md §22 completo (§4.25 sets + §4.26 legendarios).
+
+### PLAN.md
+
+- §4.25 (sets) y §4.26 (legendarios) escritos como secciones nuevas, consecutivas a §4.24 (la
+  ronda 21 dejó §4.22 como tombstone y no se renumera nada existente, regla §3.6).
+- §4.26 documenta el contrato §3.5.3 explícito: los legendarios se venden SIEMPRE instantáneo,
+  nunca entran al inventario de un puesto futuro (ronda 23) ni los toca el robot vendedor
+  (ronda 27) — su persistencia es exclusivamente `legendariesFound`.
+
+### 22.1 Data
+
+- `apps/game/src/data/collectionSets.json`: `{ "setBonusPercent": 0.02 }`.
+- `apps/game/src/data/legendaries.json`: `{ legendaryChance: 0.002, items: [8] }` — un legendario
+  por cada una de las 8 rarities de `items.json` (common..future). `valorBase` = 40× el mejor
+  `valorBase` normal de esa categoría entre TODOS los contenedores (recalculado con un script
+  Python puntual, no a mano — quedan en el rango 148..156.06T, todos por debajo del techo de
+  formato Qa de `format.js`, así que no hizo falta tocar los sufijos numéricos, eso es la 26).
+- 4 logros nuevos `a42`..`a45` (el último real antes era `a41`, con el hueco permanente `a39` de
+  la ronda 21 intacto): primer legendario, 4 legendarios, los 8 (oculto, `a44`), primer set
+  completo. Cond types nuevos: `legendariesFoundAtLeast`, `setsCompletedAtLeast`.
+- 8 íconos nuevos en `icons.js` (`legend-can`..`legend-seed`), TODOS reusando shapes existentes
+  con el mismo criterio de "reuso + color de rareza" ya documentado en el archivo — cero siluetas
+  nuevas para 8 ítems de un solo uso cada uno.
+
+### 22.2 Engine
+
+- `isSetComplete(state, container, itemsData)` + `getSetBonus(state, container, itemsData, data)`
+  en `economy.js` — `data.collectionSets` es opcional (mismo patrón que `data.streak`/`data.traps`/
+  `data.tools`): sin él, neutro. `isSetComplete` la reusa también el evaluador de logro
+  `setsCompletedAtLeast` (un solo cálculo de "set completo", nunca duplicado).
+- `rollLegendary(chance, random)` en `rng.js`, mismo patrón que `rollIsTrap`.
+- `rollContainerResult` (systems/containers.js): tras resolver los slots normales (y solo si NO
+  hubo trampa), si `!isAuto && data.legendaries`, rollea `legendaryChance` — SIEMPRE consume ese
+  `random()` cuando corresponde intentarlo (secuencia de RNG estable), pero la sustitución del
+  slot 1 solo ocurre si hay un legendario de esa categoría todavía no poseído. El valor del
+  legendario pasa por el mismo `itemSaleValue` que un ítem normal (con `getSetBonus` incluido),
+  multiplicado por su propio `valorBase` — R22.1 cubierto con test explícito de `moneyDelta`.
+- `applyContainerResult`: los ítems con `isLegendary: true` van a `state.legendariesFound` (sin
+  duplicados) y quedan FUERA de `itemsFoundCount`/`itemsFoundByCategory`/`itemsFoundByItem`/
+  `categoryFragments` — decisión de diseño: "fuera de los pools normales" se interpretó como
+  exclusión TOTAL de los contadores normales, no solo de `itemsFoundByItem` (el roadmap solo
+  mencionaba ese campo explícito; si una ronda futura necesita que los legendarios sumen a
+  `itemsFoundCount`, es un cambio de una línea en `containers.js`, documentado acá para no
+  reabrir la discusión sin motivo).
+- `checkAchievements` gana `itemsData` en el ctx (antes solo `allContainers`/`allAutomations`/
+  `allTools`) — lo necesita `setsCompletedAtLeast`. `store.js` ya lo pasa.
+
+### 22.3 Save v11
+
+- `SAVE_VERSION = 11`. `legendariesFound: []` en `freshState()`, `REQUIRED_FIELDS` (`'object'`,
+  es array) y `STRING_ARRAY_FIELDS` (mismo criterio que `achievementsUnlocked`/`autoQueue`).
+  Migración v10→v11 es un simple "agrega vacío" (no borra nada, a diferencia del precedente de
+  la ronda 21).
+- Filtrado de ids de legendario desconocidos (save manipulado o legendario renombrado/removido a
+  futuro) vive en `store.js` (`sanitizeLegendariesFound`, patrón `sanitizeContainerRefs` pero a
+  nivel store en vez de `save.js` — así lo pedía el roadmap explícitamente: "se filtran al cargar
+  en el store"). Se llama tras `loadState()` y tras `importSave()`.
+
+### 22.4 UI
+
+- `CollectionView.js`: badge `.index-set-badge` ("SET COMPLETO +2%") arriba de la grilla cuando
+  `isSetComplete` del contenedor seleccionado; sección **Vitrina** nueva al final (`renderShowcase`,
+  función de módulo aparte, no parte del objeto `CollectionView` — no necesita `this`/estado propio).
+  8 pedestales: bloqueado = candado + "???" + empty state; encontrado = ícono con bloom (CSS,
+  `drop-shadow` doble con `var(--amber)`) + nombre + valor base.
+- `CelebrationModal.js` gana el tipo `'legendary'` (ícono con bloom, `playLegendary()` — fanfarria
+  de 6 notas en `fx/audio.js`, más elaborada que `playJackpot`). `UIManager.handleDigComplete`
+  dispara esta celebración para `result.items.filter(i => i.isLegendary)`, en paralelo al loop ya
+  existente de `isFirstRareFind` (mutuamente excluyentes por construcción: el legendario
+  REEMPLAZA el slot 1 antes de que `isFirstRareFind` se hubiera evaluado sobre él).
+- CSS nuevo en `components.css`: `.index-set-badge`, `.showcase-*`, y la regla de bloom compartida
+  entre `.showcase-card-icon` y `.celebration-icon--legendary`.
+- `main.js`/`dataI18n.js`/`data-en.js`: `collectionSets.json` y `legendaries.json` entran al
+  pipeline de carga (`DATA_FILES`) y de i18n (los legendarios tienen nombre visible → entrada en
+  `data-en.js`, con parity test nuevo en `ronda16-i18n.test.js`).
+
+### Tests
+
+- `packages/engine/tests/ronda22-coleccion.test.js` (19 tests, TDD real — RED confirmado antes de
+  implementar: primero fallaban por función/campo inexistente, después por secuencia de `random()`
+  mal contada en el propio test, listo en verde tras corregir la secuencia).
+- 2 archivos de tests viejos tocados SOLO por el bump de `SAVE_VERSION` (10→11): sus asserts
+  `.toBe(10)` pasaron a `SAVE_VERSION`/`toBeGreaterThanOrEqual(10)` — no testeaban nada específico
+  de la ronda 21 en ese número, era un literal que iba a pisarse en cualquier ronda que agregara
+  estado. Documentado con AJUSTE inline en cada uno.
+- `apps/game/tests/ronda16-i18n.test.js`: `makeLoaded()` gana un bloque `legendaries` sintético
+  (con un id real + uno fantasma) para no romper `initDataLocalization`/`applyDataLanguage`, que
+  ahora exigen `loaded.legendaries.items`. Nuevo test de paridad `data-en.js ↔ legendaries.json`.
+- `apps/game/e2e/ronda22-coleccion.spec.js` (4 tests): badge con pool completo / sin badge sin
+  pool completo / vitrina con legendarios sembrados (revelados + conteo) / vitrina vacía (8
+  siluetas + empty state). No se probó el roll de legendario EN VIVO vía gesto real (1/500 de
+  probabilidad lo haría flaky o forzaría mockear `Math.random` desde el test, que el proyecto no
+  hace en e2e) — cubierto exhaustivamente en el engine con `random` inyectado.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test       → 385/385 verde (32 archivos; eran 384/32 antes de esta ronda, +1 por el test de
+                 paridad de legendarios en ronda16-i18n.test.js — los 19 de ronda22-coleccion.test.js
+                 son un archivo nuevo, no se cuentan en el delta de "archivos existentes")
+npm run test:e2e → 69/69 verde (65 previos intactos + 4 nuevos de ronda22-coleccion.spec.js)
+Manual 375px + desktop con Playwright real (screenshots temporales, no comiteadas): badge SET
+  COMPLETO visible en Escarbar→Índice con seed de pool completo; Vitrina con 3/8 revelados (bloom
+  ámbar visible en los íconos encontrados) y 5/8 con silueta+"???"+empty state, en ambos anchos.
+```
+
+### Riesgos del roadmap — qué pasó
+
+- R22.1 (legendario reemplaza el slot 1 ANTES de `moneyDelta`): cubierto con test explícito
+  (`el valor del legendario pasa por itemSaleValue... R22.1: moneyDelta refleja el total real`).
+- R22.2 (id de legendario desconocido no crashea la vitrina): cubierto por `sanitizeLegendariesFound`
+  en `store.js` — no hay test unit específico de esto en el engine porque el filtrado vive en la
+  capa store (fuera del engine por diseño del roadmap), pero `renderShowcase` ya tolera cualquier
+  id ausente de `state.legendariesFound` con normalidad (solo importa si está en el `Set`).
+- R22.3 (vitrina en contador aparte, no ensucia el % de completitud): `getCollectionCompletion`
+  no se tocó — sigue derivando solo de `itemsFoundByItem`, que los legendarios nunca tocan.
+
+### Qué necesita saber la ronda 23 (El Puesto de Chatarra)
+
+- `rollContainerResult` ahora expone en cada ítem `isLegendary?: boolean` además de
+  `isFirstRareFind` — el Agente A de la 23 necesita este flag para el filtro "los legendarios
+  NUNCA se capturan" del contrato §3.5.3 (`applyContainerResult` ya los excluye de todo lo que no
+  sea `legendariesFound`, así que un ítem legendario JAMÁS debería llegar al camino de captura del
+  puesto si el Agente A lo intercepta ANTES de `applyContainerResult`, o lo excluye explícitamente
+  por `item.isLegendary` si intercepta después).
+- `rollContainerResult` ahora expone también `item.value` de cada ítem normal ya multiplicado por
+  `getSetBonus` — la ronda 23 necesita `baseValue` (fluctuación 1, SIN el bonus de set incluido o
+  con él, a definir en 23.A) para la captura; revisar si `getSetBonus` debe entrar también en el
+  cálculo de `baseValue` que expone el roll (hoy no lo hace — el roadmap de la 23 solo pide
+  "el MISMO cálculo con fluctuación 1", no dice nada de sets, así que probablemente SÍ deba
+  incluir `getSetBonus` para ser consistente, pero es una decisión de la 23, no de esta ronda).
+- `data.collectionSets`/`data.legendaries` ya viajan en el objeto `data` que arma `main.js` —
+  cualquier función nueva del engine que necesite estas constantes las recibe gratis si toma `data`
+  como parámetro (mismo patrón que `data.tools`/`data.traps`).
+- El patrón "función de módulo aparte que no es parte del objeto `View`" (`renderShowcase` en
+  `CollectionView.js`) es el precedente a seguir si el Agente C de la 23 necesita una subsección
+  dentro de una vista existente sin ensuciar el objeto principal con estado propio.

@@ -22,7 +22,7 @@ const NUMERIC_MAP_FIELDS = [
 const BOOLEAN_MAP_FIELDS = ['automationOwned', 'toolsOwned'];
 
 /** Arrays cuyos elementos deben ser strings (ids, no texto libre). */
-const STRING_ARRAY_FIELDS = ['achievementsUnlocked', 'autoQueue'];
+const STRING_ARRAY_FIELDS = ['achievementsUnlocked', 'autoQueue', 'legendariesFound'];
 
 /**
  * Valida que todo valor propio de `obj` sea un número finito.
@@ -204,6 +204,7 @@ const REQUIRED_FIELDS = {
   equippedTool: 'string',
   toolsOwned: 'object',
   gravesHit: 'number',
+  legendariesFound: 'object',
 };
 // autoTargetContainerId NO va en REQUIRED_FIELDS: es unión `string|null` y `typeof null === 'object'`
 // rompería el chequeo de tipo; su validación de contenido vive en validateDeepContent().
@@ -340,6 +341,11 @@ function migrate(raw, itemNameToId) {
         : migrated.achievementsUnlocked,
       saveVersion: 10,
     };
+  }
+  // v10 -> v11 (ronda 22, PLAN.md §4.26): agrega legendariesFound (ids de legendarios ya
+  // encontrados). Saves viejos arrancan sin ninguno (comportamiento correcto: no existían).
+  if (migrated.saveVersion < 11) {
+    migrated = { ...migrated, legendariesFound: [], saveVersion: 11 };
   }
   return migrated;
 }

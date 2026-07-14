@@ -124,6 +124,17 @@ export function playJackpot() {
   });
 }
 
+/**
+ * Fanfarria larga (6 notas, arpegio mayor extendido con octava final) para un legendario
+ * (PLAN.md §4.26, ronda 22) — más elaborada que playJackpot: es el hallazgo más raro del juego.
+ */
+export function playLegendary() {
+  if (!enabled) return;
+  [523, 659, 784, 1047, 1319, 1568].forEach((freq, i) => {
+    setTimeout(() => playTone({ freq, duration: 0.22, type: 'triangle', gain: 0.15 }), i * 90);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Sonido de rascado continuo (agentes/rework-escarbado-y-landing-prompt.md, PUNTOS_A_MEJORAR.md:
 // "no hay ruido mientras escarbás"). Ruido blanco pasado por un filtro pasa-banda angosto (recrea

@@ -84,6 +84,8 @@ export default {
   'celebration.containerTitle': '¡Contenedor nuevo!',
   'celebration.containerReady': 'Ya está disponible para escarbar.',
   'celebration.firstFindTitle': '¡Hallazgo nuevo!',
+  // Ronda 22 (PLAN.md §4.26): celebración especial al hallar un legendario.
+  'celebration.legendaryTitle': '¡Legendario encontrado!',
 
   // CollectionView.js
   'collection.emptyPool': 'Este contenedor no tiene recompensas configuradas.',
@@ -94,6 +96,12 @@ export default {
   'collection.foundCount': 'Encontrado: {count}',
   // Ronda 19: % de completitud (PLAN.md §5.4), derivado — nunca un contador persistido nuevo.
   'collection.completionGlobal': 'Completitud global: {pct}%',
+  // Ronda 22 (PLAN.md §4.25/§4.26): badge de set completo + sección Vitrina.
+  'collection.setCompleteBadge': 'SET COMPLETO +{pct}%',
+  'collection.showcaseTitle': 'Vitrina de Legendarios',
+  'collection.showcaseCount': 'Vitrina: {count}/{total}',
+  'collection.showcaseHiddenName': '???',
+  'collection.showcaseNotFound': 'Todavía no encontraste este legendario.',
 
   // OfflineModal.js
   'offline.title': 'Mientras no estabas...',

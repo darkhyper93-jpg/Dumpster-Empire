@@ -123,6 +123,10 @@ export function trapProbability(probTrampaBaseDelContenedor, suerte) {
  *   constantes de grados de trampa (data/traps.json, ronda 20). Opcional: ver rollContainerResult.
  * @property {Array<{id:string,costo:number,radioMult:number,ritmoMult:number}>} [tools]
  *   herramientas de escarbado (data/tools.json, ronda 20). Opcional: ver getToolRadiusMult.
+ * @property {{ setBonusPercent: number }} [collectionSets]
+ *   constante del bonus por set completo (data/collectionSets.json, ronda 22). Opcional: ver getSetBonus.
+ * @property {{ legendaryChance: number, items: Array<{id:string,name:string,icon:string,categoria:string,valorBase:number}> }} [legendaries]
+ *   legendarios fuera de pool (data/legendaries.json, ronda 22). Opcional: ver rollContainerResult.
  */
 
 function upgradeDef(data, id) {
@@ -521,6 +525,38 @@ export function getLevelRarityShift(state, container) {
 export function getLevelValueMult(state, container) {
   const level = getContainerLevel(state, container.id);
   return 1 + (level - 1) * (container.levelValueMultPerLevel || 0);
+}
+
+/**
+ * §4.25 (ronda 22) — ¿el pool ENTERO de un contenedor ya se encontró al menos una vez?
+ * Puramente derivado de `itemsFoundByItem` contra `itemsData.containers[id]` (mismo criterio
+ * que `getCollectionCompletion`, ronda 19): sin contador paralelo, no puede desincronizarse.
+ * @param {GameState} state
+ * @param {Object} container
+ * @param {{ containers: Object<string, Array<Object>> }} itemsData
+ * @returns {boolean}
+ */
+export function isSetComplete(state, container, itemsData) {
+  const pool = itemsData.containers[container.id] || [];
+  if (!pool.length) return false;
+  const found = state.itemsFoundByItem[container.id] || {};
+  return pool.every((item) => (Number(found[item.id]) || 0) > 0);
+}
+
+/**
+ * §4.25 (ronda 22) — multiplicador de valor por set completo. `data.collectionSets` es opcional
+ * (mismo patrón que data.streak/data.traps/data.tools): sin él, neutro (1). Se aplica sobre el
+ * valor final del ítem, junto a `getMechanicValueMult`.
+ * @param {GameState} state
+ * @param {Object} container
+ * @param {{ containers: Object<string, Array<Object>> }} itemsData
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getSetBonus(state, container, itemsData, data) {
+  const percent = data?.collectionSets?.setBonusPercent;
+  if (!percent) return 1;
+  return isSetComplete(state, container, itemsData) ? 1 + percent : 1;
 }
 
 /**

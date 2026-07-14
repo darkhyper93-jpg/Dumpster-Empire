@@ -438,6 +438,18 @@ const ICON_MAP = {
   'shovel-wide': 'shovelWide',
   'brush-fine': 'brushFine',
   'glove-hydraulic': 'gloveHydraulic',
+
+  // Ronda 22: legendarios de la Vitrina (data/legendaries.json). Reusan formas ya existentes
+  // (mismo criterio de "reuso con color de rareza distinto" documentado arriba) — el bloom de
+  // rareza alta (PLAN.md §5.2) lo aporta el CSS de la vitrina, no una silueta nueva por ítem.
+  'legend-can': 'crushedCan',
+  'legend-bike': 'bike',
+  'legend-core': 'fusionCore',
+  'legend-watch': 'watch',
+  'legend-anchor': 'anchor',
+  'legend-muse': 'crystalHeart',
+  'legend-relic': 'sealedRelic',
+  'legend-seed': 'seed',
 };
 
 /**

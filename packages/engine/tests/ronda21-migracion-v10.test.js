@@ -22,14 +22,16 @@ describe('save.js — migración v9 -> v10 (ronda 21, remoción de energía/espi
     };
   }
 
-  it('SAVE_VERSION actual es 10', () => {
-    expect(SAVE_VERSION).toBe(10);
+  it('SAVE_VERSION actual es >= 10 (la migración v9->v10 sigue existiendo, aunque rondas después la extiendan)', () => {
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(10);
   });
 
   it('migra un save v9 real: energy/energyAt/spiesUsed desaparecen del resultado', () => {
     const result = validateSave(buildV9Save());
     expect(result.valid).toBe(true);
-    expect(result.data.saveVersion).toBe(10);
+    // AJUSTE (ronda 22): un save v9 ahora migra hasta SAVE_VERSION actual (v11), no se detiene en
+    // v10 — la migración v9->v10 sigue corriendo intacta dentro de la cadena.
+    expect(result.data.saveVersion).toBe(SAVE_VERSION);
     expect('energy' in result.data).toBe(false);
     expect('energyAt' in result.data).toBe(false);
     expect('spiesUsed' in result.data).toBe(false);
@@ -73,7 +75,7 @@ describe('save.js — migración v9 -> v10 (ronda 21, remoción de energía/espi
     const raw = JSON.stringify(v9);
     const result = deserializeState(raw);
     expect(result.ok).toBe(true);
-    expect(result.state.saveVersion).toBe(10);
+    expect(result.state.saveVersion).toBe(SAVE_VERSION);
     expect('energy' in result.state).toBe(false);
     expect('energyAt' in result.state).toBe(false);
     expect('spiesUsed' in result.state).toBe(false);

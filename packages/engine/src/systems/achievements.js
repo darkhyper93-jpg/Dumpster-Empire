@@ -3,6 +3,8 @@
  * evaluadas genéricamente acá. Ningún logro está hardcodeado en el engine.
  */
 
+import { isSetComplete } from '../economy.js';
+
 const CONDITION_EVALUATORS = {
   totalMoneyEarnedAtLeast: (state, cond) => state.totalMoneyEarned >= cond.value,
   itemsFoundCountAtLeast: (state, cond) => state.itemsFoundCount >= cond.value,
@@ -24,6 +26,14 @@ const CONDITION_EVALUATORS = {
   // `.every()` sobre array vacío daría "true" (falso positivo instantáneo), no un no-op.
   allToolsOwned: (state, cond, ctx) =>
     Boolean(ctx.allTools?.length) && ctx.allTools.every((tool) => state.toolsOwned[tool.id]),
+  // Ronda 22 (PLAN.md §4.26): cantidad de legendarios ya encontrados.
+  legendariesFoundAtLeast: (state, cond) => state.legendariesFound.length >= cond.value,
+  // Ronda 22 (PLAN.md §4.25): cantidad de contenedores con el pool completo. ctx.itemsData
+  // ausente (llamador previo a la ronda 22) nunca desbloquea este logro, mismo criterio que
+  // allToolsOwned con ctx.allTools ausente.
+  setsCompletedAtLeast: (state, cond, ctx) =>
+    Boolean(ctx.itemsData) &&
+    ctx.allContainers.filter((c) => isSetComplete(state, c, ctx.itemsData)).length >= cond.value,
 };
 
 /**

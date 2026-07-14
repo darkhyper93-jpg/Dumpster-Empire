@@ -83,6 +83,8 @@ export default {
   'celebration.containerTitle': 'New container!',
   'celebration.containerReady': "It's now available to dig.",
   'celebration.firstFindTitle': 'New find!',
+  // Round 22 (PLAN.md §4.26): special celebration when finding a legendary.
+  'celebration.legendaryTitle': 'Legendary found!',
 
   // CollectionView.js
   'collection.emptyPool': 'This container has no rewards configured.',
@@ -91,6 +93,12 @@ export default {
   'collection.probability': 'Probability: {pct}%',
   'collection.baseValue': 'Base value: {amount}',
   'collection.foundCount': 'Found: {count}',
+  // Round 22 (PLAN.md §4.25/§4.26): complete-set badge + Showcase section.
+  'collection.setCompleteBadge': 'SET COMPLETE +{pct}%',
+  'collection.showcaseTitle': 'Legendary Showcase',
+  'collection.showcaseCount': 'Showcase: {count}/{total}',
+  'collection.showcaseHiddenName': '???',
+  'collection.showcaseNotFound': "You haven't found this legendary yet.",
   // Round 19: completion % (PLAN.md §5.4), derived — never a new persisted counter.
   'collection.completionGlobal': 'Global completion: {pct}%',
 

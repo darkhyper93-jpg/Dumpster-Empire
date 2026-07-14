@@ -33,6 +33,8 @@ export {
   getLevelRarityShift,
   getLevelValueMult,
   getMechanicValueMult,
+  isSetComplete,
+  getSetBonus,
   getDigRate,
   getEffectiveDigTime,
   getAutoDigPowerMult,
@@ -55,6 +57,7 @@ export {
   rollItemVariance,
   rollIsTrap,
   rollTrapGrade,
+  rollLegendary,
   refreshMarketFluctuation,
   categoryWeights,
 } from './rng.js';

@@ -13,18 +13,27 @@ import {
   getLevelRarityShift,
   getLevelValueMult,
   getMechanicValueMult,
+  getSetBonus,
   getTrapPenalty,
   registerContainerDig,
   itemSaleValue,
 } from '../economy.js';
-import { rollCategory, rollItem, rollItemVariance, rollIsTrap, rollTrapGrade, refreshMarketFluctuation } from '../rng.js';
+import {
+  rollCategory,
+  rollItem,
+  rollItemVariance,
+  rollIsTrap,
+  rollTrapGrade,
+  rollLegendary,
+  refreshMarketFluctuation,
+} from '../rng.js';
 
 /**
  * @typedef {Object} DigResult
  * @property {boolean} isTrap
  * @property {'leve' | 'normal' | 'grave'} [trapGrade] - solo si isTrap y data.traps existía en
  *   el momento del roll (PLAN.md §4.21, ronda 20). Ausente = tratar como "normal" (compat).
- * @property {Array<{ id: string, icon: string, name: string, categoria: string, value: number, isFirstRareFind: boolean }>} items
+ * @property {Array<{ id: string, icon: string, name: string, categoria: string, value: number, isFirstRareFind: boolean, isLegendary?: boolean }>} items
  * @property {number} moneyDelta
  */
 
@@ -128,13 +137,50 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
         depthValueMult,
       }) *
       levelValueMult *
-      getMechanicValueMult(container);
+      getMechanicValueMult(container) *
+      getSetBonus(state, container, itemsData, data);
     const alreadyFound =
       Boolean(state.itemsFoundByItem?.[container.id]?.[pick.id]) || seenInThisRoll.has(pick.id);
     const isFirstRareFind = categoria === rarest && !alreadyFound;
     seenInThisRoll.add(pick.id);
     items.push({ id: pick.id, icon: pick.icon, name: pick.name, categoria, value, isFirstRareFind });
   }
+
+  // PLAN.md §4.26 (ronda 22): roll de legendario, SOLO escarbado manual y SOLO si no cayó
+  // trampa (ya se retornó arriba en ese caso). El roll de legendaryChance siempre se consume
+  // desde `random` cuando corresponde intentarlo (secuencia de RNG estable), pero la sustitución
+  // del slot 1 solo ocurre si hay un legendario elegible (categoría coincide y no se posee aún).
+  if (!isAuto && data.legendaries && rollLegendary(data.legendaries.legendaryChance, random)) {
+    const slot1 = items[0];
+    const candidate = data.legendaries.items.find(
+      (l) => l.categoria === slot1.categoria && !state.legendariesFound.includes(l.id)
+    );
+    if (candidate) {
+      const rarity = itemsData.rarities.find((r) => r.id === candidate.categoria);
+      const value =
+        itemSaleValue({
+          valorBaseObjeto: candidate.valorBase,
+          multiplicadorRareza: rarity.mult,
+          suerte: luck,
+          fluctuacionMercado: state.marketFluctuation,
+          sellMult: getSellMult(state, candidate.categoria, data),
+          depthValueMult,
+        }) *
+        levelValueMult *
+        getMechanicValueMult(container) *
+        getSetBonus(state, container, itemsData, data);
+      items[0] = {
+        id: candidate.id,
+        icon: candidate.icon,
+        name: candidate.name,
+        categoria: candidate.categoria,
+        value,
+        isFirstRareFind: false,
+        isLegendary: true,
+      };
+    }
+  }
+
   const moneyDelta = items.reduce((sum, item) => sum + item.value, 0);
   return { isTrap: false, items, moneyDelta };
 }
@@ -179,6 +225,13 @@ export function applyContainerResult(state, container, result, isAuto, data) {
   const fragmentCategories = ['antiques', 'art', 'relics', 'future'];
   for (const item of result.items) {
     total += item.value;
+    // PLAN.md §4.26 (ronda 22, contrato §3.5.3): los legendarios están FUERA de los pools
+    // normales — nunca entran a itemsFoundByItem/itemsFoundCount/itemsFoundByCategory (la
+    // vitrina, `legendariesFound`, es su única persistencia, sin duplicados).
+    if (item.isLegendary) {
+      if (!state.legendariesFound.includes(item.id)) state.legendariesFound.push(item.id);
+      continue;
+    }
     state.itemsFoundCount++;
     state.itemsFoundByCategory[item.categoria] = (state.itemsFoundByCategory[item.categoria] || 0) + 1;
     // PLAN.md §11.5: el INDEX necesita el contador por ítem específico, no solo por categoría.

@@ -7,7 +7,7 @@
  * categoría que ya expone el engine (ver agentes/HANDOFF.md, bloque del Agente 6).
  */
 
-import { getLuck, getLevelRarityShift, categoryWeights, formatMoney } from '@dumpster/engine';
+import { getLuck, getLevelRarityShift, categoryWeights, formatMoney, isSetComplete } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { t } from '../i18n/i18n.js';
 import { getCollectionCompletion } from '../collectionProgress.js';
@@ -58,9 +58,20 @@ export const CollectionView = {
       )
       .join('');
 
+    // Ronda 22 (PLAN.md §4.25): badge de set completo del contenedor seleccionado. El % que se
+    // muestra sale de la data (data.collectionSets.setBonusPercent), nunca hardcodeado en la UI.
+    const setBonusPercent = data.collectionSets?.setBonusPercent;
+    const setBadge =
+      setBonusPercent && isSetComplete(state, selected, itemsData)
+        ? `<p class="index-set-badge">${t('collection.setCompleteBadge', { pct: Math.round(setBonusPercent * 100) })}</p>`
+        : '';
+
     container.innerHTML =
       `<p class="index-completion-global">${t('collection.completionGlobal', { pct: Math.round(globalPct * 100) })}</p>` +
-      `<div class="index-container-tabs">${tabs}</div><div class="index-grid" id="index-grid"></div>`;
+      `<div class="index-container-tabs">${tabs}</div>` +
+      setBadge +
+      `<div class="index-grid" id="index-grid"></div>` +
+      renderShowcase(state, data);
 
     const grid = container.querySelector('#index-grid');
     const pool = itemsData.containers[selected.id] || [];
@@ -107,3 +118,44 @@ export const CollectionView = {
     grid.innerHTML = cards;
   },
 };
+
+/**
+ * Ronda 22 (PLAN.md §4.26): sección Vitrina al final del INDEX — grilla de pedestales, uno por
+ * legendario (`data.legendaries.items`). Los no encontrados quedan como silueta "???"; los
+ * encontrados se revelan con ícono (bloom de rareza alta vía CSS), nombre y valor.
+ * @param {import('@dumpster/engine').GameState} state
+ * @param {import('@dumpster/engine').EngineData & { legendaries?: { items: Array<Object> } }} data
+ * @returns {string}
+ */
+function renderShowcase(state, data) {
+  const legendaries = data.legendaries?.items || [];
+  if (!legendaries.length) return '';
+  const found = new Set(state.legendariesFound);
+  const cards = legendaries
+    .map((legendary) => {
+      if (!found.has(legendary.id)) {
+        return (
+          `<article class="showcase-card showcase-card--hidden">` +
+          `<span class="showcase-card-icon">${iconMarkup('locked', { size: 30 })}</span>` +
+          `<h3>${t('collection.showcaseHiddenName')}</h3>` +
+          `<p>${t('collection.showcaseNotFound')}</p>` +
+          `</article>`
+        );
+      }
+      return (
+        `<article class="showcase-card">` +
+        `<span class="showcase-card-icon">${iconMarkup(legendary.icon, { size: 30 })}</span>` +
+        `<h3>${legendary.name}</h3>` +
+        `<p>${t('collection.baseValue', { amount: formatMoney(legendary.valorBase) })}</p>` +
+        `</article>`
+      );
+    })
+    .join('');
+  return (
+    `<section class="showcase-section">` +
+    `<h2 class="showcase-title">${t('collection.showcaseTitle')}</h2>` +
+    `<p class="showcase-count">${t('collection.showcaseCount', { count: found.size, total: legendaries.length })}</p>` +
+    `<div class="showcase-grid">${cards}</div>` +
+    `</section>`
+  );
+}

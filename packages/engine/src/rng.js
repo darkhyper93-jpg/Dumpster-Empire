@@ -88,6 +88,17 @@ export function rollTrapGrade(gradosProb, random = Math.random) {
 }
 
 /**
+ * §4.26 — tira si aparece un legendario en este escarbado (roll independiente, solo se
+ * consume cuando el llamador decide rollear: escarbado manual exitoso, ver rollContainerResult).
+ * @param {number} legendaryChance
+ * @param {() => number} [random]
+ * @returns {boolean}
+ */
+export function rollLegendary(legendaryChance, random = Math.random) {
+  return random() < legendaryChance;
+}
+
+/**
  * §4.4 — recalcula la fluctuación de mercado si pasaron 60s desde la última vez.
  * @param {number} marketFluctuation
  * @param {number} marketFluctuationAt
