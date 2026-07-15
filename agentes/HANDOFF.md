@@ -5377,3 +5377,200 @@ npm run test:e2e → 69/69 verde, SIN tocar ningún spec existente (no hay wirin
   ronda futura cambia esa constante sin actualizar el logro, quedaría un logro "nivel máximo"
   que no corresponde al nivel máximo real. Vale la pena un test de coherencia cruzada si la
   auditoría quiere blindarlo.
+## Ronda 23 — Agente C (UI): pestaña Puesto (rama `feat/puesto-ronda23`, save v12 sin cambios)
+
+### Qué hice
+
+1. **PLAN.md §4.30 nuevo** ("Presets del umbral de captura"): los 3 presets de umbral que pide
+   el roadmap ("percentiles del mejor contenedor... calculados por el engine, jamás en la UI")
+   no tenían fórmula escrita — la agregué antes de tocar código (regla CLAUDE.md). Percentiles
+   25/50/75 (interpolación lineal) del valor de venta ESTIMADO (sin variance de RNG, fluctuación
+   fija 1) de cada ítem del pool del contenedor más avanzado que el jugador posee.
+2. **`economy.js`**: `getStallThresholdPresets(state, allContainers, itemsData, data)` implementa
+   §4.30 literal, reusando `itemSaleValue`/`getLuck`/`getDepthValueMult`/`getLevelValueMult`/
+   `getMechanicValueMult`/`getSetBonus`/`getSellMult` ya existentes — cero fórmula nueva fuera de
+   la agregación de percentil. `[]` sin ningún contenedor poseído.
+3. **`systems/story.js` nuevo**: `checkStory(state, storyData, ctx)`, calco de `checkAchievements`
+   pero marca `state.storySeen` sin recompensa. Exporté `CONDITION_EVALUATORS` de
+   `achievements.js` (roadmap §3.2: "un solo motor de condiciones para logros, historia y
+   misiones") en vez de duplicar la lista — 23.B había dejado la pregunta abierta en su HANDOFF.
+4. **Barrel `index.js`**: reexporta `getStallThresholdPresets` y `checkStory`.
+5. **Tests RED→GREEN** (`packages/engine/tests/ronda23c-ui.test.js`, 7 casos): confirmé RED con
+   los imports rotos antes de escribir `getStallThresholdPresets`/`checkStory` — presets vacíos
+   sin contenedor, 3 presets ascendentes, el contenedor más avanzado da presets mayores, la
+   mediana cae dentro del rango real de valores; `checkStory` marca/no repite/no marca antes de
+   tiempo.
+6. **Wiring de data** (`main.js`): `DATA_FILES` gana `stall`/`npcs`/`story`. `data.stall` (única
+   pieza que consume el engine) se suma al objeto `data`; `npcs`/`story` viajan sueltos —
+   `storyData` a `createStore` (nuevo campo de `ctx`, usado por `store.js` para `checkStory`) y
+   `npcs` también a `ctx` (pura data de UI, igual que `achievementsData`/`itemsData`: ningún
+   sistema del engine la consume, pero vive en `store.ctx` para que las vistas la lean sin hilar
+   un parámetro nuevo por toda la cadena `UIManager.render → view.render`).
+7. **`dataI18n.js`**: wireé el overlay de `npcs` (`initDataLocalization`/`applyDataLanguage`) que
+   23.B había dejado listo en `data-en.js` pero inerte — mismo patrón `{name, desc}` que
+   `automations`/`prestigeTree` (acá `rol` hace de `desc`). `story.json` no necesita overlay (sus
+   textos son claves i18n fijas, sin campo de display propio).
+8. **`store.js`**:
+   - Acciones nuevas: `buyStall`, `upgradeStall`, `setKeepThreshold`, `sellInventoryItem` (venta
+     manual: refresca fluctuación, paga mult de pedido, y llama `rotateStallOrders` tras la venta
+     — PLAN.md §4.28 dice explícitamente que ese es el llamador correcto, no `sellInventoryItem`
+     del engine).
+   - `runStory()` (mismo patrón que `runAchievements()`): corre al boot, tras `importSave`, y
+     tras cualquier acción del Puesto que pueda cumplir un hito. Cola `consumeNewStoryVignettes()`
+     igual que `consumeNewAchievements()`.
+   - **Fix de un bug real en `tickAutomation`**: antes retornaba temprano si `!hasAutoDig(state,
+     data)`, lo que significaba que el `automationTick` del engine (que SÍ llama a
+     `stallVendorTick` ANTES de su propio early-return interno, PLAN.md §4.29) nunca se invocaba
+     para un jugador sin auto-escarbado — el robot vendedor del Puesto habría quedado mudo para
+     cualquiera que comprara `robotVendedor` sin tener también el robot de escarbado. Ahora
+     `automationTick` corre siempre; el resto del tick (logros/historia/detectContainerUnlocks/
+     notify) solo si hay algo activo (`hasAutoDig` o `stallLevel >= 1`), para no re-renderizar
+     cada segundo sin motivo. También agregué la rotación periódica de pedidos acá
+     (`rotateStallOrders` cuando `stallActive`).
+   - `ownedCategories()` helper (categorías de los contenedores POSEÍDOS, PLAN.md §4.28: "nunca
+     pedir lo inalcanzable").
+9. **`StallView.js` nuevo** (`apps/game/src/ui/StallView.js`): bloqueada (teaser + ícono) hasta
+   `stallLevel >= 1`; activa muestra a Doña Rita (retrato + diálogo — el intro fijo, o el último
+   comentario de venta por categoría vía `saleCategoryGroups`/`saleComments` de `npcs.json`,
+   estado de presentación local no persistido, mismo patrón que `selectedContainerId` de
+   `CollectionView`), cotización del día (% + flecha ▲/▼ contra 1.0, con color `--olive`/`--danger`
+   de los tokens), umbral con presets del engine (nunca calculados acá), nivel + botón de mejora,
+   grilla de inventario (reusa `.shop-card` para no inventar un layout nuevo) con precio en vivo y
+   botón Vender (el tween de dinero ya lo hace `Topbar.js` automáticamente al cambiar
+   `state.money`, no hizo falta nada nuevo), y 2 tarjetas de pedidos de Salomón con progreso/
+   recompensa/tiempo restante hasta la próxima rotación (`clampedElapsedMs` del engine).
+10. **Tabbar**: 7ma pestaña `puesto` en `index.html`/`UIManager.TAB_VIEWS`, ícono `tab-puesto`
+    (reusa la forma `marketStall` ya creada por 23.B para `stall-chatarra`) — **R23.1 ya estaba
+    resuelto**: el tabbar tiene `overflow-x:auto` + `flex:0 0 auto` desde la ronda 17/21, verificado
+    con Playwright que scrollea sin romper (scrollWidth 633px > clientWidth 375px a mobile-375).
+11. **`ShopView.js`**: tarjeta de compra del Puesto (roadmap: "la Tienda gana la tarjeta del
+    puesto") — único botón con acción real de esa vista hasta ahora (el resto es informativo,
+    escarbar es "comprar"); gané el primer binding de click de `ShopView`.
+12. **`CelebrationModal.js`/`UIManager.js`**: tipo `'story'` nuevo (retrato del NPC + `t(textKey)`,
+    sin recompensa) — mismo patrón consume-queue/push que logros y desbloqueos de contenedor.
+13. **i18n**: ~30 claves nuevas (`stall.*`, `shop.stall*`, `tabs.puesto`) en `es.js`/`en.js`, ambas
+    con traducción real (regla §1.15). Verificado con `i18n.test.js`/`ronda16-i18n.test.js`.
+14. **`ronda16-i18n.test.js`**: sumé `npcs` a la data sintética (`makeLoaded()`) y un test de
+    paridad `dataEn.npcs` ↔ `npcs.json` — sin esto el nuevo overlay de `dataI18n.js` rompía la
+    suite (`loaded.npcs` undefined).
+15. **2 e2e ajustados** (regla §1.18, cambio de UI declarado): `ronda10-regression.spec.js`
+    (`.shop-card` por posición → `.filter({ hasText })`, la tarjeta del Puesto ahora es la
+    primera del grid) y `ronda16-i18n.spec.js` (lista de tabs en inglés gana `'Stall'`). Ningún
+    otro spec existente se tocó.
+
+### Decisiones no triviales
+
+- **`getStallThresholdPresets` no estaba en el scope de 23.A/23.B**: el roadmap lo menciona bajo
+  "23.C" explícitamente ("presets del umbral... calculados por el engine") pero sin fórmula en
+  PLAN.md. La escribí en §4.30 antes de implementar (regla CLAUDE.md: fórmula primero, dato
+  después). Usa el contenedor de mayor `costoInicial` POSEÍDO, no el "recomendado" ni el
+  desbloqueado — es la única señal que el engine tiene de "lo que este jugador encuentra ahora".
+- **`checkStory` exporta `CONDITION_EVALUATORS` de `achievements.js` en vez de duplicarlo**: 23.B
+  dejó la decisión explícitamente abierta en su HANDOFF ("avisame si preferís que lo agregue yo
+  en vez de vos"). La tomé yo porque cablear el checker era inevitablemente parte de conectar la
+  UI de historia (el modal necesita algo que le entregue viñetas nuevas).
+- **`npcs` viaja por `store.ctx`, no por un parámetro nuevo en `view.render(...)`**: cambiar la
+  firma de `render()` en las 8 vistas existentes para pasar `loaded` completo era desproporcionado
+  para lo que necesito (solo `npcs`). `store.ctx` ya es el mecanismo establecido para data
+  estática que las vistas necesitan pero el engine no consume (`achievementsData`, `itemsData`).
+- **Fix del bug de `tickAutomation`/robot vendedor mudo**: no estaba explícitamente en mi lista de
+  tareas, pero sin él la máquina `robotVendedor` (23.B, `cost: 2000000`) sería un ítem comprable
+  que literalmente no hace nada para cualquier jugador sin auto-escarbado — inaceptable para una
+  automatización real. Lo until documento acá porque toca `store.js`, que sí es mío.
+- **La grilla de inventario reusa la clase `.shop-card`** (con `--rarity-color` inline) en vez de
+  inventar `.stall-card` — mismo criterio que `CollectionView` reusando `.index-card`: menos CSS
+  nuevo, coherencia visual con Contenedores.
+- **Rita solo muestra el ÚLTIMO comentario de venta**, no un historial — el roadmap pide "diálogo"
+  singular, no un chat; y el estado de presentación no persiste (se resetea al recargar, mismo
+  criterio que `selectedContainerId`).
+- **No implementé el descuento de `stallVendorTick`/robot vendedor en la UI**: ya vende solo desde
+  `automationTick` (23.A + mi fix de `tickAutomation`), la UI solo necesita re-renderizar — cubierto
+  por el `notify()` periódico que agregué cuando `stallActive`.
+
+### Verificación manual (375px + desktop)
+
+Booteé el juego real (`npx serve` + Playwright temporal, script y capturas borrados tras
+verificar — no se commitearon) con un save v12 sembrado (`stallLevel: 1`, 2 ítems en inventario,
+1 pedido activo, `marketFluctuation: 1.1`) en mobile-375 y desktop-1440:
+- Pestaña Puesto: retrato+diálogo de Rita, cotización "▲10%" en verde, umbral con 3 presets
+  reales, nivel 1/5, grilla de inventario con precio en vivo, tarjeta de pedido de Salomón —
+  visible y legible en ambos anchos, tabbar scrollea a 375px sin recortar el resto de las pestañas.
+- Vender un ítem: dinero sube (con tween), el ítem desaparece del inventario, el pedido activo
+  suma progreso (categoría coincidente, mult aplicado).
+- Tienda: la tarjeta del Puesto muestra "Ya lo tenés" tras comprarlo.
+- Al bootear con `stallLevel: 1` recién puesto, la viñeta de Doña Rita apareció en el modal de
+  celebraciones (encolada junto con logros reales que el seed también disparaba) — confirma
+  `checkStory`/`runStory`/el wiring del modal de punta a punta.
+- **Cero errores de consola** en ambos anchos.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 447/447 verde (36 archivos; eran 439/34 tras 23.B, +7 de
+                     ronda23c-ui.test.js nuevo, +1 test de paridad npcs en ronda16-i18n.test.js)
+npm run test:e2e  → 69/69 verde, DOS specs existentes ajustados (declarado arriba, regla §1.18:
+                     "salvo que una ronda declare lo contrario explícitamente") — ningún otro
+                     spec tocado. Confirmé también una corrida aislada del intermitente
+                     ronda19-quickwins (falló 1 vez en la corrida completa, pasó en aislamiento y
+                     en una segunda corrida completa — flake de paralelismo, no relacionado).
+```
+
+### Estado del DoD (Agente C, ronda 23)
+
+```
+[x] PLAN.md §4.30 primero (única fórmula nueva de esta sección)
+[x] Tests RED antes de implementar (ronda23c-ui.test.js, engine puro)
+[x] npm test → 447/447 verde
+[x] npm run test:e2e → 69/69 verde (2 specs ajustados y declarados, ver arriba)
+[x] Manual 375px + desktop: Puesto completo, venta real, viñeta de Rita, cero errores de consola
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (quedan 23.D, 23.E) — no corresponde
+    todavía, regla de ramas del roadmap.
+```
+
+### Qué necesita saber la ronda 23.D (e2e)
+
+- Todo lo que pide el roadmap 23.D ya tiene DOM real para anclar: `[data-tab="puesto"]`,
+  `.stall-npc`, `.stall-quote`, `.stall-threshold` (`input[data-action="set-threshold"]`,
+  `[data-action="set-threshold-preset"]`), `.stall-level` (`[data-action="upgrade-stall"]`),
+  `.stall-inventory-grid` (`[data-action="sell-item"][data-index]`), `.stall-orders-grid`
+  (`.stall-order-card`). La tarjeta de compra en Tienda es `[data-action="buy-stall"]`.
+- Semilla recomendada: `serializeState(freshState())` mutado con `stallLevel`, `inventory`,
+  `stallOrders`, `keepThreshold` (patrón §1.9) — pero **cuidado con el schema completo**: mi
+  verificación manual pisó en un save incompleto (`categoryFragments` debe ser `number` no
+  `object`, `equippedTool` debe estar en `toolsOwned`, falta `containerLevels` aparte de
+  `containerLevelProgress`) — usar `freshState()` real y mutar encima evita este problema por
+  completo, no armar el objeto de save a mano.
+- El robot vendedor (punto 4 del roadmap) necesita `robotVendedor` comprado (23.B) — con mi fix
+  de `tickAutomation` ya vende solo cada `vendedorIntervalo` (20s) SIN necesitar auto-escarbado
+  también comprado. Si 20s reales no es viable en e2e, cubrir el intervalo en engine (ya lo hace
+  `ronda23-puesto.test.js` de 23.A) y acá smoke del estado visible, como preveía el roadmap.
+- La viñeta de Rita (punto 5): sembrar `stallLevel: 1` y booteando el juego el modal de
+  celebración aparece con `type: 'story'` — recargar y confirmar que NO vuelve a aparecer
+  (`state.storySeen` incluye `'stallUnlockRita'`, persistido).
+- El copy español de `stall.*`/`shop.stall*` es nuevo de esta ronda — no está protegido por la
+  regla §1.11 ("copy INTOCABLE") de rondas previas, pero si lo asertás en un spec, quedará
+  protegido de acá en adelante.
+
+### Qué necesita saber la ronda 23.E (auditoría)
+
+- **XSS de diálogos de NPC**: repasé esto activamente. `def.name`/`rita.name`/`lastSaleComment`
+  vienen siempre de `npcs.json`/`items.json`/claves i18n fijas (nunca de `entry.itemId`/
+  `entry.containerId` directo — `findItemDef` devuelve `null` si no matchea y cae a un fallback
+  seguro, nunca interpola el id crudo). `order.categoria` se resuelve a `rarity.name` (data) con
+  fallback al id crudo (también data, no input de save) si la rareza no existe. Ningún campo de
+  `state.inventory`/`state.stallOrders` (los más "ricos" del save, ya con validación dura en
+  save.js) se interpola crudo en el DOM.
+- **`tickAutomation` ahora notifica cada segundo si `stallLevel >= 1`** (antes solo con
+  `hasAutoDig`): vale la pena confirmar que esto no reintroduce el bug de foco del SELECT/INPUT
+  que motivó el guard de `renderTabContent` (ronda 14) — mi `StallView.render` tiene su propio
+  guard idéntico para el input de umbral, pero si la auditoría encuentra otro input en otra vista
+  que pierda foco por este cambio, es candidato a revisar.
+- **`getStallThresholdPresets`** es nuevo en `economy.js` (PLAN.md §4.30) — sin tests de
+  propiedades extremas (contenedor con pool de 1 solo ítem, todos los ítems con el mismo valor).
+  Los 7 tests de `ronda23c-ui.test.js` cubren el camino principal; vale la pena un test de borde
+  si la auditoría quiere blindarlo más.
+- **`ronda16-i18n.test.js`** ganó un octavo import (`npcsData`) y un test de paridad — mismo
+  patrón que `legendaries`, sin sorpresas.
