@@ -5574,3 +5574,114 @@ npm run test:e2e  → 69/69 verde, DOS specs existentes ajustados (declarado arr
   si la auditoría quiere blindarlo más.
 - **`ronda16-i18n.test.js`** ganó un octavo import (`npcsData`) y un test de paridad — mismo
   patrón que `legendaries`, sin sorpresas.
+## Ronda 23 — Agente D (e2e): `ronda23-puesto.spec.js` (rama `feat/puesto-ronda23`, save v12 sin cambios)
+
+### Qué hice
+
+Spec nuevo `apps/game/e2e/ronda23-puesto.spec.js` con los 5 casos que pide el roadmap 23.D,
+contra la UI ya cableada por 23.C (no toqué código de producción):
+
+1. Sin Puesto (`stallLevel: 0`): un escarbado con ítem valioso completado (`iniciarEscarbadoSinTrampa`
+   + `rascarObjeto` sobre todos los objetos) sube `#money` directo — juego idéntico al de antes de
+   la ronda (R23.2, contrato §3.5.18).
+2. Con Puesto (`stallLevel: 1`) y `keepThreshold: 1`: el mismo flujo de escarbado captura al
+   inventario en vez de vender (`#money` no se mueve), y vender manualmente desde la pestaña Puesto
+   sí sube `#money` y achica la grilla en 1.
+3. Pedido de Salomón sembrado (`stallOrders`) + 2 ítems en inventario (uno de la categoría pedida,
+   uno de otra): vender el que NO tiene pedido sube `basePrice` exacto; vender el que sí tiene
+   sube `basePrice × orderMult` — montos exactos vía `formatMoney`/`data/stall.json`, con
+   `marketFluctuation: 1` y `marketFluctuationAt` reciente para que `refreshMarketFluctuation`
+   (rng.js, ventana de 60s) no la recalcule entre las dos ventas.
+4. Robot vendedor (`automationOwned.robotVendedor: true`) con 1 ítem en inventario: `page.clock.install()`
+   + `page.clock.fastForward(vendedorIntervalo + 5s)` (mismo patrón que ronda20-dig.spec.js para
+   la Bóveda a Contrarreloj) — el inventario se vacía solo, sin click del jugador. No usé el
+   "smoke sin esperar" que preveía el roadmap como fallback: `page.clock` hizo el intervalo real
+   viable sin esperar 20s de wall-clock.
+5. Viñeta de Doña Rita (`stallUnlockRita`, story.json): aparece al bootear con `stallLevel: 1`
+   sembrado, se cierra a mano, y tras recargar (`page.reload()`) NO vuelve — confirma que
+   `state.storySeen` persiste entre sesiones.
+
+### Decisiones no triviales / bugs de MI test (no del juego) que encontré al hacerlo pasar
+
+- **Los logros pagan dinero real y ensucian los montos exactos**: `a46` ("Primer Objeto Guardado",
+  `$3000`) se dispara apenas `inventory.length >= 1`, sin importar si el jugador lo sabía. Los
+  tests 2 y 3 preseedan `achievementsUnlocked: ALL_ACHIEVEMENT_IDS` (mismo patrón que
+  `audit-ronda15.spec.js`/`ronda19-quickwins.spec.js`) para que los asserts de "el dinero no sube"
+  y "sube exactamente basePrice" no compitan con una recompensa de logro. Esto NO es un bug del
+  juego — es la primera vez que un e2e de esta ronda mezcla capturas al inventario con logros de
+  recompensa en dinero; documentado acá para el próximo agente que siembre `inventory` directo.
+- **`page.addInitScript` de `seed()` se re-ejecuta en CADA navegación, incluido `page.reload()`**:
+  el test 5 necesita reload para probar persistencia, pero el `seed()` compartido pisaría el save
+  real (con `storySeen` ya actualizado por el juego) con el seed original en cada recarga — la
+  viñeta parecía "repetirse" por un artefacto del test, no del juego (lo confirmé instrumentando
+  `Storage.prototype.setItem/getItem` con un `page.on('console')` temporal, borrado antes de
+  commitear). Solución: el test 5 usa su propio `addInitScript` con un guard de `sessionStorage`
+  (sobrevive a `reload()`, no a una pestaña/contexto nueva) que solo siembra una vez. Si otra ronda
+  necesita "seed + reload" en el mismo test, este es el patrón a reusar (no hay precedente previo
+  en el repo: ronda14/ronda16 recargan pero sin seed custom).
+- **`beforeunload` no siempre corre bajo Chromium en automation sin gesto de usuario previo a la
+  navegación**: el test 5 dispara `window.dispatchEvent(new Event('beforeunload'))` a mano antes
+  de `page.reload()` para forzar el `store.persist()` de `loop.js` de forma determinística.
+- Los montos de los tests 3 y 4 asumen `marketFluctuation` estable durante el test: se siembra
+  `marketFluctuation: 1` y `marketFluctuationAt: Date.now()` (reciente) para que
+  `refreshMarketFluctuation` (rng.js, ventana de 60s) no la recalcule entre operaciones del mismo
+  test — sin esto los montos exactos serían flaky.
+- No usé `entrarAlJuego` en el test 5 (cierra celebraciones sola) porque necesito ver la viñeta de
+  Rita ANTES de descartarla, para cerrarla a mano y verificar que no vuelve.
+
+### Verificación manual (375px + desktop)
+
+Script temporal (Playwright headless contra `npx serve`, borrado tras verificar — no se commiteó,
+mismo patrón que 23.B/23.C) con un save v12 sembrado (`stallLevel: 1`, 1 ítem en inventario,
+1 pedido con progreso 1/2, `marketFluctuation: 1.1`):
+- mobile-375 y desktop-1440: pestaña Puesto — Doña Rita con retrato y diálogo, cotización
+  "▲10%" en verde, umbral con input, nivel 1/5 · capacidad 12, botón de mejora con costo real,
+  grilla de inventario con "Lata aplastada" y precio en vivo, botón Vender. Desktop conserva el
+  panel de Escarbar/herramientas a la izquierda (layout ya existente, sin regresión visual).
+- **Cero errores de consola** en ambos anchos.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 447/447 verde (sin cambios: 23.D no tocó packages/engine ni sus tests)
+npm run test:e2e  → 74/74 verde (69 previos de 23.C + 5 nuevos de ronda23-puesto.spec.js).
+                     Un solo failure intermitente en la corrida completa
+                     (ronda19-quickwins.spec.js, test 1 "la racha aparece desde 2 escarbados
+                     manuales sin trampa") — mismo flake de paralelismo ya documentado por 23.C
+                     en su HANDOFF; confirmado reproduciendo: pasa siempre en aislamiento
+                     (reintenté 1 vez, verde). No relacionado con esta ronda, ningún spec
+                     existente se tocó.
+```
+
+### Estado del DoD (Agente D, ronda 23)
+
+```
+[x] Los 5 casos del roadmap 23.D cubiertos (numerados igual que el roadmap)
+[x] npm test → 447/447 verde
+[x] npm run test:e2e → 74/74 verde (flake preexistente de ronda19 documentado, no introducido)
+[x] Manual 375px + desktop: pestaña Puesto completa, cero errores de consola
+[x] Cero console.log / TODO / emojis en el spec final (el debug temporal de setItem/getItem se
+    removió antes de commitear)
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (queda 23.E, auditoría) — no corresponde
+    todavía, regla de ramas del roadmap.
+```
+
+### Qué necesita saber la ronda 23.E (auditoría)
+
+- El robot vendedor priorizado por pedido (`pickVendorSaleIndex`, systems/stall.js) no tiene
+  cobertura e2e de la prioridad en sí (solo smoke de "el inventario se vacía") — la prioridad de
+  pedido vs. `baseValue` ya está cubierta en `ronda23-puesto.test.js` (engine, 23.A); no dupliqué
+  ese caso acá a propósito (mismo criterio que otras rondas: e2e prueba integración DOM, no
+  reglas de negocio que el engine ya cubre exhaustivo).
+- No agregué un caso e2e para capacidad llena / captura que cae a venta instantánea por
+  `inventory.length >= capacity` (cubierto en engine 23.A) ni para el descarte offline del robot
+  vendedor (`applyOfflineStallSales`, no observable desde un boot normal de e2e sin mockear
+  `lastSavedAt` muy atrás — riesgo de flake con el modal offline real tapando el DOM). Si la
+  auditoría lo considera necesario, es candidato a un test dedicado con `seeded.lastSavedAt`
+  desplazado y `page.clock`.
+- El pattern de "seed + reload" con guard de `sessionStorage` (test 5) es nuevo en el repo — si
+  una ronda futura (24, misiones diarias con reroll por día) necesita "recargar y ver el estado
+  post-mutación", este es el precedente a reusar en vez de reinventar la instrumentación de
+  `Storage.prototype` que usé para diagnosticarlo (esa parte SÍ se borró, no quedó en el spec).
