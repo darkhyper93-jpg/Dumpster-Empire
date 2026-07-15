@@ -5685,3 +5685,133 @@ npm run test:e2e  → 74/74 verde (69 previos de 23.C + 5 nuevos de ronda23-pues
   una ronda futura (24, misiones diarias con reroll por día) necesita "recargar y ver el estado
   post-mutación", este es el precedente a reusar en vez de reinventar la instrumentación de
   `Storage.prototype` que usé para diagnosticarlo (esa parte SÍ se borró, no quedó en el spec).
+
+## Ronda 23 — Agente E: auditoría de seguridad (Verif&Audit.md) del diff completo (rama `feat/puesto-ronda23`, save v12 sin cambios)
+
+### Qué hice
+
+Revisión adversarial línea por línea del diff completo de la ronda 23 (23.A→23.D, `git diff
+main...HEAD`) con la metodología de Verif&Audit.md, foco en lo que pide el roadmap 23.E:
+`inventory`/`stallOrders` como el vector de save más rico hasta ahora, relojes manipulados,
+XSS por diálogos/campos de NPC interpolados, y la frontera engine↔UI (percentiles/precios).
+
+**Un solo hallazgo de riesgo (🟡), arreglado con test RED→GREEN. El resto del diff pasó la
+auditoría** (la validación de save del Agente A es muy sólida: `isValidInventory`/
+`isValidStallOrders` con forma exacta + `INVENTORY_MAX_SAFETY` + finitud; relojes clampeados
+en `stall.js`; legendarios excluidos de la captura; snapshot "sin puesto = idéntico").
+
+### 🟡 Hallazgo (arreglado): XSS por `order.categoria` crudo en `StallView.renderOrders`
+
+- **Vector**: `renderOrders` hacía `t('stall.orderCategory', { categoria: rarity ? rarity.name
+  : order.categoria })` y el resultado iba a `container.innerHTML`. `order.categoria` es un
+  string libre del save; `save.js`/`isValidStallOrders` lo valida SOLO por tipo (`typeof
+  string`) — correcto en esa capa (el save chequea tipo, la UI hace la defensa en profundidad
+  con allow-list, napkin #8). Un save manipulado/importado con
+  `categoria: '<img src=x onerror=...>'` (que pasa toda la validación: cantidad/mult/progress
+  válidos) inyectaba HTML ejecutable en la pestaña Puesto. Es la misma clase que la ronda de
+  fixes de `CollectionView`/`ShopView`/etc. (napkin #8), que 23.C no cubrió para este campo
+  nuevo.
+- **Fix** (`apps/game/src/ui/StallView.js`): se resuelve `order.categoria` SIEMPRE contra
+  `itemsData.rarities`; un id desconocido cae a `t('collection.hiddenName')` ("???"), nunca se
+  interpola crudo — exactamente la misma defensa que `renderInventory` ya usaba para un ítem
+  sin `def`. En juego normal los pedidos se generan solo sobre rarezas válidas (`randomOrder`
+  sobre `ownedCategories`), así que el fallback "???" solo aparece ante un save hostil.
+- **Test** (`apps/game/e2e/audit-ronda23.spec.js`, nuevo): siembra un pedido con `categoria`
+  = payload `<img onerror>`, abre el Puesto y verifica que NO hay `<img>` dentro de
+  `.stall-order-card` y que `window.__xssPwned` nunca se setea. RED confirmado antes del fix
+  (count 1, onerror disparado), GREEN después. Chequeo de ausencia inmediato (`.count()`), no
+  `toHaveCount` con auto-retry (napkin #2) — el elemento no expira, pero el count inmediato es
+  la comprobación honesta.
+
+### 🔵 Notas de calidad (NO arregladas — sin pérdida de valor ni vector explotable; documentadas)
+
+- **Ventas offline del Puesto no se muestran en el OfflineModal**: `applyOfflineProgress`
+  devuelve `stallEarnings` y `applyOfflineStallSales` YA suma ese dinero a `state.money`
+  correctamente (sin doble conteo — R23.3 respetado), pero `store.js` solo abre el modal con
+  `result.ganancia > 0` y el modal solo tweenea `summary.ganancia`. Consecuencia: si el robot
+  vendedor vende offline y no hubo loot de auto-escarbado, el dinero sube en silencio; si hubo
+  ambos, el total mostrado subestima por `stallEarnings`. No se pierde dinero ni se duplica —
+  es solo un número informativo del modal. No lo toqué para no meter una redacción de "tus
+  robots escarbaron" sobre un monto de ventas ni tocar OfflineModal (23.C) con cobertura débil;
+  si una ronda futura quiere surfacearlo, `result.stallEarnings` ya viaja listo. El campo hoy
+  no lo lee nadie (dato muerto a propósito, documenta la intención).
+- **`notify()` cada segundo con `stallLevel >= 1`**: `tickAutomation` (fix de 23.C) re-renderiza
+  la UI cada tick cuando el Puesto está activo, lo que recorre `getStallThresholdPresets`
+  (ordena el pool) cada segundo. Pool chico → costo despreciable; el input de umbral está
+  protegido por su guard de foco (`StallView.render` + `UIManager.renderTabContent`). Sin acción.
+- **Venta manual por índice con robot vendedor de fondo**: el `data-index` del botón Vender se
+  captura al render; si el robot vendedor vende entre render y click, el índice podría apuntar a
+  otro ítem. `sellInventoryItemAt` valida `if (!item)` y el `notify()` del tick re-renderiza la
+  grilla con índices frescos, así que la ventana es mínima. Edge case inherente al patrón por
+  índice, sin impacto económico. Sin acción.
+
+### Lo que audité y pasó limpio (para no re-auditar en la 24+)
+
+- **Interpolaciones a innerHTML**: barrido de todo el código nuevo de UI. Único campo
+  save-derived free-string a un sink era `order.categoria` (arriba). `entry.itemId`/
+  `entry.containerId` solo se usan para lookup (`findItemDef`), nunca como texto; `entry.categoria`
+  solo resuelve `rarity.colorToken` (atributo, data). `rita.name`/`lastSaleComment`/`npc.name`/
+  `t(textKey)` vienen 100% de data/claves i18n fijas. Diálogos de Rita/Salomón: sin `{param}` de
+  input no confiable.
+- **Relojes (`ordersRotatedAt`/`stallVendorAt`/`marketFluctuationAt`)**: todos vía
+  `clampedElapsedMs` (≥ 0, 0 si no finito). Reloj hacia atrás no rota pedidos ni vende;
+  `rotateStallOrders` solo resetea `ordersRotatedAt` en la rama de rotación completa, la de
+  relleno (`while length < 2`) no — sin exploit de reloj.
+- **Números/finitud**: `baseValue` validado finito > 0 en save; `keepThreshold`/`stallLevel`/
+  contadores con su rango; precios/capacidad/presets finitos (multiplicadores de data,
+  fluctuación finita). `percentile` guarda `length >= 1`. Sin división por cero.
+- **`stallLevel` sin cota superior en el save**: un `stallLevel` gigante (entero >= 0) pasa
+  validación, pero solo se auto-perjudica (capacidad enorme in-memory que el siguiente
+  deserialize rechaza por `INVENTORY_MAX_SAFETY`; `upgradeStall` topea en `stallNivelMax`).
+  Consistente con cómo se validan los demás niveles del repo (containerLevels, prestige) — no es
+  un vector nuevo. Sin acción.
+- **Íconos/retratos**: `portraits.js` con `xmlns`; las 3 shapes nuevas (`marketStall`/`shelf`/
+  `orderSign`) + `robot-vendor`→`robot` resuelven en `ICON_MAP`/`SHAPES` (cubierto por
+  `icons.test.js`). Cero emojis.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 447/447 verde (35 archivos; sin cambios de conteo: el fix es de UI, cubierto
+                     por e2e — no toqué packages/engine ni sus tests)
+npm run test:e2e  → 75/75 verde (74 previos de 23.D + 1 nuevo de audit-ronda23.spec.js). Sin
+                     flakes en esta corrida completa (el intermitente de ronda19-quickwins que
+                     documentaron 23.C/23.D no reapareció).
+Manual 375px + desktop-1440 (Playwright temporal, borrado tras verificar — no comiteado): pestaña
+  Puesto con nivel 2, cotización "▲10%", 2 ítems en inventario y 2 pedidos — el normal muestra
+  "Pedido: Basura Común", el hostil (sembrado a mano) cae al fallback seguro "Pedido: ???" sin
+  inyectar ningún <img> y sin ejecutar el onerror; vender un ítem sube #money; CERO errores de
+  consola en ambos anchos.
+```
+
+### Estado del DoD (Agente E, ronda 23 — ÚLTIMO agente de la ronda)
+
+```
+[x] Auditoría del diff completo con la metodología de Verif&Audit.md
+[x] Hallazgo 🟡 arreglado con test RED→GREEN (audit-ronda23.spec.js)
+[x] npm test → 447/447 verde
+[x] npm run test:e2e → 75/75 verde
+[x] Manual 375px + desktop: Puesto operable, fallback seguro del pedido hostil, cero errores de consola
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit (b354258)
+[x] HANDOFF (este bloque)
+[ ] Push de la rama + link de PR — a continuación (soy el último agente de la ronda 23)
+```
+
+### Qué necesita saber la ronda 24 (retención: misiones diarias, eventos, día/noche)
+
+- La ronda 23 completa (A→E) queda mergeable como PR #22 (save v12): `SAVE_VERSION = 12`,
+  baselines 447 unit / 75 e2e. Recontar al ejecutar (regla §0).
+- Contadores que consume la 24 (contrato §3.5.4) ya existen y están validados en el save:
+  `stallSoldCount`, `ordersFulfilledCount` (además de `digStreak` de la 19). Las misiones de
+  puesto (`sellAtStallCount`/`fulfillOrders`) SOLO se generan con `stallLevel >= 1`.
+- **Patrón anti-XSS reforzado por esta auditoría**: cualquier vista nueva de la 24 que interpole
+  un campo string del save (categoría de misión, id de evento, etc.) a `innerHTML` debe
+  resolverlo contra su allow-list de data ANTES de interpolar (napkin #8) — `t()` NO escapa. El
+  precedente exacto es `StallView.renderOrders` (categoría→`rarity.name` con fallback
+  `hiddenName`).
+- El motor de condiciones compartido (`CONDITION_EVALUATORS`, exportado desde
+  `systems/achievements.js`) ya lo reusan logros e historia (`checkStory`); las misiones de la
+  24 deben reusarlo también (roadmap §3.2 "un solo motor"), no duplicar la lista.
+- `applyOfflineProgress` devuelve `stallEarnings` (hoy sin consumidor de UI, ver 🔵 arriba): si
+  la 24 rehace el modal offline o suma un resumen, ese dato ya está disponible sin recalcular.
