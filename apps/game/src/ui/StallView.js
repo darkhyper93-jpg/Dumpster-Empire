@@ -134,9 +134,14 @@ function renderOrders(state, data, npcs, itemsData) {
   const cards = state.stallOrders
     .map((order) => {
       const rarity = itemsData.rarities.find((r) => r.id === order.categoria);
+      // AUDITORÍA (ronda 23.E, napkin #8): `order.categoria` es un string libre del save (validado
+      // solo por tipo, no allow-list). Se resuelve SIEMPRE contra la data de rarezas; un id
+      // desconocido (save manipulado/hostil) cae al nombre oculto seguro, nunca se interpola crudo
+      // en innerHTML — misma defensa que renderInventory usa para un ítem sin def.
+      const categoriaNombre = rarity ? rarity.name : t('collection.hiddenName');
       return (
         `<article class="stall-order-card">` +
-        `<h3>${t('stall.orderCategory', { categoria: rarity ? rarity.name : order.categoria })}</h3>` +
+        `<h3>${t('stall.orderCategory', { categoria: categoriaNombre })}</h3>` +
         `<p>${t('stall.orderProgress', { progress: order.progress, cantidad: order.cantidad })}</p>` +
         `<p>${t('stall.orderReward', { pct: Math.round((order.mult - 1) * 100) })}</p>` +
         `<p class="stall-order-time">${t('stall.orderTime', { minutes: remainingMin })}</p>` +
