@@ -16,6 +16,7 @@ export default {
   'tabs.logros': 'Logros',
   'tabs.prestigio': 'Prestigio',
   'tabs.index': 'Índice',
+  'tabs.puesto': 'Puesto',
 
   // Compartidos entre vistas
   'common.free': 'Gratis',
@@ -168,6 +169,29 @@ export default {
   'shop.luckLine': 'Suerte recomendada: {rec} {status}',
   'shop.digPowerLine': 'Fuerza recomendada: ×{rec} {status}',
   'shop.areaLine': 'Búsqueda recomendada: ×{rec} {status}',
+  // Ronda 23.C: tarjeta de compra del Puesto de Chatarra (PLAN.md §2.9/§4.27) en la Tienda.
+  'shop.stallCard': 'Puesto de Chatarra',
+  'shop.stallDesc': 'Guardá los objetos que valgan la pena y vendéselos a Doña Rita cuando la cotización esté alta.',
+  'shop.stallBuyFor': 'Comprar por {amount}',
+  'shop.stallOwned': 'Ya lo tenés — andá a la pestaña Puesto.',
+
+  // StallView.js (PLAN.md §2.9/§4.27-§4.30, ronda 23.C)
+  'stall.lockedTeaser': 'Se desbloquea comprando el Puesto de Chatarra en la Tienda.',
+  'stall.quote': 'Cotización del día: {arrow} {pct}%',
+  'stall.thresholdLabel': 'Guardá lo que valga $X o más',
+  'stall.thresholdActive': 'Guardando objetos de {amount} o más.',
+  'stall.thresholdPaused': 'Puesto en pausa: subí el umbral para empezar a guardar objetos.',
+  'stall.levelLine': 'Nivel {level}/{max} · Capacidad: {capacity}',
+  'stall.levelMaxed': 'Nivel máximo',
+  'stall.upgradeFor': 'Mejorar por {amount}',
+  'stall.inventoryTitle': 'Inventario',
+  'stall.inventoryEmpty': 'El puesto está vacío — subí el umbral o escarbá algo bueno.',
+  'stall.sell': 'Vender',
+  'stall.ordersTitle': 'Pedidos de {name}',
+  'stall.orderCategory': 'Pedido: {categoria}',
+  'stall.orderProgress': 'Progreso: {progress}/{cantidad}',
+  'stall.orderReward': 'Paga +{pct}% sobre el precio del puesto',
+  'stall.orderTime': 'Rotan en {minutes} min',
 
   // TitleScreen.js
   'titleScreen.play': 'Jugar',

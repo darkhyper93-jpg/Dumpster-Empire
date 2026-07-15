@@ -319,6 +319,9 @@ const ICON_MAP = {
   'tab-logros': 'medal',
   'tab-prestigio': 'crown',
   'tab-index': 'clipboard',
+  // Ronda 23.C: la pestaña Puesto reusa la forma 'marketStall' (mismo puesto que 'stall-chatarra',
+  // ronda 23.B) — un ícono de tab siempre apunta a una forma ya definida, nunca duplica el path.
+  'tab-puesto': 'marketStall',
   locked: 'shield',
   'close-x': 'closeX',
 

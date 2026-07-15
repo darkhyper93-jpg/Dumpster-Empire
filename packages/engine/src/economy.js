@@ -855,3 +855,56 @@ export function hasStallVendor(state, data) {
     ({ automationId }) => state.automationOwned[automationId]
   );
 }
+
+/**
+ * Percentil (interpolación lineal) de un array YA ordenado ascendente.
+ * @param {Array<number>} sortedValues
+ * @param {number} p - 0..1
+ * @returns {number}
+ */
+function percentile(sortedValues, p) {
+  if (sortedValues.length === 1) return sortedValues[0];
+  const idx = p * (sortedValues.length - 1);
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  if (lower === upper) return sortedValues[lower];
+  return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * (idx - lower);
+}
+
+/**
+ * §4.30 (ronda 23.C) — 3 presets de umbral de captura ("guardá lo que valga $X o más"),
+ * percentiles 25/50/75 del valor de venta ESTIMADO (sin variance de RNG, fluctuación fija 1) de
+ * cada ítem del pool del contenedor más avanzado que el jugador posee (mayor `costoInicial`).
+ * Sin ningún contenedor poseído, no hay base para estimar nada: devuelve [].
+ * @param {GameState} state
+ * @param {Array<Object>} allContainers
+ * @param {{ containers: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
+ * @param {EngineData} data
+ * @returns {Array<number>}
+ */
+export function getStallThresholdPresets(state, allContainers, itemsData, data) {
+  const owned = allContainers.filter((c) => (state.ownedContainers[c.id] || 0) >= 1);
+  if (!owned.length) return [];
+  const best = owned.reduce((a, b) => (b.costoInicial > a.costoInicial ? b : a));
+  const pool = itemsData.containers[best.id] || [];
+  if (!pool.length) return [];
+  const luck = getLuck(state, data);
+  const depthValueMult = getDepthValueMult(state, data);
+  const itemMultipliers = getLevelValueMult(state, best) * getMechanicValueMult(best) * getSetBonus(state, best, itemsData, data);
+  const values = pool
+    .map((item) => {
+      const rarity = itemsData.rarities.find((r) => r.id === item.categoria);
+      return (
+        itemSaleValue({
+          valorBaseObjeto: item.valorBase,
+          multiplicadorRareza: rarity ? rarity.mult : 1,
+          suerte: luck,
+          fluctuacionMercado: 1,
+          sellMult: getSellMult(state, item.categoria, data),
+          depthValueMult,
+        }) * itemMultipliers
+      );
+    })
+    .sort((a, b) => a - b);
+  return [0.25, 0.5, 0.75].map((p) => percentile(values, p));
+}

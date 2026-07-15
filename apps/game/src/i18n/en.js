@@ -15,6 +15,7 @@ export default {
   'tabs.logros': 'Achievements',
   'tabs.prestigio': 'Prestige',
   'tabs.index': 'Index',
+  'tabs.puesto': 'Stall',
 
   // Compartidos entre vistas
   'common.free': 'Free',
@@ -167,6 +168,29 @@ export default {
   'shop.luckLine': 'Recommended Luck: {rec} {status}',
   'shop.digPowerLine': 'Recommended Dig Power: ×{rec} {status}',
   'shop.areaLine': 'Recommended Search Area: ×{rec} {status}',
+  // Ronda 23.C: Junk Stall purchase card (PLAN.md §2.9/§4.27) in the Shop tab.
+  'shop.stallCard': 'Junk Stall',
+  'shop.stallDesc': 'Save the objects worth keeping and sell them to Doña Rita when the price is high.',
+  'shop.stallBuyFor': 'Buy for {amount}',
+  'shop.stallOwned': "You already have it — check the Stall tab.",
+
+  // StallView.js (PLAN.md §2.9/§4.27-§4.30, ronda 23.C)
+  'stall.lockedTeaser': 'Unlocked by buying the Junk Stall in the Shop.',
+  'stall.quote': "Today's price: {arrow} {pct}%",
+  'stall.thresholdLabel': 'Keep items worth $X or more',
+  'stall.thresholdActive': 'Keeping items worth {amount} or more.',
+  'stall.thresholdPaused': 'Stall paused: raise the threshold to start keeping items.',
+  'stall.levelLine': 'Level {level}/{max} · Capacity: {capacity}',
+  'stall.levelMaxed': 'Max level',
+  'stall.upgradeFor': 'Upgrade for {amount}',
+  'stall.inventoryTitle': 'Inventory',
+  'stall.inventoryEmpty': 'The stall is empty — raise the threshold or dig up something good.',
+  'stall.sell': 'Sell',
+  'stall.ordersTitle': "{name}'s orders",
+  'stall.orderCategory': 'Order: {categoria}',
+  'stall.orderProgress': 'Progress: {progress}/{cantidad}',
+  'stall.orderReward': 'Pays +{pct}% over the stall price',
+  'stall.orderTime': 'Rotates in {minutes} min',
 
   // TitleScreen.js
   'titleScreen.play': 'Play',

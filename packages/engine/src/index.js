@@ -52,6 +52,7 @@ export {
   stallSalePrice,
   getStallSalePrice,
   hasStallVendor,
+  getStallThresholdPresets,
 } from './economy.js';
 
 export { clampedElapsedMs, localDayStamp } from './time.js';
@@ -116,6 +117,8 @@ export {
 } from './systems/prestige.js';
 
 export { checkAchievements } from './systems/achievements.js';
+
+export { checkStory } from './systems/story.js';
 
 export {
   expectedContainerValue,

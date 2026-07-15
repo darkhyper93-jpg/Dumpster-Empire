@@ -5,7 +5,9 @@
 
 import { isSetComplete } from '../economy.js';
 
-const CONDITION_EVALUATORS = {
+// Exportado (ronda 23.C, roadmap §3.2): "un solo motor de condiciones para logros, historia y
+// misiones" — systems/story.js lo reusa en vez de duplicar la lista de evaluadores.
+export const CONDITION_EVALUATORS = {
   totalMoneyEarnedAtLeast: (state, cond) => state.totalMoneyEarned >= cond.value,
   itemsFoundCountAtLeast: (state, cond) => state.itemsFoundCount >= cond.value,
   categoryFoundAtLeast: (state, cond) => (state.itemsFoundByCategory[cond.categoria] || 0) >= cond.value,

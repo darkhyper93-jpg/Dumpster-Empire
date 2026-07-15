@@ -491,6 +491,19 @@ inventario ya persistido a fluctuación fija 1 (sin timing gratis mientras el ju
 de sumar la ganancia instantánea del loot generado offline (ese loot nunca pasa por el inventario:
 el modal offline no gestiona captura).
 
+### 4.30 Presets del umbral de captura (ronda 23.C)
+
+La UI del Puesto ofrece 3 sugerencias de umbral ("guardá lo que valga $X o más") en vez de forzar
+al jugador a adivinar un número — **calculadas por el engine, nunca aproximadas en la UI** (regla
+de la ronda 23.C). Se toman del pool de ítems del contenedor **más avanzado que el jugador posee**
+(mayor `costoInicial` entre los `ownedContainers >= 1`; sin ninguno poseído, no hay presets). Por
+cada ítem del pool se estima su valor de venta con el mismo `itemSaleValue` del roll real, pero
+SIN variance de RNG (`valorBaseObjeto` literal, no `× rollItemVariance()`) y con fluctuación fija 1
+— es una estimación determinística, no un roll — multiplicado por `getLevelValueMult` ×
+`getMechanicValueMult` × `getSetBonus` del contenedor (mismos multiplicadores permanentes que
+`baseValue` en `rollContainerResult`). Los presets son los percentiles 25/50/75 (interpolación
+lineal, método usual) de esa lista de valores estimados, ordenada ascendente.
+
 ---
 
 ## 5. UI / UX

@@ -48,6 +48,10 @@ export function initDataLocalization(loaded) {
     upgrades: Object.fromEntries(loaded.upgrades.map((u) => [u.id, u.label])),
     // Ronda 22: legendarios de la Vitrina (data/legendaries.json), mismo criterio que items.
     legendaries: Object.fromEntries(loaded.legendaries.items.map((l) => [l.id, l.name])),
+    // Ronda 23.C: NPCs (data/npcs.json) — mismo shape {name, desc} que automations/prestigeTree
+    // (acá `rol` hace de `desc`). `story.json` no entra: sus textos son claves i18n fijas
+    // (`textKey`), sin campo de display propio que traducir.
+    npcs: Object.fromEntries(loaded.npcs.map((n) => [n.id, { name: n.name, rol: n.rol }])),
   };
 }
 
@@ -95,4 +99,10 @@ export function applyDataLanguage(loaded, lang) {
   }
   for (const u of loaded.upgrades) u.label = pick(dataEn.upgrades, baseline.upgrades, u.id);
   for (const l of loaded.legendaries.items) l.name = pick(dataEn.legendaries, baseline.legendaries, l.id);
+  for (const n of loaded.npcs) {
+    const en = useEn ? dataEn.npcs[n.id] : undefined;
+    const base = baseline.npcs[n.id];
+    n.name = en && typeof en.name === 'string' ? en.name : base.name;
+    n.rol = en && typeof en.rol === 'string' ? en.rol : base.rol;
+  }
 }

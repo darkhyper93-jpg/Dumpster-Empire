@@ -36,6 +36,12 @@ import {
   registerContainerDig,
   getToolRadiusMult,
   getToolRhythmMult,
+  buyStall as engineBuyStall,
+  upgradeStall as engineUpgradeStall,
+  setKeepThreshold as engineSetKeepThreshold,
+  sellInventoryItem as engineSellInventoryItem,
+  rotateStallOrders as engineRotateStallOrders,
+  checkStory,
 } from '@dumpster/engine';
 
 export const SAVE_KEY = 'dumpsterEmpireSave';
@@ -49,6 +55,8 @@ const OFFLINE_MIN_SECONDS = 5;
  * @property {{ rarities: Array<Object>, containers: Object<string, Array<Object>> }} itemsData
  * @property {Array<Object>} allContainers
  * @property {Array<Object>} achievementsData
+ * @property {Array<{id:string,npcId:string,cond:Object,textKey:string}>} [storyData] - historia
+ *   liviana (ronda 23.C, data/story.json). Opcional: sin ella, checkStory nunca desbloquea nada.
  * @property {string | null} [initialSaveText] - guardado ya reconciliado con Steam Cloud, si
  *   `apps/game/src/main.js` corre dentro de Electron (ver `window.dumpsterDesktop`). En modo
  *   web se omite y se lee de `localStorage` como siempre.
@@ -58,7 +66,7 @@ const OFFLINE_MIN_SECONDS = 5;
  * @param {StoreContext} ctx
  */
 export function createStore(ctx) {
-  const { data, itemsData, allContainers, achievementsData } = ctx;
+  const { data, itemsData, allContainers, achievementsData, storyData = [] } = ctx;
   // DECISIÓN (Agente 10): el store nunca importa `steam.js` ni sabe que Electron existe — solo
   // reenvía a `globalThis.dumpsterDesktop`, el puente que expone `apps/desktop/preload.js` vía
   // contextBridge. En modo web ese global no existe y todo se comporta como antes (localStorage).
@@ -91,6 +99,9 @@ export function createStore(ctx) {
   let offlineSummary = null;
   let newAchievements = [];
   let newContainerUnlocks = [];
+  // Ronda 23.C (roadmap §3.2): viñetas de historia recién vistas en esta revisión, mismo patrón
+  // consume-queue que newAchievements/newContainerUnlocks — la UI las saca una vez por render.
+  let newStoryVignettes = [];
   // PLAN.md §4.24 (ronda 20): la Bóveda a Contrarreloj expira sola si no se completa a tiempo —
   // se pierde SIN castigo (registerContainerDig ya cuenta el intento para el nivel). Cola tipo
   // consumeNewAchievements/consumeNewContainerUnlocks para que la UI dispare su propio toast.
@@ -111,6 +122,26 @@ export function createStore(ctx) {
     }
     knownUnlocked = current;
   }
+
+  // Ronda 23.C (roadmap §3.2): mismo motor de condiciones que los logros — checkStory marca
+  // state.storySeen y devuelve los hitos recién vistos para que la UI dispare la viñeta.
+  function runStory() {
+    const seen = checkStory(state, storyData, { allContainers, allAutomations: data.automations, itemsData });
+    if (seen.length) newStoryVignettes.push(...seen);
+  }
+
+  // Ronda 23.C (PLAN.md §4.28): categorías de los contenedores que el jugador POSEE (nunca las
+  // que existen en la data pero todavía no compró) — rotateStallOrders nunca pide lo inalcanzable.
+  function ownedCategories() {
+    const set = new Set();
+    for (const c of allContainers) {
+      if ((state.ownedContainers[c.id] || 0) >= 1) {
+        for (const categoria of c.categorias) set.add(categoria);
+      }
+    }
+    return [...set];
+  }
+
   const listeners = new Set();
 
   function loadState() {
@@ -154,6 +185,7 @@ export function createStore(ctx) {
     if (result.ganancia > 0) offlineSummary = result;
   }
   runAchievements();
+  runStory();
 
   const actions = {
     buyUpgrade(upgradeId) {
@@ -288,6 +320,61 @@ export function createStore(ctx) {
       return result;
     },
 
+    /** Compra el Puesto de Chatarra (PLAN.md §2.9/§4.27, ronda 23.C). */
+    buyStall() {
+      const result = engineBuyStall(state, data);
+      if (result.ok) {
+        runAchievements();
+        runStory();
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /** Sube un nivel el Puesto de Chatarra (PLAN.md §4.27, ronda 23.C). */
+    upgradeStall() {
+      const result = engineUpgradeStall(state, data);
+      if (result.ok) {
+        runAchievements();
+        runStory();
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /**
+     * Fija el umbral de captura del Puesto ("guardá lo que valga $X o más", PLAN.md §2.9).
+     * @param {number} threshold
+     */
+    setKeepThreshold(threshold) {
+      const result = engineSetKeepThreshold(state, threshold);
+      if (result.ok) {
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /**
+     * Venta manual de un ítem del inventario del Puesto (PLAN.md §4.27/§4.28, ronda 23.C):
+     * refresca la fluctuación, paga el mult de pedido si corresponde, y repone pedidos a 2
+     * activos (PLAN.md §4.28: "el llamador invoca rotateStallOrders tras cada venta").
+     * @param {number} inventoryIndex
+     */
+    sellInventoryItem(inventoryIndex) {
+      const result = engineSellInventoryItem(state, inventoryIndex, data);
+      if (result.ok) {
+        engineRotateStallOrders(state, data, ownedCategories());
+        runAchievements();
+        runStory();
+        persist();
+        notify();
+      }
+      return result;
+    },
+
     buyAutomation(automationId) {
       const automation = data.automations.find((a) => a.id === automationId);
       if (!automation) return { ok: false, error: 'Automatización desconocida.' };
@@ -335,6 +422,7 @@ export function createStore(ctx) {
         sanitizeLegendariesFound();
         pendingDig = null;
         runAchievements();
+        runStory();
         persist();
         notify();
       }
@@ -424,12 +512,21 @@ export function createStore(ctx) {
 
     /**
      * Tick de producción automática por delta de tiempo real (no por frame). Ver loop.js.
+     * AJUSTE (ronda 23.C): antes retornaba temprano sin llamar al engine si `!hasAutoDig`, lo que
+     * dejaba mudo al robot vendedor del Puesto para un jugador sin auto-escarbado (el propio
+     * `automationTick` del engine ya llama a `stallVendorTick` ANTES de su early-return interno,
+     * PLAN.md §4.29 — pero acá ni se lo invocaba). Ahora `automationTick` corre siempre; el resto
+     * del tick (logros/historia/notify) solo si hay algo activo que automatizar (auto-escarbado o
+     * Puesto comprado), para no re-renderizar cada segundo sin motivo.
      * @param {number} dtSeconds
      */
     tickAutomation(dtSeconds) {
-      if (!hasAutoDig(state, data)) return;
       automationTick(state, dtSeconds, allContainers, itemsData, data);
+      const stallActive = Boolean(data.stall) && state.stallLevel >= 1;
+      if (stallActive) engineRotateStallOrders(state, data, ownedCategories());
+      if (!hasAutoDig(state, data) && !stallActive) return;
       runAchievements();
+      runStory();
       detectContainerUnlocks();
       notify();
     },
@@ -457,6 +554,11 @@ export function createStore(ctx) {
     consumeNewContainerUnlocks() {
       const list = newContainerUnlocks;
       newContainerUnlocks = [];
+      return list;
+    },
+    consumeNewStoryVignettes() {
+      const list = newStoryVignettes;
+      newStoryVignettes = [];
       return list;
     },
     consumeTimedDigExpirations() {

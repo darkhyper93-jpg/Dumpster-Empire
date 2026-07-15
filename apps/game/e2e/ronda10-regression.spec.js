@@ -51,13 +51,16 @@ test.describe('Dumpster Empire — regresión ronda 10 (dificultad exponencial)'
     await seed(page, tachoCompradoSave());
     await entrarAlJuego(page);
     await page.locator('[data-tab="tienda"]').click();
+    // AJUSTE (ronda 23.C): la Tienda ahora también incluye la tarjeta del Puesto de Chatarra
+    // (ShopView.js) antes de los contenedores — se localiza por texto, no por posición, mismo
+    // criterio que el resto de la suite (regla §1.16, .filter({ hasText })).
     const cards = page.locator('.shop-card');
-    const tacho = cards.nth(0);
+    const tacho = cards.filter({ hasText: 'Tacho de Vereda' });
     await expect(tacho).toContainText('Fuerza recomendada: ×1');
     await expect(tacho).toContainText('Búsqueda recomendada: ×1');
     await expect(tacho.locator('.shop-card-luck--reached')).toHaveCount(3);
 
-    const barrio = cards.nth(1);
+    const barrio = cards.filter({ hasText: 'Barrio' });
     await expect(barrio).toContainText('Fuerza recomendada: ×1.35');
     await expect(barrio).not.toContainText('Fuerza recomendada: ×1.35 (alcanzada)');
   });
