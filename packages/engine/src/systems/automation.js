@@ -93,8 +93,11 @@ export function setAutoTarget(state, containerId, allContainers) {
  * @param {{ items: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
  * @param {import('../economy.js').EngineData} data
  * @param {() => number} [random]
+ * @param {{ containerId: string, valueMult: number, trapProbBonus: number } | null} [event] -
+ *   evento de contenedor activo (§4.32, ronda 24), ver rollContainerResult.
+ * @param {number} [hour] - hora local 0-23 (§4.33, ronda 24). Default 12 (día), ver getLuck.
  */
-export function automationTick(state, dtSeconds, allContainers, itemsData, data, random = Math.random) {
+export function automationTick(state, dtSeconds, allContainers, itemsData, data, random = Math.random, event = null, hour = 12) {
   // PLAN.md §4.29 (ronda 23): el robot vendedor del Puesto es independiente del robot de
   // escarbado — un jugador puede tener uno sin el otro, así que su tick corre siempre (gateado
   // adentro por hasStallVendor/data.stall), ANTES del `return` temprano de abajo.
@@ -113,7 +116,7 @@ export function automationTick(state, dtSeconds, allContainers, itemsData, data,
       // se descarta el slot en silencio. Sin este guard, `rollContainerResult(undefined)` lanzaba
       // TypeError cada segundo y dejaba la partida inutilizable (CLAUDE.md: nada de bloqueos).
       if (container) {
-        const result = rollContainerResult(state, container, true, itemsData, data, random);
+        const result = rollContainerResult(state, container, true, itemsData, data, random, event, hour);
         // Ronda 15 (PLAN.md §4.7): el Escáner de Trampas descarta el contenedor trampeado — sin
         // castigo ni loot; el contenedor ya pagado se pierde y el escarbado cuenta para su nivel.
         if (result.isTrap && random() < getAutoTrapDiscardChance(state, data)) {

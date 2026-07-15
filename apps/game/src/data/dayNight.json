@@ -1,0 +1,6 @@
+{
+  "nightStartHour": 20,
+  "nightEndHour": 6,
+  "nightLuckBonus": 3,
+  "nightTrapProbBonus": 0.03
+}

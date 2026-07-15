@@ -35,7 +35,14 @@
 // `stallOrders`/`ordersRotatedAt` (pedidos de Salomón), `stallVendorAt` (reloj del robot
 // vendedor, mismo patrón que `marketFluctuationAt`), `stallSoldCount`/`ordersFulfilledCount`
 // (contadores para logros) y `storySeen` (viñetas de historia liviana ya vistas, PLAN.md §3.2).
-export const SAVE_VERSION = 12;
+// AJUSTE (ronda 24): v13 agrega misiones diarias (ROADMAPv4.md §4.30/§4.31): `dailyMissions`
+// (hasta 3 activas), `missionsRolledAt` (reloj del reroll diario) y `missionsCompletedCount`
+// (contador para logros). También agrega `lastEventAt` (§4.32): el evento de contenedor
+// dorado/en llamas en sí es TRANSITORIO (nunca se persiste, decisión del roadmap para eliminar
+// todo exploit de reloj), pero su cooldown sí, para que reabrir el juego no regale un evento
+// instantáneo. `eventsUsedCount` cuenta escarbados exitosos aprovechando un evento activo, para
+// el logro "primer evento aprovechado".
+export const SAVE_VERSION = 13;
 
 // AJUSTE (ronda 23): cota de seguridad para `inventory` en validateDeepContent (save.js). No es
 // la capacidad de diseño real (esa vive en data/stall.json y save.js es deliberadamente
@@ -113,6 +120,27 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  * @property {number} stallSoldCount - ítems vendidos en el puesto (manual + robot), para logros.
  * @property {number} ordersFulfilledCount - pedidos cumplidos, para logros.
  * @property {string[]} storySeen - ids de viñetas de historia ya mostradas (PLAN.md §3.2).
+ * @property {DailyMission[]} dailyMissions - hasta 3 misiones activas del día (ronda 24, §4.30).
+ * @property {number} missionsRolledAt - epoch ms del último reroll diario de misiones.
+ * @property {number} missionsCompletedCount - misiones reclamadas históricamente, para logros.
+ * @property {number} lastEventAt - epoch ms del último evento de contenedor disparado (§4.32);
+ *   el evento en sí es transitorio y NUNCA se persiste (ver systems/events.js).
+ * @property {number} eventsUsedCount - escarbados resueltos con éxito mientras un evento de
+ *   contenedor estaba activo sobre ESE contenedor (§4.32), para el logro "primer evento
+ *   aprovechado".
+ */
+
+/**
+ * @typedef {Object} DailyMission
+ * @property {string} id
+ * @property {string} type - uno de MISSION_TYPES (systems/missions.js)
+ * @property {'easy' | 'medium' | 'hard'} difficulty
+ * @property {{ categoria?: string, containerId?: string }} params
+ * @property {number} target
+ * @property {number} progress
+ * @property {boolean} claimed
+ * @property {number} snapshot - valor del contador base al momento del roll (delta de progreso)
+ * @property {{ type: 'money' | 'keys', amount: number }} reward
  */
 
 /**
@@ -186,5 +214,10 @@ export function freshState() {
     stallSoldCount: 0,
     ordersFulfilledCount: 0,
     storySeen: [],
+    dailyMissions: [],
+    missionsRolledAt: 0,
+    missionsCompletedCount: 0,
+    lastEventAt: 0,
+    eventsUsedCount: 0,
   };
 }

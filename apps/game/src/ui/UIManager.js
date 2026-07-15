@@ -225,7 +225,7 @@ export class UIManager {
 
   /** @param {import('@dumpster/engine').GameState} state - solo usado por el rAF del loop */
   renderTopbar(state) {
-    Topbar.render(this.topbarEl, state);
+    Topbar.render(this.topbarEl, state, this.store.ctx.data.dayNight);
   }
 
   /**

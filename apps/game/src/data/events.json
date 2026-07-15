@@ -1,0 +1,8 @@
+{
+  "cooldownMs": 600000,
+  "durationMs": 75000,
+  "goldenProbability": 0.7,
+  "goldenValueMult": 3,
+  "fireValueMult": 4,
+  "fireTrapProbBonus": 0.15
+}

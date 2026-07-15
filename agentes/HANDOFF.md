@@ -5815,3 +5815,136 @@ Manual 375px + desktop-1440 (Playwright temporal, borrado tras verificar — no 
   24 deben reusarlo también (roadmap §3.2 "un solo motor"), no duplicar la lista.
 - `applyOfflineProgress` devuelve `stallEarnings` (hoy sin consumidor de UI, ver 🔵 arriba): si
   la 24 rehace el modal offline o suma un resumen, ese dato ya está disponible sin recalcular.
+
+## Ronda 24 — Agente único: misiones diarias, eventos de contenedor, ciclo día/noche (rama `feat/retencion-ronda24`, save v13)
+
+### Qué hice
+
+Ronda completa (data → engine → tests → UI → e2e) de una sola tacada, siguiendo ROADMAPv4.md
+§4.30-§4.33 y §24.1-§24.5:
+
+- **Data**: `apps/game/src/data/missions.json` (6 tipos de misión con dificultad y constantes de
+  recompensa 6/15/40×V, cap 5 llaves), `dayNight.json` (noche 20:00-06:00, +3 Suerte, +3% trampa),
+  `events.json` (cooldown 10min, duración 75s, 70% dorado ×3 / 30% en llamas ×4 +15% trampa). 3
+  logros nuevos (`a49` Cumplidor, `a50` Chispa Está Orgulloso —oculto—, `a51` En el Momento Justo)
+  y 2 viñetas de historia (`firstMissionChispa`, `firstEventZoraida` en `story.json`). Chispa y
+  Zoraida ya tenían retrato/npc de la ronda 23.B, no hizo falta arte nuevo — solo 2 shapes de
+  ícono nuevas (`sun`, `flame`) para el indicador día/noche y el banner de evento en llamas.
+- **Engine** (save v13): `dailyMissions`/`missionsRolledAt`/`missionsCompletedCount`/`lastEventAt`/
+  `eventsUsedCount` nuevos en `state.js`, migración v12→v13 en `save.js` + validación de forma
+  completa de `dailyMissions` (allow-list `MISSION_TYPES`/`MISSION_DIFFICULTIES` exportada desde
+  `systems/missions.js`, reusada por `save.js` — mismo patrón de allow-list que otros campos).
+  `systems/missions.js` (reroll con reloj seguro, progreso por delta contra snapshot EXCEPTO
+  `streakReach` que es el máximo observado, `claimMission`). `systems/events.js` (evento
+  TRANSITORIO, nunca en `state` — solo `lastEventAt` como cooldown persistido). `dayNight.js`
+  (puro, `hour` inyectado, default 12 en TODA firma que lo acepta para no volver flaky la suite
+  vieja — R24.2). `economy.js` ganó `getTotalContainerDigs`/`getMissionRewardBaseValue` (V) y
+  `getLuck`/`getEffectiveTrapProbability` aceptan `hour` opcional. `containers.js` `rollContainerResult`
+  ganó `event`/`hour` opcionales (aplica `valueMult` a value+baseValue, `trapProbBonus` al roll de
+  trampa, solo si `event.containerId === container.id`) y devuelve `usedEvent` para el logro/historia.
+  `automation.js` los threadea igual. store.js: `activeEvent` vive como variable local (transitorio,
+  igual que `pendingDig`), `tickAutomation` lo dispara/expira y llama `runMissions()` cada tick;
+  `startManualDig` pasa la hora real y el evento resuelto contra el contenedor.
+- **Tests** (`ronda24-retencion.test.js`, 30 casos): las 4 manipulaciones de reloj del reroll
+  (primer boot, mismo día, día distinto, reloj atrás), recompensas escalando con V, delta vs
+  snapshot (incluida la excepción de streak), evento dispara/expira/respeta cooldown/solo afecta
+  su contenedor, día/noche puro con hora inyectada, migración v12→v13, allow-list de misión
+  hostil rechazada. **1 bug real atrapado por los tests antes de e2e**: ver hallazgo abajo.
+- **UI**: `MissionsSection.js` (nuevo) — Chispa + 3 tarjetas con dificultad/progreso/recompensa/
+  Reclamar, montada dentro de `StallView` (puesto desbloqueado) o `AchievementsView` (si no,
+  decisión de espacio del roadmap). Banner de evento sobre la tarjeta del contenedor en
+  `DigContainerPicker` (glow CSS dorado/rojo + countdown en vivo). Indicador luna/sol en el
+  topbar (`Topbar.js`), puramente derivado de la hora REAL vía el rAF existente — no necesita
+  `notify()` del store. Todo copy nuevo con claves reales en `es.js`/`en.js` (nunca placeholder).
+- **e2e** (`ronda24-retencion.spec.js`, 4 specs): progreso real tras escarbar (delta), reclamar
+  paga con polling, seed de ayer rerollea, seed de hoy NO rerollea.
+
+### 🔴 Hallazgo real (arreglado antes de e2e, con test de regresión)
+
+**`moneyEarnedToday` podía generar `target: 0` y tirar el save COMPLETO como inválido.**
+`getMissionRewardBaseValue` (V) es `0` sin ningún contenedor poseído (partida nueva, antes de la
+primera compra) — `target = Math.ceil(40 × 0) = 0` pasaba a `validateDeepContent`, que exige
+`target > 0` para toda misión. Un `target: 0` real (no manipulado, generado por el propio reroll
+de boot) hacía que `deserializeState` rechazara el save ENTERO la próxima vez que se releía (no
+solo la misión: `validateSave` es todo-o-nada). Lo atrapé recién al investigar un e2e de i18n que
+empezó a fallar de forma intermitente (~1/5) tras esta ronda: el cambio de idioma se persistía
+bien, pero un reload posterior mostraba español de nuevo — resultó ser que el `persist()` de
+`setLanguage` había serializado un `dailyMissions` con `target: 0` (rolleado en segundo plano por
+`tickAutomation`/`runMissions()` con `Math.random` real, no seedeado), y el siguiente boot
+descartaba TODO el save (`freshState()`, `language: 'es'` por default) — el bug no tenía nada que
+ver con i18n en sí. Fix: `target = Math.max(1, Math.ceil(...))` en `missions.js` (mismo patrón
+`Math.max(1, ...)` que ya usan las recompensas de dinero). Test de regresión agregado
+(`rollThreeMissions` con `freshState()` sin contenedores, target siempre > 0). Verificado con un
+script de reproducción directo (Playwright headless, 15+ corridas antes/después del fix).
+
+### 🟡 Nota de calidad (arreglada, sin bug detrás)
+
+`pendingDig.trapProb` (el % de riesgo MOSTRADO al iniciar un escarbado manual) se calculaba con
+`getEffectiveTrapProbability(state, container, false, data)` SIN pasar la hora — mostraba el
+riesgo de día aunque el roll real (que sí recibe la hora) aplicara el +3%/+3 Suerte de noche. Fix
+de una línea: se pasa `new Date().getHours()` también ahí, para que el número en pantalla sea el
+mismo que decide el roll. Ningún e2e existente asertaba un % exacto de trampa (confirmado por
+grep), así que no rompió nada.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 477/477 verde (36 archivos; +30 tests nuevos de ronda24-retencion.test.js,
+                     +1 test corregido en ronda23-puesto.test.js — el SAVE_VERSION hardcodeado en
+                     12 ahora recontaba desde el import, no un literal roto por el bump a 13)
+npm run test:e2e  → 79/79 verde (75 previos + 4 nuevos de ronda24-retencion.spec.js)
+Manual 375px + desktop-1440 (Playwright temporal, borrado tras verificar — no comiteado): 3
+  tarjetas de misión con dificultad/progreso/recompensa, Reclamar paga (+$200 verificado en
+  pantalla), indicador luna en el topbar con tooltip de Zoraida ("+3 Suerte, pero +3% de trampa"
+  — corrida real de noche, ver auditoría R24.4 abajo), CERO errores de consola en ambos anchos.
+```
+
+### Auditoría R24.4 (ciclo día/noche no debe volver flaky la suite vieja)
+
+La corrida completa de `npm run test:e2e` de esta sesión ocurrió con la hora REAL del sistema en
+20:08-20:36 (confirmado con `date`), que cae DENTRO de la ventana nocturna configurada
+(20:00-06:00, `data/dayNight.json`) — o sea que los 79 tests, incluidos los ~30 que completan un
+escarbado real con RNG real, corrieron efectivamente "de noche" y pasaron limpio. Además,
+`getRecommendedLuck`/`getRecommendedArea` (los únicos números de Suerte/riesgo que algún e2e
+existente asertá exacto, `ronda7`/`ronda10-regression.spec.js`) se calculan con un `freshState()`
+NEUTRO vía `expectedNetValueAtLuck` sin pasar por `getLuck`, así que son estructuralmente inmunes
+al bonus de noche — confirmado por lectura de código, no solo por la corrida. No hizo falta un
+fixture de reloj simulado adicional: la ventana nocturna real ya cubrió el caso.
+
+### Riesgos que sí toqué (napkin, para la 25+)
+
+- **Todo default de `hour` en el engine es `12` (día), nunca `new Date().getHours()`.** Regla dura
+  nueva: cualquier función de economía/roll que en el futuro necesite la hora del sistema debe
+  seguir este patrón (default neutro, el llamador real —siempre `store.js`— pasa la hora real) o
+  la suite existente se vuelve flaky según cuándo corra CI (R24.2).
+- **Todo campo de misión/evento derivado de un cálculo con datos del jugador (V, target, reward)
+  necesita un piso `Math.max(1, ...)` si `validateDeepContent` exige `> 0`.** El bug de arriba es
+  la lección: un valor "0 legítimo" en el dominio del juego (sin contenedores poseídos) puede ser
+  un valor ILEGAL en el esquema de guardado. Repasar esto en cualquier ronda futura que agregue un
+  campo numérico derivado nuevo.
+- El evento de contenedor es TRANSITORIO (`activeEvent` vive en `store.js`, nunca en `state`) —
+  cualquier ronda futura que quiera "recordar" un evento entre sesiones rompe la decisión explícita
+  del roadmap (elimina el exploit de reloj). No tocar sin aprobación.
+- `MissionsSection` se monta en dos vistas distintas (`StallView`/`AchievementsView`) según
+  `stallLevel` — nunca las dos a la vez. Si una ronda futura quiere una pestaña propia de
+  misiones, hay que decidir qué pasa con esta duplicación de montaje.
+
+### Estado del DoD (agente único, ronda 24)
+
+```
+[x] PLAN.md/ROADMAPv4.md §4.30-§4.33 y §24.1-§24.5 implementados literalmente
+[x] Engine puro, sin DOM, con las fórmulas del roadmap
+[x] Tests de Vitest verdes para la lógica nueva (30 casos, incluida la regresión del bug real)
+[x] UI: lee estado y despacha acciones, no recalcula economía
+[x] Estados de UI: vacío (sin misiones alcanzables) + con datos; Reclamar deshabilitado hasta cumplir
+[x] Juice: countdown en vivo del evento, glow CSS dorado/rojo sobre la tarjeta del contenedor
+[x] Mobile-first respetado (verificado 375px + desktop-1440)
+[x] Save v13: migración + validación completa (allow-list de tipo/dificultad de misión)
+[x] npm test → 477/477 verde
+[x] npm run test:e2e → 79/79 verde
+[x] Auditoría R24.4 (día/noche no rompe la suite vieja) — ver sección arriba
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[ ] git commit — a continuación
+[ ] HANDOFF (este bloque) — a continuación
+[ ] Push de la rama + link de PR — a continuación (soy el único agente de la ronda 24)
+```

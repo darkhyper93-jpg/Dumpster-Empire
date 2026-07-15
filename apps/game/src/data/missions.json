@@ -1,0 +1,17 @@
+{
+  "rewardMoneyMultEasy": 6,
+  "rewardMoneyMultMedium": 15,
+  "rewardMoneyMultHard": 40,
+  "rewardKeysCap": 5,
+  "types": [
+    { "type": "findCategoryCount", "difficulty": "easy", "n": 8 },
+    { "type": "findCategoryCount", "difficulty": "medium", "n": 25 },
+    { "type": "digContainerCount", "difficulty": "easy", "n": 6 },
+    { "type": "digContainerCount", "difficulty": "medium", "n": 15 },
+    { "type": "streakReach", "difficulty": "medium", "n": 8 },
+    { "type": "streakReach", "difficulty": "hard", "n": 15 },
+    { "type": "sellAtStallCount", "difficulty": "medium", "n": 5, "requiresStall": true },
+    { "type": "fulfillOrders", "difficulty": "hard", "n": 2, "requiresStall": true },
+    { "type": "moneyEarnedToday", "difficulty": "hard" }
+  ]
+}

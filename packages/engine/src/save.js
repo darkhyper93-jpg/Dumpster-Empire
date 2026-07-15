@@ -4,6 +4,7 @@
  */
 
 import { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, INVENTORY_MAX_SAFETY, freshState } from './state.js';
+import { MISSION_TYPES, MISSION_DIFFICULTIES } from './systems/missions.js';
 
 /** Idiomas soportados por el módulo i18n (apps/game/src/i18n). Fuente de verdad del allow-list. */
 export const SUPPORTED_LANGUAGES = ['es', 'en'];
@@ -130,6 +131,36 @@ function isValidStallOrders(arr) {
 }
 
 /**
+ * Valida `dailyMissions` (PLAN.md §4.30/§4.31, ronda 24): hasta 3 misiones activas del día.
+ * @param {unknown} arr
+ * @returns {boolean}
+ */
+function isValidDailyMissions(arr) {
+  if (!Array.isArray(arr) || arr.length > 3) return false;
+  return arr.every(
+    (m) =>
+      isPlainObject(m) &&
+      typeof m.id === 'string' &&
+      MISSION_TYPES.includes(m.type) &&
+      MISSION_DIFFICULTIES.includes(m.difficulty) &&
+      isPlainObject(m.params) &&
+      (m.params.categoria === undefined || typeof m.params.categoria === 'string') &&
+      (m.params.containerId === undefined || typeof m.params.containerId === 'string') &&
+      Number.isFinite(m.target) &&
+      m.target > 0 &&
+      Number.isFinite(m.progress) &&
+      m.progress >= 0 &&
+      typeof m.claimed === 'boolean' &&
+      Number.isFinite(m.snapshot) &&
+      m.snapshot >= 0 &&
+      isPlainObject(m.reward) &&
+      (m.reward.type === 'money' || m.reward.type === 'keys') &&
+      Number.isFinite(m.reward.amount) &&
+      m.reward.amount > 0
+  );
+}
+
+/**
  * Valida el contenido profundo de los campos de tipo `object`/array que `REQUIRED_FIELDS`
  * solo chequea a nivel de tipo. Capa primaria de defensa contra saves manipulados (XSS
  * almacenado vía `state → innerHTML` en la UI, ver agentes/fix-xss-save-prompt.md).
@@ -210,6 +241,16 @@ function validateDeepContent(migrated) {
   if (!Number.isInteger(migrated.ordersFulfilledCount) || migrated.ordersFulfilledCount < 0) {
     return 'Contenido inválido en ordersFulfilledCount: debe ser un entero >= 0.';
   }
+  // AJUSTE (ronda 24, PLAN.md §4.30/§4.31): misiones diarias.
+  if (!isValidDailyMissions(migrated.dailyMissions)) {
+    return 'Contenido inválido en dailyMissions: debe ser un array de hasta 3 misiones válidas.';
+  }
+  if (!Number.isInteger(migrated.missionsCompletedCount) || migrated.missionsCompletedCount < 0) {
+    return 'Contenido inválido en missionsCompletedCount: debe ser un entero >= 0.';
+  }
+  if (!Number.isInteger(migrated.eventsUsedCount) || migrated.eventsUsedCount < 0) {
+    return 'Contenido inválido en eventsUsedCount: debe ser un entero >= 0.';
+  }
   return null;
 }
 
@@ -276,6 +317,11 @@ const REQUIRED_FIELDS = {
   stallSoldCount: 'number',
   ordersFulfilledCount: 'number',
   storySeen: 'object',
+  dailyMissions: 'object',
+  missionsRolledAt: 'number',
+  missionsCompletedCount: 'number',
+  lastEventAt: 'number',
+  eventsUsedCount: 'number',
 };
 // autoTargetContainerId NO va en REQUIRED_FIELDS: es unión `string|null` y `typeof null === 'object'`
 // rompería el chequeo de tipo; su validación de contenido vive en validateDeepContent().
@@ -434,6 +480,21 @@ function migrate(raw, itemNameToId) {
       ordersFulfilledCount: 0,
       storySeen: [],
       saveVersion: 12,
+    };
+  }
+  // v12 -> v13 (ronda 24, PLAN.md §4.30-§4.33): misiones diarias + evento de contenedor. Saves
+  // viejos arrancan sin misiones activas (se rollean solas en el próximo boot, ver
+  // rerollDailyMissionsIfNeeded: `missionsRolledAt: 0` siempre difiere del día de hoy), sin
+  // cooldown de evento consumido y sin eventos aprovechados (logro nuevo).
+  if (migrated.saveVersion < 13) {
+    migrated = {
+      ...migrated,
+      dailyMissions: [],
+      missionsRolledAt: 0,
+      missionsCompletedCount: 0,
+      lastEventAt: 0,
+      eventsUsedCount: 0,
+      saveVersion: 13,
     };
   }
   return migrated;
