@@ -17,6 +17,7 @@ import {
 import { iconMarkup } from '../icons/icons.js';
 import { portraitMarkup } from '../icons/portraits.js';
 import { t } from '../i18n/i18n.js';
+import { MissionsSection } from './MissionsSection.js';
 
 /** Último comentario de Rita al vender (presentación local, no persistido — mismo patrón que
  * `selectedContainerId` de CollectionView). */
@@ -218,9 +219,13 @@ export const StallView = {
       renderLevel(state, data) +
       `<h2>${t('stall.inventoryTitle')}</h2>` +
       renderInventory(state, itemsData) +
-      renderOrders(state, data, npcs, itemsData);
+      renderOrders(state, data, npcs, itemsData) +
+      // Ronda 24 (roadmap §24.3): con el Puesto desbloqueado, las misiones de Chispa viven acá
+      // (si no, AchievementsView las muestra) — decisión de espacio del roadmap.
+      `<section class="stall-missions" id="stall-missions-slot"></section>`;
 
     updateInventoryPrices(container, state, data);
+    MissionsSection.render(container.querySelector('#stall-missions-slot'), state, store);
   },
 };
 

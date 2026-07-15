@@ -53,9 +53,13 @@ export {
   getStallSalePrice,
   hasStallVendor,
   getStallThresholdPresets,
+  getTotalContainerDigs,
+  getMissionRewardBaseValue,
 } from './economy.js';
 
 export { clampedElapsedMs, localDayStamp } from './time.js';
+
+export { isNightHour, getDayNightModifiers } from './dayNight.js';
 
 export {
   rollCategory,
@@ -119,6 +123,17 @@ export {
 export { checkAchievements } from './systems/achievements.js';
 
 export { checkStory } from './systems/story.js';
+
+export {
+  MISSION_TYPES,
+  MISSION_DIFFICULTIES,
+  rollThreeMissions,
+  rerollDailyMissionsIfNeeded,
+  updateMissionsProgress,
+  claimMission,
+} from './systems/missions.js';
+
+export { tryTriggerContainerEvent, isEventExpired } from './systems/events.js';
 
 export {
   expectedContainerValue,

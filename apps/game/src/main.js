@@ -28,6 +28,9 @@ const DATA_FILES = {
   stall: './data/stall.json',
   npcs: './data/npcs.json',
   story: './data/story.json',
+  missions: './data/missions.json',
+  dayNight: './data/dayNight.json',
+  events: './data/events.json',
 };
 
 async function loadData() {
@@ -94,6 +97,13 @@ async function boot() {
     // opcionales sin él). `npcs`/`story` son pura data de UI (nombres, retratos, textKeys) — se
     // leen directo de `loaded` (mismo criterio que `loaded.legendaries`/`loaded.containers` hoy).
     stall: loaded.stall,
+    // Ronda 24 (PLAN.md §4.30-§4.33): misiones diarias, ciclo día/noche y eventos de contenedor.
+    // Los tres son opcionales del lado del engine (mismo patrón que data.stall/data.streak):
+    // sin ellos, rerollDailyMissionsIfNeeded/getDayNightModifiers/tryTriggerContainerEvent
+    // devuelven un no-op neutro.
+    missions: loaded.missions,
+    dayNight: loaded.dayNight,
+    events: loaded.events,
   };
   const itemsData = loaded.items;
   const allContainers = loaded.containers;

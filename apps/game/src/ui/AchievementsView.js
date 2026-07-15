@@ -6,6 +6,7 @@
 import { formatMoney, formatNumber } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { t } from '../i18n/i18n.js';
+import { MissionsSection } from './MissionsSection.js';
 
 export const AchievementsView = {
   /**
@@ -14,9 +15,14 @@ export const AchievementsView = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
-    const { achievementsData } = store.ctx;
+    const { achievementsData, data } = store.ctx;
+    // Ronda 24 (roadmap §24.3): sin Puesto desbloqueado, las misiones de Chispa viven acá (con
+    // Puesto, StallView las muestra) — decisión de espacio del roadmap, nunca las dos a la vez.
+    const stallUnlocked = Boolean(data.stall) && state.stallLevel >= 1;
+    const missionsSlot = stallUnlocked ? '' : `<section class="achievements-missions" id="achievements-missions-slot"></section>`;
     if (!achievementsData.length) {
-      container.innerHTML = `<p class="empty-state">${t('achievements.empty')}</p>`;
+      container.innerHTML = `<p class="empty-state">${t('achievements.empty')}</p>` + missionsSlot;
+      if (!stallUnlocked) MissionsSection.render(container.querySelector('#achievements-missions-slot'), state, store);
       return;
     }
 
@@ -45,6 +51,7 @@ export const AchievementsView = {
       })
       .join('');
 
-    container.innerHTML = `<div class="achievements-grid">${cards}</div>`;
+    container.innerHTML = `<div class="achievements-grid">${cards}</div>` + missionsSlot;
+    if (!stallUnlocked) MissionsSection.render(container.querySelector('#achievements-missions-slot'), state, store);
   },
 };

@@ -38,6 +38,8 @@ import {
  *   `baseValue` (ronda 23, PLAN.md §4.27): el mismo cálculo que `value` pero con fluctuación de
  *   mercado 1 — es lo que persiste el Puesto de Chatarra al capturar un ítem (ver applyContainerResult).
  * @property {number} moneyDelta
+ * @property {boolean} [usedEvent] - true si el roll se benefició de un evento de contenedor
+ *   activo (§4.32, ronda 24). Ausente en el camino de trampa (nunca aplica ahí).
  */
 
 /**
@@ -85,9 +87,15 @@ export function buyContainer(state, container, data) {
  * @param {{ containers: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
  * @param {import('../economy.js').EngineData} data
  * @param {() => number} [random]
+ * @param {{ containerId: string, valueMult: number, trapProbBonus: number } | null} [event] -
+ *   evento de contenedor activo (§4.32, ronda 24), ya resuelto por el llamador (store.js) contra
+ *   `container.id` — pasa `null` si no hay evento o si es de OTRO contenedor. Transitorio: nunca
+ *   se lee de `state` (el evento no se persiste, ver systems/events.js).
+ * @param {number} [hour] - hora local 0-23 para el ciclo día/noche (§4.33). Default 12 (día):
+ *   ver getLuck/getEffectiveTrapProbability — solo store.js pasa la hora real.
  * @returns {DigResult}
  */
-export function rollContainerResult(state, container, isAuto, itemsData, data, random = Math.random) {
+export function rollContainerResult(state, container, isAuto, itemsData, data, random = Math.random, event = null, hour = 12) {
   const { marketFluctuation, marketFluctuationAt } = refreshMarketFluctuation(
     state.marketFluctuation,
     state.marketFluctuationAt,
@@ -97,7 +105,10 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
   state.marketFluctuation = marketFluctuation;
   state.marketFluctuationAt = marketFluctuationAt;
 
-  const trapProb = getEffectiveTrapProbability(state, container, isAuto, data);
+  const eventMult = event && event.containerId === container.id ? event.valueMult : 1;
+  const eventTrapBonus = event && event.containerId === container.id ? event.trapProbBonus : 0;
+
+  const trapProb = Math.min(1, getEffectiveTrapProbability(state, container, isAuto, data, hour) + eventTrapBonus);
   if (rollIsTrap(trapProb, random)) {
     // PLAN.md §4.21 (ronda 20): el grado es un roll SEGUNDO e independiente, nunca afecta la
     // probabilidad de trampa de arriba. `data.traps` es opcional a propósito (mismo patrón que
@@ -110,7 +121,7 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
     return { isTrap: true, items: [], moneyDelta: 0 };
   }
 
-  const luck = getLuck(state, data);
+  const luck = getLuck(state, data, hour);
   const depthValueMult = getDepthValueMult(state, data);
   // PLAN.md §11.3: a mayor nivel del contenedor, más probabilidad de la categoría rara propia.
   const levelShift = getLevelRarityShift(state, container);
@@ -130,7 +141,11 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
     const pool = containerPool.filter((item) => item.categoria === categoria);
     const pick = rollItem(pool, random);
     const variance = rollItemVariance(random);
-    const itemMultipliers = levelValueMult * getMechanicValueMult(container) * getSetBonus(state, container, itemsData, data);
+    // §4.32 (ronda 24): el multiplicador del evento (Dorado ×3 / En Llamas ×4) es parte del
+    // "valor" que la fórmula literal de PLAN.md §4 no contempla — se aplica encima, igual que
+    // los demás multiplicadores de mecánica/set, y a AMBOS (value y baseValue) para que un ítem
+    // capturado durante el evento conserve el bonus si se vende después desde el Puesto.
+    const itemMultipliers = levelValueMult * getMechanicValueMult(container) * getSetBonus(state, container, itemsData, data) * eventMult;
     const value =
       itemSaleValue({
         valorBaseObjeto: pick.valorBase * variance,
@@ -195,7 +210,9 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
   }
 
   const moneyDelta = items.reduce((sum, item) => sum + item.value, 0);
-  return { isTrap: false, items, moneyDelta };
+  // §4.32 (ronda 24): "evento aprovechado" — este escarbado se resolvió con éxito (no trampa)
+  // mientras un evento de contenedor estaba activo sobre ESTE contenedor.
+  return { isTrap: false, items, moneyDelta, usedEvent: eventMult !== 1 };
 }
 
 /**
@@ -234,6 +251,8 @@ export function applyContainerResult(state, container, result, isAuto, data) {
     if (!isAuto) state.digStreak = 0;
     return { moneyDelta: 0, trapPenalty: penalty };
   }
+  // §4.32 (ronda 24): contador de "evento aprovechado" para el logro correspondiente.
+  if (result.usedEvent) state.eventsUsedCount++;
   let total = 0;
   const fragmentCategories = ['antiques', 'art', 'relics', 'future'];
   // PLAN.md §2.9 (ronda 23): captura del Puesto de Chatarra. `data.stall` opcional (patrón

@@ -43,6 +43,10 @@ export const CONDITION_EVALUATORS = {
   ordersFulfilledAtLeast: (state, cond) => state.ordersFulfilledCount >= cond.value,
   stallLevelAtLeast: (state, cond) => state.stallLevel >= cond.value,
   stallInventoryAtLeast: (state, cond) => state.inventory.length >= cond.value,
+  // Ronda 24 (PLAN.md §4.30/§4.32): misiones diarias reclamadas y eventos de contenedor
+  // aprovechados.
+  missionsCompletedAtLeast: (state, cond) => state.missionsCompletedCount >= cond.value,
+  eventsUsedAtLeast: (state, cond) => state.eventsUsedCount >= cond.value,
 };
 
 /**

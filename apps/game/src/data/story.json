@@ -10,5 +10,17 @@
     "npcId": "salomon",
     "cond": { "type": "ordersFulfilledAtLeast", "value": 1 },
     "textKey": "npc.salomon.storyFirstOrder"
+  },
+  {
+    "id": "firstMissionChispa",
+    "npcId": "chispa",
+    "cond": { "type": "missionsCompletedAtLeast", "value": 1 },
+    "textKey": "npc.chispa.storyFirstMission"
+  },
+  {
+    "id": "firstEventZoraida",
+    "npcId": "zoraida",
+    "cond": { "type": "eventsUsedAtLeast", "value": 1 },
+    "textKey": "npc.zoraida.storyFirstEvent"
   }
 ]

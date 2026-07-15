@@ -171,6 +171,10 @@ const SHAPES = {
   marketStall: '<path d="M3 9l2-5h14l2 5z"/><line x1="3" y1="9" x2="21" y2="9"/><rect x="5" y="9" width="14" height="10"/><line x1="9" y1="9" x2="9" y2="19"/><line x1="15" y1="9" x2="15" y2="19"/>',
   shelf: '<rect x="4" y="3" width="16" height="18" rx="1"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><rect x="6.5" y="5" width="3" height="3"/><rect x="14.5" y="11" width="3" height="3"/>',
   orderSign: '<path d="M6 21V11l6-4 6 4v10z"/><line x1="4" y1="11" x2="20" y2="11"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="18" x2="13" y2="18"/>',
+
+  // Ronda 24 — misiones diarias, ciclo día/noche y eventos de contenedor (PLAN.md §4.30-§4.33).
+  sun: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.5" y1="4.5" x2="6.6" y2="6.6"/><line x1="17.4" y1="17.4" x2="19.5" y2="19.5"/><line x1="4.5" y1="19.5" x2="6.6" y2="17.4"/><line x1="17.4" y1="6.6" x2="19.5" y2="4.5"/>',
+  flame: '<path d="M12 2c2 4-2 5-2 9a4 4 0 0 0 8 0c0-2-1-3-1-5 2 2 3 5 3 8a6 6 0 0 1-12 0c0-5 3-6 4-12z"/>',
 };
 
 /** Mapea cada clave `icon` de la data (items/containers/upgrades/automations/prestigeTree/achievements) a una forma. */
@@ -442,6 +446,16 @@ const ICON_MAP = {
   // DECISIÓN: robot-vendor reusa 'robot' (mismo robot que robot-sorter) — se diferencia por
   // contexto de tarjeta (Automatización) y color, mismo criterio que servo-arm/servo-arm-titanium.
   'robot-vendor': 'robot',
+
+  // Ronda 24 — misiones diarias (Chispa), ciclo día/noche (Zoraida) y eventos de contenedor.
+  'quest-board': 'clipboard',
+  'sun-day': 'sun',
+  'moon-night': 'crescent',
+  'event-golden': 'coinStack',
+  'event-fire': 'flame',
+  // DECISIÓN: el logro "primer evento aprovechado" reusa 'sparkGenesis' (mismo destello que
+  // spark-genesis) — un evento aprovechado es, literalmente, una chispa de suerte.
+  'event-spark': 'sparkGenesis',
 
   // Ronda 20 — Agente B: indicios visuales de grado de trampa (PLAN.md §4.24).
   'hint-leve': 'waterStain',

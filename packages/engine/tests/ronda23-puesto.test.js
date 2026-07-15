@@ -417,8 +417,10 @@ describe('§4.29 robot vendedor', () => {
 });
 
 describe('save v12: inventario y puesto', () => {
-  it('SAVE_VERSION es 12 y freshState trae los campos nuevos', () => {
-    expect(SAVE_VERSION).toBe(12);
+  it('freshState trae los campos del Puesto de la ronda 23 (SAVE_VERSION >= 12)', () => {
+    // AJUSTE (ronda 24): SAVE_VERSION avanzó a 13 (misiones diarias/eventos); esta prueba solo
+    // verifica que freshState() siga trayendo los campos del Puesto, no el número exacto.
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(12);
     const state = freshState();
     expect(state.inventory).toEqual([]);
     expect(state.stallLevel).toBe(0);
@@ -444,7 +446,9 @@ describe('save v12: inventario y puesto', () => {
     delete v11.storySeen;
     const result = validateSave(v11);
     expect(result.valid).toBe(true);
-    expect(result.data.saveVersion).toBe(12);
+    // AJUSTE (ronda 24): migrate() encadena todas las migraciones pendientes en una sola pasada,
+    // así que un save v11 termina en el SAVE_VERSION actual (13), no en 12.
+    expect(result.data.saveVersion).toBe(SAVE_VERSION);
     expect(result.data.inventory).toEqual([]);
     expect(result.data.stallLevel).toBe(0);
   });

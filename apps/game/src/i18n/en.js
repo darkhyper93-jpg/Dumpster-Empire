@@ -217,4 +217,36 @@ export default {
   'npc.rita.sale.classy': 'Doña Rita: "Now this has class. Reminds me of my grandmother\'s house."',
   'npc.rita.sale.premium': 'Doña Rita: "Would you look at this marvel! You don\'t find these every day."',
   'npc.salomon.storyFirstOrder': 'El Turco Salomón: "Finally, someone who fulfills an order properly! That\'s the way to do business, champ."',
+
+  // Ronda 24 — daily missions, container events and day/night cycle (PLAN.md §4.30-§4.33).
+  'npc.chispa.storyFirstMission': 'Chispa: "There it is! You cleared your first mission. I\'m gonna throw you a new challenge every day, got it?"',
+  'npc.zoraida.storyFirstEvent': 'Madame Zoraida: "I saw it coming in the cards... a special container, and there you were, seizing the moment. That\'s how I like it."',
+
+  // MissionsSection.js
+  'missions.title': "Chispa's Missions",
+  'missions.intro': 'Chispa: "Hey, you! I\'ve got 3 challenges for today. Clear them and I\'ll throw you a nice reward."',
+  'missions.empty': "Chispa doesn't have any challenges for you yet — buy your first container.",
+  'missions.claim': 'Claim',
+  'missions.claimed': 'Claimed',
+  'missions.progress': '{progress}/{target}',
+  'missions.rewardMoney': 'Reward: {amount}',
+  'missions.rewardKeys': 'Reward: {amount} City Key{plural}',
+  'missions.difficulty.easy': 'Easy',
+  'missions.difficulty.medium': 'Medium',
+  'missions.difficulty.hard': 'Hard',
+  'missions.desc.findCategoryCount': 'Find {n} {categoria} items',
+  'missions.desc.digContainerCount': 'Dig {contenedor} {n} times',
+  'missions.desc.streakReach': 'Reach a streak of {n}',
+  'missions.desc.sellAtStallCount': 'Sell {n} items at the Stall',
+  'missions.desc.fulfillOrders': 'Fulfill {n} orders',
+  'missions.desc.moneyEarnedToday': 'Earn {monto} today',
+
+  // Container events (systems/events.js, banner over the container card).
+  'event.goldenBanner': 'Golden! Worth ×{mult}',
+  'event.fireBanner': 'On Fire! Worth ×{mult}, +{pct}% trap chance',
+  'event.timeLeft': '{seconds}s',
+
+  // Day/night cycle (Topbar.js, Zoraida's tooltip).
+  'dayNight.dayTooltip': 'Madame Zoraida: "Everything is calm by day, dear."',
+  'dayNight.nightTooltip': 'Madame Zoraida: "Luck shifts at night: +{luck} Luck, but +{pct}% trap chance."',
 };

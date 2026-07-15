@@ -42,6 +42,11 @@ import {
   sellInventoryItem as engineSellInventoryItem,
   rotateStallOrders as engineRotateStallOrders,
   checkStory,
+  rerollDailyMissionsIfNeeded,
+  updateMissionsProgress,
+  claimMission as engineClaimMission,
+  tryTriggerContainerEvent,
+  isEventExpired,
 } from '@dumpster/engine';
 
 export const SAVE_KEY = 'dumpsterEmpireSave';
@@ -106,6 +111,25 @@ export function createStore(ctx) {
   // se pierde SIN castigo (registerContainerDig ya cuenta el intento para el nivel). Cola tipo
   // consumeNewAchievements/consumeNewContainerUnlocks para que la UI dispare su propio toast.
   let timedDigExpirations = [];
+  // §4.32 (ronda 24): el evento de contenedor (Dorado/En Llamas) es TRANSITORIO por diseño —
+  // decisión del roadmap para eliminar todo exploit de reloj — así que vive SOLO acá, nunca en
+  // `state` (mismo criterio que `pendingDig`). Se pierde al recargar la página; `state.lastEventAt`
+  // (persistido) evita que eso regale un evento instantáneo al reabrir.
+  let activeEvent = null;
+
+  /**
+   * @param {string} containerId
+   * @returns {{ containerId: string, valueMult: number, trapProbBonus: number } | null}
+   */
+  function eventEffectFor(containerId) {
+    return activeEvent && activeEvent.containerId === containerId ? activeEvent : null;
+  }
+
+  /** Ronda 24 (PLAN.md §4.30): reroll diario + recalcula progreso de todas las misiones activas. */
+  function runMissions() {
+    rerollDailyMissionsIfNeeded(state, allContainers, itemsData, data);
+    updateMissionsProgress(state, allContainers);
+  }
   /** Ids desbloqueados según el estado actual (baseline para detectar novedades). */
   const unlockedIdsNow = () =>
     new Set(allContainers.filter((c) => isContainerUnlocked(state, c, allContainers)).map((c) => c.id));
@@ -186,6 +210,7 @@ export function createStore(ctx) {
   }
   runAchievements();
   runStory();
+  runMissions();
 
   const actions = {
     buyUpgrade(upgradeId) {
@@ -211,7 +236,16 @@ export function createStore(ctx) {
       const result = engineBuyContainer(state, container, data);
       if (!result.ok) return result;
       detectContainerUnlocks(); // comprar el anterior puede desbloquear el siguiente.
-      const digResult = rollContainerResult(state, container, false, itemsData, data);
+      const digResult = rollContainerResult(
+        state,
+        container,
+        false,
+        itemsData,
+        data,
+        Math.random,
+        eventEffectFor(container.id),
+        new Date().getHours()
+      );
       // DECISIÓN (ronda 5): el escarbado manual ya no usa getRevealThreshold — se completa al
       // destapar TODOS los objetos (ver digRevealModel.js), no por % de área. La fórmula sigue
       // en el engine (contrato de PLAN.md §4, usada por sus tests); la UI dejó de consumirla.
@@ -225,7 +259,10 @@ export function createStore(ctx) {
         // del contenedor vs. Fuerza del jugador, ya calculado por el engine para automatización/
         // offline) también viaja al canvas manual — la resistencia achica el pincel del gesto.
         digRate: getDigRate(state, container, data) * getToolRhythmMult(state, data),
-        trapProb: getEffectiveTrapProbability(state, container, false, data),
+        // Ronda 24 (PLAN.md §4.33): el riesgo MOSTRADO usa la misma hora real que el roll de
+        // arriba — mostrar un % de día mientras se tira con el bonus/castigo de noche sería un
+        // dato mentiroso en pantalla.
+        trapProb: getEffectiveTrapProbability(state, container, false, data, new Date().getHours()),
         // PLAN.md §4.24 (ronda 20): límite DURO de tiempo solo para contenedores `mode: "timed"`
         // (Bóveda a Contrarreloj) — `container.digTime` en segundos, decrementado por delta real
         // del loop (tickDigTimer), nunca por setTimeout (R20.3).
@@ -246,6 +283,7 @@ export function createStore(ctx) {
       if (state.tutorialStep === 0) state.tutorialStep = 1;
       pendingDig = null;
       runAchievements();
+      runMissions();
       detectContainerUnlocks();
       persist();
       notify();
@@ -369,6 +407,21 @@ export function createStore(ctx) {
         engineRotateStallOrders(state, data, ownedCategories());
         runAchievements();
         runStory();
+        runMissions();
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /**
+     * Reclama la recompensa de una misión diaria ya cumplida (PLAN.md §4.30/§4.31, ronda 24).
+     * @param {string} missionId
+     */
+    claimMission(missionId) {
+      const result = engineClaimMission(state, missionId);
+      if (result.ok) {
+        runAchievements();
         persist();
         notify();
       }
@@ -521,10 +574,22 @@ export function createStore(ctx) {
      * @param {number} dtSeconds
      */
     tickAutomation(dtSeconds) {
-      automationTick(state, dtSeconds, allContainers, itemsData, data);
+      const now = Date.now();
+      const hour = new Date(now).getHours();
+      // §4.32 (ronda 24): el evento expira solo (transitorio, nunca en state); si no hay uno
+      // activo, se intenta disparar un nuevo (gateado por cooldown/data.events adentro).
+      if (isEventExpired(activeEvent, now)) activeEvent = null;
+      if (!activeEvent && data.events) {
+        activeEvent = tryTriggerContainerEvent(state, allContainers, data, dtSeconds, now, Math.random);
+      }
+      automationTick(state, dtSeconds, allContainers, itemsData, data, Math.random, activeEvent, hour);
       const stallActive = Boolean(data.stall) && state.stallLevel >= 1;
       if (stallActive) engineRotateStallOrders(state, data, ownedCategories());
-      if (!hasAutoDig(state, data) && !stallActive) return;
+      runMissions();
+      // Ronda 24: con un evento activo se notifica SIEMPRE (countdown/glow en vivo, §4.32),
+      // incluso sin automatización ni puesto — mismo criterio que la excepción de arriba, para
+      // no re-renderizar cada segundo sin motivo cuando no hay nada visible que cambie por sí solo.
+      if (!hasAutoDig(state, data) && !stallActive && !activeEvent) return;
       runAchievements();
       runStory();
       detectContainerUnlocks();
@@ -536,6 +601,8 @@ export function createStore(ctx) {
     ctx,
     getState: () => state,
     getPendingDig: () => pendingDig,
+    /** @returns {{ containerId: string, kind: 'golden'|'fire', valueMult: number, trapProbBonus: number, expiresAt: number } | null} */
+    getActiveEvent: () => activeEvent,
     subscribe(fn) {
       listeners.add(fn);
       return () => listeners.delete(fn);

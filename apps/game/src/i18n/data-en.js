@@ -249,6 +249,9 @@ export default {
     a46: 'First Item Saved',
     a47: 'Trusted Trader',
     a48: 'Top-Tier Stall',
+    a49: 'Reliable',
+    a50: "Chispa's Proud",
+    a51: 'Right on Time',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },

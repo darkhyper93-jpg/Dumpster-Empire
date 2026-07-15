@@ -5,6 +5,7 @@
 
 import { categoryWeights } from './rng.js';
 import { freshState } from './state.js';
+import { getDayNightModifiers } from './dayNight.js';
 
 /**
  * @typedef {import('./state.js').GameState} GameState
@@ -167,9 +168,13 @@ function automationEffectsOfType(data, type) {
  * Suerte total del jugador. Sube probabilidad de rareza y baja probabilidad de trampa.
  * @param {GameState} state
  * @param {EngineData} data
+ * @param {number} [hour] - hora local 0-23 para el bonus de noche (§4.33, ronda 24). Default 12
+ *   (mediodía, "de día") a propósito: la suite previa a la ronda 24 llama a getLuck sin este
+ *   parámetro y no debe volverse flaky según la hora real en que corra CI (R24.2) — solo
+ *   store.js (juego real) pasa la hora real del sistema.
  * @returns {number}
  */
-export function getLuck(state, data) {
+export function getLuck(state, data, hour = 12) {
   const def = upgradeDef(data, 'luck');
   const level = state.upgradeLevels.luck || 0;
   let luck = def.baseValue + level * def.perNivel;
@@ -190,6 +195,7 @@ export function getLuck(state, data) {
     );
     luck += bonus;
   }
+  luck += getDayNightModifiers(hour, data.dayNight).luckBonus;
   return luck;
 }
 
@@ -422,10 +428,11 @@ export function getContainerCost(state, container, data) {
  * @param {Object} container
  * @param {boolean} isAuto
  * @param {EngineData} data
+ * @param {number} [hour] - ver getLuck: default 12 (día), solo store.js pasa la hora real (§4.33).
  * @returns {number}
  */
-export function getEffectiveTrapProbability(state, container, isAuto, data) {
-  const luck = getLuck(state, data);
+export function getEffectiveTrapProbability(state, container, isAuto, data, hour = 12) {
+  const luck = getLuck(state, data, hour);
   let prob = container.probTrampaBase - luck * 0.002;
   for (const { nodeId, effect } of prestigeEffectsOfType(data, 'trapPercentReductionPerNivel')) {
     prob -= prestigeLevel(state, nodeId) * effect.percentPerNivel;
@@ -440,6 +447,7 @@ export function getEffectiveTrapProbability(state, container, isAuto, data) {
       if (state.automationOwned[automationId]) prob *= effect.mult;
     }
   }
+  prob += getDayNightModifiers(hour, data.dayNight).trapProbBonus;
   return Math.max(TRAP_PROBABILITY_FLOOR, prob);
 }
 
@@ -854,6 +862,47 @@ export function hasStallVendor(state, data) {
   return automationEffectsOfType(data, 'enablesStallVendor').some(
     ({ automationId }) => state.automationOwned[automationId]
   );
+}
+
+/**
+ * §4.30 (ronda 24) — total de escarbados acumulados de un contenedor específico, para el
+ * progreso de la misión `digContainerCount`. Puramente derivado de `containerLevels`/
+ * `containerLevelProgress` (nada de tracking paralelo, roadmap §24.3): la suma de los
+ * escarbados que hicieron falta para cada nivel ya superado, más el progreso hacia el
+ * próximo. Monotónico creciente (los niveles nunca bajan, ni siquiera al prestigiar — ver
+ * systems/prestige.js), así que sirve de base segura para un delta de misión.
+ * @param {import('./state.js').GameState} state
+ * @param {Object} container
+ * @returns {number}
+ */
+export function getTotalContainerDigs(state, container) {
+  const level = getContainerLevel(state, container.id);
+  let total = state.containerLevelProgress[container.id] || 0;
+  for (let l = 1; l < level; l++) {
+    total += digsNeededForNextLevel(container, l);
+  }
+  return total;
+}
+
+/**
+ * §4.31 (ronda 24) — "V" de la fórmula de recompensas de misiones diarias: valor medio del
+ * pool del contenedor poseído más avanzado (mayor `costoInicial`, mismo criterio que
+ * `getStallThresholdPresets`), multiplicado por sus slots. 0 sin ningún contenedor poseído
+ * (nunca debería llamarse antes de esa condición, pero un 0 es seguro: misiones de recompensa
+ * en dinero simplemente pagarían 0, nunca NaN/Infinity).
+ * @param {import('./state.js').GameState} state
+ * @param {Array<Object>} allContainers
+ * @param {{ containers: Object<string, Array<Object>> }} itemsData
+ * @returns {number}
+ */
+export function getMissionRewardBaseValue(state, allContainers, itemsData) {
+  const owned = allContainers.filter((c) => (state.ownedContainers[c.id] || 0) >= 1);
+  if (!owned.length) return 0;
+  const best = owned.reduce((a, b) => (b.costoInicial > a.costoInicial ? b : a));
+  const pool = itemsData.containers[best.id] || [];
+  if (!pool.length) return 0;
+  const avgBase = pool.reduce((sum, item) => sum + item.valorBase, 0) / pool.length;
+  return avgBase * best.slots;
 }
 
 /**

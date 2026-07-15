@@ -1287,3 +1287,103 @@ textarea {
   font-size: 0.85rem;
 }
 
+/* --- Ronda 24: misiones diarias de Chispa, banner de evento e indicador día/noche --- */
+
+.missions-npc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-tactile);
+  margin: var(--space-3) 0;
+}
+
+.missions-npc-portrait {
+  color: var(--amber);
+  flex-shrink: 0;
+}
+
+.missions-npc-text p {
+  margin: 0;
+  color: var(--fg-1);
+  font-size: 0.9rem;
+}
+
+.missions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.mission-card {
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-tactile);
+}
+
+.mission-card--claimed {
+  opacity: 0.6;
+}
+
+.mission-card-difficulty {
+  align-self: flex-start;
+}
+
+.mission-card-desc {
+  margin: 0;
+  color: var(--fg-0);
+}
+
+.mission-card-progress,
+.mission-card-reward {
+  margin: 0;
+  color: var(--fg-1);
+  font-size: 0.9rem;
+}
+
+.mission-card-reward {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+/* Banner de evento de contenedor (Dorado/En Llamas, PLAN.md §4.32) sobre la tarjeta del picker. */
+.dig-picker-card-event {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-1);
+}
+
+.dig-picker-card-event--golden {
+  color: var(--amber-dark);
+  background: var(--amber);
+}
+
+.dig-picker-card-event--fire {
+  color: var(--fg-0);
+  background: var(--danger-container);
+}
+
+.dig-picker-card--golden {
+  box-shadow: var(--shadow-tactile), 0 0 12px var(--amber);
+}
+
+.dig-picker-card--fire {
+  box-shadow: var(--shadow-tactile), 0 0 12px var(--danger);
+}
+
+/* Indicador luna/sol del topbar (ciclo día/noche, PLAN.md §4.33): mismo pill que dinero/llaves
+   pero sin valor numérico, solo el ícono — de ahí el padding angosto. */
+.stat-pill--icon-only {
+  padding: var(--space-1);
+}
+
