@@ -5221,3 +5221,159 @@ npm run test:e2e → 69/69 verde, SIN tocar ningún spec existente (el store/UI 
   exactas + `INVENTORY_MAX_SAFETY`, relojes clampeados (`ordersRotatedAt`/`stallVendorAt`) que
   nunca rotan/venden con el reloj atrás. Falta auditar la capa de UI/store que agreguen 23.B/23.C
   (interpolación de diálogos de NPC, XSS) — no es mío.
+## Ronda 23 — Agente B: data (NPCs, retratos, historia, robot vendedor, logros) (rama `feat/puesto-ronda23`, save v12 sin cambios)
+
+### Qué hice
+
+1. **PLAN.md**: agregué §2.10 "NPCs y viñetas de historia liviana (ronda 23)", consecutivo a
+   §2.9 (el Puesto de Chatarra, escrito por 23.A). Documenta los 5 NPCs, el mecanismo de
+   `saleCategoryGroups`/`saleComments` de Rita y el motor de condiciones compartido de `story.json`.
+2. **`apps/game/src/data/npcs.json`** (nuevo): los 5 personajes fijos del roadmap §3.1 —
+   `rita`, `salomon`, `chispa`, `zoraida`, `intendente` — con `{id, name, portrait, rol}`. Rita
+   suma `saleComments` (4 claves i18n: `junk`/`tech`/`classy`/`premium`) y
+   `saleCategoryGroups` (mapea las 8 categorías de `items.json` a esos 4 grupos) — así la UI
+   (23.C) elige el comentario de Rita al vender sin calcular nada, solo indexando data.
+3. **`apps/game/src/icons/portraits.js`** (nuevo): registro hermano de `icons.js` (mismo
+   vocabulario de trazos, viewBox 24, cero emojis). `portraitMarkup(npcId, opts)` +
+   `hasPortrait`, exporta `PORTRAITS` para tests. Cara base compartida + accesorio distintivo
+   por NPC (rodete+anteojos, turbante+bigote, gorra+goggles, pañuelo+aros, gorra de funcionario).
+4. **`apps/game/src/data/story.json`** (nuevo): los 2 hitos de ESTA ronda únicamente (los de
+   Chispa/Zoraida/Intendente son de las rondas 24/26, que agregarán sus propias entradas):
+   `stallUnlockRita` (`cond: stallLevelAtLeast: 1`) y `firstOrderSalomon`
+   (`cond: ordersFulfilledAtLeast: 1`). `{id, npcId, cond, textKey}` tal cual pide §3.2.
+5. **`packages/engine/src/systems/achievements.js`**: 3 evaluadores nuevos en
+   `CONDITION_EVALUATORS` — `ordersFulfilledAtLeast` (`state.ordersFulfilledCount`),
+   `stallLevelAtLeast` (`state.stallLevel`), `stallInventoryAtLeast` (`state.inventory.length`,
+   evaluado en vivo — un logro nunca se re-bloquea una vez desbloqueado, así que capturar 1 ítem
+   y venderlo después no le hace perder el logro "primer ítem guardado"). Estos mismos 3 tipos
+   los reusa `story.json` (un solo motor de condiciones, tal como pide §3.2).
+6. **`apps/game/src/data/automations.json`**: máquina `robotVendedor` (cost `2000000`, efecto
+   `{type: 'enablesStallVendor'}`, icon `robot-vendor`), insertada entre `centroSubastas`
+   (1.6M) y `redDrones` (9M) — mantiene el orden por costo (regla ronda 15.C).
+7. **`apps/game/src/data/achievements.json`**: `a46` (Primer Objeto Guardado,
+   `stallInventoryAtLeast: 1`, money 3000), `a47` (Comerciante de Confianza,
+   `ordersFulfilledAtLeast: 25`, keys 5), `a48` (Puesto de Primera, `stallLevelAtLeast: 5`,
+   keys 6). **DECISIÓN**: el `value: 5` de `a48` está acoplado a `stallNivelMax` de
+   `data/stall.json` (hoy 5) — si esa constante cambia, hay que actualizar `a48` a mano (no hay
+   una forma limpia de referenciar una constante de `data/*.json` desde otro archivo `data/*.json`
+   sin acoplar `achievements.json` a `stall.json` en el engine).
+8. **Íconos nuevos en `icons.js`**: shapes `marketStall`/`shelf`/`orderSign` (puesto, estantería
+   del inventario, cartel de pedido) con sus claves `stall-chatarra`/`shelf-inventory`/
+   `order-sign`. `robot-vendor` REUSA la shape `robot` (mismo criterio de reuso + color de rareza
+   documentado en el archivo, como `servo-arm`/`servo-arm-titanium`).
+9. **i18n**: `es.js`/`en.js` ganan 6 claves (`npc.rita.storyIntro`, las 4 `npc.rita.sale.*` y
+   `npc.salomon.storyFirstOrder`), traducción real de una (regla §1.15). `data-en.js` gana
+   overlay de `achievements` (a46-a48) y `automations` (robotVendedor) — obligatorio para no
+   romper la paridad dinámica de `ronda16-i18n.test.js` — y un bloque `npcs` nuevo (nombres/rol
+   traducidos) que documento como decisión aparte abajo.
+
+### Decisiones no triviales
+
+- **NO toqué `dataI18n.js`/`main.js`/`store.js`** para cablear la colección `npcs` al pipeline de
+  carga (`DATA_FILES`) ni al overlay de idioma (`initDataLocalization`/`applyDataLanguage`). Mi
+  sección del roadmap es estrictamente "data" (23.B); ese wiring es el mismo tipo de tarea que
+  23.A dejó explícitamente para 23.C con `data.stall` ("sumalo al objeto data que arma
+  store.js/main.js"). Igual agregué el bloque `npcs` a `data-en.js` (regla §1.15: "data nueva con
+  nombre visible → entrada en data-en.js") documentado con un comentario inline explicando que
+  queda inerte hasta que 23.C conecte `npcs.json`/`story.json` a `DATA_FILES` y a
+  `dataI18n.js` — sin ese wiring, `name`/`rol` de los NPCs se ven en español aunque el idioma sea
+  'en' (degrada limpio: no rompe nada, solo no traduce todavía).
+- **NO creé un `systems/story.js` en el engine** (análogo a `checkAchievements` pero para
+  viñetas). El roadmap dice que story reusa el motor de `CONDITION_EVALUATORS`, pero no asigna
+  explícitamente a nadie la función que recorra `story.json`, marque `storySeen` y dispare el
+  modal — no está en el scope explícito de 23.B ("data") ni lo until ahora tenía dueño claro.
+  Dejo la data (`story.json`) lista con la forma exacta que pide §3.2; quien cablee el modal
+  (23.C, si le entra en el scope de "UI: pestaña Puesto", o quien lo asuma) puede reusar
+  `checkAchievements` como plantilla — es literalmente el mismo patrón (recorrer, evaluar,
+  marcar, no repetir) contra `CONDITION_EVALUATORS`, que ya evalúa los 3 tipos que uso acá.
+- **"3-4 variantes" de Rita se implementaron como 4 variantes por GRUPO de categoría, no por
+  categoría individual** (`junk`=common+reusable, `tech`=electronics+antiques,
+  `classy`=historic+art, `premium`=relics+future) — 8 categorías × 4 variantes cada una hubiera
+  sido 32 líneas de diálogo, desproporcionado para una sola viñeta del roadmap. La UI (23.C)
+  resuelve el grupo con `npcs.rita.saleCategoryGroups[item.categoria]` y el texto con
+  `npcs.rita.saleComments[grupo]` (clave i18n) — cero cálculo en la UI, todo indexado de data.
+- **No toqué `data/stall.json`** (Agente A pidió no reemplazar sus 9 claves numéricas) ni
+  `packages/engine/src/systems/stall.js` (el `npcId: 'salomon'` hardcodeado ahí ya coincide
+  con el id que usé en `npcs.json`, sin necesidad de tocar nada).
+
+### Verificación manual (375px + desktop)
+
+Sin wiring de UI todavía (esperado, mismo caso que 23.A), así que no hay nada visible nuevo del
+Puesto/NPCs en pantalla. Igual booteé el juego real (Playwright temporal contra `npx serve`,
+scripts borrados tras verificar — no se commitearon) en mobile-375 y desktop-1440: `data-state`
+llega a `"ready"`, `#title-screen` visible, **cero errores de consola** en ambos anchos (mis
+cambios en `icons.js`/`es.js`/`en.js`/`data-en.js`/`achievements.json`/`automations.json` no
+rompen el boot ni el overlay de i18n existente).
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test       → 439/439 verde (34 archivos; eran 426/33 tras 23.A, +13 de
+                 ronda23b-npc-story.test.js, archivo nuevo)
+npm run test:e2e → 69/69 verde, SIN tocar ningún spec existente (no hay wiring de UI, mismo
+                    resultado que dejó 23.A)
+```
+
+### Estado del DoD (Agente B, ronda 23)
+
+```
+[x] PLAN.md §2.10 primero
+[x] Tests RED antes de implementar (ronda23b-npc-story.test.js, confirmé RED con el import de
+    npcs.json/story.json roto antes de crear los archivos)
+[x] npm test → 439/439 verde
+[x] npm run test:e2e → 69/69 verde, sin tocar specs existentes
+[x] Manual 375px + desktop: boot limpio, cero errores de consola
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (quedan 23.C, 23.D, 23.E) — no corresponde
+    todavía, regla de ramas del roadmap.
+```
+
+### Qué necesita saber la ronda 23.C (UI: pestaña Puesto)
+
+- `apps/game/src/data/npcs.json`, `story.json` NO están en `DATA_FILES` (main.js) todavía —
+  sumalos ahí (mismo patrón que `stall.json`/`traps.json`) para que `store.js` los tenga
+  disponibles.
+- `dataI18n.js` (`initDataLocalization`/`applyDataLanguage`) NO tiene una entrada `npcs` — hace
+  falta agregarla si querés que `name`/`rol` de los NPCs se traduzcan al inglés (ya dejé el
+  overlay listo en `data-en.js` bajo la clave `npcs: {...}`, mismo shape que `automations`/
+  `prestigeTree`: `{name, rol}` por id). Sin este wiring, los nombres/roles de los NPCs quedan
+  en español aunque el idioma sea 'en' (degrada limpio, no rompe nada).
+- Diálogos de Rita: `npcs.json` (`rita.saleCategoryGroups[categoria]` → grupo →
+  `rita.saleComments[grupo]` → clave i18n) resuelve a una de 4 líneas
+  (`npc.rita.sale.junk/tech/classy/premium`) ya traducidas en es.js/en.js. La viñeta de
+  presentación de Rita es `npc.rita.storyIntro` (fija, no depende de categoría).
+- Retratos: `portraitMarkup(npc.portrait, opts)` de `apps/game/src/icons/portraits.js` (acepta
+  el valor de `portrait` con o sin el prefijo `portrait-`, ambos funcionan).
+- `story.json` tiene la forma `{id, npcId, cond, textKey}` — si armás el checker (recorrer,
+  evaluar contra `CONDITION_EVALUATORS`, marcar `state.storySeen`, no repetir), es exactamente
+  el mismo patrón que `checkAchievements` (`packages/engine/src/systems/achievements.js`), pero
+  ese motor no está exportado como función reusable fuera de `achievements.js` — si preferís no
+  duplicar la lógica de "recorrer condiciones", puede valer la pena un `systems/story.js`
+  pequeño que importe `CONDITION_EVALUATORS` (hoy no exportado, solo `checkAchievements` lo
+  está) — avisame si preferís que lo agregue yo en vez de vos.
+- `automations.json` ya tiene `robotVendedor` con `enablesStallVendor` — los tests de 23.A ya no
+  necesitan su `automationsStub` para probar wiring real de datos si querés un test de
+  integración con la data real (aunque su test interno sigue usando el stub por diseño, no hace
+  falta tocarlo).
+- 3 logros nuevos (`a46`-`a48`) ya aparecen en `AchievementsView` sin cambios de UI (usa la
+  misma data-driven render de siempre).
+
+### Qué necesita saber la ronda 23.D (e2e)
+
+- `state.storySeen` (save v12, ya validado) es un array de ids de `story.json` — para probar
+  "la viñeta de Rita aparece UNA vez" (punto 5 del roadmap), sembrá `stallLevel: 1` y verificá
+  que `storySeen` incluya `'stallUnlockRita'` tras el trigger (una vez que 23.C cablee el
+  checker); si 23.C no llegó a cablearlo, documentá la decisión de smoke-test como hizo 15.D.
+
+### Qué necesita saber la ronda 23.E (auditoría)
+
+- Diálogos de NPC interpolados: todas mis claves i18n son texto fijo (sin `{param}` que venga de
+  data no confiable) — el foco de XSS de la auditoría debería estar en cómo 23.C interpola
+  `npc.name`/`npc.rol` (si usa `innerHTML` con esos strings, aunque hoy son 100% controlados
+  por `npcs.json`, no por input del jugador).
+- `a48.cond.value: 5` está hardcodeado igual a `stallNivelMax` de `data/stall.json` — si una
+  ronda futura cambia esa constante sin actualizar el logro, quedaría un logro "nivel máximo"
+  que no corresponde al nivel máximo real. Vale la pena un test de coherencia cruzada si la
+  auditoría quiere blindarlo.
