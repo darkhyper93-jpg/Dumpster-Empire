@@ -134,6 +134,18 @@
     ]
   },
   {
+    "id": "robotVendedor",
+    "name": "Robot Vendedor",
+    "icon": "robot-vendor",
+    "cost": 2000000,
+    "desc": "Vende un objeto del inventario del Puesto de Chatarra cada 20s, incluso con el juego cerrado.",
+    "effects": [
+      {
+        "type": "enablesStallVendor"
+      }
+    ]
+  },
+  {
     "id": "redDrones",
     "name": "Red de Drones",
     "icon": "drone-network",

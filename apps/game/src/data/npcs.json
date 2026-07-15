@@ -1,0 +1,48 @@
+[
+  {
+    "id": "rita",
+    "name": "Doña Rita",
+    "portrait": "portrait-rita",
+    "rol": "Compradora fija del Puesto de Chatarra. Jubilada coleccionista, paga bien y opina de todo.",
+    "saleComments": {
+      "junk": "npc.rita.sale.junk",
+      "tech": "npc.rita.sale.tech",
+      "classy": "npc.rita.sale.classy",
+      "premium": "npc.rita.sale.premium"
+    },
+    "saleCategoryGroups": {
+      "common": "junk",
+      "reusable": "junk",
+      "electronics": "tech",
+      "antiques": "tech",
+      "historic": "classy",
+      "art": "classy",
+      "relics": "premium",
+      "future": "premium"
+    }
+  },
+  {
+    "id": "salomon",
+    "name": "El Turco Salomón",
+    "portrait": "portrait-salomon",
+    "rol": "Pedidos especiales del Puesto de Chatarra. Regateador teatral."
+  },
+  {
+    "id": "chispa",
+    "name": "Chispa",
+    "portrait": "portrait-chispa",
+    "rol": "Pibe fanático de robots. Da las misiones diarias y el flavor de la flota."
+  },
+  {
+    "id": "zoraida",
+    "name": "Madame Zoraida",
+    "portrait": "portrait-zoraida",
+    "rol": "Vidente del barrio. Anuncia eventos dorados y el ciclo día/noche."
+  },
+  {
+    "id": "intendente",
+    "name": "El Intendente",
+    "portrait": "portrait-intendente",
+    "rol": "Historia de prestigio: en cada ciudad reaparece con otro cargo, running gag del barrio."
+  }
+]

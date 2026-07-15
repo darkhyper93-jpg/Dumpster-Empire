@@ -185,4 +185,12 @@ export default {
   // main.js
   'boot.loadFailed': 'Could not load {path} (HTTP {status}).',
   'boot.fatalError': 'Could not start Dumpster Empire: {message}',
+
+  // Ronda 23 — Agente B (data): NPC dialogue and light story beats.
+  'npc.rita.storyIntro': 'Doña Rita: "Oh, so you\'ve got your own stall now? Bring me nice things and I\'ll pay you well, dear."',
+  'npc.rita.sale.junk': 'Doña Rita: "This is junk, but scrap is scrap. I\'ll still pay for it."',
+  'npc.rita.sale.tech': 'Doña Rita: "I don\'t mess with technology, but I know worth when I see it."',
+  'npc.rita.sale.classy': 'Doña Rita: "Now this has class. Reminds me of my grandmother\'s house."',
+  'npc.rita.sale.premium': 'Doña Rita: "Would you look at this marvel! You don\'t find these every day."',
+  'npc.salomon.storyFirstOrder': 'El Turco Salomón: "Finally, someone who fulfills an order properly! That\'s the way to do business, champ."',
 };

@@ -186,4 +186,13 @@ export default {
   // main.js
   'boot.loadFailed': 'No se pudo cargar {path} (HTTP {status}).',
   'boot.fatalError': 'No se pudo iniciar Dumpster Empire: {message}',
+
+  // Ronda 23 — Agente B (data): diálogos de NPCs (apps/game/src/data/npcs.json) y viñetas de
+  // historia liviana (apps/game/src/data/story.json, PLAN.md §2.9, roadmap §3.1/§3.2).
+  'npc.rita.storyIntro': 'Doña Rita: "Ah, ¿así que ahora tenés puesto propio? Traeme cosas lindas y te pago bien, m\'hijo."',
+  'npc.rita.sale.junk': 'Doña Rita: "Esto es cachivache, pero un fierro es un fierro. Te lo pago igual."',
+  'npc.rita.sale.tech': 'Doña Rita: "Con la tecnología yo no me meto, pero sé reconocer cuando algo vale."',
+  'npc.rita.sale.classy': 'Doña Rita: "Esto sí que tiene clase. Me acuerda a la casa de mi abuela."',
+  'npc.rita.sale.premium': 'Doña Rita: "¡Pero mirá esta maravilla! Esto no se encuentra todos los días."',
+  'npc.salomon.storyFirstOrder': 'El Turco Salomón: "¡Al fin alguien que cumple un pedido como la gente! Así se trabaja, campeón."',
 };

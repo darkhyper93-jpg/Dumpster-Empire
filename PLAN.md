@@ -206,6 +206,26 @@ siempre, y que sigue siendo el default) en un sistema de inventario con timing d
   (ver 4.29). Los **legendarios NUNCA entran al inventario del puesto**: se venden siempre
   instantáneo, contrato irrevocable (ver 4.26).
 
+### 2.10 NPCs y viñetas de historia liviana (ronda 23)
+
+Cinco personajes fijos con retrato SVG propio (`apps/game/src/data/npcs.json`,
+`apps/game/src/icons/portraits.js`): Doña Rita (compradora fija del Puesto), El Turco Salomón
+(pedidos especiales del Puesto), Chispa (misiones diarias, ronda 24), Madame Zoraida (eventos
+dorados y día/noche, ronda 24) y El Intendente (historia de prestigio, ronda 26). Sus diálogos
+viven SIEMPRE como claves i18n (`npc.<npcId>.<contexto>`, es.js/en.js reales — nunca texto
+hardcodeado en la data ni en la UI). Rita comenta cada venta del Puesto con una de 4 variantes
+según el grupo de categoría del ítem vendido (`npcs.json`: `saleCategoryGroups` mapea las 8
+categorías de `items.json` a 4 grupos — `junk`/`tech`/`classy`/`premium` —, `saleComments` mapea
+cada grupo a su clave i18n).
+
+`apps/game/src/data/story.json` guarda viñetas de historia (`{ id, npcId, cond, textKey }`) que se
+muestran UNA vez en el modal de celebración existente, con `state.storySeen: string[]` para no
+repetir (save v12). El `cond` de cada viñeta reusa el mismo motor de `CONDITION_EVALUATORS` de
+`achievements.js` (un solo motor de condiciones para logros, historia y misiones futuras). Los 2
+hitos de esta ronda: comprar el Puesto (`stallLevelAtLeast: 1`, Rita se presenta) y cumplir el
+primer pedido (`ordersFulfilledAtLeast: 1`, Salomón festeja). Los hitos de Chispa/Zoraida/El
+Intendente se agregan en las rondas 24/26 que introducen sus sistemas.
+
 ---
 
 ## 3. CONTRATO DE EXPERIENCIA — RITMO ESPERADO

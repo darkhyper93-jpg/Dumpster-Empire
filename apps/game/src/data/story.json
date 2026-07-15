@@ -1,0 +1,14 @@
+[
+  {
+    "id": "stallUnlockRita",
+    "npcId": "rita",
+    "cond": { "type": "stallLevelAtLeast", "value": 1 },
+    "textKey": "npc.rita.storyIntro"
+  },
+  {
+    "id": "firstOrderSalomon",
+    "npcId": "salomon",
+    "cond": { "type": "ordersFulfilledAtLeast", "value": 1 },
+    "textKey": "npc.salomon.storyFirstOrder"
+  }
+]
