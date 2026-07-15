@@ -127,6 +127,12 @@ export function trapProbability(probTrampaBaseDelContenedor, suerte) {
  *   constante del bonus por set completo (data/collectionSets.json, ronda 22). Opcional: ver getSetBonus.
  * @property {{ legendaryChance: number, items: Array<{id:string,name:string,icon:string,categoria:string,valorBase:number}> }} [legendaries]
  *   legendarios fuera de pool (data/legendaries.json, ronda 22). Opcional: ver rollContainerResult.
+ * @property {{ stallCost: number, stallMultBase: number, stallMultPorNivel: number, stallNivelMax: number,
+ *   stallCapacityBase: number, stallCapacityPorNivel: number, orderRotationMs: number, orderMult: number,
+ *   vendedorIntervalo: number }} [stall]
+ *   constantes del Puesto de Chatarra (data/stall.json, ronda 23). Opcional: ver getStallCapacity/
+ *   getStallUpgradeCost/getStallSalePrice — sin él, la captura nunca se activa (mismo patrón que
+ *   data.streak/data.traps/data.tools).
  */
 
 function upgradeDef(data, id) {
@@ -773,4 +779,132 @@ export function getToolRadiusMult(state, data) {
  */
 export function getToolRhythmMult(state, data) {
   return equippedToolDef(state, data)?.ritmoMult ?? 1;
+}
+
+// ---------------------------------------------------------------------------
+// El Puesto de Chatarra (PLAN.md §2.9, §4.27-§4.29, ronda 23). `data.stall` es opcional (mismo
+// patrón que data.streak/data.traps/data.tools): sin él, la captura nunca se activa (ver
+// applyContainerResult) y estos getters no deben llamarse (asumen `data.stall` presente).
+// ---------------------------------------------------------------------------
+
+/**
+ * §4.27 — capacidad del inventario del Puesto. 0 sin puesto comprado (stallLevel 0).
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getStallCapacity(state, data) {
+  if (state.stallLevel < 1) return 0;
+  return data.stall.stallCapacityBase + data.stall.stallCapacityPorNivel * (state.stallLevel - 1);
+}
+
+/**
+ * §4.27 — costo para alcanzar `targetLevel` (default: el siguiente al actual).
+ * costo(nivel) = stallCost × 4^(nivel-1). Comprar el puesto en sí es alcanzar el nivel 1: mismo
+ * costo `stallCost` (4^0 = 1), sin necesitar una fórmula separada para la compra inicial.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @param {number} [targetLevel]
+ * @returns {number}
+ */
+export function getStallUpgradeCost(state, data, targetLevel = state.stallLevel + 1) {
+  return Math.ceil(data.stall.stallCost * Math.pow(4, targetLevel - 1));
+}
+
+/**
+ * §4.27 — precio de venta literal de un ítem del inventario del Puesto.
+ * precioPuesto = baseValue × fluctuacionMercado × (stallMultBase + stallMultPorNivel × (stallLevel - 1))
+ * @param {{ baseValue: number, fluctuacionMercado: number, stallLevel: number, stallMultBase: number, stallMultPorNivel: number }} params
+ * @returns {number}
+ */
+export function stallSalePrice({ baseValue, fluctuacionMercado, stallLevel, stallMultBase, stallMultPorNivel }) {
+  return baseValue * fluctuacionMercado * (stallMultBase + stallMultPorNivel * (stallLevel - 1));
+}
+
+/**
+ * Getter de conveniencia sobre `stallSalePrice`, tomando las constantes de `data.stall` y el
+ * nivel del puesto de `state`. La fluctuación es un parámetro explícito (no siempre
+ * `state.marketFluctuation`: la venta offline usa fluctuación fija 1, PLAN.md §4.29).
+ * @param {GameState} state
+ * @param {{ baseValue: number }} item
+ * @param {EngineData} data
+ * @param {number} [fluctuacionMercado]
+ * @returns {number}
+ */
+export function getStallSalePrice(state, item, data, fluctuacionMercado = state.marketFluctuation) {
+  return stallSalePrice({
+    baseValue: item.baseValue,
+    fluctuacionMercado,
+    stallLevel: state.stallLevel,
+    stallMultBase: data.stall.stallMultBase,
+    stallMultPorNivel: data.stall.stallMultPorNivel,
+  });
+}
+
+/**
+ * ¿El jugador posee alguna automatización que habilite el robot vendedor del Puesto (PLAN.md
+ * §4.29, ronda 23)? Vive acá (no en systems/automation.js, donde vive `hasAutoDig`) para que
+ * `systems/stall.js` pueda consultarlo sin crear un ciclo de imports con automation.js (que sí
+ * llama a `stallVendorTick` de stall.js dentro de `automationTick`).
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {boolean}
+ */
+export function hasStallVendor(state, data) {
+  return automationEffectsOfType(data, 'enablesStallVendor').some(
+    ({ automationId }) => state.automationOwned[automationId]
+  );
+}
+
+/**
+ * Percentil (interpolación lineal) de un array YA ordenado ascendente.
+ * @param {Array<number>} sortedValues
+ * @param {number} p - 0..1
+ * @returns {number}
+ */
+function percentile(sortedValues, p) {
+  if (sortedValues.length === 1) return sortedValues[0];
+  const idx = p * (sortedValues.length - 1);
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  if (lower === upper) return sortedValues[lower];
+  return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * (idx - lower);
+}
+
+/**
+ * §4.30 (ronda 23.C) — 3 presets de umbral de captura ("guardá lo que valga $X o más"),
+ * percentiles 25/50/75 del valor de venta ESTIMADO (sin variance de RNG, fluctuación fija 1) de
+ * cada ítem del pool del contenedor más avanzado que el jugador posee (mayor `costoInicial`).
+ * Sin ningún contenedor poseído, no hay base para estimar nada: devuelve [].
+ * @param {GameState} state
+ * @param {Array<Object>} allContainers
+ * @param {{ containers: Object<string, Array<Object>>, rarities: Array<Object> }} itemsData
+ * @param {EngineData} data
+ * @returns {Array<number>}
+ */
+export function getStallThresholdPresets(state, allContainers, itemsData, data) {
+  const owned = allContainers.filter((c) => (state.ownedContainers[c.id] || 0) >= 1);
+  if (!owned.length) return [];
+  const best = owned.reduce((a, b) => (b.costoInicial > a.costoInicial ? b : a));
+  const pool = itemsData.containers[best.id] || [];
+  if (!pool.length) return [];
+  const luck = getLuck(state, data);
+  const depthValueMult = getDepthValueMult(state, data);
+  const itemMultipliers = getLevelValueMult(state, best) * getMechanicValueMult(best) * getSetBonus(state, best, itemsData, data);
+  const values = pool
+    .map((item) => {
+      const rarity = itemsData.rarities.find((r) => r.id === item.categoria);
+      return (
+        itemSaleValue({
+          valorBaseObjeto: item.valorBase,
+          multiplicadorRareza: rarity ? rarity.mult : 1,
+          suerte: luck,
+          fluctuacionMercado: 1,
+          sellMult: getSellMult(state, item.categoria, data),
+          depthValueMult,
+        }) * itemMultipliers
+      );
+    })
+    .sort((a, b) => a - b);
+  return [0.25, 0.5, 0.75].map((p) => percentile(values, p));
 }

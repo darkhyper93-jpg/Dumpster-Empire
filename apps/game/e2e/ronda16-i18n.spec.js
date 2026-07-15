@@ -51,7 +51,8 @@ test.describe('Dumpster Empire — i18n (ronda 16): detección, switch en vivo, 
       if (await skip.isVisible()) await skip.click();
 
       const tabs = page.locator('#tabbar button');
-      await expect(tabs).toHaveText(['Dig', 'Containers', 'Automation', 'Achievements', 'Prestige', 'Index']);
+      // AJUSTE (ronda 23.C): 7ma pestaña "Stall" (Puesto de Chatarra) sumada al tabbar.
+      await expect(tabs).toHaveText(['Dig', 'Containers', 'Automation', 'Achievements', 'Prestige', 'Index', 'Stall']);
 
       await page.locator('[data-tab="tienda"]').click();
       await expect(page.locator('#tab-content')).toContainText('Cost:');

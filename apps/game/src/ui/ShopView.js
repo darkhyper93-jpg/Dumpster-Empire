@@ -26,6 +26,37 @@ import {
 import { iconMarkup } from '../icons/icons.js';
 import { t } from '../i18n/i18n.js';
 
+/**
+ * Ronda 23.C (PLAN.md §2.9/§4.27): tarjeta de compra del Puesto de Chatarra, único botón que
+ * dispara una acción real desde esta vista (el resto es informativo — escarbar es "comprar").
+ * @param {import('@dumpster/engine').GameState} state
+ * @param {import('@dumpster/engine').EngineData} data
+ * @returns {string}
+ */
+function renderStallCard(state, data) {
+  if (!data.stall) return '';
+  if (state.stallLevel >= 1) {
+    return (
+      `<article class="shop-card">` +
+      `<span class="shop-card-icon">${iconMarkup('stall-chatarra', { size: 28 })}</span>` +
+      `<h3>${t('shop.stallCard')}</h3>` +
+      `<p>${t('shop.stallOwned')}</p>` +
+      `</article>`
+    );
+  }
+  const canAfford = state.money >= data.stall.stallCost;
+  return (
+    `<article class="shop-card">` +
+    `<span class="shop-card-icon">${iconMarkup('stall-chatarra', { size: 28 })}</span>` +
+    `<h3>${t('shop.stallCard')}</h3>` +
+    `<p>${t('shop.stallDesc')}</p>` +
+    `<button type="button" data-action="buy-stall" ${canAfford ? '' : 'disabled'} title="${
+      canAfford ? '' : t('common.missingMoney', { amount: formatMoney(data.stall.stallCost - state.money) })
+    }">${t('shop.stallBuyFor', { amount: formatMoney(data.stall.stallCost) })}</button>` +
+    `</article>`
+  );
+}
+
 export const ShopView = {
   /**
    * @param {HTMLElement} container
@@ -33,9 +64,21 @@ export const ShopView = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
+    // Marca propia (ver CollectionView/AutomationView): #tab-content se reusa entre vistas. Antes
+    // de la ronda 23.C esta vista era 100% informativa (sin binding); la tarjeta del Puesto suma
+    // el primer botón con acción real.
+    if (!container.dataset.boundClickShop) {
+      container.dataset.boundClickShop = 'true';
+      container.addEventListener('click', (evt) => {
+        const buyBtn = evt.target.closest('[data-action="buy-stall"]');
+        if (buyBtn && !buyBtn.disabled) store.actions.buyStall();
+      });
+    }
+
     const { allContainers, data, itemsData } = store.ctx;
+    const stallCard = renderStallCard(state, data);
     if (!allContainers.length) {
-      container.innerHTML = `<p class="empty-state">${t('common.emptyContainers')}</p>`;
+      container.innerHTML = stallCard || `<p class="empty-state">${t('common.emptyContainers')}</p>`;
       return;
     }
 
@@ -114,6 +157,6 @@ export const ShopView = {
       );
     });
 
-    container.innerHTML = `<div class="shop-grid">${cards.join('')}</div>`;
+    container.innerHTML = `<div class="shop-grid">${stallCard}${cards.join('')}</div>`;
   },
 };

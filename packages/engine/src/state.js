@@ -30,7 +30,19 @@
 // escarbado, sistemas independientes que la ronda 21 conserva.
 // AJUSTE (ronda 22): v11 agrega legendariesFound (PLAN.md §4.26) — ids de legendarios ya
 // encontrados, FUERA de itemsFoundByItem (la vitrina es su casa, no el INDEX de contenedores).
-export const SAVE_VERSION = 11;
+// AJUSTE (ronda 23): v12 agrega el Puesto de Chatarra (PLAN.md §2.9/§4.27-§4.29): `inventory`
+// (ítems capturados, sin vender), `stallLevel`/`keepThreshold` (compra y umbral de captura),
+// `stallOrders`/`ordersRotatedAt` (pedidos de Salomón), `stallVendorAt` (reloj del robot
+// vendedor, mismo patrón que `marketFluctuationAt`), `stallSoldCount`/`ordersFulfilledCount`
+// (contadores para logros) y `storySeen` (viñetas de historia liviana ya vistas, PLAN.md §3.2).
+export const SAVE_VERSION = 12;
+
+// AJUSTE (ronda 23): cota de seguridad para `inventory` en validateDeepContent (save.js). No es
+// la capacidad de diseño real (esa vive en data/stall.json y save.js es deliberadamente
+// agnóstico de datos de balance) — es un techo generoso muy por encima de cualquier capacidad
+// realista (12 base + 6×4 niveles = 36) que deja margen a futuros ajustes sin falsos rechazos,
+// y a la vez rechaza un array absurdo de un save manipulado.
+export const INVENTORY_MAX_SAFETY = 200;
 
 // AJUSTE (auditoría post-ronda 14): rango de diseño de `digSensitivity`, exportado como única
 // fuente de verdad. Antes el 0.5–1.5 estaba repetido como número mágico en save.js (validación),
@@ -91,6 +103,35 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  * @property {number} gravesHit - cantidad de trampas de grado grave sufridas (logro oculto ronda 20).
  * @property {string[]} legendariesFound - ids de legendarios ya encontrados (PLAN.md §4.26,
  *   ronda 22); FUERA de itemsFoundByItem — la vitrina es su única persistencia.
+ * @property {StallInventoryItem[]} inventory - ítems capturados por el Puesto de Chatarra, sin
+ *   vender todavía (PLAN.md §2.9, ronda 23).
+ * @property {number} stallLevel - 0 = no comprado; 1-`stallNivelMax` con el puesto activo.
+ * @property {number} keepThreshold - valor mínimo para capturar un ítem; 0 = puesto en pausa.
+ * @property {StallOrder[]} stallOrders - hasta 2 pedidos activos de Salomón (PLAN.md §4.28).
+ * @property {number} ordersRotatedAt - epoch ms de la última rotación completa de pedidos.
+ * @property {number} stallVendorAt - epoch ms del último intento del robot vendedor (PLAN.md §4.29).
+ * @property {number} stallSoldCount - ítems vendidos en el puesto (manual + robot), para logros.
+ * @property {number} ordersFulfilledCount - pedidos cumplidos, para logros.
+ * @property {string[]} storySeen - ids de viñetas de historia ya mostradas (PLAN.md §3.2).
+ */
+
+/**
+ * @typedef {Object} StallInventoryItem
+ * @property {string} itemId
+ * @property {string} containerId
+ * @property {string} categoria
+ * @property {number} baseValue - valor con fluctuación de mercado 1 (PLAN.md §4.27), para no
+ *   aplicarla dos veces al vender.
+ */
+
+/**
+ * @typedef {Object} StallOrder
+ * @property {string} id
+ * @property {string} npcId
+ * @property {string} categoria
+ * @property {number} cantidad
+ * @property {number} mult
+ * @property {number} progress
  */
 
 /**
@@ -136,5 +177,14 @@ export function freshState() {
     toolsOwned: { manos: true },
     gravesHit: 0,
     legendariesFound: [],
+    inventory: [],
+    stallLevel: 0,
+    keepThreshold: 0,
+    stallOrders: [],
+    ordersRotatedAt: 0,
+    stallVendorAt: 0,
+    stallSoldCount: 0,
+    ordersFulfilledCount: 0,
+    storySeen: [],
   };
 }

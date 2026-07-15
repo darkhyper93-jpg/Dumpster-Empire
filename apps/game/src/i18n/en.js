@@ -15,6 +15,7 @@ export default {
   'tabs.logros': 'Achievements',
   'tabs.prestigio': 'Prestige',
   'tabs.index': 'Index',
+  'tabs.puesto': 'Stall',
 
   // Compartidos entre vistas
   'common.free': 'Free',
@@ -167,6 +168,29 @@ export default {
   'shop.luckLine': 'Recommended Luck: {rec} {status}',
   'shop.digPowerLine': 'Recommended Dig Power: ×{rec} {status}',
   'shop.areaLine': 'Recommended Search Area: ×{rec} {status}',
+  // Ronda 23.C: Junk Stall purchase card (PLAN.md §2.9/§4.27) in the Shop tab.
+  'shop.stallCard': 'Junk Stall',
+  'shop.stallDesc': 'Save the objects worth keeping and sell them to Doña Rita when the price is high.',
+  'shop.stallBuyFor': 'Buy for {amount}',
+  'shop.stallOwned': "You already have it — check the Stall tab.",
+
+  // StallView.js (PLAN.md §2.9/§4.27-§4.30, ronda 23.C)
+  'stall.lockedTeaser': 'Unlocked by buying the Junk Stall in the Shop.',
+  'stall.quote': "Today's price: {arrow} {pct}%",
+  'stall.thresholdLabel': 'Keep items worth $X or more',
+  'stall.thresholdActive': 'Keeping items worth {amount} or more.',
+  'stall.thresholdPaused': 'Stall paused: raise the threshold to start keeping items.',
+  'stall.levelLine': 'Level {level}/{max} · Capacity: {capacity}',
+  'stall.levelMaxed': 'Max level',
+  'stall.upgradeFor': 'Upgrade for {amount}',
+  'stall.inventoryTitle': 'Inventory',
+  'stall.inventoryEmpty': 'The stall is empty — raise the threshold or dig up something good.',
+  'stall.sell': 'Sell',
+  'stall.ordersTitle': "{name}'s orders",
+  'stall.orderCategory': 'Order: {categoria}',
+  'stall.orderProgress': 'Progress: {progress}/{cantidad}',
+  'stall.orderReward': 'Pays +{pct}% over the stall price',
+  'stall.orderTime': 'Rotates in {minutes} min',
 
   // TitleScreen.js
   'titleScreen.play': 'Play',
@@ -185,4 +209,12 @@ export default {
   // main.js
   'boot.loadFailed': 'Could not load {path} (HTTP {status}).',
   'boot.fatalError': 'Could not start Dumpster Empire: {message}',
+
+  // Ronda 23 — Agente B (data): NPC dialogue and light story beats.
+  'npc.rita.storyIntro': 'Doña Rita: "Oh, so you\'ve got your own stall now? Bring me nice things and I\'ll pay you well, dear."',
+  'npc.rita.sale.junk': 'Doña Rita: "This is junk, but scrap is scrap. I\'ll still pay for it."',
+  'npc.rita.sale.tech': 'Doña Rita: "I don\'t mess with technology, but I know worth when I see it."',
+  'npc.rita.sale.classy': 'Doña Rita: "Now this has class. Reminds me of my grandmother\'s house."',
+  'npc.rita.sale.premium': 'Doña Rita: "Would you look at this marvel! You don\'t find these every day."',
+  'npc.salomon.storyFirstOrder': 'El Turco Salomón: "Finally, someone who fulfills an order properly! That\'s the way to do business, champ."',
 };

@@ -25,6 +25,9 @@ const DATA_FILES = {
   tools: './data/tools.json',
   collectionSets: './data/collectionSets.json',
   legendaries: './data/legendaries.json',
+  stall: './data/stall.json',
+  npcs: './data/npcs.json',
+  story: './data/story.json',
 };
 
 async function loadData() {
@@ -86,13 +89,21 @@ async function boot() {
     tools: loaded.tools,
     collectionSets: loaded.collectionSets,
     legendaries: loaded.legendaries,
+    // Ronda 23.C: `data.stall` es lo único que el engine consume (getStallCapacity/
+    // getStallUpgradeCost/getStallSalePrice/hasStallVendor/getStallThresholdPresets, todos
+    // opcionales sin él). `npcs`/`story` son pura data de UI (nombres, retratos, textKeys) — se
+    // leen directo de `loaded` (mismo criterio que `loaded.legendaries`/`loaded.containers` hoy).
+    stall: loaded.stall,
   };
   const itemsData = loaded.items;
   const allContainers = loaded.containers;
   const achievementsData = loaded.achievements;
+  const storyData = loaded.story;
   const initialSaveText = await resolveInitialSaveText();
 
-  const store = createStore({ data, itemsData, allContainers, achievementsData, initialSaveText });
+  // `npcs` es pura data de UI (StallView: retrato/nombre/comentarios de Rita) — se pasa por ctx
+  // como itemsData/achievementsData, aunque el engine nunca la consume (ronda 23.C).
+  const store = createStore({ data, itemsData, allContainers, achievementsData, storyData, npcs: loaded.npcs, initialSaveText });
   // Partida nueva: si no había save, el idioma inicial sale del navegador (es-* → es, resto en).
   // Con save existente manda su state.language (ya validado por el engine contra el allow-list).
   if (!initialSaveText && !localStorage.getItem(SAVE_KEY)) {

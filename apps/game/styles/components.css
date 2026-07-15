@@ -1159,3 +1159,131 @@ textarea {
   border-radius: var(--radius-md);
 }
 
+/* --- Puesto de Chatarra (StallView.js, PLAN.md §2.9/§4.27-§4.30, ronda 23.C) --- */
+
+.stall-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.stall-locked-icon {
+  color: var(--fg-1);
+  opacity: 0.6;
+}
+
+.stall-npc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-tactile);
+  margin-bottom: var(--space-3);
+}
+
+.stall-npc-portrait {
+  color: var(--amber);
+  flex-shrink: 0;
+}
+
+.stall-npc-text p {
+  margin: 0;
+  color: var(--fg-1);
+  font-size: 0.9rem;
+}
+
+.stall-quote {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  margin: 0 0 var(--space-3);
+}
+
+.stall-quote--up {
+  color: var(--olive);
+}
+
+.stall-quote--down {
+  color: var(--danger);
+}
+
+.stall-threshold,
+.stall-level {
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-tactile);
+  margin-bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stall-threshold-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.9rem;
+  color: var(--fg-0);
+}
+
+.stall-threshold-label input {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-highest);
+  box-shadow: var(--shadow-recessed);
+  color: var(--fg-0);
+  border: none;
+}
+
+.stall-threshold-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.stall-threshold-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--fg-1);
+}
+
+.stall-inventory-grid .shop-card-icon {
+  color: var(--rarity-color, var(--amber));
+}
+
+.stall-item-price {
+  font-family: var(--font-mono);
+  color: var(--amber);
+  margin: 0;
+}
+
+.stall-orders {
+  margin-top: var(--space-3);
+}
+
+.stall-orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.stall-order-card {
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  box-shadow: var(--shadow-tactile);
+}
+
+.stall-order-time {
+  margin: 0;
+  color: var(--fg-1);
+  font-size: 0.85rem;
+}
+

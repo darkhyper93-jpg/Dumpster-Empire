@@ -1,0 +1,11 @@
+{
+  "stallCost": 30000,
+  "stallMultBase": 1.25,
+  "stallMultPorNivel": 0.05,
+  "stallNivelMax": 5,
+  "stallCapacityBase": 12,
+  "stallCapacityPorNivel": 6,
+  "orderRotationMs": 1200000,
+  "orderMult": 1.4,
+  "vendedorIntervalo": 20
+}

@@ -12,6 +12,7 @@ import {
   registerContainerDig,
 } from '../economy.js';
 import { isContainerUnlocked, rollContainerResult, applyContainerResult } from './containers.js';
+import { stallVendorTick } from './stall.js';
 
 /**
  * Compra una mejora de automatización de un solo uso.
@@ -94,6 +95,11 @@ export function setAutoTarget(state, containerId, allContainers) {
  * @param {() => number} [random]
  */
 export function automationTick(state, dtSeconds, allContainers, itemsData, data, random = Math.random) {
+  // PLAN.md §4.29 (ronda 23): el robot vendedor del Puesto es independiente del robot de
+  // escarbado — un jugador puede tener uno sin el otro, así que su tick corre siempre (gateado
+  // adentro por hasStallVendor/data.stall), ANTES del `return` temprano de abajo.
+  if (data.stall) stallVendorTick(state, data, Date.now(), random);
+
   if (!hasAutoDig(state, data)) return;
 
   const parallelSlots = getParallelAutoSlots(state, data);

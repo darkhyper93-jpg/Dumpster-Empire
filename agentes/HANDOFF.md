@@ -5044,3 +5044,774 @@ Manual 375px + desktop con Playwright real (screenshots temporales, no comiteada
 - El patrón "función de módulo aparte que no es parte del objeto `View`" (`renderShowcase` en
   `CollectionView.js`) es el precedente a seguir si el Agente C de la 23 necesita una subsección
   dentro de una vista existente sin ensuciar el objeto principal con estado propio.
+## Ronda 23 — Agente A: engine (inventario, captura, venta, pedidos, robot vendedor) (rama `feat/puesto-ronda23`, save v12)
+
+### Qué hice
+
+1. **PLAN.md primero**: agregué §2.9 (concepto del Puesto de Chatarra), §4.27 (precio de venta),
+   §4.28 (pedidos) y §4.29 (robot vendedor), consecutivas a §4.26 (la ronda 22 no dejó tombstone,
+   así que siguen el número real del archivo, regla §3.6).
+2. **`apps/game/src/data/stall.json`** (constantes de §4.27-§4.29: `stallCost`, `stallMultBase`,
+   `stallMultPorNivel`, `stallNivelMax`, `stallCapacityBase`, `stallCapacityPorNivel`,
+   `orderRotationMs`, `orderMult`, `vendedorIntervalo`). Lo creé yo (Agente A) aunque 23.B también
+   lo menciona, mismo precedente que la ronda 20 (Agente A creó `traps.json`/`tools.json` porque
+   el engine los necesita para compilar y testear) — **23.B puede EXTENDER este archivo** (por
+   ejemplo con textos/ids de NPC si hiciera falta) pero no debería reemplazar las claves numéricas
+   que ya uso, o rompe mis tests.
+3. **Captura** (`systems/containers.js`): `rollContainerResult` ahora expone `item.baseValue` en
+   cada ítem (mismo cálculo que `value` pero con `fluctuacionMercado: 1` — incluye
+   `getLevelValueMult`/`getMechanicValueMult`/`getSetBonus`, así que ronda 22 los sets también
+   valen más en el puesto). `applyContainerResult` gana la lógica de captura: con
+   `data.stall` presente, `stallLevel >= 1`, `keepThreshold > 0`, `item.value >= keepThreshold` y
+   `inventory.length < capacidad(state,data)`, el ítem va a `state.inventory` (`{itemId,
+   containerId, categoria, baseValue}`) en vez de sumarse a `money`. Los contadores de colección
+   (`itemsFoundCount`/`itemsFoundByCategory`/`itemsFoundByItem`/`categoryFragments`) suben SIEMPRE
+   (se capture o no: encontrar es encontrar). Los **legendarios NUNCA pasan por la captura**
+   (`continue` antes del chequeo, contrato §3.5.3) — venta instantánea siempre. R23.2 cubierto con
+   test explícito: con `stallLevel: 0` (default) o `keepThreshold: 0`, el camino es bit a bit
+   idéntico al pre-ronda-23.
+4. **`packages/engine/src/systems/stall.js` nuevo**: `buyStall`/`upgradeStall` (costo
+   `stallCost × 4^(nivel-1)`, mismo `getStallUpgradeCost` sirve para la compra inicial con
+   `targetLevel: 1` y para subir de nivel), `setKeepThreshold` (valida finito >= 0),
+   `sellInventoryItem` (refresca la fluctuación con `refreshMarketFluctuation` ANTES de calcular
+   el precio — toda venta la refresca, PLAN.md §4.27), `stallVendorTick` (reloj clampeado §3.3 con
+   `state.stallVendorAt`, prioriza ítems que satisfacen un pedido activo, después el de mayor
+   `baseValue`), `applyOfflineStallSales` (vende sobre el inventario YA persistido a fluctuación
+   FIJA 1, sin tocar `state.marketFluctuation`), `rotateStallOrders` (genera 2 pedidos sobre
+   `ownedCategories` si no hay ninguno o pasó `orderRotationMs`; si falta alguno por debajo de 2,
+   completa sin reiniciar el reloj de rotación completa — reloj clampeado: con el reloj atrás, NO
+   rota).
+5. **`economy.js`**: `getStallCapacity`, `getStallUpgradeCost`, `stallSalePrice` (fórmula pura
+   §4.27), `getStallSalePrice` (getter, fluctuación como parámetro explícito — la venta offline
+   pasa `1`, no `state.marketFluctuation`), `hasStallVendor` (vive acá, no en `automation.js`
+   junto a `hasAutoDig`, para que `stall.js` la consulte sin crear un ciclo de imports con
+   `automation.js`, que sí importa `stallVendorTick` de `stall.js`).
+6. **`automation.js`**: `automationTick` llama a `stallVendorTick` ANTES del `return` temprano de
+   `hasAutoDig` — el robot vendedor es independiente del robot de escarbado (un jugador puede
+   tener uno sin el otro). `data.stall` opcional gatea la llamada.
+7. **`offline.js`**: `applyOfflineProgress` llama `applyOfflineStallSales` (a fluctuación 1) ANTES
+   de sumar `result.ganancia` (R23.3: primero el vendedor offline sobre el inventario persistido,
+   después el loot instantáneo — que nunca pasa por el inventario). El return ahora incluye
+   `stallEarnings` (campo aditivo, no rompe a nadie que ya desestructure `{ganancia,
+   segundosEfectivos}`).
+8. **Save v12**: `freshState()` gana `inventory: []`, `stallLevel: 0`, `keepThreshold: 0`,
+   `stallOrders: []`, `ordersRotatedAt: 0`, `stallVendorAt: 0` (timer nuevo, DECISIÓN: no estaba
+   listado explícito en el roadmap pero es necesario para el reloj clampeado del robot vendedor —
+   mismo patrón que `marketFluctuationAt`/`ordersRotatedAt`), `stallSoldCount: 0`,
+   `ordersFulfilledCount: 0`, `storySeen: []`. Migración v11→v12 aditiva (backfill de esos 9
+   campos). `validateDeepContent` gana `isValidInventory` (forma exacta + `baseValue` finito > 0 +
+   `INVENTORY_MAX_SAFETY: 200`, cota de seguridad exportada de `state.js`, NO acoplada a
+   `stallCapacityBase`/`stallNivelMax` de `data/stall.json` — save.js sigue agnóstico de datos de
+   balance) e `isValidStallOrders` (forma exacta + `progress <= cantidad`). `stallLevel` entero
+   >= 0, `keepThreshold`/`stallSoldCount`/`ordersFulfilledCount` con su rango.
+9. **Barrel `index.js`**: reexporta todo lo nuevo de `economy.js` y `systems/stall.js`.
+10. **Tests**: `packages/engine/tests/ronda23-puesto.test.js` (41 casos, TDD real — confirmé RED
+    con el import roto antes de crear `stall.js`): compra/nivel/capacidad, captura con las 6
+    variantes de umbral/capacidad/legendario/contadores, precio con fluctuación refrescada,
+    pedidos (generación/rotación clampeada/cumplimiento/mult), robot vendedor (prioridad,
+    intervalo, independiente de `hasAutoDig`, offline a fluctuación 1), migración v12 completa +
+    6 rechazos de save manipulado.
+11. `packages/engine/tests/ronda22-coleccion.test.js`: 2 asserts `.toBe(11)` sobre
+    `SAVE_VERSION`/`saveVersion` pasaron a `SAVE_VERSION`/`toBeGreaterThanOrEqual(11)` — mismo
+    AJUSTE documentado por la propia ronda 22 sobre el literal de la ronda 21 (no testeaban nada
+    específico de la ronda 22, era el número de versión que cualquier ronda siguiente iba a pisar).
+
+### Decisiones no triviales
+
+- **`stallVendorAt` es un campo nuevo no listado explícitamente en el roadmap** (que solo lista
+  `ordersRotatedAt` entre los relojes). Sin él, "vende cada `vendedorIntervalo` segundos" solo se
+  podía implementar como probabilidad `dt/intervalo` (como los eventos de la ronda 24) — decidí un
+  reloj real (mismo patrón que `marketFluctuationAt`) porque el roadmap describe un intervalo
+  determinístico, no probabilístico, y porque ya existe el precedente de timers persistidos
+  (`marketFluctuationAt`, `ordersRotatedAt`) — documentado en save.js/state.js con AJUSTE.
+- **`rotateStallOrders` NO se llama automáticamente desde `sellInventoryItem`**: cumplir un pedido
+  lo retira de `stallOrders` pero NO genera el reemplazo ahí mismo (esa función no tiene
+  `ownedCategories` a mano, y no quise que la venta dependa de la lista de contenedores). Actualicé
+  PLAN.md §4.28 para reflejar esto: el store/UI (23.C) debe llamar `rotateStallOrders` tras cada
+  venta (además de periódicamente) para reponer a 2 pedidos activos.
+- **`baseValue` del ítem incluye `getSetBonus`/`getLevelValueMult`/`getMechanicValueMult`** (todo
+  menos la fluctuación) — es la decisión que la ronda 22 dejó pendiente en su HANDOFF ("a definir
+  en 23.A"). Elegí incluirlos porque son multiplicadores permanentes del ítem en sí, no del timing
+  de mercado.
+- **No toqué `data/automations.json`** (la máquina `robotVendedor` con el efecto
+  `enablesStallVendor` es tarea de 23.B): mis tests de robot vendedor usan un `automationsStub`
+  inline (mismo patrón que `ronda15-robot.test.js`), documentado en el encabezado del test file.
+- **No generé `npcs.json`/`story.json`/`portraits.js`** (23.B) ni toqué la UI/tabbar (23.C): mi
+  scope es 23.A completo, nada más.
+
+### Verificación manual (375px + desktop)
+
+Booteé el juego real (Playwright temporal, borrado tras verificar — no se commitea) con un save
+v11 real en `localStorage`: migra a v12 sin errores de consola, `#money` muestra el valor
+esperado, en mobile-375 y desktop-1440. Sin wiring de UI todavía, no hay nada visible del Puesto
+(esperado: "el puesto y todo sistema nuevo degrada limpio", §1.18).
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test       → 426/426 verde (385 previos de la ronda 22 + 41 nuevos de ronda23-puesto.test.js)
+npm run test:e2e → 69/69 verde, SIN tocar ningún spec existente (el store/UI no consume nada
+                    nuevo todavía — wiring es de 23.C)
+```
+
+### Estado del DoD (Agente A, ronda 23)
+
+```
+[x] PLAN.md §2.9/§4.27-§4.29 primero
+[x] Tests RED antes de implementar (ronda23-puesto.test.js, 41 casos)
+[x] npm test → 426/426 verde
+[x] npm run test:e2e → 69/69 verde, sin tocar specs existentes
+[x] Manual 375px + desktop: boot limpio con save v11→v12, cero errores de consola
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (quedan 23.B, 23.C, 23.D, 23.E) — no
+    corresponde todavía, regla de ramas del roadmap.
+```
+
+### Qué necesita saber la ronda 23.B (data: NPCs, retratos, historia, textos)
+
+- `data/stall.json` YA EXISTE con las 9 constantes de §4.27-§4.29 — extendé, no reemplaces, esas
+  claves si necesitás sumar algo (por ejemplo textos/ids que Rita/Salomón usan).
+- La máquina `robotVendedor` en `automations.json` necesita el efecto
+  `{ type: 'enablesStallVendor' }` (nombre exacto, ya está consumido por `hasStallVendor` en
+  `economy.js` y por mis tests con un stub) — costo sugerido por el roadmap: `2000000`.
+- 3 logros sugeridos por el roadmap (`primer ítem guardado`, `25 pedidos cumplidos` →
+  `ordersFulfilledAtLeast` contra `state.ordersFulfilledCount`, `puesto nivel máximo` →
+  `stallLevelAtLeast` contra `state.stallLevel`) — ninguno de los dos cond-evaluators existe
+  todavía en `CONDITION_EVALUATORS` (`systems/achievements.js`), hace falta agregarlos ahí.
+- `npcId: 'salomon'` ya está hardcodeado en `randomOrder` (`systems/stall.js`) — si `npcs.json`
+  define otro id para el Turco Salomón, avisame o ajustalo vos mismo (es un string literal, un
+  solo lugar).
+
+### Qué necesita saber la ronda 23.C (UI: pestaña Puesto)
+
+- Todo lo del engine está listo y exportado desde `@dumpster/engine`: `buyStall`, `upgradeStall`,
+  `setKeepThreshold`, `sellInventoryItem`, `stallVendorTick`, `applyOfflineStallSales`,
+  `rotateStallOrders`, y los getters `getStallCapacity`, `getStallUpgradeCost`,
+  `getStallSalePrice`, `hasStallVendor`. Ningún call site de `apps/game/src/store.js` los usa
+  todavía — ese wiring es tuyo.
+- Para pasar `data.stall` real, sumalo al objeto `data` que arma `store.js`/`main.js` (import de
+  `stall.json`), igual que ya se hizo con `traps.json`/`streak.json` en rondas previas — sin ese
+  wiring, el engine sigue degradando limpio (gate opcional).
+- **Los presets del umbral** que pide el roadmap ("percentiles del mejor contenedor... calculados
+  por el engine, jamás en la UI") NO los implementé — no estaban en el scope explícito de "Estado
+  y save"/"Tests RED" de 23.A, y el roadmap los menciona bajo 23.C. Si los necesitás, son un getter
+  nuevo en `economy.js` (avisame si preferís que los agregue yo primero).
+- `rotateStallOrders` necesita `ownedCategories` (categorías de los contenedores que el jugador
+  POSEE, no todas las que existen) — derivalas de `containers.json` filtrando por
+  `state.ownedContainers[id] >= 1` y aplanando `container.categorias`.
+- El loop de automatización (`loop.js`) llama a `automationTick` — el robot vendedor ya vende solo
+  desde ahí (no hace falta un call site nuevo), pero necesitás llamar `rotateStallOrders`
+  periódicamente (y tras cada venta) desde algún lado del store/loop.
+
+### Qué necesita saber la ronda 23.D (e2e)
+
+- `state.inventory`/`state.stallOrders`/`state.stallLevel`/`state.keepThreshold` ya están
+  validados en el save (v12) — podés sembrarlos directo con `addInitScript` +
+  `serializeState(freshState())` mutado, patrón §1.9.
+- El robot vendedor necesita la automatización `robotVendedor` (23.B) comprada Y `data.stall`
+  wireado (23.C) para vender algo — si 23.C no llegó a wirear `automationTick`/`loop.js` a tiempo,
+  documentá la decisión de smoke-test como hizo la 15.D con las trampas (roadmap 23.D punto 4 ya
+  lo prevé).
+
+### Qué necesita saber la ronda 23.E (auditoría)
+
+- Foco sugerido por el roadmap ya cubierto en el engine: `inventory`/`stallOrders` con formas
+  exactas + `INVENTORY_MAX_SAFETY`, relojes clampeados (`ordersRotatedAt`/`stallVendorAt`) que
+  nunca rotan/venden con el reloj atrás. Falta auditar la capa de UI/store que agreguen 23.B/23.C
+  (interpolación de diálogos de NPC, XSS) — no es mío.
+## Ronda 23 — Agente B: data (NPCs, retratos, historia, robot vendedor, logros) (rama `feat/puesto-ronda23`, save v12 sin cambios)
+
+### Qué hice
+
+1. **PLAN.md**: agregué §2.10 "NPCs y viñetas de historia liviana (ronda 23)", consecutivo a
+   §2.9 (el Puesto de Chatarra, escrito por 23.A). Documenta los 5 NPCs, el mecanismo de
+   `saleCategoryGroups`/`saleComments` de Rita y el motor de condiciones compartido de `story.json`.
+2. **`apps/game/src/data/npcs.json`** (nuevo): los 5 personajes fijos del roadmap §3.1 —
+   `rita`, `salomon`, `chispa`, `zoraida`, `intendente` — con `{id, name, portrait, rol}`. Rita
+   suma `saleComments` (4 claves i18n: `junk`/`tech`/`classy`/`premium`) y
+   `saleCategoryGroups` (mapea las 8 categorías de `items.json` a esos 4 grupos) — así la UI
+   (23.C) elige el comentario de Rita al vender sin calcular nada, solo indexando data.
+3. **`apps/game/src/icons/portraits.js`** (nuevo): registro hermano de `icons.js` (mismo
+   vocabulario de trazos, viewBox 24, cero emojis). `portraitMarkup(npcId, opts)` +
+   `hasPortrait`, exporta `PORTRAITS` para tests. Cara base compartida + accesorio distintivo
+   por NPC (rodete+anteojos, turbante+bigote, gorra+goggles, pañuelo+aros, gorra de funcionario).
+4. **`apps/game/src/data/story.json`** (nuevo): los 2 hitos de ESTA ronda únicamente (los de
+   Chispa/Zoraida/Intendente son de las rondas 24/26, que agregarán sus propias entradas):
+   `stallUnlockRita` (`cond: stallLevelAtLeast: 1`) y `firstOrderSalomon`
+   (`cond: ordersFulfilledAtLeast: 1`). `{id, npcId, cond, textKey}` tal cual pide §3.2.
+5. **`packages/engine/src/systems/achievements.js`**: 3 evaluadores nuevos en
+   `CONDITION_EVALUATORS` — `ordersFulfilledAtLeast` (`state.ordersFulfilledCount`),
+   `stallLevelAtLeast` (`state.stallLevel`), `stallInventoryAtLeast` (`state.inventory.length`,
+   evaluado en vivo — un logro nunca se re-bloquea una vez desbloqueado, así que capturar 1 ítem
+   y venderlo después no le hace perder el logro "primer ítem guardado"). Estos mismos 3 tipos
+   los reusa `story.json` (un solo motor de condiciones, tal como pide §3.2).
+6. **`apps/game/src/data/automations.json`**: máquina `robotVendedor` (cost `2000000`, efecto
+   `{type: 'enablesStallVendor'}`, icon `robot-vendor`), insertada entre `centroSubastas`
+   (1.6M) y `redDrones` (9M) — mantiene el orden por costo (regla ronda 15.C).
+7. **`apps/game/src/data/achievements.json`**: `a46` (Primer Objeto Guardado,
+   `stallInventoryAtLeast: 1`, money 3000), `a47` (Comerciante de Confianza,
+   `ordersFulfilledAtLeast: 25`, keys 5), `a48` (Puesto de Primera, `stallLevelAtLeast: 5`,
+   keys 6). **DECISIÓN**: el `value: 5` de `a48` está acoplado a `stallNivelMax` de
+   `data/stall.json` (hoy 5) — si esa constante cambia, hay que actualizar `a48` a mano (no hay
+   una forma limpia de referenciar una constante de `data/*.json` desde otro archivo `data/*.json`
+   sin acoplar `achievements.json` a `stall.json` en el engine).
+8. **Íconos nuevos en `icons.js`**: shapes `marketStall`/`shelf`/`orderSign` (puesto, estantería
+   del inventario, cartel de pedido) con sus claves `stall-chatarra`/`shelf-inventory`/
+   `order-sign`. `robot-vendor` REUSA la shape `robot` (mismo criterio de reuso + color de rareza
+   documentado en el archivo, como `servo-arm`/`servo-arm-titanium`).
+9. **i18n**: `es.js`/`en.js` ganan 6 claves (`npc.rita.storyIntro`, las 4 `npc.rita.sale.*` y
+   `npc.salomon.storyFirstOrder`), traducción real de una (regla §1.15). `data-en.js` gana
+   overlay de `achievements` (a46-a48) y `automations` (robotVendedor) — obligatorio para no
+   romper la paridad dinámica de `ronda16-i18n.test.js` — y un bloque `npcs` nuevo (nombres/rol
+   traducidos) que documento como decisión aparte abajo.
+
+### Decisiones no triviales
+
+- **NO toqué `dataI18n.js`/`main.js`/`store.js`** para cablear la colección `npcs` al pipeline de
+  carga (`DATA_FILES`) ni al overlay de idioma (`initDataLocalization`/`applyDataLanguage`). Mi
+  sección del roadmap es estrictamente "data" (23.B); ese wiring es el mismo tipo de tarea que
+  23.A dejó explícitamente para 23.C con `data.stall` ("sumalo al objeto data que arma
+  store.js/main.js"). Igual agregué el bloque `npcs` a `data-en.js` (regla §1.15: "data nueva con
+  nombre visible → entrada en data-en.js") documentado con un comentario inline explicando que
+  queda inerte hasta que 23.C conecte `npcs.json`/`story.json` a `DATA_FILES` y a
+  `dataI18n.js` — sin ese wiring, `name`/`rol` de los NPCs se ven en español aunque el idioma sea
+  'en' (degrada limpio: no rompe nada, solo no traduce todavía).
+- **NO creé un `systems/story.js` en el engine** (análogo a `checkAchievements` pero para
+  viñetas). El roadmap dice que story reusa el motor de `CONDITION_EVALUATORS`, pero no asigna
+  explícitamente a nadie la función que recorra `story.json`, marque `storySeen` y dispare el
+  modal — no está en el scope explícito de 23.B ("data") ni lo until ahora tenía dueño claro.
+  Dejo la data (`story.json`) lista con la forma exacta que pide §3.2; quien cablee el modal
+  (23.C, si le entra en el scope de "UI: pestaña Puesto", o quien lo asuma) puede reusar
+  `checkAchievements` como plantilla — es literalmente el mismo patrón (recorrer, evaluar,
+  marcar, no repetir) contra `CONDITION_EVALUATORS`, que ya evalúa los 3 tipos que uso acá.
+- **"3-4 variantes" de Rita se implementaron como 4 variantes por GRUPO de categoría, no por
+  categoría individual** (`junk`=common+reusable, `tech`=electronics+antiques,
+  `classy`=historic+art, `premium`=relics+future) — 8 categorías × 4 variantes cada una hubiera
+  sido 32 líneas de diálogo, desproporcionado para una sola viñeta del roadmap. La UI (23.C)
+  resuelve el grupo con `npcs.rita.saleCategoryGroups[item.categoria]` y el texto con
+  `npcs.rita.saleComments[grupo]` (clave i18n) — cero cálculo en la UI, todo indexado de data.
+- **No toqué `data/stall.json`** (Agente A pidió no reemplazar sus 9 claves numéricas) ni
+  `packages/engine/src/systems/stall.js` (el `npcId: 'salomon'` hardcodeado ahí ya coincide
+  con el id que usé en `npcs.json`, sin necesidad de tocar nada).
+
+### Verificación manual (375px + desktop)
+
+Sin wiring de UI todavía (esperado, mismo caso que 23.A), así que no hay nada visible nuevo del
+Puesto/NPCs en pantalla. Igual booteé el juego real (Playwright temporal contra `npx serve`,
+scripts borrados tras verificar — no se commitearon) en mobile-375 y desktop-1440: `data-state`
+llega a `"ready"`, `#title-screen` visible, **cero errores de consola** en ambos anchos (mis
+cambios en `icons.js`/`es.js`/`en.js`/`data-en.js`/`achievements.json`/`automations.json` no
+rompen el boot ni el overlay de i18n existente).
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test       → 439/439 verde (34 archivos; eran 426/33 tras 23.A, +13 de
+                 ronda23b-npc-story.test.js, archivo nuevo)
+npm run test:e2e → 69/69 verde, SIN tocar ningún spec existente (no hay wiring de UI, mismo
+                    resultado que dejó 23.A)
+```
+
+### Estado del DoD (Agente B, ronda 23)
+
+```
+[x] PLAN.md §2.10 primero
+[x] Tests RED antes de implementar (ronda23b-npc-story.test.js, confirmé RED con el import de
+    npcs.json/story.json roto antes de crear los archivos)
+[x] npm test → 439/439 verde
+[x] npm run test:e2e → 69/69 verde, sin tocar specs existentes
+[x] Manual 375px + desktop: boot limpio, cero errores de consola
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (quedan 23.C, 23.D, 23.E) — no corresponde
+    todavía, regla de ramas del roadmap.
+```
+
+### Qué necesita saber la ronda 23.C (UI: pestaña Puesto)
+
+- `apps/game/src/data/npcs.json`, `story.json` NO están en `DATA_FILES` (main.js) todavía —
+  sumalos ahí (mismo patrón que `stall.json`/`traps.json`) para que `store.js` los tenga
+  disponibles.
+- `dataI18n.js` (`initDataLocalization`/`applyDataLanguage`) NO tiene una entrada `npcs` — hace
+  falta agregarla si querés que `name`/`rol` de los NPCs se traduzcan al inglés (ya dejé el
+  overlay listo en `data-en.js` bajo la clave `npcs: {...}`, mismo shape que `automations`/
+  `prestigeTree`: `{name, rol}` por id). Sin este wiring, los nombres/roles de los NPCs quedan
+  en español aunque el idioma sea 'en' (degrada limpio, no rompe nada).
+- Diálogos de Rita: `npcs.json` (`rita.saleCategoryGroups[categoria]` → grupo →
+  `rita.saleComments[grupo]` → clave i18n) resuelve a una de 4 líneas
+  (`npc.rita.sale.junk/tech/classy/premium`) ya traducidas en es.js/en.js. La viñeta de
+  presentación de Rita es `npc.rita.storyIntro` (fija, no depende de categoría).
+- Retratos: `portraitMarkup(npc.portrait, opts)` de `apps/game/src/icons/portraits.js` (acepta
+  el valor de `portrait` con o sin el prefijo `portrait-`, ambos funcionan).
+- `story.json` tiene la forma `{id, npcId, cond, textKey}` — si armás el checker (recorrer,
+  evaluar contra `CONDITION_EVALUATORS`, marcar `state.storySeen`, no repetir), es exactamente
+  el mismo patrón que `checkAchievements` (`packages/engine/src/systems/achievements.js`), pero
+  ese motor no está exportado como función reusable fuera de `achievements.js` — si preferís no
+  duplicar la lógica de "recorrer condiciones", puede valer la pena un `systems/story.js`
+  pequeño que importe `CONDITION_EVALUATORS` (hoy no exportado, solo `checkAchievements` lo
+  está) — avisame si preferís que lo agregue yo en vez de vos.
+- `automations.json` ya tiene `robotVendedor` con `enablesStallVendor` — los tests de 23.A ya no
+  necesitan su `automationsStub` para probar wiring real de datos si querés un test de
+  integración con la data real (aunque su test interno sigue usando el stub por diseño, no hace
+  falta tocarlo).
+- 3 logros nuevos (`a46`-`a48`) ya aparecen en `AchievementsView` sin cambios de UI (usa la
+  misma data-driven render de siempre).
+
+### Qué necesita saber la ronda 23.D (e2e)
+
+- `state.storySeen` (save v12, ya validado) es un array de ids de `story.json` — para probar
+  "la viñeta de Rita aparece UNA vez" (punto 5 del roadmap), sembrá `stallLevel: 1` y verificá
+  que `storySeen` incluya `'stallUnlockRita'` tras el trigger (una vez que 23.C cablee el
+  checker); si 23.C no llegó a cablearlo, documentá la decisión de smoke-test como hizo 15.D.
+
+### Qué necesita saber la ronda 23.E (auditoría)
+
+- Diálogos de NPC interpolados: todas mis claves i18n son texto fijo (sin `{param}` que venga de
+  data no confiable) — el foco de XSS de la auditoría debería estar en cómo 23.C interpola
+  `npc.name`/`npc.rol` (si usa `innerHTML` con esos strings, aunque hoy son 100% controlados
+  por `npcs.json`, no por input del jugador).
+- `a48.cond.value: 5` está hardcodeado igual a `stallNivelMax` de `data/stall.json` — si una
+  ronda futura cambia esa constante sin actualizar el logro, quedaría un logro "nivel máximo"
+  que no corresponde al nivel máximo real. Vale la pena un test de coherencia cruzada si la
+  auditoría quiere blindarlo.
+## Ronda 23 — Agente C (UI): pestaña Puesto (rama `feat/puesto-ronda23`, save v12 sin cambios)
+
+### Qué hice
+
+1. **PLAN.md §4.30 nuevo** ("Presets del umbral de captura"): los 3 presets de umbral que pide
+   el roadmap ("percentiles del mejor contenedor... calculados por el engine, jamás en la UI")
+   no tenían fórmula escrita — la agregué antes de tocar código (regla CLAUDE.md). Percentiles
+   25/50/75 (interpolación lineal) del valor de venta ESTIMADO (sin variance de RNG, fluctuación
+   fija 1) de cada ítem del pool del contenedor más avanzado que el jugador posee.
+2. **`economy.js`**: `getStallThresholdPresets(state, allContainers, itemsData, data)` implementa
+   §4.30 literal, reusando `itemSaleValue`/`getLuck`/`getDepthValueMult`/`getLevelValueMult`/
+   `getMechanicValueMult`/`getSetBonus`/`getSellMult` ya existentes — cero fórmula nueva fuera de
+   la agregación de percentil. `[]` sin ningún contenedor poseído.
+3. **`systems/story.js` nuevo**: `checkStory(state, storyData, ctx)`, calco de `checkAchievements`
+   pero marca `state.storySeen` sin recompensa. Exporté `CONDITION_EVALUATORS` de
+   `achievements.js` (roadmap §3.2: "un solo motor de condiciones para logros, historia y
+   misiones") en vez de duplicar la lista — 23.B había dejado la pregunta abierta en su HANDOFF.
+4. **Barrel `index.js`**: reexporta `getStallThresholdPresets` y `checkStory`.
+5. **Tests RED→GREEN** (`packages/engine/tests/ronda23c-ui.test.js`, 7 casos): confirmé RED con
+   los imports rotos antes de escribir `getStallThresholdPresets`/`checkStory` — presets vacíos
+   sin contenedor, 3 presets ascendentes, el contenedor más avanzado da presets mayores, la
+   mediana cae dentro del rango real de valores; `checkStory` marca/no repite/no marca antes de
+   tiempo.
+6. **Wiring de data** (`main.js`): `DATA_FILES` gana `stall`/`npcs`/`story`. `data.stall` (única
+   pieza que consume el engine) se suma al objeto `data`; `npcs`/`story` viajan sueltos —
+   `storyData` a `createStore` (nuevo campo de `ctx`, usado por `store.js` para `checkStory`) y
+   `npcs` también a `ctx` (pura data de UI, igual que `achievementsData`/`itemsData`: ningún
+   sistema del engine la consume, pero vive en `store.ctx` para que las vistas la lean sin hilar
+   un parámetro nuevo por toda la cadena `UIManager.render → view.render`).
+7. **`dataI18n.js`**: wireé el overlay de `npcs` (`initDataLocalization`/`applyDataLanguage`) que
+   23.B había dejado listo en `data-en.js` pero inerte — mismo patrón `{name, desc}` que
+   `automations`/`prestigeTree` (acá `rol` hace de `desc`). `story.json` no necesita overlay (sus
+   textos son claves i18n fijas, sin campo de display propio).
+8. **`store.js`**:
+   - Acciones nuevas: `buyStall`, `upgradeStall`, `setKeepThreshold`, `sellInventoryItem` (venta
+     manual: refresca fluctuación, paga mult de pedido, y llama `rotateStallOrders` tras la venta
+     — PLAN.md §4.28 dice explícitamente que ese es el llamador correcto, no `sellInventoryItem`
+     del engine).
+   - `runStory()` (mismo patrón que `runAchievements()`): corre al boot, tras `importSave`, y
+     tras cualquier acción del Puesto que pueda cumplir un hito. Cola `consumeNewStoryVignettes()`
+     igual que `consumeNewAchievements()`.
+   - **Fix de un bug real en `tickAutomation`**: antes retornaba temprano si `!hasAutoDig(state,
+     data)`, lo que significaba que el `automationTick` del engine (que SÍ llama a
+     `stallVendorTick` ANTES de su propio early-return interno, PLAN.md §4.29) nunca se invocaba
+     para un jugador sin auto-escarbado — el robot vendedor del Puesto habría quedado mudo para
+     cualquiera que comprara `robotVendedor` sin tener también el robot de escarbado. Ahora
+     `automationTick` corre siempre; el resto del tick (logros/historia/detectContainerUnlocks/
+     notify) solo si hay algo activo (`hasAutoDig` o `stallLevel >= 1`), para no re-renderizar
+     cada segundo sin motivo. También agregué la rotación periódica de pedidos acá
+     (`rotateStallOrders` cuando `stallActive`).
+   - `ownedCategories()` helper (categorías de los contenedores POSEÍDOS, PLAN.md §4.28: "nunca
+     pedir lo inalcanzable").
+9. **`StallView.js` nuevo** (`apps/game/src/ui/StallView.js`): bloqueada (teaser + ícono) hasta
+   `stallLevel >= 1`; activa muestra a Doña Rita (retrato + diálogo — el intro fijo, o el último
+   comentario de venta por categoría vía `saleCategoryGroups`/`saleComments` de `npcs.json`,
+   estado de presentación local no persistido, mismo patrón que `selectedContainerId` de
+   `CollectionView`), cotización del día (% + flecha ▲/▼ contra 1.0, con color `--olive`/`--danger`
+   de los tokens), umbral con presets del engine (nunca calculados acá), nivel + botón de mejora,
+   grilla de inventario (reusa `.shop-card` para no inventar un layout nuevo) con precio en vivo y
+   botón Vender (el tween de dinero ya lo hace `Topbar.js` automáticamente al cambiar
+   `state.money`, no hizo falta nada nuevo), y 2 tarjetas de pedidos de Salomón con progreso/
+   recompensa/tiempo restante hasta la próxima rotación (`clampedElapsedMs` del engine).
+10. **Tabbar**: 7ma pestaña `puesto` en `index.html`/`UIManager.TAB_VIEWS`, ícono `tab-puesto`
+    (reusa la forma `marketStall` ya creada por 23.B para `stall-chatarra`) — **R23.1 ya estaba
+    resuelto**: el tabbar tiene `overflow-x:auto` + `flex:0 0 auto` desde la ronda 17/21, verificado
+    con Playwright que scrollea sin romper (scrollWidth 633px > clientWidth 375px a mobile-375).
+11. **`ShopView.js`**: tarjeta de compra del Puesto (roadmap: "la Tienda gana la tarjeta del
+    puesto") — único botón con acción real de esa vista hasta ahora (el resto es informativo,
+    escarbar es "comprar"); gané el primer binding de click de `ShopView`.
+12. **`CelebrationModal.js`/`UIManager.js`**: tipo `'story'` nuevo (retrato del NPC + `t(textKey)`,
+    sin recompensa) — mismo patrón consume-queue/push que logros y desbloqueos de contenedor.
+13. **i18n**: ~30 claves nuevas (`stall.*`, `shop.stall*`, `tabs.puesto`) en `es.js`/`en.js`, ambas
+    con traducción real (regla §1.15). Verificado con `i18n.test.js`/`ronda16-i18n.test.js`.
+14. **`ronda16-i18n.test.js`**: sumé `npcs` a la data sintética (`makeLoaded()`) y un test de
+    paridad `dataEn.npcs` ↔ `npcs.json` — sin esto el nuevo overlay de `dataI18n.js` rompía la
+    suite (`loaded.npcs` undefined).
+15. **2 e2e ajustados** (regla §1.18, cambio de UI declarado): `ronda10-regression.spec.js`
+    (`.shop-card` por posición → `.filter({ hasText })`, la tarjeta del Puesto ahora es la
+    primera del grid) y `ronda16-i18n.spec.js` (lista de tabs en inglés gana `'Stall'`). Ningún
+    otro spec existente se tocó.
+
+### Decisiones no triviales
+
+- **`getStallThresholdPresets` no estaba en el scope de 23.A/23.B**: el roadmap lo menciona bajo
+  "23.C" explícitamente ("presets del umbral... calculados por el engine") pero sin fórmula en
+  PLAN.md. La escribí en §4.30 antes de implementar (regla CLAUDE.md: fórmula primero, dato
+  después). Usa el contenedor de mayor `costoInicial` POSEÍDO, no el "recomendado" ni el
+  desbloqueado — es la única señal que el engine tiene de "lo que este jugador encuentra ahora".
+- **`checkStory` exporta `CONDITION_EVALUATORS` de `achievements.js` en vez de duplicarlo**: 23.B
+  dejó la decisión explícitamente abierta en su HANDOFF ("avisame si preferís que lo agregue yo
+  en vez de vos"). La tomé yo porque cablear el checker era inevitablemente parte de conectar la
+  UI de historia (el modal necesita algo que le entregue viñetas nuevas).
+- **`npcs` viaja por `store.ctx`, no por un parámetro nuevo en `view.render(...)`**: cambiar la
+  firma de `render()` en las 8 vistas existentes para pasar `loaded` completo era desproporcionado
+  para lo que necesito (solo `npcs`). `store.ctx` ya es el mecanismo establecido para data
+  estática que las vistas necesitan pero el engine no consume (`achievementsData`, `itemsData`).
+- **Fix del bug de `tickAutomation`/robot vendedor mudo**: no estaba explícitamente en mi lista de
+  tareas, pero sin él la máquina `robotVendedor` (23.B, `cost: 2000000`) sería un ítem comprable
+  que literalmente no hace nada para cualquier jugador sin auto-escarbado — inaceptable para una
+  automatización real. Lo until documento acá porque toca `store.js`, que sí es mío.
+- **La grilla de inventario reusa la clase `.shop-card`** (con `--rarity-color` inline) en vez de
+  inventar `.stall-card` — mismo criterio que `CollectionView` reusando `.index-card`: menos CSS
+  nuevo, coherencia visual con Contenedores.
+- **Rita solo muestra el ÚLTIMO comentario de venta**, no un historial — el roadmap pide "diálogo"
+  singular, no un chat; y el estado de presentación no persiste (se resetea al recargar, mismo
+  criterio que `selectedContainerId`).
+- **No implementé el descuento de `stallVendorTick`/robot vendedor en la UI**: ya vende solo desde
+  `automationTick` (23.A + mi fix de `tickAutomation`), la UI solo necesita re-renderizar — cubierto
+  por el `notify()` periódico que agregué cuando `stallActive`.
+
+### Verificación manual (375px + desktop)
+
+Booteé el juego real (`npx serve` + Playwright temporal, script y capturas borrados tras
+verificar — no se commitearon) con un save v12 sembrado (`stallLevel: 1`, 2 ítems en inventario,
+1 pedido activo, `marketFluctuation: 1.1`) en mobile-375 y desktop-1440:
+- Pestaña Puesto: retrato+diálogo de Rita, cotización "▲10%" en verde, umbral con 3 presets
+  reales, nivel 1/5, grilla de inventario con precio en vivo, tarjeta de pedido de Salomón —
+  visible y legible en ambos anchos, tabbar scrollea a 375px sin recortar el resto de las pestañas.
+- Vender un ítem: dinero sube (con tween), el ítem desaparece del inventario, el pedido activo
+  suma progreso (categoría coincidente, mult aplicado).
+- Tienda: la tarjeta del Puesto muestra "Ya lo tenés" tras comprarlo.
+- Al bootear con `stallLevel: 1` recién puesto, la viñeta de Doña Rita apareció en el modal de
+  celebraciones (encolada junto con logros reales que el seed también disparaba) — confirma
+  `checkStory`/`runStory`/el wiring del modal de punta a punta.
+- **Cero errores de consola** en ambos anchos.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 447/447 verde (36 archivos; eran 439/34 tras 23.B, +7 de
+                     ronda23c-ui.test.js nuevo, +1 test de paridad npcs en ronda16-i18n.test.js)
+npm run test:e2e  → 69/69 verde, DOS specs existentes ajustados (declarado arriba, regla §1.18:
+                     "salvo que una ronda declare lo contrario explícitamente") — ningún otro
+                     spec tocado. Confirmé también una corrida aislada del intermitente
+                     ronda19-quickwins (falló 1 vez en la corrida completa, pasó en aislamiento y
+                     en una segunda corrida completa — flake de paralelismo, no relacionado).
+```
+
+### Estado del DoD (Agente C, ronda 23)
+
+```
+[x] PLAN.md §4.30 primero (única fórmula nueva de esta sección)
+[x] Tests RED antes de implementar (ronda23c-ui.test.js, engine puro)
+[x] npm test → 447/447 verde
+[x] npm run test:e2e → 69/69 verde (2 specs ajustados y declarados, ver arriba)
+[x] Manual 375px + desktop: Puesto completo, venta real, viñeta de Rita, cero errores de consola
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (quedan 23.D, 23.E) — no corresponde
+    todavía, regla de ramas del roadmap.
+```
+
+### Qué necesita saber la ronda 23.D (e2e)
+
+- Todo lo que pide el roadmap 23.D ya tiene DOM real para anclar: `[data-tab="puesto"]`,
+  `.stall-npc`, `.stall-quote`, `.stall-threshold` (`input[data-action="set-threshold"]`,
+  `[data-action="set-threshold-preset"]`), `.stall-level` (`[data-action="upgrade-stall"]`),
+  `.stall-inventory-grid` (`[data-action="sell-item"][data-index]`), `.stall-orders-grid`
+  (`.stall-order-card`). La tarjeta de compra en Tienda es `[data-action="buy-stall"]`.
+- Semilla recomendada: `serializeState(freshState())` mutado con `stallLevel`, `inventory`,
+  `stallOrders`, `keepThreshold` (patrón §1.9) — pero **cuidado con el schema completo**: mi
+  verificación manual pisó en un save incompleto (`categoryFragments` debe ser `number` no
+  `object`, `equippedTool` debe estar en `toolsOwned`, falta `containerLevels` aparte de
+  `containerLevelProgress`) — usar `freshState()` real y mutar encima evita este problema por
+  completo, no armar el objeto de save a mano.
+- El robot vendedor (punto 4 del roadmap) necesita `robotVendedor` comprado (23.B) — con mi fix
+  de `tickAutomation` ya vende solo cada `vendedorIntervalo` (20s) SIN necesitar auto-escarbado
+  también comprado. Si 20s reales no es viable en e2e, cubrir el intervalo en engine (ya lo hace
+  `ronda23-puesto.test.js` de 23.A) y acá smoke del estado visible, como preveía el roadmap.
+- La viñeta de Rita (punto 5): sembrar `stallLevel: 1` y booteando el juego el modal de
+  celebración aparece con `type: 'story'` — recargar y confirmar que NO vuelve a aparecer
+  (`state.storySeen` incluye `'stallUnlockRita'`, persistido).
+- El copy español de `stall.*`/`shop.stall*` es nuevo de esta ronda — no está protegido por la
+  regla §1.11 ("copy INTOCABLE") de rondas previas, pero si lo asertás en un spec, quedará
+  protegido de acá en adelante.
+
+### Qué necesita saber la ronda 23.E (auditoría)
+
+- **XSS de diálogos de NPC**: repasé esto activamente. `def.name`/`rita.name`/`lastSaleComment`
+  vienen siempre de `npcs.json`/`items.json`/claves i18n fijas (nunca de `entry.itemId`/
+  `entry.containerId` directo — `findItemDef` devuelve `null` si no matchea y cae a un fallback
+  seguro, nunca interpola el id crudo). `order.categoria` se resuelve a `rarity.name` (data) con
+  fallback al id crudo (también data, no input de save) si la rareza no existe. Ningún campo de
+  `state.inventory`/`state.stallOrders` (los más "ricos" del save, ya con validación dura en
+  save.js) se interpola crudo en el DOM.
+- **`tickAutomation` ahora notifica cada segundo si `stallLevel >= 1`** (antes solo con
+  `hasAutoDig`): vale la pena confirmar que esto no reintroduce el bug de foco del SELECT/INPUT
+  que motivó el guard de `renderTabContent` (ronda 14) — mi `StallView.render` tiene su propio
+  guard idéntico para el input de umbral, pero si la auditoría encuentra otro input en otra vista
+  que pierda foco por este cambio, es candidato a revisar.
+- **`getStallThresholdPresets`** es nuevo en `economy.js` (PLAN.md §4.30) — sin tests de
+  propiedades extremas (contenedor con pool de 1 solo ítem, todos los ítems con el mismo valor).
+  Los 7 tests de `ronda23c-ui.test.js` cubren el camino principal; vale la pena un test de borde
+  si la auditoría quiere blindarlo más.
+- **`ronda16-i18n.test.js`** ganó un octavo import (`npcsData`) y un test de paridad — mismo
+  patrón que `legendaries`, sin sorpresas.
+## Ronda 23 — Agente D (e2e): `ronda23-puesto.spec.js` (rama `feat/puesto-ronda23`, save v12 sin cambios)
+
+### Qué hice
+
+Spec nuevo `apps/game/e2e/ronda23-puesto.spec.js` con los 5 casos que pide el roadmap 23.D,
+contra la UI ya cableada por 23.C (no toqué código de producción):
+
+1. Sin Puesto (`stallLevel: 0`): un escarbado con ítem valioso completado (`iniciarEscarbadoSinTrampa`
+   + `rascarObjeto` sobre todos los objetos) sube `#money` directo — juego idéntico al de antes de
+   la ronda (R23.2, contrato §3.5.18).
+2. Con Puesto (`stallLevel: 1`) y `keepThreshold: 1`: el mismo flujo de escarbado captura al
+   inventario en vez de vender (`#money` no se mueve), y vender manualmente desde la pestaña Puesto
+   sí sube `#money` y achica la grilla en 1.
+3. Pedido de Salomón sembrado (`stallOrders`) + 2 ítems en inventario (uno de la categoría pedida,
+   uno de otra): vender el que NO tiene pedido sube `basePrice` exacto; vender el que sí tiene
+   sube `basePrice × orderMult` — montos exactos vía `formatMoney`/`data/stall.json`, con
+   `marketFluctuation: 1` y `marketFluctuationAt` reciente para que `refreshMarketFluctuation`
+   (rng.js, ventana de 60s) no la recalcule entre las dos ventas.
+4. Robot vendedor (`automationOwned.robotVendedor: true`) con 1 ítem en inventario: `page.clock.install()`
+   + `page.clock.fastForward(vendedorIntervalo + 5s)` (mismo patrón que ronda20-dig.spec.js para
+   la Bóveda a Contrarreloj) — el inventario se vacía solo, sin click del jugador. No usé el
+   "smoke sin esperar" que preveía el roadmap como fallback: `page.clock` hizo el intervalo real
+   viable sin esperar 20s de wall-clock.
+5. Viñeta de Doña Rita (`stallUnlockRita`, story.json): aparece al bootear con `stallLevel: 1`
+   sembrado, se cierra a mano, y tras recargar (`page.reload()`) NO vuelve — confirma que
+   `state.storySeen` persiste entre sesiones.
+
+### Decisiones no triviales / bugs de MI test (no del juego) que encontré al hacerlo pasar
+
+- **Los logros pagan dinero real y ensucian los montos exactos**: `a46` ("Primer Objeto Guardado",
+  `$3000`) se dispara apenas `inventory.length >= 1`, sin importar si el jugador lo sabía. Los
+  tests 2 y 3 preseedan `achievementsUnlocked: ALL_ACHIEVEMENT_IDS` (mismo patrón que
+  `audit-ronda15.spec.js`/`ronda19-quickwins.spec.js`) para que los asserts de "el dinero no sube"
+  y "sube exactamente basePrice" no compitan con una recompensa de logro. Esto NO es un bug del
+  juego — es la primera vez que un e2e de esta ronda mezcla capturas al inventario con logros de
+  recompensa en dinero; documentado acá para el próximo agente que siembre `inventory` directo.
+- **`page.addInitScript` de `seed()` se re-ejecuta en CADA navegación, incluido `page.reload()`**:
+  el test 5 necesita reload para probar persistencia, pero el `seed()` compartido pisaría el save
+  real (con `storySeen` ya actualizado por el juego) con el seed original en cada recarga — la
+  viñeta parecía "repetirse" por un artefacto del test, no del juego (lo confirmé instrumentando
+  `Storage.prototype.setItem/getItem` con un `page.on('console')` temporal, borrado antes de
+  commitear). Solución: el test 5 usa su propio `addInitScript` con un guard de `sessionStorage`
+  (sobrevive a `reload()`, no a una pestaña/contexto nueva) que solo siembra una vez. Si otra ronda
+  necesita "seed + reload" en el mismo test, este es el patrón a reusar (no hay precedente previo
+  en el repo: ronda14/ronda16 recargan pero sin seed custom).
+- **`beforeunload` no siempre corre bajo Chromium en automation sin gesto de usuario previo a la
+  navegación**: el test 5 dispara `window.dispatchEvent(new Event('beforeunload'))` a mano antes
+  de `page.reload()` para forzar el `store.persist()` de `loop.js` de forma determinística.
+- Los montos de los tests 3 y 4 asumen `marketFluctuation` estable durante el test: se siembra
+  `marketFluctuation: 1` y `marketFluctuationAt: Date.now()` (reciente) para que
+  `refreshMarketFluctuation` (rng.js, ventana de 60s) no la recalcule entre operaciones del mismo
+  test — sin esto los montos exactos serían flaky.
+- No usé `entrarAlJuego` en el test 5 (cierra celebraciones sola) porque necesito ver la viñeta de
+  Rita ANTES de descartarla, para cerrarla a mano y verificar que no vuelve.
+
+### Verificación manual (375px + desktop)
+
+Script temporal (Playwright headless contra `npx serve`, borrado tras verificar — no se commiteó,
+mismo patrón que 23.B/23.C) con un save v12 sembrado (`stallLevel: 1`, 1 ítem en inventario,
+1 pedido con progreso 1/2, `marketFluctuation: 1.1`):
+- mobile-375 y desktop-1440: pestaña Puesto — Doña Rita con retrato y diálogo, cotización
+  "▲10%" en verde, umbral con input, nivel 1/5 · capacidad 12, botón de mejora con costo real,
+  grilla de inventario con "Lata aplastada" y precio en vivo, botón Vender. Desktop conserva el
+  panel de Escarbar/herramientas a la izquierda (layout ya existente, sin regresión visual).
+- **Cero errores de consola** en ambos anchos.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 447/447 verde (sin cambios: 23.D no tocó packages/engine ni sus tests)
+npm run test:e2e  → 74/74 verde (69 previos de 23.C + 5 nuevos de ronda23-puesto.spec.js).
+                     Un solo failure intermitente en la corrida completa
+                     (ronda19-quickwins.spec.js, test 1 "la racha aparece desde 2 escarbados
+                     manuales sin trampa") — mismo flake de paralelismo ya documentado por 23.C
+                     en su HANDOFF; confirmado reproduciendo: pasa siempre en aislamiento
+                     (reintenté 1 vez, verde). No relacionado con esta ronda, ningún spec
+                     existente se tocó.
+```
+
+### Estado del DoD (Agente D, ronda 23)
+
+```
+[x] Los 5 casos del roadmap 23.D cubiertos (numerados igual que el roadmap)
+[x] npm test → 447/447 verde
+[x] npm run test:e2e → 74/74 verde (flake preexistente de ronda19 documentado, no introducido)
+[x] Manual 375px + desktop: pestaña Puesto completa, cero errores de consola
+[x] Cero console.log / TODO / emojis en el spec final (el debug temporal de setItem/getItem se
+    removió antes de commitear)
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push + PR: NO soy el último agente de la ronda (queda 23.E, auditoría) — no corresponde
+    todavía, regla de ramas del roadmap.
+```
+
+### Qué necesita saber la ronda 23.E (auditoría)
+
+- El robot vendedor priorizado por pedido (`pickVendorSaleIndex`, systems/stall.js) no tiene
+  cobertura e2e de la prioridad en sí (solo smoke de "el inventario se vacía") — la prioridad de
+  pedido vs. `baseValue` ya está cubierta en `ronda23-puesto.test.js` (engine, 23.A); no dupliqué
+  ese caso acá a propósito (mismo criterio que otras rondas: e2e prueba integración DOM, no
+  reglas de negocio que el engine ya cubre exhaustivo).
+- No agregué un caso e2e para capacidad llena / captura que cae a venta instantánea por
+  `inventory.length >= capacity` (cubierto en engine 23.A) ni para el descarte offline del robot
+  vendedor (`applyOfflineStallSales`, no observable desde un boot normal de e2e sin mockear
+  `lastSavedAt` muy atrás — riesgo de flake con el modal offline real tapando el DOM). Si la
+  auditoría lo considera necesario, es candidato a un test dedicado con `seeded.lastSavedAt`
+  desplazado y `page.clock`.
+- El pattern de "seed + reload" con guard de `sessionStorage` (test 5) es nuevo en el repo — si
+  una ronda futura (24, misiones diarias con reroll por día) necesita "recargar y ver el estado
+  post-mutación", este es el precedente a reusar en vez de reinventar la instrumentación de
+  `Storage.prototype` que usé para diagnosticarlo (esa parte SÍ se borró, no quedó en el spec).
+
+## Ronda 23 — Agente E: auditoría de seguridad (Verif&Audit.md) del diff completo (rama `feat/puesto-ronda23`, save v12 sin cambios)
+
+### Qué hice
+
+Revisión adversarial línea por línea del diff completo de la ronda 23 (23.A→23.D, `git diff
+main...HEAD`) con la metodología de Verif&Audit.md, foco en lo que pide el roadmap 23.E:
+`inventory`/`stallOrders` como el vector de save más rico hasta ahora, relojes manipulados,
+XSS por diálogos/campos de NPC interpolados, y la frontera engine↔UI (percentiles/precios).
+
+**Un solo hallazgo de riesgo (🟡), arreglado con test RED→GREEN. El resto del diff pasó la
+auditoría** (la validación de save del Agente A es muy sólida: `isValidInventory`/
+`isValidStallOrders` con forma exacta + `INVENTORY_MAX_SAFETY` + finitud; relojes clampeados
+en `stall.js`; legendarios excluidos de la captura; snapshot "sin puesto = idéntico").
+
+### 🟡 Hallazgo (arreglado): XSS por `order.categoria` crudo en `StallView.renderOrders`
+
+- **Vector**: `renderOrders` hacía `t('stall.orderCategory', { categoria: rarity ? rarity.name
+  : order.categoria })` y el resultado iba a `container.innerHTML`. `order.categoria` es un
+  string libre del save; `save.js`/`isValidStallOrders` lo valida SOLO por tipo (`typeof
+  string`) — correcto en esa capa (el save chequea tipo, la UI hace la defensa en profundidad
+  con allow-list, napkin #8). Un save manipulado/importado con
+  `categoria: '<img src=x onerror=...>'` (que pasa toda la validación: cantidad/mult/progress
+  válidos) inyectaba HTML ejecutable en la pestaña Puesto. Es la misma clase que la ronda de
+  fixes de `CollectionView`/`ShopView`/etc. (napkin #8), que 23.C no cubrió para este campo
+  nuevo.
+- **Fix** (`apps/game/src/ui/StallView.js`): se resuelve `order.categoria` SIEMPRE contra
+  `itemsData.rarities`; un id desconocido cae a `t('collection.hiddenName')` ("???"), nunca se
+  interpola crudo — exactamente la misma defensa que `renderInventory` ya usaba para un ítem
+  sin `def`. En juego normal los pedidos se generan solo sobre rarezas válidas (`randomOrder`
+  sobre `ownedCategories`), así que el fallback "???" solo aparece ante un save hostil.
+- **Test** (`apps/game/e2e/audit-ronda23.spec.js`, nuevo): siembra un pedido con `categoria`
+  = payload `<img onerror>`, abre el Puesto y verifica que NO hay `<img>` dentro de
+  `.stall-order-card` y que `window.__xssPwned` nunca se setea. RED confirmado antes del fix
+  (count 1, onerror disparado), GREEN después. Chequeo de ausencia inmediato (`.count()`), no
+  `toHaveCount` con auto-retry (napkin #2) — el elemento no expira, pero el count inmediato es
+  la comprobación honesta.
+
+### 🔵 Notas de calidad (NO arregladas — sin pérdida de valor ni vector explotable; documentadas)
+
+- **Ventas offline del Puesto no se muestran en el OfflineModal**: `applyOfflineProgress`
+  devuelve `stallEarnings` y `applyOfflineStallSales` YA suma ese dinero a `state.money`
+  correctamente (sin doble conteo — R23.3 respetado), pero `store.js` solo abre el modal con
+  `result.ganancia > 0` y el modal solo tweenea `summary.ganancia`. Consecuencia: si el robot
+  vendedor vende offline y no hubo loot de auto-escarbado, el dinero sube en silencio; si hubo
+  ambos, el total mostrado subestima por `stallEarnings`. No se pierde dinero ni se duplica —
+  es solo un número informativo del modal. No lo toqué para no meter una redacción de "tus
+  robots escarbaron" sobre un monto de ventas ni tocar OfflineModal (23.C) con cobertura débil;
+  si una ronda futura quiere surfacearlo, `result.stallEarnings` ya viaja listo. El campo hoy
+  no lo lee nadie (dato muerto a propósito, documenta la intención).
+- **`notify()` cada segundo con `stallLevel >= 1`**: `tickAutomation` (fix de 23.C) re-renderiza
+  la UI cada tick cuando el Puesto está activo, lo que recorre `getStallThresholdPresets`
+  (ordena el pool) cada segundo. Pool chico → costo despreciable; el input de umbral está
+  protegido por su guard de foco (`StallView.render` + `UIManager.renderTabContent`). Sin acción.
+- **Venta manual por índice con robot vendedor de fondo**: el `data-index` del botón Vender se
+  captura al render; si el robot vendedor vende entre render y click, el índice podría apuntar a
+  otro ítem. `sellInventoryItemAt` valida `if (!item)` y el `notify()` del tick re-renderiza la
+  grilla con índices frescos, así que la ventana es mínima. Edge case inherente al patrón por
+  índice, sin impacto económico. Sin acción.
+
+### Lo que audité y pasó limpio (para no re-auditar en la 24+)
+
+- **Interpolaciones a innerHTML**: barrido de todo el código nuevo de UI. Único campo
+  save-derived free-string a un sink era `order.categoria` (arriba). `entry.itemId`/
+  `entry.containerId` solo se usan para lookup (`findItemDef`), nunca como texto; `entry.categoria`
+  solo resuelve `rarity.colorToken` (atributo, data). `rita.name`/`lastSaleComment`/`npc.name`/
+  `t(textKey)` vienen 100% de data/claves i18n fijas. Diálogos de Rita/Salomón: sin `{param}` de
+  input no confiable.
+- **Relojes (`ordersRotatedAt`/`stallVendorAt`/`marketFluctuationAt`)**: todos vía
+  `clampedElapsedMs` (≥ 0, 0 si no finito). Reloj hacia atrás no rota pedidos ni vende;
+  `rotateStallOrders` solo resetea `ordersRotatedAt` en la rama de rotación completa, la de
+  relleno (`while length < 2`) no — sin exploit de reloj.
+- **Números/finitud**: `baseValue` validado finito > 0 en save; `keepThreshold`/`stallLevel`/
+  contadores con su rango; precios/capacidad/presets finitos (multiplicadores de data,
+  fluctuación finita). `percentile` guarda `length >= 1`. Sin división por cero.
+- **`stallLevel` sin cota superior en el save**: un `stallLevel` gigante (entero >= 0) pasa
+  validación, pero solo se auto-perjudica (capacidad enorme in-memory que el siguiente
+  deserialize rechaza por `INVENTORY_MAX_SAFETY`; `upgradeStall` topea en `stallNivelMax`).
+  Consistente con cómo se validan los demás niveles del repo (containerLevels, prestige) — no es
+  un vector nuevo. Sin acción.
+- **Íconos/retratos**: `portraits.js` con `xmlns`; las 3 shapes nuevas (`marketStall`/`shelf`/
+  `orderSign`) + `robot-vendor`→`robot` resuelven en `ICON_MAP`/`SHAPES` (cubierto por
+  `icons.test.js`). Cero emojis.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 447/447 verde (35 archivos; sin cambios de conteo: el fix es de UI, cubierto
+                     por e2e — no toqué packages/engine ni sus tests)
+npm run test:e2e  → 75/75 verde (74 previos de 23.D + 1 nuevo de audit-ronda23.spec.js). Sin
+                     flakes en esta corrida completa (el intermitente de ronda19-quickwins que
+                     documentaron 23.C/23.D no reapareció).
+Manual 375px + desktop-1440 (Playwright temporal, borrado tras verificar — no comiteado): pestaña
+  Puesto con nivel 2, cotización "▲10%", 2 ítems en inventario y 2 pedidos — el normal muestra
+  "Pedido: Basura Común", el hostil (sembrado a mano) cae al fallback seguro "Pedido: ???" sin
+  inyectar ningún <img> y sin ejecutar el onerror; vender un ítem sube #money; CERO errores de
+  consola en ambos anchos.
+```
+
+### Estado del DoD (Agente E, ronda 23 — ÚLTIMO agente de la ronda)
+
+```
+[x] Auditoría del diff completo con la metodología de Verif&Audit.md
+[x] Hallazgo 🟡 arreglado con test RED→GREEN (audit-ronda23.spec.js)
+[x] npm test → 447/447 verde
+[x] npm run test:e2e → 75/75 verde
+[x] Manual 375px + desktop: Puesto operable, fallback seguro del pedido hostil, cero errores de consola
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit (b354258)
+[x] HANDOFF (este bloque)
+[ ] Push de la rama + link de PR — a continuación (soy el último agente de la ronda 23)
+```
+
+### Qué necesita saber la ronda 24 (retención: misiones diarias, eventos, día/noche)
+
+- La ronda 23 completa (A→E) queda mergeable como PR #22 (save v12): `SAVE_VERSION = 12`,
+  baselines 447 unit / 75 e2e. Recontar al ejecutar (regla §0).
+- Contadores que consume la 24 (contrato §3.5.4) ya existen y están validados en el save:
+  `stallSoldCount`, `ordersFulfilledCount` (además de `digStreak` de la 19). Las misiones de
+  puesto (`sellAtStallCount`/`fulfillOrders`) SOLO se generan con `stallLevel >= 1`.
+- **Patrón anti-XSS reforzado por esta auditoría**: cualquier vista nueva de la 24 que interpole
+  un campo string del save (categoría de misión, id de evento, etc.) a `innerHTML` debe
+  resolverlo contra su allow-list de data ANTES de interpolar (napkin #8) — `t()` NO escapa. El
+  precedente exacto es `StallView.renderOrders` (categoría→`rarity.name` con fallback
+  `hiddenName`).
+- El motor de condiciones compartido (`CONDITION_EVALUATORS`, exportado desde
+  `systems/achievements.js`) ya lo reusan logros e historia (`checkStory`); las misiones de la
+  24 deben reusarlo también (roadmap §3.2 "un solo motor"), no duplicar la lista.
+- `applyOfflineProgress` devuelve `stallEarnings` (hoy sin consumidor de UI, ver 🔵 arriba): si
+  la 24 rehace el modal offline o suma un resumen, ese dato ya está disponible sin recalcular.

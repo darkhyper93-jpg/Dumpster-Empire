@@ -3,7 +3,7 @@
  * Cero DOM en todo lo que este módulo reexporta.
  */
 
-export { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, freshState } from './state.js';
+export { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, INVENTORY_MAX_SAFETY, freshState } from './state.js';
 export { formatNumber, formatMoney } from './format.js';
 
 export {
@@ -47,6 +47,12 @@ export {
   getToolRadiusMult,
   getToolRhythmMult,
   registerContainerDig,
+  getStallCapacity,
+  getStallUpgradeCost,
+  stallSalePrice,
+  getStallSalePrice,
+  hasStallVendor,
+  getStallThresholdPresets,
 } from './economy.js';
 
 export { clampedElapsedMs, localDayStamp } from './time.js';
@@ -83,6 +89,16 @@ export { nextUpgradeCost, buyUpgrade } from './systems/upgrades.js';
 export { buyTool, equipTool } from './systems/tools.js';
 
 export {
+  buyStall,
+  upgradeStall,
+  setKeepThreshold,
+  sellInventoryItem,
+  stallVendorTick,
+  applyOfflineStallSales,
+  rotateStallOrders,
+} from './systems/stall.js';
+
+export {
   buyAutomation,
   automationTick,
   hasAutoDig,
@@ -101,6 +117,8 @@ export {
 } from './systems/prestige.js';
 
 export { checkAchievements } from './systems/achievements.js';
+
+export { checkStory } from './systems/story.js';
 
 export {
   expectedContainerValue,

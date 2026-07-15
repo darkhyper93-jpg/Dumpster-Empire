@@ -246,6 +246,9 @@ export default {
     a43: 'Four Legends',
     a44: 'Full Showcase',
     a45: 'Complete Set',
+    a46: 'First Item Saved',
+    a47: 'Trusted Trader',
+    a48: 'Top-Tier Stall',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },
@@ -263,6 +266,10 @@ export default {
     plantaReciclaje: { name: 'Recycling Plant', desc: '+20% sale value of Common Junk and Reusable Items.' },
     chipOverclock: { name: 'Overclocked Chip', desc: '+25% robot processing speed.' },
     centroSubastas: { name: 'Auction House', desc: '+15% sale value of Art and Relics.' },
+    robotVendedor: {
+      name: 'Vending Robot',
+      desc: 'Sells one item from the Junk Stall inventory every 20s, even with the game closed.',
+    },
     redDrones: {
       name: 'Drone Network',
       desc: 'A second robot processing in parallel. Unlocks the Extradimensional Container.',
@@ -307,5 +314,17 @@ export default {
     'legendary-crystal-muse': 'The Crystal Muse',
     'legendary-mother-relic': 'The Mother Relic',
     'legendary-void-seed': 'The Void Seed',
+  },
+  // Ronda 23 — Agente B: NPCs (data/npcs.json). DECISIÓN: agregado acá por la regla §1.15
+  // ("data nueva con nombre visible → entrada en data-en.js"), aunque el wiring de
+  // initDataLocalization/applyDataLanguage para esta colección (dataI18n.js, main.js) es tarea
+  // de 23.C junto con el resto de la carga de npcs.json/story.json en DATA_FILES — sin ese
+  // wiring, `name`/`rol` quedan en español incluso con idioma 'en' hasta que 23.C lo conecte.
+  npcs: {
+    rita: { name: 'Doña Rita', rol: 'Regular buyer at the Junk Stall. Retired collector, pays well and has an opinion on everything.' },
+    salomon: { name: 'Salomón the Turk', rol: 'Special orders at the Junk Stall. A theatrical haggler.' },
+    chispa: { name: 'Chispa', rol: 'Kid obsessed with robots. Gives out daily missions and the fleet flavor.' },
+    zoraida: { name: 'Madame Zoraida', rol: 'Neighborhood fortune teller. Announces golden events and the day/night cycle.' },
+    intendente: { name: 'The Mayor', rol: "Prestige story: reappears in every city with a new job, the neighborhood's running gag." },
   },
 };

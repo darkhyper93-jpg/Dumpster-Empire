@@ -12,6 +12,7 @@
 
 import { formatMoney, formatNumber } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { portraitMarkup } from '../icons/portraits.js';
 import { playCelebration, playContainerFanfare, playJackpot, playLegendary } from '../fx/audio.js';
 import { t } from '../i18n/i18n.js';
 
@@ -20,7 +21,8 @@ import { t } from '../i18n/i18n.js';
  *   { type: 'achievement', achievement: { name: string, icon: string, reward?: { type: string, amount: number } } } |
  *   { type: 'containerUnlock', container: { name: string, icon: string } } |
  *   { type: 'firstFind', item: { name: string, icon: string, value: number } } |
- *   { type: 'legendary', item: { name: string, icon: string, value: number } }
+ *   { type: 'legendary', item: { name: string, icon: string, value: number } } |
+ *   { type: 'story', npc: { name: string, portrait: string }, textKey: string }
  * )} Celebration
  */
 
@@ -65,6 +67,15 @@ function contentFor(celebration) {
       `<h2>${t('celebration.legendaryTitle')}</h2>` +
       `<p class="celebration-name">${item.name}</p>` +
       `<p class="celebration-reward">${formatMoney(item.value)}</p>`
+    );
+  }
+  if (celebration.type === 'story') {
+    const { npc, textKey } = celebration;
+    playCelebration();
+    return (
+      `<span class="celebration-icon celebration-icon--story">${portraitMarkup(npc.portrait, { size: 56 })}</span>` +
+      `<h2>${npc.name}</h2>` +
+      `<p class="celebration-name">${t(textKey)}</p>`
     );
   }
   const { item } = celebration;

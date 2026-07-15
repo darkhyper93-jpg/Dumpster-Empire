@@ -166,6 +166,11 @@ const SHAPES = {
   waterStain: '<path d="M12 4c3 2 6 6 6 10a6 6 0 0 1-12 0c0-4 3-8 6-10z" stroke-dasharray="2 2"/><path d="M12 10c1.5 1 3 3 3 5a3 3 0 0 1-6 0c0-2 1.5-4 3-5z" stroke-dasharray="1 1.4"/>',
   crackedGround: '<path d="M2 16h4l2-5 2 7 2-4 2 6h4"/><line x1="8" y1="11" x2="6" y2="14"/><line x1="16" y1="18" x2="18" y2="21"/>',
   clawMarks: '<line x1="5" y1="3" x2="10" y2="21"/><line x1="10" y1="2" x2="14" y2="22"/><line x1="15" y1="3" x2="19" y2="21"/>',
+
+  // Ronda 23 — Agente B: Puesto de Chatarra (puesto, estantería del inventario, cartel de pedido).
+  marketStall: '<path d="M3 9l2-5h14l2 5z"/><line x1="3" y1="9" x2="21" y2="9"/><rect x="5" y="9" width="14" height="10"/><line x1="9" y1="9" x2="9" y2="19"/><line x1="15" y1="9" x2="15" y2="19"/>',
+  shelf: '<rect x="4" y="3" width="16" height="18" rx="1"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><rect x="6.5" y="5" width="3" height="3"/><rect x="14.5" y="11" width="3" height="3"/>',
+  orderSign: '<path d="M6 21V11l6-4 6 4v10z"/><line x1="4" y1="11" x2="20" y2="11"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="18" x2="13" y2="18"/>',
 };
 
 /** Mapea cada clave `icon` de la data (items/containers/upgrades/automations/prestigeTree/achievements) a una forma. */
@@ -314,6 +319,9 @@ const ICON_MAP = {
   'tab-logros': 'medal',
   'tab-prestigio': 'crown',
   'tab-index': 'clipboard',
+  // Ronda 23.C: la pestaña Puesto reusa la forma 'marketStall' (mismo puesto que 'stall-chatarra',
+  // ronda 23.B) — un ícono de tab siempre apunta a una forma ya definida, nunca duplica el path.
+  'tab-puesto': 'marketStall',
   locked: 'shield',
   'close-x': 'closeX',
 
@@ -426,6 +434,14 @@ const ICON_MAP = {
   'eye-glass-dark': 'eyeGlassDark',
   // DECISIÓN: relic-unlit reusa 'sealedRelic' (misma reliquia sellada que relic-sealed).
   'relic-unlit': 'sealedRelic',
+
+  // Ronda 23 — Agente B: Puesto de Chatarra (data/stall.json, achievements.json, automations.json).
+  'stall-chatarra': 'marketStall',
+  'shelf-inventory': 'shelf',
+  'order-sign': 'orderSign',
+  // DECISIÓN: robot-vendor reusa 'robot' (mismo robot que robot-sorter) — se diferencia por
+  // contexto de tarjeta (Automatización) y color, mismo criterio que servo-arm/servo-arm-titanium.
+  'robot-vendor': 'robot',
 
   // Ronda 20 — Agente B: indicios visuales de grado de trampa (PLAN.md §4.24).
   'hint-leve': 'waterStain',

@@ -5,7 +5,9 @@
 
 import { isSetComplete } from '../economy.js';
 
-const CONDITION_EVALUATORS = {
+// Exportado (ronda 23.C, roadmap §3.2): "un solo motor de condiciones para logros, historia y
+// misiones" — systems/story.js lo reusa en vez de duplicar la lista de evaluadores.
+export const CONDITION_EVALUATORS = {
   totalMoneyEarnedAtLeast: (state, cond) => state.totalMoneyEarned >= cond.value,
   itemsFoundCountAtLeast: (state, cond) => state.itemsFoundCount >= cond.value,
   categoryFoundAtLeast: (state, cond) => (state.itemsFoundByCategory[cond.categoria] || 0) >= cond.value,
@@ -34,6 +36,13 @@ const CONDITION_EVALUATORS = {
   setsCompletedAtLeast: (state, cond, ctx) =>
     Boolean(ctx.itemsData) &&
     ctx.allContainers.filter((c) => isSetComplete(state, c, ctx.itemsData)).length >= cond.value,
+  // Ronda 23.B (PLAN.md §2.9, roadmap §3.1/§3.2): mismo motor de condiciones para logros e
+  // historia liviana — pedidos cumplidos, nivel del Puesto y "al menos un ítem guardado" (esta
+  // última se evalúa en vivo contra `inventory.length`: un logro nunca se re-bloquea una vez
+  // desbloqueado, así que capturar 1 ítem y venderlo después no le hace perder el logro).
+  ordersFulfilledAtLeast: (state, cond) => state.ordersFulfilledCount >= cond.value,
+  stallLevelAtLeast: (state, cond) => state.stallLevel >= cond.value,
+  stallInventoryAtLeast: (state, cond) => state.inventory.length >= cond.value,
 };
 
 /**

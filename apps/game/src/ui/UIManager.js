@@ -15,6 +15,7 @@ import { AutomationView } from './AutomationView.js';
 import { AchievementsView } from './AchievementsView.js';
 import { PrestigeView } from './PrestigeView.js';
 import { CollectionView } from './CollectionView.js';
+import { StallView } from './StallView.js';
 import { SettingsView } from './SettingsView.js';
 import { StatsView } from './StatsView.js';
 import { ToolsSection } from './ToolsSection.js';
@@ -34,6 +35,7 @@ const TAB_VIEWS = {
   logros: AchievementsView,
   prestigio: PrestigeView,
   index: CollectionView,
+  puesto: StallView,
   ajustes: SettingsView,
   estadisticas: StatsView,
 };
@@ -287,6 +289,12 @@ export class UIManager {
     }
     for (const container of this.store.consumeNewContainerUnlocks()) {
       CelebrationModal.push(this.celebrationModalEl, { type: 'containerUnlock', container });
+    }
+    // Ronda 23.C (roadmap §3.2): viñetas de historia liviana — mismo patrón consume-queue que
+    // logros/desbloqueos, resueltas contra `this.loaded.npcs` (el store no conoce npcs.json).
+    for (const milestone of this.store.consumeNewStoryVignettes()) {
+      const npc = this.loaded?.npcs.find((n) => n.id === milestone.npcId);
+      if (npc) CelebrationModal.push(this.celebrationModalEl, { type: 'story', npc, textKey: milestone.textKey });
     }
     // PLAN.md §4.24 (ronda 20): la Bóveda a Contrarreloj expiró sola (tickDigTimer, store.js) —
     // se pierde SIN castigo, solo avisamos con un toast (mismo patrón que el descarte del robot).

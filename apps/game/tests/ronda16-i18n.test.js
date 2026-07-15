@@ -19,6 +19,7 @@ import automationsData from '../src/data/automations.json';
 import prestigeTreeData from '../src/data/prestigeTree.json';
 import achievementsData from '../src/data/achievements.json';
 import legendariesData from '../src/data/legendaries.json';
+import npcsData from '../src/data/npcs.json';
 
 // El throw por orden de boot roto va PRIMERO: dataI18n guarda el baseline en estado de módulo
 // y cualquier initDataLocalization posterior lo dejaría seteado para el resto del archivo.
@@ -109,6 +110,14 @@ describe('paridad data-en.js ↔ data real (ambas direcciones)', () => {
   it('legendaries: mismos ids (ronda 22)', () => {
     expect(keysOf(dataEn.legendaries)).toEqual(idsOf(legendariesData.items));
   });
+
+  it('npcs: mismos ids, cada entrada con name y rol string (ronda 23.C)', () => {
+    expect(keysOf(dataEn.npcs)).toEqual(idsOf(npcsData));
+    for (const [id, entry] of Object.entries(dataEn.npcs)) {
+      expect(typeof entry.name, `npcs.${id}.name`).toBe('string');
+      expect(typeof entry.rol, `npcs.${id}.rol`).toBe('string');
+    }
+  });
 });
 
 describe('dataI18n — overlay in-place con fallback y restauración', () => {
@@ -157,6 +166,10 @@ describe('dataI18n — overlay in-place con fallback y restauración', () => {
         { id: 'fantasmaXYZ', name: 'Legendario Fantasma' },
       ],
     },
+    npcs: [
+      { id: 'rita', name: 'Doña Rita (base)', rol: 'Rol base.' },
+      { id: 'fantasmaXYZ', name: 'NPC Fantasma', rol: 'Rol fantasma.' },
+    ],
   });
 
   it("aplica 'en' por id, con fallback al baseline para ids que no están en data-en.js", () => {
@@ -173,6 +186,8 @@ describe('dataI18n — overlay in-place con fallback y restauración', () => {
     expect(loaded.prestigeTree[0].desc).toBe(dataEn.prestigeTree.capitalInicial.desc);
     expect(loaded.upgrades[0].label).toBe(dataEn.upgrades.luck);
     expect(loaded.legendaries.items[0].name).toBe(dataEn.legendaries['legendary-first-can']);
+    expect(loaded.npcs[0].name).toBe(dataEn.npcs.rita.name);
+    expect(loaded.npcs[0].rol).toBe(dataEn.npcs.rita.rol);
     // Ids fantasma: caen al baseline español, nunca undefined ni hueco.
     expect(loaded.containers[1].name).toBe('Contenedor Fantasma');
     expect(loaded.items.containers.tachoVereda[1].name).toBe('Ítem Fantasma');
@@ -182,6 +197,8 @@ describe('dataI18n — overlay in-place con fallback y restauración', () => {
     expect(loaded.prestigeTree[1].name).toBe('Nodo Fantasma');
     expect(loaded.upgrades[1].label).toBe('Mejora Fantasma');
     expect(loaded.legendaries.items[1].name).toBe('Legendario Fantasma');
+    expect(loaded.npcs[1].name).toBe('NPC Fantasma');
+    expect(loaded.npcs[1].rol).toBe('Rol fantasma.');
   });
 
   it("restaura el baseline español completo al volver a 'es' (ida y vuelta sin pérdida)", () => {
