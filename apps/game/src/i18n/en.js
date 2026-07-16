@@ -75,6 +75,8 @@ export default {
   'automation.active': 'Active',
   'automation.buyFor': 'Buy for {amount}',
   'automation.expandCapacity': 'Expand Capacity (level {level}) for {amount}',
+  // Ronda 25 (PLAN.md §4.32): desafío `manosVacias` activo bloquea toda compra de máquinas.
+  'automation.blockedByChallenge': 'The active challenge does not allow buying machines.',
 
   // CelebrationModal.js
   'celebration.close': 'Close',
@@ -119,6 +121,28 @@ export default {
   'prestige.doButton': 'Prestige',
   // {amount} = PRESTIGE_MONEY_THRESHOLD del engine formateado (PrestigeView), nunca un número fijo acá.
   'prestige.needMoney': 'You need {amount} earned in total to prestige.',
+  'prestige.infinite': 'Level {level} (no cap)',
+  'prestige.chooseTitle': 'Choose for your next run',
+  'prestige.specializationsHeading': 'Specializations',
+  'prestige.challengesHeading': 'Challenges',
+  'prestige.noneOption': 'No specialization',
+  'prestige.noneOptionDesc': 'No sale bonus or penalty by category.',
+  'prestige.specializationBonus': '+50% on {categories}',
+  'prestige.specializationPenalty': '-15% on the rest',
+  'prestige.challengeGoal': 'Goal: {goal}',
+  'prestige.challengeGoalMoney': 'earn {amount} this run',
+  'prestige.challengeGoalPrestige': 'reach prestige',
+  'prestige.challengeReward': 'Permanent reward: {reward}',
+  'prestige.challengeCompleted': 'Completed',
+  'prestige.confirmButton': 'Confirm Prestige',
+  'prestige.cancelButton': 'Cancel',
+  'prestige.activeSpecialization': 'Active specialization: {name}',
+  'prestige.activeChallenge': 'Active challenge: {name}',
+  'prestige.selected': 'Selected',
+  'prestige.rewardSellPercent': '+{pct}% global sale value',
+  'prestige.rewardLuckFlat': '+{amount} Luck',
+  'prestige.rewardDigPowerPercent': '+{pct}% Dig Power',
+  'prestige.rewardMarketFluctuationMinFlat': '+{amount} to the market quote floor',
 
   // SettingsView.js
   'settings.on': 'On',

@@ -42,7 +42,18 @@
 // todo exploit de reloj), pero su cooldown sí, para que reabrir el juego no regale un evento
 // instantáneo. `eventsUsedCount` cuenta escarbados exitosos aprovechando un evento activo, para
 // el logro "primer evento aprovechado".
-export const SAVE_VERSION = 13;
+// AJUSTE (ronda 25): v14 agrega prestigio profundo (PLAN.md §4.31-§4.33): `specialization`
+// (string|null, patrón autoTargetContainerId — save.js solo valida tipo; store.js sanitiza
+// contra data/specializations.json real, igual que sanitizeLegendariesFound) y `activeChallenge`
+// (ídem contra data/challenges.json), EXCLUYENTES entre sí por run. `challengesCompleted`
+// (ids, recompensa permanente ya otorgada — nunca se repite). `specializationsUsed` cuenta
+// prestigios con especialización elegida (para su logro). `totalKeysEarned` es un acumulado
+// HISTÓRICO (nunca se resetea, a diferencia de `prestigeKeys` que sí se gasta) que la ronda 26
+// necesita para la fórmula de Escrituras — la migración lo backfillea con
+// `prestigeKeys + costoAcumulado(prestigeTreeLevels)` porque es el mejor estimado posible de lo
+// ganado históricamente a partir de lo que el save YA tiene (Llaves sin gastar + Llaves ya
+// invertidas en el árbol); un save nuevo simplemente empieza en 0 real desde acá en adelante.
+export const SAVE_VERSION = 14;
 
 // AJUSTE (ronda 23): cota de seguridad para `inventory` en validateDeepContent (save.js). No es
 // la capacidad de diseño real (esa vive en data/stall.json y save.js es deliberadamente
@@ -128,6 +139,17 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  * @property {number} eventsUsedCount - escarbados resueltos con éxito mientras un evento de
  *   contenedor estaba activo sobre ESE contenedor (§4.32), para el logro "primer evento
  *   aprovechado".
+ * @property {string|null} specialization - id de `data/specializations.json` elegida al último
+ *   prestigio (PLAN.md §4.31, ronda 25); dura hasta el próximo. Excluyente con `activeChallenge`.
+ * @property {string|null} activeChallenge - id de `data/challenges.json` activo en esta run
+ *   (PLAN.md §4.32, ronda 25). Excluyente con `specialization`.
+ * @property {string[]} challengesCompleted - ids de desafíos cuya recompensa permanente ya se
+ *   otorgó (PLAN.md §4.32); nunca se repite ni se retira.
+ * @property {number} specializationsUsed - prestigios donde se eligió una especialización
+ *   (no "Sin especialización"), para su logro (ronda 25).
+ * @property {number} totalKeysEarned - Llaves de Ciudad ganadas históricamente, nunca se
+ *   resetea (a diferencia de `prestigeKeys`, que se gasta). La ronda 26 lo necesita para la
+ *   fórmula de Escrituras.
  */
 
 /**
@@ -219,5 +241,10 @@ export function freshState() {
     missionsCompletedCount: 0,
     lastEventAt: 0,
     eventsUsedCount: 0,
+    specialization: null,
+    activeChallenge: null,
+    challengesCompleted: [],
+    specializationsUsed: 0,
+    totalKeysEarned: 0,
   };
 }

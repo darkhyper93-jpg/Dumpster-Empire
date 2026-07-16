@@ -252,6 +252,10 @@ export default {
     a49: 'Reliable',
     a50: "Chispa's Proud",
     a51: 'Right on Time',
+    a52: 'First Challenge',
+    a53: 'Challenge Master',
+    a54: 'Infinite Bet',
+    a55: 'Specialist',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },
@@ -300,6 +304,9 @@ export default {
       name: 'Trap Scanner',
       desc: 'The robot detects traps and discards those containers: +34% chance per level.',
     },
+    codiciaEterna: { name: 'Eternal Greed', desc: '+2% global sale value per level. No level cap.' },
+    paladaEterna: { name: 'Eternal Shovel', desc: '+3% permanent Dig Power per level. No level cap.' },
+    imanDeSuerte: { name: 'Luck Magnet', desc: '+1 permanent Luck per level. No level cap.' },
   },
   upgrades: {
     luck: 'Luck',
@@ -329,5 +336,39 @@ export default {
     chispa: { name: 'Chispa', rol: 'Kid obsessed with robots. Gives out daily missions and the fleet flavor.' },
     zoraida: { name: 'Madame Zoraida', rol: 'Neighborhood fortune teller. Announces golden events and the day/night cycle.' },
     intendente: { name: 'The Mayor', rol: "Prestige story: reappears in every city with a new job, the neighborhood's running gag." },
+  },
+  // Ronda 25 (PLAN.md §4.31): especializaciones elegidas al prestigiar (data/specializations.json).
+  specializations: {
+    coleccionista: {
+      name: 'Collector',
+      desc: '+50% sale value on antiques, art and relics; -15% on everything else.',
+    },
+    chatarrero: {
+      name: 'Scrapper',
+      desc: '+50% sale value on common, reusable and electronics; -15% on everything else.',
+    },
+    anticuario: {
+      name: 'Antiquarian',
+      desc: '+50% sale value on historic, relics and future items; -15% on everything else.',
+    },
+  },
+  // Ronda 25 (PLAN.md §4.32): desafíos elegidos al prestigiar (data/challenges.json).
+  challenges: {
+    manosVacias: {
+      name: 'Empty Handed',
+      desc: "No machines: you can't buy any automation this run.",
+    },
+    campoMinado: {
+      name: 'Minefield',
+      desc: 'Double trap chance for the whole run.',
+    },
+    pulsoDebil: {
+      name: 'Weak Pulse',
+      desc: 'Dig Power halved for the whole run.',
+    },
+    mercadoNegro: {
+      name: 'Black Market',
+      desc: "Today's quote is fixed at 0.8 (bad) for the whole run.",
+    },
   },
 };

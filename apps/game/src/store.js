@@ -90,6 +90,20 @@ export function createStore(ctx) {
     state.legendariesFound = state.legendariesFound.filter((id) => legendaryIds.has(id));
   }
 
+  // Ronda 25 (PLAN.md §4.31/§4.32): save.js solo valida que specialization/activeChallenge sean
+  // string|null (agnóstico de datos de balance, mismo patrón que legendariesFound/containerIds);
+  // acá se sanea contra la data REAL de specializations.json/challenges.json al cargar.
+  const specializationIds = new Set((data.specializations || []).map((s) => s.id));
+  const challengeIds = new Set((data.challenges || []).map((c) => c.id));
+  function sanitizeSpecializationAndChallenge() {
+    if (state.specialization !== null && !specializationIds.has(state.specialization)) {
+      state.specialization = null;
+    }
+    if (state.activeChallenge !== null && !challengeIds.has(state.activeChallenge)) {
+      state.activeChallenge = null;
+    }
+  }
+
   // Ronda 16: mapa `containerId -> { nombreEspañol -> id }` construido desde la data TODAVÍA en
   // español (antes de cualquier applyDataLanguage) — lo usa la migración v6->v7 de itemsFoundByItem
   // para remapear claves de saves viejos sin perder la colección.
@@ -100,6 +114,7 @@ export function createStore(ctx) {
 
   let state = loadState();
   sanitizeLegendariesFound();
+  sanitizeSpecializationAndChallenge();
   let pendingDig = null;
   let offlineSummary = null;
   let newAchievements = [];
@@ -171,7 +186,7 @@ export function createStore(ctx) {
   function loadState() {
     const raw = ctx.initialSaveText !== undefined ? ctx.initialSaveText : localStorage.getItem(SAVE_KEY);
     if (!raw) return freshState();
-    const result = deserializeState(raw, containerIds, itemNameToId);
+    const result = deserializeState(raw, containerIds, itemNameToId, data.prestigeTree);
     return result.ok ? result.state : freshState();
   }
 
@@ -431,7 +446,7 @@ export function createStore(ctx) {
     buyAutomation(automationId) {
       const automation = data.automations.find((a) => a.id === automationId);
       if (!automation) return { ok: false, error: 'Automatización desconocida.' };
-      const result = engineBuyAutomation(state, automation);
+      const result = engineBuyAutomation(state, automation, data);
       if (result.ok) {
         runAchievements();
         detectContainerUnlocks();
@@ -452,8 +467,13 @@ export function createStore(ctx) {
       return result;
     },
 
-    doPrestige() {
-      const result = engineDoPrestige(state, data);
+    /**
+     * Ejecuta el prestigio (PLAN.md §4.31/§4.32, ronda 25): `choice` es la especialización o
+     * desafío elegido para la PRÓXIMA run (`null`/omitido = "Sin especialización").
+     * @param {{ type: 'specialization'|'challenge', id: string } | null} [choice]
+     */
+    doPrestige(choice = null) {
+      const result = engineDoPrestige(state, data, choice);
       if (result.ok) {
         pendingDig = null;
         runAchievements();
@@ -469,10 +489,11 @@ export function createStore(ctx) {
     },
 
     importSave(text) {
-      const result = engineImportSave(text, containerIds, itemNameToId);
+      const result = engineImportSave(text, containerIds, itemNameToId, data.prestigeTree);
       if (result.ok) {
         state = result.state;
         sanitizeLegendariesFound();
+        sanitizeSpecializationAndChallenge();
         pendingDig = null;
         runAchievements();
         runStory();

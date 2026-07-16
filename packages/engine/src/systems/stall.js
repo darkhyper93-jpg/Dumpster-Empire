@@ -4,8 +4,13 @@
  * Mutaciones puras: reciben el estado y lo mutan, sin tocar el DOM.
  */
 
-import { getStallCapacity, getStallUpgradeCost, getStallSalePrice, hasStallVendor } from '../economy.js';
-import { refreshMarketFluctuation } from '../rng.js';
+import {
+  getStallCapacity,
+  getStallUpgradeCost,
+  getStallSalePrice,
+  hasStallVendor,
+  resolveMarketFluctuation,
+} from '../economy.js';
 import { clampedElapsedMs } from '../time.js';
 
 /**
@@ -108,12 +113,7 @@ function sellInventoryItemAt(state, inventoryIndex, data, fluctuacionMercado) {
  * @returns {{ ok: true, moneyDelta: number } | { ok: false, error: string }}
  */
 export function sellInventoryItem(state, inventoryIndex, data, now = Date.now(), random = Math.random) {
-  const { marketFluctuation, marketFluctuationAt } = refreshMarketFluctuation(
-    state.marketFluctuation,
-    state.marketFluctuationAt,
-    now,
-    random
-  );
+  const { marketFluctuation, marketFluctuationAt } = resolveMarketFluctuation(state, data, now, random);
   state.marketFluctuation = marketFluctuation;
   state.marketFluctuationAt = marketFluctuationAt;
   return sellInventoryItemAt(state, inventoryIndex, data, state.marketFluctuation);

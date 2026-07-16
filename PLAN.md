@@ -504,6 +504,93 @@ SIN variance de RNG (`valorBaseObjeto` literal, no `× rollItemVariance()`) y co
 `baseValue` en `rollContainerResult`). Los presets son los percentiles 25/50/75 (interpolación
 lineal, método usual) de esa lista de valores estimados, ordenada ascendente.
 
+### 4.31 Especializaciones (ronda 25)
+
+AJUSTE (roadmap §3.6): el numerado siguiente real de PLAN.md es §4.31, no §4.34 — ROADMAPv4.md
+lo escribió antes de confirmar que la ronda 24 no sumó secciones propias; el contenido manda.
+
+Al prestigiar (`doPrestige`), el jugador elige UNA de tres especializaciones o "Sin
+especialización" — dura hasta el próximo prestigio, se aplica DESPUÉS del reset de la run
+(sobrevive al reset, como Llaves/árbol). `data/specializations.json`:
+`{ id, name, desc, categoriasBonus: string[], bonusMult, penaltyMult }`.
+
+```
+getSellMult(categoria) *= categoriasBonus.includes(categoria) ? bonusMult : penaltyMult
+```
+
+Aplica sobre TODA categoría (incluida la bonificada, exclusiva de la penalizada — nunca ambas a
+la vez), compuesto con el resto de `getSellMult` (automatización + árbol de prestigio).
+
+| id | categorías bonificadas (×1.5) | resto (×0.85) |
+|---|---|---|
+| `coleccionista` | antiques, art, relics | — |
+| `chatarrero` | common, reusable, electronics | — |
+| `anticuario` | historic, relics, future | — |
+
+### 4.32 Desafíos (ronda 25)
+
+Se activan al prestigiar en vez de una especialización (excluyentes entre sí para la misma run:
+`state.specialization` y `state.activeChallenge` nunca están seteados los dos a la vez).
+`data/challenges.json`: `{ id, name, desc, modifiers: Effect[], goal, reward: Effect }`.
+
+**Modificadores** (activos SOLO mientras `state.activeChallenge === id`, durante la run en
+curso):
+
+```
+noAutomationPurchases        → buyAutomation() rechaza toda compra (§2.7)
+trapProbMultiplier(mult)      → probEfectiva = min(0.95, getEffectiveTrapProbability(...) * mult)
+digPowerMultiplier(mult)      → getDigPowerMult(...) *= mult
+fixedMarketFluctuation(value) → la fluctuación de mercado NO se randomiza: siempre `value`
+```
+
+**Goal**: se chequea UNA vez, al prestigiar (`doPrestige`, ANTES del reset de la run saliente),
+reusando `CONDITION_EVALUATORS` (`systems/achievements.js`, mismo motor que logros/historia,
+roadmap §3.2). `{ type: 'always' }` (nuevo evaluador, siempre `true`) cubre "el objetivo es
+prestigiar sin más condición"; `{ type: 'totalMoneyEarnedAtLeast', value }` reusa el evaluador ya
+existente contra `state.totalMoneyEarned` — que ya es un contador POR RUN (`doPrestige` lo
+resetea a `getPrestigeStartMoney` en cada prestigio, `systems/prestige.js`), así que sirve tal
+cual sin contador nuevo. Si se cumple, `id` entra a `state.challengesCompleted` (una sola vez:
+`Array.includes` antes de empujar — sin recompensa doble).
+
+**Recompensa permanente**: efecto pasivo evaluado en el getter correspondiente para todo
+`challengeId` presente en `state.challengesCompleted` (`challengeEffectsOfType(data, type)`,
+espejo de `automationEffectsOfType`/`prestigeEffectsOfType`) — sobrevive resets/prestigios, como
+el árbol de prestigio:
+
+```
+sellPercentGlobal(percent)     → getSellMult(...) *= 1 + percent
+luckFlat(flat)                 → getLuck(...) += flat
+digPowerPercent(percent)       → getDigPowerMult(...) *= 1 + percent
+marketFluctuationMinFlat(flat) → piso de refreshMarketFluctuation (0.85) += flat
+```
+
+| id | modificador | goal | recompensa permanente |
+|---|---|---|---|
+| `manosVacias` | `noAutomationPurchases` | `totalMoneyEarnedAtLeast` 1e9 | `sellPercentGlobal` 0.05 |
+| `campoMinado` | `trapProbMultiplier` ×2 | `always` (prestigiar) | `luckFlat` +1 |
+| `pulsoDebil` | `digPowerMultiplier` ×0.5 | `always` (prestigiar) | `digPowerPercent` 0.10 |
+| `mercadoNegro` | `fixedMarketFluctuation` 0.8 | `totalMoneyEarnedAtLeast` 1e10 | `marketFluctuationMinFlat` 0.1 |
+
+### 4.33 Nodos infinitos del árbol de prestigio (ronda 25)
+
+3 nodos nuevos en `prestigeTree.json` SIN el campo `nivelMaximo` (pasa a **opcional**: ausente =
+sin tope — `buyPrestigeNode`/la UI ya tratan `level >= node.nivelMaximo` como `false` para
+siempre cuando `nivelMaximo` es `undefined`, sin código especial). Sumidero infinito de Llaves
+de Ciudad para el lategame; costo `upgradeCost` (§4.1) igual que cualquier nodo.
+
+| id | efecto | costoBase | factorCrecimiento | requires |
+|---|---|---|---|---|
+| `codiciaEterna` | +2% valor de venta global/nivel (`sellPercentGlobalPerNivel`) | 20 | 2.0 | `tasadorExperto` |
+| `paladaEterna` | +3% Fuerza de Escarbado/nivel (`statPercentFinal` digPower) | 15 | 1.9 | `brazosDeAcero` |
+| `imanDeSuerte` | +1 Suerte FLAT/nivel (`statFlatPerNivel` luck, nuevo effect type) | 25 | 2.1 | `suerteAncestral` |
+
+`statFlatPerNivel` es un effect type nuevo del árbol de prestigio (mirror de `statFlat` de
+automatización, PLAN.md §2.7, pero por NIVEL en vez de por posesión booleana):
+`getLuck(...) += prestigeLevel(nodeId) * effect.flatPerNivel`. Literal al roadmap ("+1 Suerte/
+nivel"): no se aproxima a porcentaje solo porque el resto del árbol use `statPercentFinal` — el
+roadmap especificó flat a propósito (con `imanDeSuerte` sin tope, un flat mantiene el bonus
+predecible; un percent compuesto infinito explotaría la Suerte más rápido de lo diseñado).
+
 ---
 
 ## 5. UI / UX

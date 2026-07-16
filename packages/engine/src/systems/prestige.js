@@ -1,8 +1,10 @@
 /**
- * Sistema de prestigio: "Llaves de Ciudad" (§2.8).
+ * Sistema de prestigio: "Llaves de Ciudad" (§2.8) y prestigio profundo — especializaciones y
+ * desafíos (PLAN.md §4.31/§4.32, ronda 25).
  */
 
 import { prestigeKeysEarned, upgradeCost, getPrestigeStartMoney } from '../economy.js';
+import { CONDITION_EVALUATORS } from './achievements.js';
 
 // AJUSTE (auditoría post-ronda 14): exportado para que la UI (PrestigeView) muestre el umbral
 // real en el tooltip de "Hacer Prestigio" en vez de un "$1.000.000.000" hardcodeado en el
@@ -59,6 +61,8 @@ export function isPrestigeNodeUnlocked(state, node) {
 export function buyPrestigeNode(state, node) {
   if (!isPrestigeNodeUnlocked(state, node)) return { ok: false, error: 'Faltan prerrequisitos para este nodo.' };
   const level = state.prestigeTreeLevels[node.id] || 0;
+  // PLAN.md §4.33 (ronda 25): `nivelMaximo` es opcional — un nodo infinito lo omite, y
+  // `level >= undefined` siempre da `false`, así que nunca topea sin ningún cambio de código.
   if (level >= node.nivelMaximo) return { ok: false, error: 'Nodo ya al nivel máximo.' };
   const cost = nextPrestigeNodeCost(state, node);
   if (state.prestigeKeys < cost) return { ok: false, error: 'No alcanzan las Llaves de Ciudad.' };
@@ -68,18 +72,66 @@ export function buyPrestigeNode(state, node) {
 }
 
 /**
- * Ejecuta el prestigio: resetea dinero/contenedores/mejoras/automatización normales, conserva
- * Llaves de Ciudad, árbol de prestigio y logros.
+ * Evalúa el goal del desafío activo de la run SALIENTE (antes de resetearla) y, si se cumple,
+ * otorga su recompensa permanente una sola vez (PLAN.md §4.32, ronda 25). Reusa
+ * `CONDITION_EVALUATORS` (mismo motor que logros/historia/misiones, roadmap §3.2): el `ctx` que
+ * pasan logros/historia no hace falta acá porque los dos goal types de esta ronda
+ * (`totalMoneyEarnedAtLeast`/`always`) no lo usan.
  * @param {import('../state.js').GameState} state
  * @param {import('../economy.js').EngineData} data
+ * @returns {void}
+ */
+function resolveActiveChallengeGoal(state, data) {
+  if (!state.activeChallenge || !data.challenges) return;
+  const challenge = data.challenges.find((c) => c.id === state.activeChallenge);
+  if (!challenge) return;
+  if (state.challengesCompleted.includes(challenge.id)) return;
+  const evaluator = CONDITION_EVALUATORS[challenge.goal.type];
+  if (evaluator && evaluator(state, challenge.goal)) {
+    state.challengesCompleted.push(challenge.id);
+  }
+}
+
+/**
+ * Aplica la elección de especialización/desafío para la PRÓXIMA run (PLAN.md §4.31/§4.32,
+ * ronda 25) — se llama DESPUÉS del reset, así que sobrevive a él (R25.1). Son EXCLUYENTES: elegir
+ * una limpia la otra. `null`/id desconocido en `data` deja ambas en null ("Sin especialización").
+ * @param {import('../state.js').GameState} state
+ * @param {import('../economy.js').EngineData} data
+ * @param {{ type: 'specialization' | 'challenge', id: string } | null} [choice]
+ * @returns {void}
+ */
+function applyPrestigeChoice(state, data, choice) {
+  state.specialization = null;
+  state.activeChallenge = null;
+  if (!choice) return;
+  if (choice.type === 'specialization' && data.specializations?.some((s) => s.id === choice.id)) {
+    state.specialization = choice.id;
+    state.specializationsUsed += 1;
+  } else if (choice.type === 'challenge' && data.challenges?.some((c) => c.id === choice.id)) {
+    state.activeChallenge = choice.id;
+  }
+}
+
+/**
+ * Ejecuta el prestigio: resetea dinero/contenedores/mejoras/automatización normales, conserva
+ * Llaves de Ciudad, árbol de prestigio y logros. Ronda 25 (PLAN.md §4.31/§4.32): antes del reset,
+ * evalúa el goal del desafío saliente; después del reset, aplica la especialización/desafío
+ * elegido para la run que arranca.
+ * @param {import('../state.js').GameState} state
+ * @param {import('../economy.js').EngineData} data
+ * @param {{ type: 'specialization' | 'challenge', id: string } | null} [choice] - elección para
+ *   la PRÓXIMA run; `null`/omitido = "Sin especialización".
  * @returns {{ ok: true, keysEarned: number } | { ok: false, error: string }}
  */
-export function doPrestige(state, data) {
+export function doPrestige(state, data, choice = null) {
   if (!canPrestige(state)) return { ok: false, error: 'Todavía no se alcanzó el umbral de prestigio.' };
+  resolveActiveChallengeGoal(state, data);
   const keysEarned = prestigeKeysEarned(state.totalMoneyEarned);
   const startMoney = getPrestigeStartMoney(state, data);
 
   state.prestigeKeys += keysEarned;
+  state.totalKeysEarned += keysEarned;
   state.prestigeCount += 1;
   state.money = startMoney;
   state.totalMoneyEarned = startMoney;
@@ -91,6 +143,7 @@ export function doPrestige(state, data) {
   // DECISIÓN (ronda 14, D6): un target apuntando a un contenedor re-bloqueado por el prestigio
   // dejaría al robot idle sin explicación; vuelve a modo Auto igual que el resto de automatización.
   state.autoTargetContainerId = null;
+  applyPrestigeChoice(state, data, choice);
 
   return { ok: true, keysEarned };
 }

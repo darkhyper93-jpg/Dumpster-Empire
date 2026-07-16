@@ -36,7 +36,9 @@ function ownTacho(state) {
 
 describe('save v13: misiones diarias + evento de contenedor', () => {
   it('SAVE_VERSION es 13 y freshState trae los campos nuevos', () => {
-    expect(SAVE_VERSION).toBe(13);
+    // AJUSTE (ronda 25): SAVE_VERSION avanzó a 14 (prestigio profundo); esta prueba solo
+    // necesita que sea al menos 13 (los campos de esta ronda siguen presentes).
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(13);
     const state = freshState();
     expect(state.dailyMissions).toEqual([]);
     expect(state.missionsRolledAt).toBe(0);
@@ -54,7 +56,8 @@ describe('save v13: misiones diarias + evento de contenedor', () => {
     delete v12.eventsUsedCount;
     const result = validateSave(v12);
     expect(result.valid).toBe(true);
-    expect(result.data.saveVersion).toBe(13);
+    // AJUSTE (ronda 25): un v12 migra hasta el SAVE_VERSION actual (14), no se detiene en 13.
+    expect(result.data.saveVersion).toBe(SAVE_VERSION);
     expect(result.data.dailyMissions).toEqual([]);
     expect(result.data.missionsCompletedCount).toBe(0);
   });

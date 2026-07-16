@@ -148,5 +148,35 @@
     "desc": "El robot detecta trampas y descarta esos contenedores: +34% de probabilidad por nivel.",
     "effects": [{ "type": "trapDiscardChancePerNivel", "percentPerNivel": 0.34 }],
     "requires": ["instintoCarronero"]
+  },
+  {
+    "id": "codiciaEterna",
+    "name": "Codicia Eterna",
+    "icon": "bank-vault",
+    "costoBase": 20,
+    "factorCrecimiento": 2.0,
+    "desc": "+2% valor de venta global por nivel. Sin nivel máximo.",
+    "effects": [{ "type": "sellPercentGlobalPerNivel", "percentPerNivel": 0.02 }],
+    "requires": ["tasadorExperto"]
+  },
+  {
+    "id": "paladaEterna",
+    "name": "Pala Eterna",
+    "icon": "shovel-wide",
+    "costoBase": 15,
+    "factorCrecimiento": 1.9,
+    "desc": "+3% Fuerza de Escarbado permanente por nivel. Sin nivel máximo.",
+    "effects": [{ "type": "statPercentFinal", "stat": "digPower", "percentPerNivel": 0.03 }],
+    "requires": ["brazosDeAcero"]
+  },
+  {
+    "id": "imanDeSuerte",
+    "name": "Imán de Suerte",
+    "icon": "clover-glow",
+    "costoBase": 25,
+    "factorCrecimiento": 2.1,
+    "desc": "+1 Suerte permanente por nivel. Sin nivel máximo.",
+    "effects": [{ "type": "statFlatPerNivel", "stat": "luck", "flatPerNivel": 1 }],
+    "requires": ["suerteAncestral"]
   }
 ]

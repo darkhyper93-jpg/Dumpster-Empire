@@ -31,6 +31,8 @@ const DATA_FILES = {
   missions: './data/missions.json',
   dayNight: './data/dayNight.json',
   events: './data/events.json',
+  specializations: './data/specializations.json',
+  challenges: './data/challenges.json',
 };
 
 async function loadData() {
@@ -104,6 +106,12 @@ async function boot() {
     missions: loaded.missions,
     dayNight: loaded.dayNight,
     events: loaded.events,
+    // Ronda 25 (PLAN.md §4.31/§4.32): especializaciones y desafíos de prestigio profundo, ambos
+    // opcionales del lado del engine (mismo patrón que data.stall/data.streak) — sin ellos,
+    // getSellMult/getLuck/getDigPowerMult/getEffectiveTrapProbability/resolveMarketFluctuation
+    // no aplican ningún modificador ni recompensa.
+    specializations: loaded.specializations,
+    challenges: loaded.challenges,
   };
   const itemsData = loaded.items;
   const allContainers = loaded.containers;

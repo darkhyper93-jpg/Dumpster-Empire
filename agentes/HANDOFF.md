@@ -5948,3 +5948,131 @@ fixture de reloj simulado adicional: la ventana nocturna real ya cubrió el caso
 [ ] HANDOFF (este bloque) — a continuación
 [ ] Push de la rama + link de PR — a continuación (soy el único agente de la ronda 24)
 ```
+
+## Ronda 25 — Agente único: prestigio profundo (rama `feat/prestigio-ronda25`, save v14)
+
+### Qué hice
+
+Ronda completa (PLAN.md → engine → tests → UI → e2e) de una sola tacada, siguiendo
+ROADMAPv4.md §4.31-§4.33 y §25.1-§25.5.
+
+- **PLAN.md primero**: agregué §4.31 (especializaciones), §4.32 (desafíos), §4.33 (nodos
+  infinitos). AJUSTE de numeración (roadmap §3.6): el último § real de PLAN.md era §4.30
+  (Presets del umbral de captura, ronda 23.C) — la ronda 24 nunca llegó a escribir sus propias
+  secciones §4.30-§4.33 pese a que el roadmap y su HANDOFF las citan por ese número (parece un
+  gap de esa ronda, no lo toqué retroactivamente por no ser mi letra/sección). Usé §4.31/§4.32/
+  §4.33 reales para esta ronda; si una ronda futura necesita escribir las secciones que le faltan
+  a la 24, van a tener que insertarse en otro lado o renumerarse — dejo la nota para quien la
+  ejecute.
+- **Data**: `specializations.json` (3, con `categoriasBonus`/`bonusMult` 1.5/`penaltyMult` 0.85),
+  `challenges.json` (4, con `modifiers`/`goal`/`reward`), 3 nodos nuevos en `prestigeTree.json`
+  SIN `nivelMaximo` (`codiciaEterna`, `paladaEterna`, `imanDeSuerte` — este último con un effect
+  type NUEVO `statFlatPerNivel`, literal al roadmap "+1 Suerte/nivel" flat, no porcentaje como el
+  resto del árbol — ver AJUSTE en PLAN.md §4.33). 4 logros nuevos (`a52`-`a55`).
+- **Engine** (save v14): `specialization`/`activeChallenge` (string|null, excluyentes, allow-list
+  real sanitizada en `store.js` como `legendariesFound` — save.js solo valida tipo),
+  `challengesCompleted`/`specializationsUsed`/`totalKeysEarned` (histórico, nunca se resetea,
+  para la ronda 26). Migración v13→v14 backfillea `totalKeysEarned` con `prestigeKeys +
+  costoAcumulado(prestigeTreeLevels)` — necesita `prestigeTree.json` enhebrado en `migrate()`
+  igual que `itemNameToId` en v7 (`validateSave`/`deserializeState`/`importSave` ganaron un 4º
+  parámetro opcional `prestigeTreeData`; `store.js` pasa `data.prestigeTree`).
+  `economy.js`: `activeChallengeModifier`/`challengeEffectsOfType` (mirror de
+  `automationEffectsOfType`/`prestigeEffectsOfType`, pero sobre `reward` singular) y
+  `resolveMarketFluctuation` (compone §4.4 con el desafío `mercadoNegro`: fija o sube el piso).
+  `getSellMult`/`getLuck`/`getDigPowerMult`/`getEffectiveTrapProbability` ganaron los términos de
+  especialización/desafío. `systems/prestige.js`: `doPrestige(state, data, choice)` — evalúa el
+  goal del desafío SALIENTE (reusa `CONDITION_EVALUATORS`, nuevo tipo `always`) ANTES del reset,
+  aplica la elección para la PRÓXIMA run DESPUÉS del reset (R25.1). `systems/automation.js`:
+  `buyAutomation` gana un 3er parámetro `data` opcional para bloquear bajo `manosVacias`.
+  `nivelMaximo` opcional: grep completo (`buyPrestigeNode`, `PrestigeView.js`,
+  `fase9-balance.test.js`) — ninguno crashea, `level >= undefined` es siempre `false` (R25.2).
+- **Tests** (`ronda25-prestigio.test.js`, 32 casos): migración con/sin `prestigeTreeData`,
+  especializaciones en `getSellMult`, exclusión especialización/desafío, goal chequeado al
+  prestigiar (los 4 desafíos), recompensa única (no doble), modificadores activos (los 4),
+  nodos infinitos nunca topean y su costo sigue creciendo, `imanDeSuerte` flat vs. porcentaje.
+  2 tests viejos corregidos por el bump de SAVE_VERSION (`ronda24-retencion.test.js`, mismo
+  patrón que dejó la ronda 24 en `ronda23-puesto.test.js`: recontar desde el import, no un
+  literal roto por el bump).
+- **UI**: `PrestigeView.js` — "Hacer Prestigio" ahora abre un panel de elección (especialización
+  ×3 + "Sin especialización" + 4 desafíos, mutuamente excluyentes) en vez de prestigiar directo;
+  confirmar despacha `doPrestige(choice)`. Badge de especialización/desafío activo en el resumen.
+  Nodo infinito muestra "Nivel N (sin máximo)" en vez de "N/undefined". `AutomationView.js`:
+  botón de compra deshabilitado + tooltip bajo `manosVacias` activo. CSS nuevo en
+  `components.css` (`.prestige-choice-*`, reusa tokens existentes, cero color hardcodeado).
+  Todo copy nuevo en `es.js`/`en.js` con traducción real; `data-en.js`/`dataI18n.js` ganaron el
+  overlay de `specializations`/`challenges` (mismo shape `{name, desc}` que `prestigeTree`).
+- **e2e** (`ronda25-prestigio.spec.js`, 2 specs): prestigiar eligiendo Chatarrero y verificar el
+  `baseValue` capturado en el Puesto (leído del save en `localStorage`, no del precio ya
+  redondeado por `formatMoney` — ver hallazgo abajo); desafío `manosVacias` activo bloquea la
+  compra de máquinas con su tooltip exacto.
+
+### 🔴 Hallazgo real (arreglado antes de cerrar, con verificación manual de antes/después)
+
+**El panel de elección de especialización/desafío quedaba abierto en pantalla después de
+confirmar el prestigio**, mostrando el estado YA post-prestigio pero con los botones
+"Confirmar"/"Cancelar" todavía visibles (atrapado en la verificación manual con captura de
+pantalla en 375px, no por ningún test automatizado — ni Vitest ni los e2e lo notaban porque
+ninguno aserta que el panel se CIERRE, solo que el prestigio se aplicó). Causa: el click handler
+hacía `store.actions.doPrestige(selectedChoice)` y RECIÉN DESPUÉS reseteaba `choiceOpen = false`.
+`doPrestige` llama a `persist()`+`notify()` de forma SÍNCRONA dentro de la misma llamada — el
+`notify()` re-renderiza esta vista (vía `store.subscribe`) ANTES de que la línea siguiente del
+handler corriera, así que ese render intermedio todavía veía `choiceOpen = true` con el estado
+YA actualizado. Fix: resetear `choiceOpen`/`selectedChoice` ANTES de despachar la acción (una
+sola línea de reordenamiento). Verificado con un script de Playwright manual (antes/después,
+capturas de pantalla en 375px y 1440px) — no hay test automatizado nuevo para este caso puntual
+porque los 2 e2e existentes ya bastan para cubrir el flujo completo (si el panel quedara abierto,
+`select-choice`/`confirm-prestige` del test 2 fallarían al reusar los mismos data-action, pero no
+es una garantía tan directa como la inspección visual que lo atrapó). Dejo la nota para la
+ronda 26+: **cualquier acción que resetee estado LOCAL de una vista y despache al store en el
+mismo click debe resetear el estado local ANTES de la llamada al store**, nunca después — el
+store puede notificar sincrónicamente dentro de la misma llamada.
+
+### Riesgos que sí toqué (para la 26+)
+
+- `totalKeysEarned` es el contador que la ronda 26 necesita para "Escrituras" — ya persiste y
+  migra. Si la 26 cambia la fórmula de costo de nodos del árbol (`upgradeCost`), la migración
+  v13→v14 de saves VIEJOS que todavía no corrieron quedaría desincronizada con el nuevo costo;
+  no debería importar (el backfill es un estimado histórico de una sola vez, no se recalcula).
+- El desafío `manosVacias` solo bloquea `buyAutomation` — no impide que un jugador que YA tenía
+  máquinas antes de elegirlo las siga usando (a propósito, ver roadmap: "no se pueden comprar",
+  no "se desactivan"). Si una ronda futura quiere que también se desactiven, es una decisión de
+  diseño nueva, no un bug de esta ronda.
+- `data.specializations`/`data.challenges` son opcionales en el engine (mismo patrón que
+  `data.stall`/`data.streak`): cualquier test que construya `data` a mano sin ellos sigue
+  funcionando exactamente igual que antes de la ronda 25.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 509/509 verde (37 archivos; +32 tests nuevos de ronda25-prestigio.test.js,
+                     +2 tests corregidos en ronda24-retencion.test.js por el bump de SAVE_VERSION
+                     13→14, mismo patrón que dejó la ronda 24 en ronda23-puesto.test.js)
+npm run test:e2e  → 81/81 verde (79 previos + 2 nuevos de ronda25-prestigio.spec.js). Una corrida
+                     tuvo 1 fallo aislado en ronda15-contenido.spec.js #4 (Billonario Galáctico)
+                     que pasó solo al reproducirlo en aislamiento — flake preexistente de timing
+                     entre workers paralelos, no relacionado con esta ronda (confirmado: no toqué
+                     ese archivo ni sus dependencias).
+Manual 375px + desktop-1440 (Playwright temporal, borrado tras verificar — no comiteado): panel
+  de elección visible y operable en ambos anchos, badge de especialización activa correcto,
+  nodo infinito "Codicia Eterna (Nivel 0 (sin máximo))" se ve bien, CERO errores de consola en
+  ambos anchos, el hallazgo del panel-que-no-cerraba se verificó arreglado con captura antes/después.
+```
+
+### Estado del DoD (agente único, ronda 25)
+
+```
+[x] ROADMAPv4.md §4.31-§4.33/§25.1-§25.5 y PLAN.md §4.31-§4.33 implementados literalmente
+[x] Engine puro, sin DOM, con las fórmulas del roadmap
+[x] Tests de Vitest verdes para la lógica nueva (32 casos)
+[x] UI: lee estado y despacha acciones, no recalcula economía
+[x] Estados de UI: panel de elección con "Sin especialización" como default explícito; badge
+    activo; tooltip de bloqueo bajo manosVacias
+[x] Mobile-first respetado (verificado 375px + desktop-1440)
+[x] Save v14: migración + validación completa (specialization/activeChallenge excluyentes)
+[x] npm test → 509/509 verde
+[x] npm run test:e2e → 81/81 verde
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[ ] git commit — a continuación
+[ ] HANDOFF (este bloque) — a continuación
+[ ] Push de la rama + link de PR — a continuación (soy el único agente de la ronda 25)
+```

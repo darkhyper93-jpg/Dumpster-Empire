@@ -3,7 +3,7 @@
  * Cero DOM. Toda función es pura: recibe estado + data, devuelve un número.
  */
 
-import { categoryWeights } from './rng.js';
+import { categoryWeights, refreshMarketFluctuation } from './rng.js';
 import { freshState } from './state.js';
 import { getDayNightModifiers } from './dayNight.js';
 
@@ -134,6 +134,11 @@ export function trapProbability(probTrampaBaseDelContenedor, suerte) {
  *   constantes del Puesto de Chatarra (data/stall.json, ronda 23). Opcional: ver getStallCapacity/
  *   getStallUpgradeCost/getStallSalePrice — sin él, la captura nunca se activa (mismo patrón que
  *   data.streak/data.traps/data.tools).
+ * @property {Array<{id:string,categoriasBonus:string[],bonusMult:number,penaltyMult:number}>} [specializations]
+ *   especializaciones de prestigio (data/specializations.json, ronda 25). Opcional: ver getSellMult.
+ * @property {Array<{id:string,modifiers:Array<Object>,goal:Object,reward:Object}>} [challenges]
+ *   desafíos de prestigio (data/challenges.json, ronda 25). Opcional: ver activeChallengeModifier/
+ *   getSellMult/getLuck/getDigPowerMult/getEffectiveTrapProbability/resolveMarketFluctuation.
  */
 
 function upgradeDef(data, id) {
@@ -164,6 +169,52 @@ function automationEffectsOfType(data, type) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Desafíos de prestigio profundo (PLAN.md §4.32, ronda 25). `data.challenges` es opcional
+// (mismo patrón que data.streak/data.traps/data.tools/data.stall): sin él, ningún modificador
+// activo ni recompensa permanente aplica (comportamiento idéntico a antes de la ronda 25).
+// ---------------------------------------------------------------------------
+
+/**
+ * Definición del desafío activo en la run, o `null` si no hay ninguno / no hay data.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {Object|null}
+ */
+function activeChallengeDef(state, data) {
+  if (!state.activeChallenge || !data.challenges) return null;
+  return data.challenges.find((c) => c.id === state.activeChallenge) || null;
+}
+
+/**
+ * Modificador (activo SOLO durante la run en curso) del desafío tipo `type`, o `null`.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @param {string} type
+ * @returns {Object|null}
+ */
+export function activeChallengeModifier(state, data, type) {
+  const challenge = activeChallengeDef(state, data);
+  if (!challenge) return null;
+  return (challenge.modifiers || []).find((m) => m.type === type) || null;
+}
+
+/**
+ * Todos los desafíos de `data.challenges` cuya recompensa permanente es del `type` pedido —
+ * espejo de `automationEffectsOfType`/`prestigeEffectsOfType`, pero sobre `reward` en vez de
+ * `effects[]` (cada desafío tiene una sola recompensa, no una lista).
+ * @param {EngineData} data
+ * @param {string} type
+ * @returns {Array<{ challengeId: string, effect: Object }>}
+ */
+function challengeEffectsOfType(data, type) {
+  const out = [];
+  for (const challenge of data.challenges || []) {
+    if (challenge.reward && challenge.reward.type === type) out.push({ challengeId: challenge.id, effect: challenge.reward });
+  }
+  return out;
+}
+
 /**
  * Suerte total del jugador. Sube probabilidad de rareza y baja probabilidad de trampa.
  * @param {GameState} state
@@ -184,6 +235,12 @@ export function getLuck(state, data, hour = 12) {
   for (const { nodeId, effect } of prestigeEffectsOfType(data, 'statPercentFinal')) {
     if (effect.stat === 'luck') luck *= 1 + prestigeLevel(state, nodeId) * effect.percentPerNivel;
   }
+  // AJUSTE (ronda 25, PLAN.md §4.33): nodo infinito `imanDeSuerte` — flat por nivel, no
+  // porcentaje (a diferencia del resto del árbol), a propósito: un flat mantiene el bonus
+  // predecible en un nodo SIN nivel máximo (un percent compuesto infinito escalaría sin freno).
+  for (const { nodeId, effect } of prestigeEffectsOfType(data, 'statFlatPerNivel')) {
+    if (effect.stat === 'luck') luck += prestigeLevel(state, nodeId) * effect.flatPerNivel;
+  }
   // AJUSTE (ronda 19, PLAN.md §4.20): bonus plano de racha de escarbado manual sin trampa, en
   // tramos de `data.streak` (data/streak.json). `data.streak` es opcional: los tests/llamadores
   // anteriores a esta ronda construyen `data` sin él y siempre corren con `state.digStreak === 0`
@@ -196,6 +253,10 @@ export function getLuck(state, data, hour = 12) {
     luck += bonus;
   }
   luck += getDayNightModifiers(hour, data.dayNight).luckBonus;
+  // PLAN.md §4.32 (ronda 25): recompensa permanente del desafío `campoMinado`, una vez completado.
+  for (const { challengeId, effect } of challengeEffectsOfType(data, 'luckFlat')) {
+    if (state.challengesCompleted.includes(challengeId)) luck += effect.flat;
+  }
   return luck;
 }
 
@@ -218,6 +279,14 @@ export function getDigPowerMult(state, data) {
   for (const { nodeId, effect } of prestigeEffectsOfType(data, 'statPercentFinal')) {
     if (effect.stat === 'digPower') mult *= 1 + prestigeLevel(state, nodeId) * effect.percentPerNivel;
   }
+  // PLAN.md §4.32 (ronda 25): recompensa permanente del desafío `pulsoDebil`, una vez completado.
+  for (const { challengeId, effect } of challengeEffectsOfType(data, 'digPowerPercent')) {
+    if (state.challengesCompleted.includes(challengeId)) mult *= 1 + effect.percent;
+  }
+  // El modificador ACTIVO de `pulsoDebil` (Fuerza ×0.5 durante la run) es harsh a propósito —
+  // se aplica último, sobre el resultado ya compuesto de mejoras/automatización/árbol.
+  const activeMod = activeChallengeModifier(state, data, 'digPowerMultiplier');
+  if (activeMod) mult *= activeMod.mult;
   return mult;
 }
 
@@ -322,7 +391,57 @@ export function getSellMult(state, categoria, data) {
   for (const { nodeId, effect } of prestigeEffectsOfType(data, 'sellPercentGlobalPerNivel')) {
     mult *= 1 + prestigeLevel(state, nodeId) * effect.percentPerNivel;
   }
+  // PLAN.md §4.32 (ronda 25): recompensa permanente del desafío `manosVacias`, una vez completado.
+  for (const { challengeId, effect } of challengeEffectsOfType(data, 'sellPercentGlobal')) {
+    if (state.challengesCompleted.includes(challengeId)) mult *= 1 + effect.percent;
+  }
+  // PLAN.md §4.31 (ronda 25): especialización elegida al último prestigio — ×bonusMult en sus
+  // categorías, ×penaltyMult en el resto (nunca ambas a la vez para la misma categoría).
+  if (data.specializations && state.specialization) {
+    const spec = data.specializations.find((s) => s.id === state.specialization);
+    if (spec) mult *= spec.categoriasBonus.includes(categoria) ? spec.bonusMult : spec.penaltyMult;
+  }
   return mult;
+}
+
+/**
+ * Bonus permanente al piso de la fluctuación de mercado (0.85), otorgado por la recompensa del
+ * desafío `mercadoNegro` una vez completado (PLAN.md §4.32, ronda 25).
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getMarketFluctuationMinBonus(state, data) {
+  let bonus = 0;
+  for (const { challengeId, effect } of challengeEffectsOfType(data, 'marketFluctuationMinFlat')) {
+    if (state.challengesCompleted.includes(challengeId)) bonus += effect.flat;
+  }
+  return bonus;
+}
+
+/**
+ * Recalcula la fluctuación de mercado, componiendo §4.4 con el desafío de prestigio profundo
+ * (PLAN.md §4.32, ronda 25): si `mercadoNegro` está ACTIVO, la fluctuación queda fija (sin
+ * randomizar) en el valor que declara su modificador; si no, delega en `refreshMarketFluctuation`
+ * (rng.js) con el piso ya subido por cualquier recompensa `marketFluctuationMinFlat` completada.
+ * Único punto de entrada para todo llamador que necesite tocar `state.marketFluctuation`
+ * (rollContainerResult, sellInventoryItem, applyOfflineProgress).
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @param {number} now - epoch ms
+ * @param {() => number} [random]
+ * @returns {{ marketFluctuation: number, marketFluctuationAt: number }}
+ */
+export function resolveMarketFluctuation(state, data, now, random = Math.random) {
+  const fixedMod = activeChallengeModifier(state, data, 'fixedMarketFluctuation');
+  if (fixedMod) return { marketFluctuation: fixedMod.value, marketFluctuationAt: now };
+  return refreshMarketFluctuation(
+    state.marketFluctuation,
+    state.marketFluctuationAt,
+    now,
+    random,
+    getMarketFluctuationMinBonus(state, data)
+  );
 }
 
 /**
@@ -448,7 +567,13 @@ export function getEffectiveTrapProbability(state, container, isAuto, data, hour
     }
   }
   prob += getDayNightModifiers(hour, data.dayNight).trapProbBonus;
-  return Math.max(TRAP_PROBABILITY_FLOOR, prob);
+  let effective = Math.max(TRAP_PROBABILITY_FLOOR, prob);
+  // PLAN.md §4.32 (ronda 25): modificador ACTIVO del desafío `campoMinado` — se dobla la
+  // probabilidad ya calculada (post-fórmula §4.6) y se clampa a 0.95 (nunca 100%: el jugador
+  // siempre conserva alguna chance).
+  const trapMod = activeChallengeModifier(state, data, 'trapProbMultiplier');
+  if (trapMod) effective = Math.min(0.95, effective * trapMod.mult);
+  return effective;
 }
 
 /**

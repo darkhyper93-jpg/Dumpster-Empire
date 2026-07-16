@@ -76,6 +76,8 @@ export default {
   'automation.active': 'Activo',
   'automation.buyFor': 'Comprar por {amount}',
   'automation.expandCapacity': 'Ampliar Capacidad (nivel {level}) por {amount}',
+  // Ronda 25 (PLAN.md §4.32): desafío `manosVacias` activo bloquea toda compra de máquinas.
+  'automation.blockedByChallenge': 'El desafío activo no permite comprar máquinas.',
 
   // CelebrationModal.js
   'celebration.close': 'Cerrar',
@@ -120,6 +122,29 @@ export default {
   'prestige.doButton': 'Hacer Prestigio',
   // {amount} = PRESTIGE_MONEY_THRESHOLD del engine formateado (PrestigeView), nunca un número fijo acá.
   'prestige.needMoney': 'Necesitás {amount} ganados en total para prestigiar.',
+  'prestige.infinite': 'Nivel {level} (sin máximo)',
+  // Ronda 25 (PLAN.md §4.31/§4.32): elección de especialización/desafío al prestigiar.
+  'prestige.chooseTitle': 'Elegí para tu próxima run',
+  'prestige.specializationsHeading': 'Especializaciones',
+  'prestige.challengesHeading': 'Desafíos',
+  'prestige.noneOption': 'Sin especialización',
+  'prestige.noneOptionDesc': 'Sin bonus ni penalización de venta por categoría.',
+  'prestige.specializationBonus': '+50% en {categories}',
+  'prestige.specializationPenalty': '-15% en el resto',
+  'prestige.challengeGoal': 'Objetivo: {goal}',
+  'prestige.challengeGoalMoney': 'ganar {amount} en la run',
+  'prestige.challengeGoalPrestige': 'llegar a prestigiar',
+  'prestige.challengeReward': 'Recompensa permanente: {reward}',
+  'prestige.challengeCompleted': 'Completado',
+  'prestige.confirmButton': 'Confirmar Prestigio',
+  'prestige.cancelButton': 'Cancelar',
+  'prestige.activeSpecialization': 'Especialización activa: {name}',
+  'prestige.activeChallenge': 'Desafío activo: {name}',
+  'prestige.selected': 'Elegido',
+  'prestige.rewardSellPercent': '+{pct}% valor de venta global',
+  'prestige.rewardLuckFlat': '+{amount} Suerte',
+  'prestige.rewardDigPowerPercent': '+{pct}% Fuerza de Escarbado',
+  'prestige.rewardMarketFluctuationMinFlat': '+{amount} al piso de la cotización de mercado',
 
   // SettingsView.js
   'settings.on': 'Encendido',

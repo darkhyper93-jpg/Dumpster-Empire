@@ -1,0 +1,38 @@
+[
+  {
+    "id": "manosVacias",
+    "name": "Manos Vacías",
+    "icon": "hands-bare",
+    "desc": "Sin máquinas: no podés comprar ninguna automatización en esta run.",
+    "modifiers": [{ "type": "noAutomationPurchases" }],
+    "goal": { "type": "totalMoneyEarnedAtLeast", "value": 1000000000 },
+    "reward": { "type": "sellPercentGlobal", "percent": 0.05 }
+  },
+  {
+    "id": "campoMinado",
+    "name": "Campo Minado",
+    "icon": "bone-cracked",
+    "desc": "El doble de probabilidad de trampa en toda la run.",
+    "modifiers": [{ "type": "trapProbMultiplier", "mult": 2 }],
+    "goal": { "type": "always" },
+    "reward": { "type": "luckFlat", "flat": 1 }
+  },
+  {
+    "id": "pulsoDebil",
+    "name": "Pulso Débil",
+    "icon": "fist-dig",
+    "desc": "Fuerza de Escarbado a la mitad en toda la run.",
+    "modifiers": [{ "type": "digPowerMultiplier", "mult": 0.5 }],
+    "goal": { "type": "always" },
+    "reward": { "type": "digPowerPercent", "percent": 0.1 }
+  },
+  {
+    "id": "mercadoNegro",
+    "name": "Mercado Negro",
+    "icon": "auction-house",
+    "desc": "La cotización del día queda fija en 0.8 (mala) durante toda la run.",
+    "modifiers": [{ "type": "fixedMarketFluctuation", "value": 0.8 }],
+    "goal": { "type": "totalMoneyEarnedAtLeast", "value": 10000000000 },
+    "reward": { "type": "marketFluctuationMinFlat", "flat": 0.1 }
+  }
+]
