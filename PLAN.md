@@ -226,6 +226,20 @@ hitos de esta ronda: comprar el Puesto (`stallLevelAtLeast: 1`, Rita se presenta
 primer pedido (`ordersFulfilledAtLeast: 1`, Salomón festeja). Los hitos de Chispa/Zoraida/El
 Intendente se agregan en las rondas 24/26 que introducen sus sistemas.
 
+### 2.11 Mudanza de Galaxia y Escrituras (ronda 26)
+
+Segunda capa de prestigio, disponible desde `prestigeCount >= 10`. Mudarse resetea todo lo que
+resetea un prestigio normal (dinero, contenedores, mejoras, automatización) y ADEMÁS las Llaves
+de Ciudad y su árbol entero (`prestigeKeys`, `prestigeTreeLevels`, `prestigeCount` vuelve a 0,
+`specialization`/`activeChallenge` se limpian — un desafío activo se cancela SIN pagar su
+recompensa, no se evalúa su goal). El inventario del Puesto se liquida a venta instantánea al
+mudarse (nunca se pierde ni viaja a la próxima galaxia intacto: "sin arbitraje entre galaxias").
+NO se resetea: logros, colección/vitrina/sets, desafíos ya completados, herramientas, el Puesto y
+su nivel, `bestDigStreak` y todo contador histórico — y, sobre todo, las **Escrituras** y su
+propio árbol (`deeds`/`deedsTreeLevels`), que sobreviven CADA mudanza (ver 4.34-4.36). El
+Intendente presenta la mudanza con una viñeta de historia (reaparece con "otro cargo", running
+gag de `story.json`).
+
 ---
 
 ## 3. CONTRATO DE EXPERIENCIA — RITMO ESPERADO
@@ -590,6 +604,75 @@ automatización, PLAN.md §2.7, pero por NIVEL en vez de por posesión booleana)
 nivel"): no se aproxima a porcentaje solo porque el resto del árbol use `statPercentFinal` — el
 roadmap especificó flat a propósito (con `imanDeSuerte` sin tope, un flat mantiene el bonus
 predecible; un percent compuesto infinito explotaría la Suerte más rápido de lo diseñado).
+
+### 4.34 Mudanza de Galaxia (ronda 26)
+
+AJUSTE (roadmap §3.6): el numerado siguiente real de PLAN.md es §4.34 (ROADMAPv4.md la cita como
+§4.37 asumiendo una numeración de rondas intermedias que no llegó a escribir sus propias
+secciones — el contenido manda, no el número).
+
+Disponible con `state.prestigeCount >= 10`. Ejecutar la mudanza NO evalúa el goal del desafío
+activo (a diferencia de un prestigio normal): se cancela sin otorgar su recompensa. Tabla
+campo-por-campo de `GameState` (la fuente de verdad es el test RED "qué conserva / qué resetea",
+roadmap R26.1):
+
+**Reseteado (igual que `doPrestige`, PLAN.md §2.8/§4.3):** `money`/`totalMoneyEarned` (a
+`getPrestigeStartMoney` recalculado DESPUÉS de vaciar `prestigeTreeLevels`, por lo tanto 0 salvo
+que las Escrituras lo compensen a futuro), `upgradeLevels`, `ownedContainers`, `automationOwned`,
+`autoQueue`, `autoProcessing`, `autoTargetContainerId`.
+
+**Reseteado ADEMÁS (exclusivo de la mudanza, nunca de un prestigio normal):** `prestigeKeys` → 0,
+`prestigeTreeLevels` → `{}`, `specialization` → `null`, `activeChallenge` → `null` (cancelado sin
+recompensa), `prestigeCount` → 0, `totalKeysEarnedRun` → 0 (ya se usó para pagar Escrituras, ver
+4.35, antes de este reset), `inventory` → `[]` (liquidado: `stallSoldCount` suma la cantidad de
+ítems liquidados — el dinero resultante es intrascendente porque `money` se resetea en el mismo
+paso, pero el hallazgo cuenta como "vendido" para logros/misiones, nunca se pierde).
+`galaxyMoveCount` += 1.
+
+**NO reseteado:** `achievementsUnlocked`, `itemsFoundCount`/`itemsFoundByCategory`/
+`itemsFoundByItem` (colección/sets), `categoryFragments`, `trapsHit`/`trapsDiscarded`,
+`legendariesFound` (vitrina), `containerLevels`/`containerLevelProgress` (tampoco los toca un
+prestigio normal), `digStreak`/`bestDigStreak`, `equippedTool`/`toolsOwned`, `gravesHit`,
+`stallLevel`/`keepThreshold`/`stallOrders`/`ordersRotatedAt`/`stallVendorAt`/`stallSoldCount`/
+`ordersFulfilledCount` (el Puesto y su nivel), `storySeen`, `dailyMissions`/`missionsRolledAt`/
+`missionsCompletedCount`, `lastEventAt`/`eventsUsedCount`, `challengesCompleted`,
+`specializationsUsed`, `totalKeysEarned` (histórico), `deeds`/`deedsTreeLevels` (§4.36 — el
+punto entero de la segunda capa es que sobreviva).
+
+### 4.35 Escrituras (ronda 26)
+
+Moneda de la segunda capa de prestigio, ganada SOLO al mudarse (nunca al prestigiar normal):
+
+```
+escrituras = max(1, floor(sqrt(prestigeCount × totalKeysEarnedRun) / 5))
+```
+
+con `prestigeCount`/`totalKeysEarnedRun` tomados ANTES del reset de 4.34.
+`totalKeysEarnedRun` (save v15) es un contador que acumula las Llaves de Ciudad ganadas en
+`doPrestige` desde la ÚLTIMA mudanza (o desde el inicio de la partida si nunca se mudó) — mismo
+punto de acumulación que `totalKeysEarned` (histórico, nunca se resetea), pero éste sí vuelve a 0
+en cada mudanza. AJUSTE inicial (roadmap): la primera mudanza (~10 prestigios, ~200-400 Llaves
+acumuladas en esa ventana) paga ~9-12 Escrituras — `sqrt(10 × 300) / 5 ≈ 10.9` cae en rango.
+
+### 4.36 Árbol de Escrituras (ronda 26)
+
+`data/deedsTree.json`, 6 nodos, mismo mecanismo que el árbol de prestigio (`costoBase`/
+`factorCrecimiento`/`nivelMaximo`/`effects`/`requires`, `upgradeCost` de §4.1) pero pagado con
+`deeds` en vez de `prestigeKeys`, y en `state.deedsTreeLevels` en vez de `state.prestigeTreeLevels`
+— **nunca se resetea con una mudanza** (§4.34).
+
+| id | efecto | costoBase | factorCrecimiento | nivelMaximo |
+|---|---|---|---|---|
+| `ventajaGalactica` | +25% valor de venta global/nivel (`sellPercentGlobalPerNivel`, mismo effect type que `tasadorExperto`/`codiciaEterna`, aplicado sobre `state.deedsTreeLevels`) | 3 | 2.2 | 4 |
+| `memoriaDeCiudades` | +1 Llave de Ciudad por prestigio/nivel (`keysFlatPerNivel`, nuevo effect type: se suma a `prestigeKeysEarned(...)` dentro de `doPrestige`, ANTES de acumular a `totalKeysEarned`/`totalKeysEarnedRun`) | 2 | 2.0 | 3 |
+| `bolsilloCosmico` | +6 slots de inventario del Puesto/nivel (`stallCapacityFlatPerNivel`, se suma dentro de `getStallCapacity`) | 4 | 2.1 | 3 |
+| `agendaLlena` | +1 misión diaria/nivel (`extraDailyMissionSlotsPerNivel`; `rollThreeMissions`/`rerollDailyMissionsIfNeeded` pasan de "una por dificultad fija" a rellenar slots extra con más plantillas alcanzables de cualquier dificultad) | 5 | 2.3 | 2 |
+| `flotaFundadora` | +1 slot de robot de automatización/nivel (`parallelSlotsFlatPerNivel`, se suma dentro de `getParallelAutoSlots` — la ronda 27 construye la asignación real de robots sobre este slot) | 6 | 2.4 | 2 |
+| `ecoDelBigBang` | desbloquea los tiers procedurales post-Big Bang (flag booleano, sin efecto numérico — la ronda 26.B lo consume en `isContainerUnlocked`/la factory procedural) | 10 | 1 | 1 |
+
+`data.deedsTree` es opcional en `EngineData` (mismo patrón que `data.streak`/`data.stall`/
+`data.challenges`): sin él, ningún getter de arriba suma nada — comportamiento idéntico al de
+antes de la ronda 26.
 
 ---
 

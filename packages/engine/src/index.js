@@ -58,6 +58,9 @@ export {
   activeChallengeModifier,
   getMarketFluctuationMinBonus,
   resolveMarketFluctuation,
+  getDeedsKeysBonusFlat,
+  getExtraDailyMissionSlots,
+  hasProceduralContainersUnlocked,
 } from './economy.js';
 
 export { clampedElapsedMs, localDayStamp } from './time.js';
@@ -121,6 +124,12 @@ export {
   isPrestigeNodeUnlocked,
   buyPrestigeNode,
   doPrestige,
+  canGalaxyMove,
+  galaxyMoveDeedsPreview,
+  doGalaxyMove,
+  nextDeedsNodeCost,
+  isDeedsNodeUnlocked,
+  buyDeedsNode,
 } from './systems/prestige.js';
 
 export { checkAchievements } from './systems/achievements.js';

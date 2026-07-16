@@ -7,7 +7,7 @@
  */
 
 import { localDayStamp } from '../time.js';
-import { getTotalContainerDigs, getMissionRewardBaseValue } from '../economy.js';
+import { getTotalContainerDigs, getMissionRewardBaseValue, getExtraDailyMissionSlots } from '../economy.js';
 
 /** Allow-list de tipos de misión — save.js la reusa para validar un save/import (napkin #8). */
 export const MISSION_TYPES = [
@@ -134,15 +134,38 @@ function buildMission(state, tpl, cats, containerIds, rewardBaseValue, allContai
 }
 
 /**
- * Rollea las 3 misiones del día (una por dificultad), SOLO sobre plantillas alcanzables:
- * `requiresStall` exige `stallLevel >= 1`; `findCategoryCount`/`digContainerCount` exigen al
- * menos una categoría/contenedor poseído. Si ninguna plantilla de una dificultad es alcanzable
- * todavía (early game sin ningún contenedor comprado), esa dificultad se omite — el jugador
- * arranca con menos de 3 misiones hasta tener contenido; nunca se fabrica una misión imposible.
+ * Filtra las plantillas de `missionsData.types` alcanzables con el contenido poseído (mismos
+ * criterios de siempre: `requiresStall` exige `stallLevel >= 1`; `findCategoryCount`/
+ * `digContainerCount` exigen al menos una categoría/contenedor poseído), opcionalmente
+ * restringidas a una dificultad.
+ * @param {import('../state.js').GameState} state
+ * @param {Object} missionsData
+ * @param {string[]} cats
+ * @param {string[]} containerIds
+ * @param {string} [difficulty]
+ * @returns {Array<Object>}
+ */
+function reachableTemplates(state, missionsData, cats, containerIds, difficulty) {
+  return missionsData.types.filter((tpl) => {
+    if (difficulty && tpl.difficulty !== difficulty) return false;
+    if (tpl.requiresStall && state.stallLevel < 1) return false;
+    if (tpl.type === 'findCategoryCount' && !cats.length) return false;
+    if (tpl.type === 'digContainerCount' && !containerIds.length) return false;
+    return true;
+  });
+}
+
+/**
+ * Rollea las misiones del día: 3 base (una por dificultad) más los slots extra de `agendaLlena`
+ * (PLAN.md §4.36, ronda 26 — hasta 2 más, de cualquier dificultad alcanzable), SOLO sobre
+ * plantillas alcanzables (ver `reachableTemplates`). Si ninguna plantilla de una dificultad es
+ * alcanzable todavía (early game sin ningún contenedor comprado), esa dificultad se omite — el
+ * jugador arranca con menos de 3 misiones hasta tener contenido; nunca se fabrica una misión
+ * imposible.
  * @param {import('../state.js').GameState} state
  * @param {Array<Object>} allContainers
  * @param {{ containers: Object<string, Array<Object>> }} itemsData
- * @param {{ missions?: Object }} data
+ * @param {{ missions?: Object, deedsTree?: Array<Object> }} data
  * @param {() => number} [random]
  * @returns {import('../state.js').DailyMission[]}
  */
@@ -153,16 +176,20 @@ export function rollThreeMissions(state, allContainers, itemsData, data, random 
   const rewardBaseValue = getMissionRewardBaseValue(state, allContainers, itemsData);
   const missions = [];
   for (const difficulty of MISSION_DIFFICULTIES) {
-    const templates = missionsData.types.filter((tpl) => {
-      if (tpl.difficulty !== difficulty) return false;
-      if (tpl.requiresStall && state.stallLevel < 1) return false;
-      if (tpl.type === 'findCategoryCount' && !cats.length) return false;
-      if (tpl.type === 'digContainerCount' && !containerIds.length) return false;
-      return true;
-    });
+    const templates = reachableTemplates(state, missionsData, cats, containerIds, difficulty);
     if (!templates.length) continue;
     const tpl = templates[Math.floor(random() * templates.length)];
     missions.push(buildMission(state, tpl, cats, containerIds, rewardBaseValue, allContainers, missionsData, random));
+  }
+  // PLAN.md §4.36 (ronda 26): `agendaLlena` del árbol de Escrituras suma slots extra sobre las 3
+  // base, de cualquier dificultad alcanzable (puede repetir tipo/dificultad).
+  const extraSlots = getExtraDailyMissionSlots(state, data);
+  if (extraSlots > 0) {
+    const anyTemplates = reachableTemplates(state, missionsData, cats, containerIds);
+    for (let i = 0; i < extraSlots && anyTemplates.length; i++) {
+      const tpl = anyTemplates[Math.floor(random() * anyTemplates.length)];
+      missions.push(buildMission(state, tpl, cats, containerIds, rewardBaseValue, allContainers, missionsData, random));
+    }
   }
   return missions;
 }

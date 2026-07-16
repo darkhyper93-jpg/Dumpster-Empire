@@ -33,6 +33,7 @@ const DATA_FILES = {
   events: './data/events.json',
   specializations: './data/specializations.json',
   challenges: './data/challenges.json',
+  deedsTree: './data/deedsTree.json',
 };
 
 async function loadData() {

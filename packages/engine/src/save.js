@@ -17,6 +17,7 @@ const NUMERIC_MAP_FIELDS = [
   'containerLevelProgress',
   'prestigeTreeLevels',
   'itemsFoundByCategory',
+  'deedsTreeLevels',
 ];
 
 /** Mapa plano `id -> boolean` (compras de un solo uso). */
@@ -137,12 +138,15 @@ function isValidStallOrders(arr) {
 }
 
 /**
- * Valida `dailyMissions` (PLAN.md §4.30/§4.31, ronda 24): hasta 3 misiones activas del día.
+ * Valida `dailyMissions` (PLAN.md §4.30/§4.31, ronda 24): hasta 3 misiones activas del día, más
+ * hasta 2 slots extra del nodo `agendaLlena` del árbol de Escrituras (PLAN.md §4.36, ronda 26) —
+ * 5 en total como techo de seguridad (save.js es agnóstico de deedsTree.json, igual que del resto
+ * de la data de balance; la validación de cantidad exacta no le corresponde).
  * @param {unknown} arr
  * @returns {boolean}
  */
 function isValidDailyMissions(arr) {
-  if (!Array.isArray(arr) || arr.length > 3) return false;
+  if (!Array.isArray(arr) || arr.length > 5) return false;
   return arr.every(
     (m) =>
       isPlainObject(m) &&
@@ -276,6 +280,16 @@ function validateDeepContent(migrated) {
   if (!Number.isFinite(migrated.totalKeysEarned) || migrated.totalKeysEarned < 0) {
     return 'Contenido inválido en totalKeysEarned: debe ser un número >= 0.';
   }
+  // AJUSTE (ronda 26, PLAN.md §2.11/§4.34-§4.36): Mudanza de Galaxia y Escrituras.
+  if (!Number.isFinite(migrated.deeds) || migrated.deeds < 0) {
+    return 'Contenido inválido en deeds: debe ser un número >= 0.';
+  }
+  if (!Number.isInteger(migrated.galaxyMoveCount) || migrated.galaxyMoveCount < 0) {
+    return 'Contenido inválido en galaxyMoveCount: debe ser un entero >= 0.';
+  }
+  if (!Number.isFinite(migrated.totalKeysEarnedRun) || migrated.totalKeysEarnedRun < 0) {
+    return 'Contenido inválido en totalKeysEarnedRun: debe ser un número >= 0.';
+  }
   return null;
 }
 
@@ -350,6 +364,10 @@ const REQUIRED_FIELDS = {
   challengesCompleted: 'object',
   specializationsUsed: 'number',
   totalKeysEarned: 'number',
+  deeds: 'number',
+  deedsTreeLevels: 'object',
+  galaxyMoveCount: 'number',
+  totalKeysEarnedRun: 'number',
 };
 // autoTargetContainerId/specialization/activeChallenge NO van en REQUIRED_FIELDS: son unión
 // `string|null` y `typeof null === 'object'` rompería el chequeo de tipo; su validación de
@@ -556,6 +574,20 @@ function migrate(raw, itemNameToId, prestigeTreeData) {
       specializationsUsed: 0,
       totalKeysEarned: (Number.isFinite(migrated.prestigeKeys) ? migrated.prestigeKeys : 0) + investedCost,
       saveVersion: 14,
+    };
+  }
+  // v14 -> v15 (ronda 26, PLAN.md §2.11/§4.34-§4.36): Mudanza de Galaxia. Saves viejos arrancan
+  // sin Escrituras ni mudanzas (comportamiento actual sin cambios visibles) y
+  // `totalKeysEarnedRun` se backfillea con `totalKeysEarned` (el save nunca se mudó todavía, así
+  // que la "ventana desde la última mudanza" es toda la vida de la partida).
+  if (migrated.saveVersion < 15) {
+    migrated = {
+      ...migrated,
+      deeds: 0,
+      deedsTreeLevels: {},
+      galaxyMoveCount: 0,
+      totalKeysEarnedRun: Number.isFinite(migrated.totalKeysEarned) ? migrated.totalKeysEarned : 0,
+      saveVersion: 15,
     };
   }
   return migrated;

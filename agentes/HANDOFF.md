@@ -6076,3 +6076,140 @@ Manual 375px + desktop-1440 (Playwright temporal, borrado tras verificar — no 
 [ ] HANDOFF (este bloque) — a continuación
 [ ] Push de la rama + link de PR — a continuación (soy el único agente de la ronda 25)
 ```
+
+## Ronda 26 — Agente A: engine de la segunda capa de prestigio (rama `feat/lategame-ronda26`, save v15)
+
+### Qué hice (SOLO mi sección, 26.A — no avancé 26.B/C/D)
+
+Implementé ÚNICAMENTE el engine de la Mudanza de Galaxia y las Escrituras
+(ROADMAPv4.md §26.A, PLAN.md §2.11/§4.34-§4.36). No toqué UI, i18n de presentación, e2e ni
+logros nuevos — esos son 26.B (procedurales/sufijos), 26.C (UI+e2e) y 26.D (auditoría).
+
+- **PLAN.md primero**: agregué §2.11 (concepto de Mudanza de Galaxia) y §4.34/§4.35/§4.36
+  (tabla campo-por-campo de qué resetea/conserva, fórmula de Escrituras, árbol de Escrituras).
+  AJUSTE de numeración (roadmap §3.6): el último § real de PLAN.md era §4.33 (nodos infinitos,
+  ronda 25) — el roadmap cita esta ronda como §4.37/§4.38 asumiendo secciones intermedias que
+  la ronda 24 nunca llegó a escribir (mismo gap que dejó anotado la ronda 25); usé §4.34-§4.36
+  reales, con el mismo comentario AJUSTE que dejó la ronda 25 para la próxima.
+- **Data**: `apps/game/src/data/deedsTree.json` (6 nodos: `ventajaGalactica`, `memoriaDeCiudades`,
+  `bolsilloCosmico`, `agendaLlena`, `flotaFundadora`, `ecoDelBigBang` — TODOS con `nivelMaximo`
+  finito, a diferencia de los 3 nodos infinitos del árbol de prestigio de la ronda 25: el roadmap
+  no pidió ninguno infinito acá). Iconos: reusé aliases YA registrados en `icons.js`
+  (`dust-firststar`, `city-skyline`, `archive-multiverse`, `quest-board`, `drone-network`,
+  `echo-bigbang`) — cero íconos nuevos, no le tocaba a mi sección. Sumé `deedsTree` a
+  `DATA_FILES` de `main.js` (1 línea) para que fluya al bag `data` que ya recibe todo getter.
+- **Engine** (save v15): `state.js` — `deeds`/`deedsTreeLevels`/`galaxyMoveCount`/
+  `totalKeysEarnedRun`. `save.js` — REQUIRED_FIELDS/NUMERIC_MAP_FIELDS/validateDeepContent +
+  migración v14→v15 (`totalKeysEarnedRun` backfillea con `totalKeysEarned`, mismo criterio que
+  usó la ronda 25 para backfillear ese campo: "toda la vida de la partida" si nunca hubo mudanza
+  previa). También subí el techo de `isValidDailyMissions` de 3 a 5 (3 base + hasta 2 de
+  `agendaLlena`) — save.js sigue agnóstico del valor exacto de balance, solo el techo de
+  seguridad cambia.
+  `economy.js`: `deedsLevel`/`deedsEffectsOfType` (espejo de `prestigeEffectsOfType`, sobre
+  `state.deedsTreeLevels`), y 3 getters nuevos (`getDeedsKeysBonusFlat`,
+  `getExtraDailyMissionSlots`, `hasProceduralContainersUnlocked`) para que 26.B/27 los consuman.
+  Efectos wireados en getters YA existentes: `getSellMult` (+`sellPercentGlobalPerNivel` de
+  `ventajaGalactica`), `getStallCapacity` (+`stallCapacityFlatPerNivel` de `bolsilloCosmico`,
+  solo con `stallLevel >= 1`), `getParallelAutoSlots` (+`parallelSlotsFlatPerNivel` de
+  `flotaFundadora`). `data.deedsTree` es opcional (mismo patrón que `data.stall`/
+  `data.challenges`): sin él, cero efecto, comportamiento previo intacto.
+  `systems/prestige.js`: `doPrestige` ahora suma `getDeedsKeysBonusFlat` (memoriaDeCiudades)
+  a `keysEarned` ANTES de acumular a `totalKeysEarned`/`totalKeysEarnedRun` (campo nuevo, sube
+  en cada prestigio, la mudanza lo resetea). Funciones nuevas: `canGalaxyMove`/
+  `galaxyMoveDeedsPreview`/`doGalaxyMove` (Mudanza completa, ver tabla abajo) y
+  `nextDeedsNodeCost`/`isDeedsNodeUnlocked`/`buyDeedsNode` (mecanismo del árbol de Escrituras,
+  espejo exacto de `nextPrestigeNodeCost`/`isPrestigeNodeUnlocked`/`buyPrestigeNode`, pagado en
+  `deeds` en vez de `prestigeKeys`).
+  `systems/missions.js`: extraje `reachableTemplates()` (antes inline en `rollThreeMissions`) y
+  sumé el loop de slots extra de `agendaLlena` (`getExtraDailyMissionSlots`) DESPUÉS de las 3
+  misiones base — de cualquier dificultad alcanzable, puede repetir tipo. Sin `agendaLlena`
+  comprado, comportamiento idéntico a antes (0 slots extra).
+  `index.js`: exporté todo lo nuevo (`getDeedsKeysBonusFlat`, `getExtraDailyMissionSlots`,
+  `hasProceduralContainersUnlocked`, `canGalaxyMove`, `galaxyMoveDeedsPreview`, `doGalaxyMove`,
+  `nextDeedsNodeCost`, `isDeedsNodeUnlocked`, `buyDeedsNode`) para que 26.C los use desde la UI.
+
+### Tabla campo-por-campo de la Mudanza (R26.1, la trampa de este agente)
+
+Escribí el test RED primero (`ronda26-lategame.test.js`, describe "tabla campo-por-campo") con
+UN estado sembrado con basura en TODOS los campos relevantes, y aserté campo por campo qué
+resetea / qué no. La implementación de `doGalaxyMove` es deliberadamente explícita (sin loops
+genéricos "resetear todo excepto X") para que quede autodocumentada contra esa tabla. Verifiqué
+que el test realmente atrapa una regresión: comenté `state.prestigeCount = 0;` a mano, corrí
+la suite (1 test cae con el mensaje esperado), y revertí — no fue un ejercicio de fe, se vio
+caer con el motivo correcto antes de confirmar GREEN.
+
+Puntos no obvios que dejo documentados en el código:
+- El desafío activo se CANCELA sin evaluar su `goal` en la mudanza (a diferencia de un
+  prestigio normal, que si llama a `resolveActiveChallengeGoal`) — R26.D. Cubierto con un test
+  que planta `campoMinado` (goal `always`, se completaría instantáneo en un prestigio normal) y
+  verifica que NO entra a `challengesCompleted`.
+- El inventario del Puesto se liquida: se vacía y `stallSoldCount` suma la cantidad liquidada
+  (el dinero resultante es intrascendente porque `money` se pisa con `startMoney` en el mismo
+  paso — no hice el cálculo de venta real, sería trabajo sin efecto observable).
+- `getPrestigeStartMoney` se llama DESPUÉS de vaciar `prestigeTreeLevels` (mismo orden que ya
+  usaba `doPrestige`), así que tras una mudanza el dinero inicial es 0 salvo que las Escrituras
+  compensen a futuro (nodo nuevo que sume startMoney no existe todavía en `deedsTree.json` — el
+  roadmap no lo pidió).
+
+### Corrección a tests preexistentes por el bump de SAVE_VERSION (14→15)
+
+`ronda25-prestigio.test.js` tenía 2 asserts con el literal `14` hardcodeado
+(`expect(SAVE_VERSION).toBe(14)` y `expect(result.data.saveVersion).toBe(14)`) que rompían con
+el bump — mismo patrón que dejaron las rondas 24/25 en los tests de las rondas anteriores
+("recontar desde el import, no un literal roto por el bump"). Cambié el primero a
+`toBeGreaterThanOrEqual(14)` (el test verifica campos de la ronda 25, no la versión exacta) y el
+segundo a comparar contra `SAVE_VERSION` importado. Documenté el motivo en un comentario AJUSTE
+para que la ronda 27 no se sorprenda con el mismo patrón otra vez.
+
+### Riesgos que dejo para 26.B/C/D
+
+- `hasProceduralContainersUnlocked(state, data)` está expuesto pero NADIE lo consume todavía —
+  26.B lo cablea en `isContainerUnlocked`/la factory procedural (`bigbangPlus<n>`).
+  `getExtraDailyMissionSlots` y el wiring en `rollThreeMissions` SÍ están activos ya (no
+  necesitan a 26.B), pero como `agendaLlena` no es comprable sin UI del árbol de Escrituras,
+  en la práctica no se ve hasta que 26.C construya esa pantalla.
+- `getParallelAutoSlots` ahora incluye el bonus de `flotaFundadora`, pero HOY no hay ningún
+  sistema que "asigne" robots a esos slots extra más allá de lo que ya hacía automatización —
+  la ronda 27 ("Flota de robots asignables") es quien construye la asignación real; mientras
+  tanto el slot extra simplemente amplía `getParallelAutoSlots` sin UI que lo explique (aceptable:
+  el nodo tampoco es comprable sin la UI del árbol de Escrituras de 26.C).
+- `doGalaxyMove`/`buyDeedsNode` NO están cableados a ninguna acción de `store.js` todavía — le
+  toca a 26.C (mismo patrón que `doPrestige`/`buyPrestigeNode` en `PrestigeView.js`).
+- Logros de la mudanza ("primera mudanza / 3 mudanzas / Eco 5 comprado") son tarea de 26.C según
+  el roadmap — no los toqué (ni until `achievements.json` ni `CONDITION_EVALUATORS` nuevos como
+  `galaxyMoveCountAtLeast`, que 26.C va a necesitar agregar).
+- Copy en inglés de `deedsTree.json` (overlay `data-en.js`, patrón de `prestigeTree`/
+  `specializations`/`challenges`) tampoco lo agregué — es parte de la UI/i18n de presentación
+  que le toca a 26.C, y agregarlo sin la pantalla que lo consuma hubiera sido trabajo a ciegas.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 542/542 verde (38 archivos; +33 tests nuevos de ronda26-lategame.test.js,
+                     +ajuste de 2 asserts en ronda25-prestigio.test.js por el bump 14→15)
+npm run test:e2e  → 81/81 verde (sin cambios: esta sección no tocó UI, así que la suite
+                     existente corre exactamente igual — confirma el contrato §18, "el juego es
+                     EXACTAMENTE el de hoy" para todo lo que no compré/desbloqueé)
+```
+
+No hice verificación manual de UI a 375px/desktop: esta sección no agregó NINGUNA pantalla ni
+tocó ningún componente visual (el único archivo de `apps/game/src` que toqué es `main.js`, una
+línea para sumar `deedsTree` a `DATA_FILES`, sin efecto visible sin la UI de 26.C). El smoke
+test de Playwright (`smoke.spec.js`, corrido arriba) sí cubre los anchos de referencia y confirma
+que el boot no se rompió con el archivo nuevo.
+
+### Estado del DoD (agente A de 4, ronda 26)
+
+```
+[x] ROADMAPv4.md §26.A y PLAN.md §2.11/§4.34-§4.36 implementados literalmente
+[x] Engine puro, sin DOM
+[x] Tests de Vitest verdes para la lógica nueva (33 casos), con verificación RED real
+    (mutación deliberada + revert) en el caso más crítico (tabla de reseteo)
+[x] Save v15: migración + validación completa
+[x] npm test → 542/542 verde
+[x] npm run test:e2e → 81/81 verde (sin cambios, esta sección no tocó UI)
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit — a continuación
+[x] HANDOFF (este bloque)
+[ ] Push de la rama — NO me corresponde: soy el agente A de 4 (B/C/D siguen en esta misma rama)
+```
