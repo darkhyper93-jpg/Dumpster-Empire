@@ -674,6 +674,56 @@ acumuladas en esa ventana) paga ~9-12 Escrituras — `sqrt(10 × 300) / 5 ≈ 10
 `data.challenges`): sin él, ningún getter de arriba suma nada — comportamiento idéntico al de
 antes de la ronda 26.
 
+### 4.37 Contenedores procedurales post-Big Bang (ronda 26.B)
+
+AJUSTE (roadmap §3.6, mismo criterio que dejó anotado 26.A en §4.34): ROADMAPv4.md cita esta
+sección como §4.39; el numerado real siguiente de PLAN.md es §4.37.
+
+Con `ecoDelBigBang` comprado (§4.36), después de `vertederoBigBang` aparecen tiers infinitos
+`bigbangPlus1`, `bigbangPlus2`, … generados en runtime por una factory pura del engine
+(`proceduralContainer(n, baseContainer)`, `packages/engine/src/systems/containers.js`), **nunca
+escritos a `containers.json`**. El tier `n` se desbloquea con `ecoDelBigBang` comprado y, salvo
+`n=1`, con el tier `n-1` poseído (`isProceduralTierUnlocked`) — nunca por la cadena de
+`isContainerUnlocked` (los procedurales no están en `allContainers`).
+
+Fórmulas literales (coeficientes = el contrato, igual criterio que la fórmula de Escrituras de
+§4.35):
+
+```
+costoInicial(n)   = vertederoBigBang.costoInicial × 15^n
+resistencia(n)    = vertederoBigBang.resistencia × 1.32^n
+probTrampaBase(n) = min(0.5, 0.44 + 0.005 × n)
+valorMult(n)       = 13^n   (reusa mechanicValueMult, ronda 20, sobre el pool del Big Bang)
+```
+
+El pool de ítems es el MISMO que `vertederoBigBang` (`poolContainerId` en el contenedor
+sintético le indica a `rollContainerResult` de dónde leer `itemsData.containers`); el arte
+ilustrado de la ronda 29 reusa el mismo pool por la misma razón (contrato §3.5.7). El nombre en
+pantalla es `{nombre del Big Bang} (Eco {n})`, con `{n}` interpolado vía clave i18n
+(`container.proceduralSuffix`, es+en) — el contenedor sintético expone `name` (el del Big Bang,
+sin sufijo) y `proceduralN`; la ronda 26.C compone el string final al renderizar.
+
+**Tope duro**: `PROCEDURAL_CONTAINER_MAX_N = 25` (`packages/engine/src/procedural.js`). Con
+`costoInicial = 1e18` y ×15^n, `n=25` llega a ≈2.5e47 (sufijo `QaDc`, 1e45) y recién `n=26`
+cruza a `QiDc` (1e48, el sufijo más alto de `format.js`); el tope se fija en 25 para que ningún
+costo/valor visible se quede sin sufijo definido.
+
+**Ids de save**: `bigbangPlus<n>` entra a `ownedContainers`/`autoQueue`/`autoProcessing`/
+`autoTargetContainerId` de un jugador con tiers comprados. `isProceduralContainerId` (patrón
+`^bigbangPlus([1-9][0-9]?)$` + `n` dentro del tope) valida esos ids en `sanitizeContainerRefs`
+(`save.js`) además del `Set` de ids de `containers.json` — rechaza ids hostiles
+(`bigbangPlus999`, `bigbangPlus01`, `bigbangPlus1e2`, `bigbangPlus-1`) sin descartar los tiers
+legítimos de un save real.
+
+**Exclusión de colección/misiones/sets (contrato §3.5.6)**: los procedurales JAMÁS entran al
+array `allContainers` que arma `apps/game/src/main.js` desde `containers.json` — por eso quedan
+fuera, gratis, del % de completitud (`getCollectionCompletion`, ronda 19) y de los generadores de
+misión (`ownedContainerIds`/`rollThreeMissions`, ronda 24), que solo iteran `allContainers`. Sets
+(`isSetComplete`/`getSetBonus`, ronda 22) además chequean explícito `container.isProcedural` para
+no depender de que el pool inexistente en `items.json` resuelva a `[]`. Sus hallazgos SÍ suman
+`itemsFoundCount`/`itemsFoundByCategory` (logros generales los siguen contando) pero bajo la
+clave propia `itemsFoundByItem['bigbangPlus<n>']`, nunca mezclada con la de `vertederoBigBang`.
+
 ---
 
 ## 5. UI / UX

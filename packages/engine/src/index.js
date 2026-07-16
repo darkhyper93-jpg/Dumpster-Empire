@@ -92,7 +92,16 @@ export {
   buyContainer,
   rollContainerResult,
   applyContainerResult,
+  proceduralContainer,
+  isProceduralTierUnlocked,
 } from './systems/containers.js';
+
+export {
+  PROCEDURAL_CONTAINER_MAX_N,
+  isProceduralContainerId,
+  proceduralTierN,
+  proceduralContainerId,
+} from './procedural.js';
 
 export { nextUpgradeCost, buyUpgrade } from './systems/upgrades.js';
 

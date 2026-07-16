@@ -198,6 +198,9 @@ export default {
   'shop.stallBuyFor': 'Buy for {amount}',
   'shop.stallOwned': "You already have it — check the Stall tab.",
 
+  // Post-Big Bang procedural tiers (PLAN.md §4.37, round 26.B): name suffix, {n} = tier.
+  'shop.proceduralSuffix': ' (Echo {n})',
+
   // StallView.js (PLAN.md §2.9/§4.27-§4.30, ronda 23.C)
   'stall.lockedTeaser': 'Unlocked by buying the Junk Stall in the Shop.',
   'stall.quote': "Today's price: {arrow} {pct}%",

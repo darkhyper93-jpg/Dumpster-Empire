@@ -6213,3 +6213,136 @@ que el boot no se rompió con el archivo nuevo.
 [x] HANDOFF (este bloque)
 [ ] Push de la rama — NO me corresponde: soy el agente A de 4 (B/C/D siguen en esta misma rama)
 ```
+
+## Ronda 26 — Agente B: contenedores procedurales post-Big Bang + sufijos (rama `feat/lategame-ronda26`, save v15)
+
+### Qué hice (SOLO mi sección, 26.B — no avancé 26.C/D)
+
+Implementé el engine de los tiers procedurales post-Big Bang y la extensión de sufijos
+numéricos (ROADMAPv4.md §26.B, PLAN.md §4.37 nuevo). No toqué UI de Tienda/Prestigio, e2e, ni
+logros nuevos de mudanza — esos son 26.C; auditoría es 26.D.
+
+- **PLAN.md primero**: agregué §4.37 (fórmulas literales de costo/resistencia/probTrampa/
+  mechanicValueMult, tope duro `PROCEDURAL_CONTAINER_MAX_N=25` con la cuenta que lo justifica,
+  contrato de exclusión de colección/sets/misiones). AJUSTE de numeración (mismo criterio que
+  dejó anotado 26.A en §4.34): el roadmap cita esta sección como §4.39 asumiendo numeración
+  intermedia que nunca se escribió; usé §4.37 real.
+- **Módulo nuevo `packages/engine/src/procedural.js`** (hoja, sin dependencias, para que
+  `save.js` y `systems/containers.js` lo importen sin ciclo): `PROCEDURAL_CONTAINER_MAX_N=25`,
+  `isProceduralContainerId(id, maxN)` (patrón `^bigbangPlus([1-9][0-9]?)$` + tope — rechaza
+  `bigbangPlus999`/`bigbangPlus01`/`bigbangPlus1e2`/`bigbangPlus-1`/`bigbangPlus0`), `proceduralTierN(id)`,
+  `proceduralContainerId(n)`.
+- **Factory (`systems/containers.js`)**: `proceduralContainer(n, baseContainer)` — pura,
+  reconstruible desde `n` + `vertederoBigBang`, NUNCA se escribe a containers.json. Fórmulas
+  literales (mismo criterio que la escritura de Escrituras de 26.A: el número es el contrato,
+  no un valor tuneable de JSON): `costoInicial×15^n`, `resistencia×1.32^n`,
+  `probTrampaBase=min(0.5, 0.44+0.005n)`, y reusa `mechanicValueMult` (ronda 20) para el ×13^n
+  del pool de ítems (evita duplicar `itemSaleValue`). `poolContainerId: baseContainer.id` le
+  dice a `rollContainerResult` de dónde sacar el pool de `itemsData.containers` (los
+  procedurales no tienen pool propio en items.json — ronda 29 reusará el mismo mecanismo para
+  el arte ilustrado). `isProcedural: true` + `proceduralN: n` para que 26.C/otros sistemas lo
+  detecten. `name` queda en el nombre SIN sufijo (el del Big Bang) a propósito: el sufijo
+  "(Eco {n})" es i18n (`shop.proceduralSuffix`, es+en, agregado a es.js/en.js) — 26.C lo
+  compone con `t('shop.proceduralSuffix', {n})` al renderizar, el engine no hornea idioma.
+  `isProceduralTierUnlocked(state, n, data)`: requiere `hasProceduralContainersUnlocked`
+  (getter de 26.A sobre `ecoDelBigBang`) Y, salvo `n=1`, poseer el tier `n-1` — nunca pasa por
+  la cadena de `isContainerUnlocked` (los procedurales no están en `allContainers`).
+- **`rollContainerResult`**: único cambio de comportamiento sobre contenedores REALES es cero —
+  `containerPool = itemsData.containers[container.poolContainerId || container.id]`, y ningún
+  contenedor de containers.json declara `poolContainerId`, así que el fallback nunca se activa
+  para ellos (mismo patrón "opcional, sin efecto si no está" de toda la ronda).
+- **Exclusión de colección/sets/misiones (contrato §3.5.6), gratis por diseño**: confirmé que
+  `getCollectionCompletion` (ronda 19), `isSetComplete`/`getSetBonus` (ronda 22, `CONDITION_EVALUATORS.setsCompletedAtLeast`)
+  y `rollThreeMissions`/`ownedContainerIds` (ronda 24) reciben `allContainers` como PARÁMETRO en
+  toda la cadena — como los procedurales nunca se agregan a ese array (construido en
+  `apps/game/src/main.js` desde containers.json), quedan afuera sin tocar esas funciones. Sí
+  agregué un guard EXPLÍCITO `if (container.isProcedural) return false;` al inicio de
+  `isSetComplete` (economy.js) para no depender implícitamente de que el pool inexistente en
+  items.json resuelva a `[]` — más robusto y autodocumentado contra el contrato. Sus hallazgos
+  SÍ suman `itemsFoundCount`/`itemsFoundByCategory` (logros generales los siguen contando) bajo
+  la clave propia `itemsFoundByItem['bigbangPlus<n>']`, nunca mezclada con `vertederoBigBang`
+  (test explícito).
+- **`format.js`**: extendí `SUFFIXES` de `[Qa,T,B,M,K]` a la tabla completa `K M B T Qa Qi Sx Sp
+  Oc No Dc UDc DDc TDc QaDc QiDc` (1e3..1e48, escala corta). El tope de 25 en
+  `PROCEDURAL_CONTAINER_MAX_N` se eligió justo para que ningún costo/valor procedural necesite
+  un sufijo por encima de `QiDc` — documentado con la cuenta exacta en `procedural.js` y en
+  PLAN.md §4.37.
+- **`save.js`**: `sanitizeContainerRefs` ahora acepta `id` válido si está en el `Set` de
+  containers.json O si `isProceduralContainerId(id)` — sin este OR, un jugador legítimo con
+  tiers procedurales en `autoQueue`/`autoProcessing`/`autoTargetContainerId` los perdía en cada
+  recarga (falso positivo de "referencia huérfana"), y sin el chequeo de patrón+tope un save
+  manipulado con `bigbangPlus999` pasaría. Documentado el motivo inline.
+- **`index.js`**: exporté `proceduralContainer`, `isProceduralTierUnlocked` (de containers.js) y
+  `PROCEDURAL_CONTAINER_MAX_N`/`isProceduralContainerId`/`proceduralTierN`/`proceduralContainerId`
+  (de procedural.js nuevo) para que 26.C los consuma desde la UI.
+- **i18n**: `shop.proceduralSuffix` en es.js (`' (Eco {n})'`) y en.js (`' (Echo {n})'`) — clave
+  lista, sin wiring de UI todavía (26.C la usa al renderizar Tienda).
+
+### Tests (RED primero, `packages/engine/tests/ronda26b-procedural.test.js`, 17 casos)
+
+Escribí el archivo completo de tests ANTES de correr contra la implementación final: los primeros
+intentos con `random = () => 0.01` cayeron en trampa (probTrampaBase 0.445 del tier 1 > 0.01) y
+mostraron el mensaje esperado del roll — recién ahí ajusté el random determinístico a 0.99 y
+agregué `prestigeTree` a la data de prueba (faltaba, tiraba `data.prestigeTree is not iterable`
+dentro de `getLuck`). Cobertura: bordes de cada sufijo nuevo + "nunca e+" en un costo procedural
+extremo; validación de ids (válidos 1-25, hostiles 999/01/1e2/-1/0/vacío); factory (escalas
+exactas, tope de probTrampaBase, nunca en containers.json); `isProceduralTierUnlocked` (bloqueado
+sin `ecoDelBigBang`, cadena tier-a-tier, tope duro); `rollContainerResult`/`applyContainerResult`
+sobre un tier (pool del Big Bang, clave de colección propia); contrato de exclusión
+(`isSetComplete`/`getSetBonus`, `getCollectionCompletion` sin cambios, `rollThreeMissions` nunca
+elige un id procedural); `sanitizeContainerRefs` (conserva legítimos, descarta los 4 hostiles del
+roadmap en autoQueue+autoProcessing+autoTargetContainerId).
+
+### Riesgos que dejo para 26.C/27 (sin tocar, no me correspondía)
+
+- Nada wireado a UI: `proceduralContainer`/`isProceduralTierUnlocked` no los llama nadie todavía
+  (ni ShopView ni AutomationView). 26.C construye la Tienda del tier siguiente y compone el
+  nombre con `t('shop.proceduralSuffix', {n})`.
+- R26.3 (roadmap, "el Auto del robot debe considerar los tiers generados") sigue abierto — a
+  propósito NO inyecté contenedores procedurales al array `allContainers` que alimenta
+  `bestAffordableUnlockedContainer`/`getQueueMax` (economy.js:1114/1150) porque ESE MISMO array
+  también alimenta INDEX/sets/misiones (contrato §3.5.6): mezclarlos ahí rompería la exclusión.
+  26.C necesita una vía separada (no `allContainers`) para que "Auto" contemple los tiers.
+- `AutomationView.js` (selector manual de target) tampoco ofrece tiers procedurales como opción
+  — mismo motivo, no hardcodeado a `allContainers`, tarea de 26.C si el roadmap lo pide.
+- Logros de mudanza ("primera mudanza/3 mudanzas/Eco 5 comprado") son 26.C, no los toqué.
+- `data-en.js` (paridad de nombres) no necesita entrada para `bigbangPlus<n>` — los procedurales
+  nunca están en containers.json, así que el test de paridad de la ronda 16 no los ve (confirmado
+  corriendo `apps/game/tests/ronda16-i18n.test.js`, sigue verde sin cambios).
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 559/559 verde (39 archivos; +17 tests nuevos de ronda26b-procedural.test.js
+                     sobre los 542 que dejó 26.A)
+npm run test:e2e   → 81/81 verde con `npx playwright test --workers=1` (serial). Con el default
+                     de workers en paralelo salió flaky en ESTA corrida (un test distinto y no
+                     relacionado cayó cada vez: ronda15-contenido, después ronda24-retencion,
+                     después ronda19-quickwins — ninguno toca contenedores/sufijos/save). Repetí
+                     el mismo test 3 veces en aislamiento (`--repeat-each=3`) y pasó las 3 —
+                     confirmé además contra el commit de 26.A ANTES de mis cambios (git stash)
+                     que la corrida en paralelo también puede fallar ahí. Es flakiness de
+                     contención de recursos del entorno, preexistente, no introducida por esta
+                     sección — recomiendo a 26.C/D correr con `--workers=1` si ven un fallo
+                     aislado no relacionado a su diff.
+```
+
+Manual 375px/desktop: esta sección no tocó NINGÚN archivo de `apps/game/src/ui` ni CSS —
+`smoke.spec.js` (dentro de la corrida serial verde) cubre los 3 anchos de referencia y confirma
+que el boot no se rompió. Sin UI nueva que verificar a mano (contrato §18: "el juego es
+EXACTAMENTE el de hoy" para todo lo que la UI de 26.C todavía no expone).
+
+### Estado del DoD (agente B de 4, ronda 26)
+
+```
+[x] ROADMAPv4.md §26.B y PLAN.md §4.37 implementados literalmente
+[x] Engine puro, sin DOM
+[x] Tests de Vitest verdes para la lógica nueva (17 casos)
+[x] Save v15 sin cambios de esquema (26.B no agrega campos persistidos)
+[x] npm test → 559/559 verde
+[x] npm run test:e2e → 81/81 verde (serial, --workers=1; ver nota de flakiness paralela arriba)
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit — a continuación
+[x] HANDOFF (este bloque)
+[ ] Push de la rama — NO me corresponde: soy el agente B de 4 (C/D siguen en esta misma rama)
+```

@@ -761,6 +761,9 @@ export function getLevelValueMult(state, container) {
  * @returns {boolean}
  */
 export function isSetComplete(state, container, itemsData) {
+  // Ronda 26.B (contrato §3.5.6): los tiers procedurales post-Big Bang NUNCA forman sets —
+  // explícito acá para no depender de que su id, sin pool propio en items.json, resuelva a [].
+  if (container.isProcedural) return false;
   const pool = itemsData.containers[container.id] || [];
   if (!pool.length) return false;
   const found = state.itemsFoundByItem[container.id] || {};

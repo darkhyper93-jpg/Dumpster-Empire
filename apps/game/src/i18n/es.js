@@ -200,6 +200,9 @@ export default {
   'shop.stallBuyFor': 'Comprar por {amount}',
   'shop.stallOwned': 'Ya lo tenés — andá a la pestaña Puesto.',
 
+  // Tiers procedurales post-Big Bang (PLAN.md §4.37, ronda 26.B): sufijo del nombre, {n} = tier.
+  'shop.proceduralSuffix': ' (Eco {n})',
+
   // StallView.js (PLAN.md §2.9/§4.27-§4.30, ronda 23.C)
   'stall.lockedTeaser': 'Se desbloquea comprando el Puesto de Chatarra en la Tienda.',
   'stall.quote': 'Cotización del día: {arrow} {pct}%',

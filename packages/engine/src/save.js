@@ -5,6 +5,7 @@
 
 import { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, INVENTORY_MAX_SAFETY, freshState } from './state.js';
 import { MISSION_TYPES, MISSION_DIFFICULTIES } from './systems/missions.js';
+import { isProceduralContainerId } from './procedural.js';
 
 /** Idiomas soportados por el módulo i18n (apps/game/src/i18n). Fuente de verdad del allow-list. */
 export const SUPPORTED_LANGUAGES = ['es', 'en'];
@@ -302,9 +303,16 @@ function validateDeepContent(migrated) {
  * @param {Set<string>} validIds - ids de contenedores que existen en la data actual
  */
 function sanitizeContainerRefs(migrated, validIds) {
-  migrated.autoQueue = migrated.autoQueue.filter((id) => validIds.has(id));
-  migrated.autoProcessing = migrated.autoProcessing.filter((slot) => validIds.has(slot.containerId));
-  if (migrated.autoTargetContainerId !== null && !validIds.has(migrated.autoTargetContainerId)) {
+  // Ronda 26.B: los tiers procedurales post-Big Bang (`bigbangPlus<n>`) nunca están en
+  // containers.json, así que jamás entran a `validIds` — sin este OR, un jugador legítimo que
+  // los tenga en autoQueue/autoProcessing los perdería en cada recarga (falso positivo de
+  // "referencia huérfana"). `isProceduralContainerId` valida patrón Y tope de n, así que un id
+  // hostil (`bigbangPlus999`, `bigbangPlus01`, `bigbangPlus1e2`, `bigbangPlus-1`) se sigue
+  // filtrando igual que cualquier otro id inexistente.
+  const isValidRef = (id) => validIds.has(id) || isProceduralContainerId(id);
+  migrated.autoQueue = migrated.autoQueue.filter(isValidRef);
+  migrated.autoProcessing = migrated.autoProcessing.filter((slot) => isValidRef(slot.containerId));
+  if (migrated.autoTargetContainerId !== null && !isValidRef(migrated.autoTargetContainerId)) {
     migrated.autoTargetContainerId = null;
   }
 }
