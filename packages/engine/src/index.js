@@ -55,6 +55,9 @@ export {
   getStallThresholdPresets,
   getTotalContainerDigs,
   getMissionRewardBaseValue,
+  activeChallengeModifier,
+  getMarketFluctuationMinBonus,
+  resolveMarketFluctuation,
 } from './economy.js';
 
 export { clampedElapsedMs, localDayStamp } from './time.js';

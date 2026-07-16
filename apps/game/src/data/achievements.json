@@ -48,5 +48,9 @@
   { "id": "a48", "name": "Puesto de Primera", "icon": "stall-chatarra", "cond": { "type": "stallLevelAtLeast", "value": 5 }, "reward": { "type": "keys", "amount": 6 } },
   { "id": "a49", "name": "Cumplidor", "icon": "quest-board", "cond": { "type": "missionsCompletedAtLeast", "value": 10 }, "reward": { "type": "money", "amount": 5000 } },
   { "id": "a50", "name": "Chispa Está Orgulloso", "icon": "quest-board", "hidden": true, "cond": { "type": "missionsCompletedAtLeast", "value": 50 }, "reward": { "type": "keys", "amount": 4 } },
-  { "id": "a51", "name": "En el Momento Justo", "icon": "event-spark", "cond": { "type": "eventsUsedAtLeast", "value": 1 }, "reward": { "type": "money", "amount": 2000 } }
+  { "id": "a51", "name": "En el Momento Justo", "icon": "event-spark", "cond": { "type": "eventsUsedAtLeast", "value": 1 }, "reward": { "type": "money", "amount": 2000 } },
+  { "id": "a52", "name": "Primer Desafío", "icon": "bone-cracked", "cond": { "type": "challengesCompletedAtLeast", "value": 1 }, "reward": { "type": "money", "amount": 5000 } },
+  { "id": "a53", "name": "Maestro de Desafíos", "icon": "bone-cracked", "hidden": true, "cond": { "type": "challengesCompletedAtLeast", "value": 4 }, "reward": { "type": "keys", "amount": 8 } },
+  { "id": "a54", "name": "Apuesta Infinita", "icon": "bank-vault", "cond": { "type": "anyPrestigeNodeLevelAtLeast", "nodeIds": ["codiciaEterna", "paladaEterna", "imanDeSuerte"], "value": 10 }, "reward": { "type": "keys", "amount": 6 } },
+  { "id": "a55", "name": "Especialista", "icon": "archive-box", "cond": { "type": "specializationsUsedAtLeast", "value": 5 }, "reward": { "type": "money", "amount": 10000 } }
 ]

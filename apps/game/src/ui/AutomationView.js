@@ -15,6 +15,7 @@ import {
   hasAutoDig,
   isContainerUnlocked,
   getContainerCost,
+  activeChallengeModifier,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { upgradeEffectLabel } from './upgradeEffect.js';
@@ -102,15 +103,27 @@ export const AutomationView = {
       })
       .join('');
 
+    // Ronda 25 (PLAN.md §4.32): desafío `manosVacias` activo bloquea toda compra de máquinas
+    // nuevas (las ya compradas antes de elegirlo siguen activas — el modificador solo afecta
+    // `buyAutomation`, nunca desactiva lo ya poseído).
+    const blockedByChallenge = Boolean(activeChallengeModifier(state, data, 'noAutomationPurchases'));
+
     const automationCards = data.automations
       .map((a) => {
         const owned = Boolean(state.automationOwned[a.id]);
         const canAfford = state.money >= a.cost;
+        const disabled = !canAfford || blockedByChallenge;
+        const reason = blockedByChallenge
+          ? t('automation.blockedByChallenge')
+          : canAfford
+          ? ''
+          : t('common.missingMoney', { amount: formatMoney(a.cost - state.money) });
         const button = owned
           ? `<span class="badge">${t('automation.active')}</span>`
-          : `<button type="button" data-action="buy-automation" data-id="${a.id}" ${canAfford ? '' : 'disabled'} title="${
-              canAfford ? '' : t('common.missingMoney', { amount: formatMoney(a.cost - state.money) })
-            }">${t('automation.buyFor', { amount: formatMoney(a.cost) })}</button>`;
+          : `<button type="button" data-action="buy-automation" data-id="${a.id}" ${disabled ? 'disabled' : ''} title="${reason}">${t(
+              'automation.buyFor',
+              { amount: formatMoney(a.cost) }
+            )}</button>`;
         return (
           `<article class="automation-card ${owned ? 'automation-card--owned' : ''}">` +
           `<span class="automation-card-icon">${iconMarkup(a.icon, { size: 28 })}</span>` +

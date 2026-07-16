@@ -104,11 +104,15 @@ export function rollLegendary(legendaryChance, random = Math.random) {
  * @param {number} marketFluctuationAt
  * @param {number} now - epoch ms
  * @param {() => number} [random]
+ * @param {number} [minBonus] - PLAN.md §4.32 (ronda 25): recompensa permanente del desafío
+ *   `mercadoNegro` (`marketFluctuationMinFlat`) sube el piso 0.85 sin tocar el techo 1.20.
+ *   Default 0: comportamiento idéntico a antes de la ronda 25.
  * @returns {{ marketFluctuation: number, marketFluctuationAt: number }}
  */
-export function refreshMarketFluctuation(marketFluctuation, marketFluctuationAt, now, random = Math.random) {
+export function refreshMarketFluctuation(marketFluctuation, marketFluctuationAt, now, random = Math.random, minBonus = 0) {
   if (now - marketFluctuationAt <= 60000) {
     return { marketFluctuation, marketFluctuationAt };
   }
-  return { marketFluctuation: 0.85 + random() * 0.35, marketFluctuationAt: now };
+  const min = 0.85 + minBonus;
+  return { marketFluctuation: min + random() * 0.35, marketFluctuationAt: now };
 }

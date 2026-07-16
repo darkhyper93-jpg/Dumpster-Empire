@@ -23,7 +23,13 @@ const NUMERIC_MAP_FIELDS = [
 const BOOLEAN_MAP_FIELDS = ['automationOwned', 'toolsOwned'];
 
 /** Arrays cuyos elementos deben ser strings (ids, no texto libre). */
-const STRING_ARRAY_FIELDS = ['achievementsUnlocked', 'autoQueue', 'legendariesFound', 'storySeen'];
+const STRING_ARRAY_FIELDS = [
+  'achievementsUnlocked',
+  'autoQueue',
+  'legendariesFound',
+  'storySeen',
+  'challengesCompleted',
+];
 
 /**
  * Valida que todo valor propio de `obj` sea un número finito.
@@ -251,6 +257,25 @@ function validateDeepContent(migrated) {
   if (!Number.isInteger(migrated.eventsUsedCount) || migrated.eventsUsedCount < 0) {
     return 'Contenido inválido en eventsUsedCount: debe ser un entero >= 0.';
   }
+  // AJUSTE (ronda 25, PLAN.md §4.31/§4.32): specialization/activeChallenge son unión
+  // string|null, mismo patrón que autoTargetContainerId — save.js es agnóstico de
+  // specializations.json/challenges.json (esa allow-list real la aplica store.js al cargar,
+  // igual que sanitizeLegendariesFound/sanitizeContainerRefs); acá solo se valida el tipo.
+  if (migrated.specialization !== null && typeof migrated.specialization !== 'string') {
+    return 'Contenido inválido en specialization: debe ser null o un string.';
+  }
+  if (migrated.activeChallenge !== null && typeof migrated.activeChallenge !== 'string') {
+    return 'Contenido inválido en activeChallenge: debe ser null o un string.';
+  }
+  if (migrated.specialization !== null && migrated.activeChallenge !== null) {
+    return 'Contenido inválido: specialization y activeChallenge son excluyentes por run.';
+  }
+  if (!Number.isInteger(migrated.specializationsUsed) || migrated.specializationsUsed < 0) {
+    return 'Contenido inválido en specializationsUsed: debe ser un entero >= 0.';
+  }
+  if (!Number.isFinite(migrated.totalKeysEarned) || migrated.totalKeysEarned < 0) {
+    return 'Contenido inválido en totalKeysEarned: debe ser un número >= 0.';
+  }
   return null;
 }
 
@@ -322,9 +347,13 @@ const REQUIRED_FIELDS = {
   missionsCompletedCount: 'number',
   lastEventAt: 'number',
   eventsUsedCount: 'number',
+  challengesCompleted: 'object',
+  specializationsUsed: 'number',
+  totalKeysEarned: 'number',
 };
-// autoTargetContainerId NO va en REQUIRED_FIELDS: es unión `string|null` y `typeof null === 'object'`
-// rompería el chequeo de tipo; su validación de contenido vive en validateDeepContent().
+// autoTargetContainerId/specialization/activeChallenge NO van en REQUIRED_FIELDS: son unión
+// `string|null` y `typeof null === 'object'` rompería el chequeo de tipo; su validación de
+// contenido vive en validateDeepContent().
 
 /**
  * Migra un objeto de guardado de una versión anterior a la actual. v1 es la primera versión,
@@ -333,9 +362,12 @@ const REQUIRED_FIELDS = {
  * @param {Object<string, Object<string, string>>} [itemNameToId] - mapa `containerId -> { nombreEspañol -> id }`
  *   usado por la migración v6->v7 para remapear las claves de `itemsFoundByItem`. Si se omite,
  *   las claves quedan tal cual (compat: saves ya en v7 no lo necesitan).
+ * @param {Array<Object>} [prestigeTreeData] - definición de `prestigeTree.json`, usada SOLO por
+ *   la migración v13->v14 para backfillear `totalKeysEarned` (necesita `costoBase`/
+ *   `factorCrecimiento` de cada nodo ya comprado). Se enhebra igual que `itemNameToId` en v7.
  * @returns {Object}
  */
-function migrate(raw, itemNameToId) {
+function migrate(raw, itemNameToId, prestigeTreeData) {
   let migrated = raw;
   if (migrated.saveVersion < 1) {
     migrated = { ...freshState(), ...migrated, saveVersion: 1 };
@@ -497,6 +529,35 @@ function migrate(raw, itemNameToId) {
       saveVersion: 13,
     };
   }
+  // v13 -> v14 (ronda 25, PLAN.md §4.31-§4.33): prestigio profundo. Saves viejos arrancan sin
+  // especialización/desafío activo (comportamiento actual sin cambios visibles) y
+  // `totalKeysEarned` se backfillea con `prestigeKeys` (lo que le queda sin gastar) más el costo
+  // en Llaves ya invertido en `prestigeTreeLevels` (lo que gastó históricamente) — el mejor
+  // estimado posible de lo ganado alguna vez a partir de lo que el save YA tiene. Si
+  // `prestigeTreeData` no se pasa (compat: llamador previo a esta ronda), el costo invertido
+  // backfillea en 0 — subestima levemente pero nunca sobreestima ni crashea.
+  if (migrated.saveVersion < 14) {
+    const levels = isPlainObject(migrated.prestigeTreeLevels) ? migrated.prestigeTreeLevels : {};
+    let investedCost = 0;
+    if (Array.isArray(prestigeTreeData)) {
+      for (const [nodeId, level] of Object.entries(levels)) {
+        const node = prestigeTreeData.find((n) => n.id === nodeId);
+        if (!node || !Number.isFinite(level)) continue;
+        for (let lvl = 0; lvl < level; lvl++) {
+          investedCost += Math.ceil(node.costoBase * Math.pow(node.factorCrecimiento, lvl));
+        }
+      }
+    }
+    migrated = {
+      ...migrated,
+      specialization: null,
+      activeChallenge: null,
+      challengesCompleted: [],
+      specializationsUsed: 0,
+      totalKeysEarned: (Number.isFinite(migrated.prestigeKeys) ? migrated.prestigeKeys : 0) + investedCost,
+      saveVersion: 14,
+    };
+  }
   return migrated;
 }
 
@@ -508,9 +569,11 @@ function migrate(raw, itemNameToId) {
  *   referencias huérfanas de saves viejos/manipulados). Si se omite, no se filtra (compat).
  * @param {Object<string, Object<string, string>>} [itemNameToId] - ver migrate(). Necesario solo
  *   para migrar saves v6 o anteriores; saves ya en v7 no lo requieren.
+ * @param {Array<Object>} [prestigeTreeData] - ver migrate(). Necesario solo para migrar saves
+ *   v13 o anteriores con niveles de árbol ya comprados; saves ya en v14 no lo requieren.
  * @returns {{ valid: true, data: Object } | { valid: false, error: string }}
  */
-export function validateSave(candidate, validContainerIds, itemNameToId) {
+export function validateSave(candidate, validContainerIds, itemNameToId, prestigeTreeData) {
   if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
     return { valid: false, error: 'El guardado no es un objeto JSON válido.' };
   }
@@ -520,7 +583,7 @@ export function validateSave(candidate, validContainerIds, itemNameToId) {
   if (candidate.saveVersion > SAVE_VERSION) {
     return { valid: false, error: `saveVersion ${candidate.saveVersion} es más nueva que la soportada (${SAVE_VERSION}).` };
   }
-  const migrated = migrate(candidate, itemNameToId);
+  const migrated = migrate(candidate, itemNameToId, prestigeTreeData);
   for (const [field, type] of Object.entries(REQUIRED_FIELDS)) {
     if (typeof migrated[field] !== type) {
       return { valid: false, error: `Campo inválido o faltante: ${field}` };
@@ -559,16 +622,17 @@ export function serializeState(state) {
  * @param {string} raw
  * @param {Set<string> | Array<string>} [validContainerIds] - ver validateSave.
  * @param {Object<string, Object<string, string>>} [itemNameToId] - ver migrate().
+ * @param {Array<Object>} [prestigeTreeData] - ver migrate().
  * @returns {{ ok: true, state: import('./state.js').GameState } | { ok: false, error: string }}
  */
-export function deserializeState(raw, validContainerIds, itemNameToId) {
+export function deserializeState(raw, validContainerIds, itemNameToId, prestigeTreeData) {
   let parsed;
   try {
     parsed = JSON.parse(raw);
   } catch {
     return { ok: false, error: 'El guardado no es JSON válido.' };
   }
-  const result = validateSave(parsed, validContainerIds, itemNameToId);
+  const result = validateSave(parsed, validContainerIds, itemNameToId, prestigeTreeData);
   if (!result.valid) return { ok: false, error: result.error };
   return { ok: true, state: result.data };
 }
@@ -591,9 +655,10 @@ export function exportSave(state) {
  * @param {string} encoded
  * @param {Set<string> | Array<string>} [validContainerIds] - ver validateSave.
  * @param {Object<string, Object<string, string>>} [itemNameToId] - ver migrate().
+ * @param {Array<Object>} [prestigeTreeData] - ver migrate().
  * @returns {{ ok: true, state: import('./state.js').GameState } | { ok: false, error: string }}
  */
-export function importSave(encoded, validContainerIds, itemNameToId) {
+export function importSave(encoded, validContainerIds, itemNameToId, prestigeTreeData) {
   let json;
   try {
     json =
@@ -603,5 +668,5 @@ export function importSave(encoded, validContainerIds, itemNameToId) {
   } catch {
     return { ok: false, error: 'El texto no es un guardado en base64 válido.' };
   }
-  return deserializeState(json, validContainerIds, itemNameToId);
+  return deserializeState(json, validContainerIds, itemNameToId, prestigeTreeData);
 }

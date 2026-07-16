@@ -217,6 +217,7 @@ button:hover:not(:disabled) {
 .automation-card,
 .achievement-card,
 .prestige-node,
+.prestige-choice-card,
 .automation-status,
 .automation-explainer,
 .prestige-summary,
@@ -1052,6 +1053,41 @@ textarea {
 .badge--locked {
   background: var(--bg-3);
   color: var(--fg-1);
+}
+
+/* --- Elección de especialización/desafío al prestigiar (PLAN.md §4.31/§4.32, ronda 25) --- */
+
+.prestige-active-badge {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.prestige-choice-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.prestige-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.prestige-choice-card {
+  text-align: center;
+  align-items: center;
+}
+
+.prestige-choice-card.is-selected {
+  box-shadow: var(--shadow-tactile), 0 0 0 2px var(--amber);
+}
+
+.prestige-choice-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: center;
 }
 
 /* --- Tarjeta de escarbado (`scavenge-card`, mockup main_game) --- */

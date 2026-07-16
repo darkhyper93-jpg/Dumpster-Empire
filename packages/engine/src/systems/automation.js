@@ -10,6 +10,7 @@ import {
   getAutoSpeedMult,
   getAutoTrapDiscardChance,
   registerContainerDig,
+  activeChallengeModifier,
 } from '../economy.js';
 import { isContainerUnlocked, rollContainerResult, applyContainerResult } from './containers.js';
 import { stallVendorTick } from './stall.js';
@@ -18,9 +19,16 @@ import { stallVendorTick } from './stall.js';
  * Compra una mejora de automatización de un solo uso.
  * @param {import('../state.js').GameState} state
  * @param {Object} automation - definición de apps/game/src/data/automations.json
+ * @param {import('../economy.js').EngineData} [data] - PLAN.md §4.32 (ronda 25): si se pasa y el
+ *   desafío `manosVacias` está activo (`noAutomationPurchases`), la compra se rechaza. Opcional
+ *   (mismo patrón que data.streak/data.traps): sin él, ninguna llamada previa a la ronda 25 cambia
+ *   de comportamiento.
  * @returns {{ ok: true } | { ok: false, error: string }}
  */
-export function buyAutomation(state, automation) {
+export function buyAutomation(state, automation, data = {}) {
+  if (activeChallengeModifier(state, data, 'noAutomationPurchases')) {
+    return { ok: false, error: 'El desafío activo no permite comprar máquinas.' };
+  }
   if (state.automationOwned[automation.id]) return { ok: false, error: 'Ya comprada.' };
   if (state.money < automation.cost) return { ok: false, error: 'No alcanza el dinero para esta automatización.' };
   state.money -= automation.cost;

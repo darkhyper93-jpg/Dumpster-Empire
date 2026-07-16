@@ -21,6 +21,8 @@ import dataEn from './data-en.js';
  * @property {Array<{id: string, name: string, desc: string}>} prestigeTree
  * @property {Array<{id: string, name: string}>} achievements
  * @property {{ legendaryChance: number, items: Array<{id: string, name: string}> }} legendaries
+ * @property {Array<{id: string, name: string, desc: string}>} [specializations]
+ * @property {Array<{id: string, name: string, desc: string}>} [challenges]
  */
 
 /** Baseline español capturado en init: mapas `id → string` por colección. */
@@ -52,6 +54,10 @@ export function initDataLocalization(loaded) {
     // (acá `rol` hace de `desc`). `story.json` no entra: sus textos son claves i18n fijas
     // (`textKey`), sin campo de display propio que traducir.
     npcs: Object.fromEntries(loaded.npcs.map((n) => [n.id, { name: n.name, rol: n.rol }])),
+    // Ronda 25 (PLAN.md §4.31/§4.32): especializaciones/desafíos, mismo shape {name, desc} que
+    // automations/prestigeTree. `|| []` porque son opcionales (mismo patrón que data.stall/etc.).
+    specializations: Object.fromEntries((loaded.specializations || []).map((s) => [s.id, { name: s.name, desc: s.desc }])),
+    challenges: Object.fromEntries((loaded.challenges || []).map((c) => [c.id, { name: c.name, desc: c.desc }])),
   };
 }
 
@@ -104,5 +110,17 @@ export function applyDataLanguage(loaded, lang) {
     const base = baseline.npcs[n.id];
     n.name = en && typeof en.name === 'string' ? en.name : base.name;
     n.rol = en && typeof en.rol === 'string' ? en.rol : base.rol;
+  }
+  for (const s of loaded.specializations || []) {
+    const en = useEn ? dataEn.specializations[s.id] : undefined;
+    const base = baseline.specializations[s.id];
+    s.name = en && typeof en.name === 'string' ? en.name : base.name;
+    s.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
+  }
+  for (const c of loaded.challenges || []) {
+    const en = useEn ? dataEn.challenges[c.id] : undefined;
+    const base = baseline.challenges[c.id];
+    c.name = en && typeof en.name === 'string' ? en.name : base.name;
+    c.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
   }
 }

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "coleccionista",
+    "name": "Coleccionista",
+    "icon": "archive-box",
+    "desc": "+50% valor de venta en antigüedades, arte y reliquias; -15% en el resto.",
+    "categoriasBonus": ["antiques", "art", "relics"],
+    "bonusMult": 1.5,
+    "penaltyMult": 0.85
+  },
+  {
+    "id": "chatarrero",
+    "name": "Chatarrero",
+    "icon": "gloves-work",
+    "desc": "+50% valor de venta en comunes, reutilizables y electrónica; -15% en el resto.",
+    "categoriasBonus": ["common", "reusable", "electronics"],
+    "bonusMult": 1.5,
+    "penaltyMult": 0.85
+  },
+  {
+    "id": "anticuario",
+    "name": "Anticuario",
+    "icon": "appraiser-loupe",
+    "desc": "+50% valor de venta en históricos, reliquias y objetos del futuro; -15% en el resto.",
+    "categoriasBonus": ["historic", "relics", "future"],
+    "bonusMult": 1.5,
+    "penaltyMult": 0.85
+  }
+]

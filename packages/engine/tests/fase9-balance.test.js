@@ -170,6 +170,9 @@ describe('PLAN.md §11.6 — recompensas de logros no rompen la economía', () =
   // deberían, sumados, cubrir más de un ~15% del árbol completo (no pueden "comprar" el árbol solos).
   it('la suma de recompensas en Llaves de todos los logros es una fracción chica del costo total del árbol de Prestigio', () => {
     const totalKeys = achievements.filter((a) => a.reward.type === 'keys').reduce((s, a) => s + a.reward.amount, 0);
+    // AJUSTE (ronda 25, R25.2): los 3 nodos infinitos (§4.33) no tienen `nivelMaximo` — el loop
+    // con `lvl < undefined` nunca itera, así que aportan 0 a este total (correcto: son un
+    // sumidero infinito de Llaves, no tienen un "costo total" finito que comparar).
     const totalTreeCost = prestigeTree.reduce((sum, node) => {
       let nodeCost = 0;
       for (let lvl = 0; lvl < node.nivelMaximo; lvl++) {

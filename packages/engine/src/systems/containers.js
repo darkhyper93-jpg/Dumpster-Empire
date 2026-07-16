@@ -18,16 +18,9 @@ import {
   getTrapPenalty,
   registerContainerDig,
   itemSaleValue,
+  resolveMarketFluctuation,
 } from '../economy.js';
-import {
-  rollCategory,
-  rollItem,
-  rollItemVariance,
-  rollIsTrap,
-  rollTrapGrade,
-  rollLegendary,
-  refreshMarketFluctuation,
-} from '../rng.js';
+import { rollCategory, rollItem, rollItemVariance, rollIsTrap, rollTrapGrade, rollLegendary } from '../rng.js';
 
 /**
  * @typedef {Object} DigResult
@@ -96,12 +89,7 @@ export function buyContainer(state, container, data) {
  * @returns {DigResult}
  */
 export function rollContainerResult(state, container, isAuto, itemsData, data, random = Math.random, event = null, hour = 12) {
-  const { marketFluctuation, marketFluctuationAt } = refreshMarketFluctuation(
-    state.marketFluctuation,
-    state.marketFluctuationAt,
-    Date.now(),
-    random
-  );
+  const { marketFluctuation, marketFluctuationAt } = resolveMarketFluctuation(state, data, Date.now(), random);
   state.marketFluctuation = marketFluctuation;
   state.marketFluctuationAt = marketFluctuationAt;
 

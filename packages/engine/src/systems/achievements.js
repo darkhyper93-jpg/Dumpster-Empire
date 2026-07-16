@@ -47,6 +47,16 @@ export const CONDITION_EVALUATORS = {
   // aprovechados.
   missionsCompletedAtLeast: (state, cond) => state.missionsCompletedCount >= cond.value,
   eventsUsedAtLeast: (state, cond) => state.eventsUsedCount >= cond.value,
+  // Ronda 25 (PLAN.md §4.32): goal genérico "sin más condición que cumplirse el evento" —
+  // usado por el goal de los desafíos `campoMinado`/`pulsoDebil` (alcanzar el prestigio ya
+  // implica que se sobrevivió toda la run con el modificador activo).
+  always: () => true,
+  // Ronda 25 (PLAN.md §4.33): CUALQUIERA de los nodos infinitos del árbol llega a nivel N
+  // (los 3 son intercambiables para este logro — el jugador elige a cuál apostarle las Llaves).
+  anyPrestigeNodeLevelAtLeast: (state, cond) =>
+    cond.nodeIds.some((nodeId) => (state.prestigeTreeLevels[nodeId] || 0) >= cond.value),
+  specializationsUsedAtLeast: (state, cond) => state.specializationsUsed >= cond.value,
+  challengesCompletedAtLeast: (state, cond) => state.challengesCompleted.length >= cond.value,
 };
 
 /**
