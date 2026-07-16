@@ -116,6 +116,22 @@ export function isProceduralTierUnlocked(state, n, data) {
 }
 
 /**
+ * Próximo tier procedural sin poseer, para que la UI (ShopView/DigContainerPicker, ronda 26.C)
+ * sepa cuál ofrecer a continuación: el mayor `n` YA poseído (`ownedContainers[bigbangPlusN] >= 1`)
+ * más uno, o `1` si ninguno se posee. Puede devolver `PROCEDURAL_CONTAINER_MAX_N + 1` (todos
+ * poseídos) — el llamador lo chequea contra el tope antes de mostrar/comprar nada.
+ * @param {import('../state.js').GameState} state
+ * @returns {number}
+ */
+export function nextProceduralTier(state) {
+  let maxOwned = 0;
+  for (let n = 1; n <= PROCEDURAL_CONTAINER_MAX_N; n++) {
+    if ((state.ownedContainers[proceduralContainerId(n)] || 0) >= 1) maxOwned = n;
+  }
+  return maxOwned + 1;
+}
+
+/**
  * Compra una unidad de un contenedor (descuenta dinero, incrementa cantidad comprada).
  * @param {import('../state.js').GameState} state
  * @param {Object} container

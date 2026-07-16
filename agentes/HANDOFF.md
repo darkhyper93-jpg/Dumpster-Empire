@@ -6346,3 +6346,125 @@ EXACTAMENTE el de hoy" para todo lo que la UI de 26.C todavía no expone).
 [x] HANDOFF (este bloque)
 [ ] Push de la rama — NO me corresponde: soy el agente B de 4 (C/D siguen en esta misma rama)
 ```
+
+## Ronda 26 — Agente C: UI + e2e de Mudanza de Galaxia y tiers procedurales (rama `feat/lategame-ronda26`, save v15)
+
+### Qué hice (SOLO mi sección, 26.C — no toqué logros/e2e/auditoría más allá de lo pedido)
+
+Construí la UI y los e2e de la Mudanza de Galaxia (§4.34-§4.36, engine de 26.A) y de los
+contenedores procedurales post-Big Bang (§4.37/§4.39, engine de 26.B). No había "PLAN.md primero"
+propio en el roadmap para 26.C (a diferencia de 26.A/26.B) — no toqué PLAN.md.
+
+- **Bug de wiring que arrastraban 26.A/26.B**: `main.js` cargaba `deedsTree.json` en `DATA_FILES`
+  pero nunca lo sumaba al objeto `data` que se pasa al engine — `getDeedsKeysBonusFlat`/
+  `getExtraDailyMissionSlots`/`hasProceduralContainersUnlocked` siempre devolvían su neutro,
+  invisibles hasta hoy porque nadie compraba nodos sin esta UI. Lo até (`data.deedsTree =
+  loaded.deedsTree`) y sumé el overlay de idioma completo (`dataI18n.js`: `initDataLocalization`/
+  `applyDataLanguage` para `deedsTree`, mismo patrón `{name, desc}` que `prestigeTree`; `data-en.js`
+  con los 6 nodos traducidos).
+- **Engine, mínimo y con TDD** (`packages/engine/tests/ronda26c-ui-support.test.js`, 6 casos RED
+  antes de implementar): `nextProceduralTier(state)` en `systems/containers.js` (próximo tier sin
+  poseer, para que Tienda/Escarbar sepan cuál ofrecer — mayor `n` con `ownedContainers[bigbangPlusN]
+  >= 1` más uno, exportado desde `index.js`) y el evaluador `galaxyMoveCountAtLeast` en
+  `CONDITION_EVALUATORS` (achievements.js) para los logros de mudanza. También exporté
+  `GALAXY_MOVE_PRESTIGE_THRESHOLD` desde `index.js` (26.A lo dejó sin exportar) para que
+  `PrestigeView` arme el tooltip de bloqueo con el número real, no hardcodeado.
+- **store.js**: `resolveDigContainer(containerId)` — único punto que resuelve un id de contenedor
+  a su objeto real, sea de `allContainers` o un tier procedural (`bigbangPlus<n>`, reconstruido con
+  `proceduralContainer(n, vertederoBigBang)`, nunca en `allContainers` por el contrato §3.5.6).
+  `startManualDig` lo usa en vez de `allContainers.find` directo, así escarbar un tier procedural
+  funciona con el mismo flujo (compra al iniciar, roll, revelado) sin código duplicado. Acciones
+  nuevas `doGalaxyMove()`/`buyDeedsNode(nodeId)` — mismo patrón que `doPrestige`/`buyPrestigeNode`.
+- **PrestigeView.js**: sección "Mudanza de Galaxia" (bloqueada con tooltip antes del prestigio 10,
+  vía `canGalaxyMove`; panel de confirmación de dos pasos como "Hacer Prestigio" con preview de
+  Escrituras y el resumen literal de qué se pierde/conserva) + árbol de Escrituras. El árbol de
+  Escrituras usa una clase CSS **distinta** (`.deeds-tree`, no `.prestige-tree`) aunque comparte
+  100% el CSS (reglas `.prestige-tree, .deeds-tree { ... }`) — `deedsTree.json` no tiene
+  `requires` en ningún nodo (es plano, a diferencia del árbol de prestigio), así que no usé
+  `buildTreeLayout`, solo `--branch: index` en una fila. Detecté en el primer full e2e run que
+  reusar literalmente `.prestige-tree` rompía `ronda4-regression.spec.js` P3 (`page.locator`
+  en "strict mode": 2 elementos) — lo dejo documentado inline para que nadie lo reintente.
+- **ShopView.js / DigContainerPicker.js**: tarjeta informativa (Tienda) y tarjeta de escarbado real
+  (Escarbar, mismo `data-start-dig` que un contenedor normal) del próximo tier procedural, solo
+  visibles con `hasProceduralContainersUnlocked`. Ambas reusan `t('shop.proceduralSuffix', {n})`
+  (clave que ya había dejado 26.B sin wiring de UI).
+- **Data/i18n**: 3 logros nuevos `a56`/`a57`/`a58` (Primera Mudanza, Nómade Galáctico oculto, Eco
+  de Quinta — `containerOwnedAtLeast` con `containerId: "bigbangPlus5"`, ya existente desde la
+  ronda 22) + traducción en `data-en.js`. 1 viñeta de historia nueva (`firstGalaxyMoveIntendente`,
+  `npc.intendente.storyGalaxyMove`, es+en) — el Intendente se vuelve "Intendente Galáctico" en la
+  primera mudanza, siguiendo el running gag de roadmap §3.1. Ícono nuevo `galaxySwirl`/
+  `galaxy-move` (espiral orbital, SVG propio, cero emojis). Todas las claves i18n nuevas en es.js
+  Y en.js real (nunca placeholder) — verificado contra `ronda16-i18n.test.js`.
+- **AJUSTE de balance**: `a58` (Eco de Quinta) arrancó con recompensa de $50.000.000 y rompió
+  `fase9-balance.test.js` (el total de recompensas de dinero de TODOS los logros se sale del techo
+  de 5% del umbral de Prestigio, y ese logro solo ya se comía más del 100% del techo por-logro de
+  1%) — bajado a $5.000.000, documentado en el propio commit (no hay comentarios en JSON).
+
+### e2e nuevo (`ronda26-lategame.spec.js`, 3 casos, todos verdes)
+
+1. Seed prestigio 10 → "Mudarse de Galaxia" habilitado, confirmar resetea Llaves/árbol/contador
+   Y CONSERVA logros (comparé el array `achievementsUnlocked` completo antes/después, no un
+   conteo). Nota: los logros que se desbloquean en memoria al bootear (`runAchievements()` en
+   `store.js`) NO se persisten a `localStorage` hasta la siguiente acción real — el test fuerza un
+   `toggle-sound` ida y vuelta antes de leer el "antes", si no el snapshot inicial siempre da
+   vacío (no es un bug de esta ronda, es cómo `store.js` viene funcionando desde antes).
+2. Seed con `ecoDelBigBang` comprado → `bigbangPlus1` aparece en Escarbar y es escarbable con
+   money alto (compra real, `ownedContainers.bigbangPlus1` queda en 1 tras el click).
+3. Seed con `bigbangPlus1`/`bigbangPlus2` poseídos → el costo de `bigbangPlus3` (≈3.375e21) se ve
+   con sufijo (`Sx`) en Tienda y Escarbar, nunca "e+".
+
+### Riesgos / cosas para la 26.D (auditoría) y más allá
+
+- R26.3 del roadmap (el robot de automatización debe considerar tiers procedurales) sigue
+  DELIBERADAMENTE sin resolver — ni `bestAffordableUnlockedContainer` ni el selector de
+  `AutomationView` los ven. 26.B ya lo había dejado anotado; yo tampoco lo toqué (fuera de
+  alcance de "UI + e2e de Mudanza/Tienda/Escarbar", es un tema de automatización).
+  `data-start-dig="bigbangPlusN"` SOLO funciona para escarbado manual.
+- `isDeedsNodeUnlocked` se llama en `PrestigeView` pero con la data actual (`deedsTree.json`, 6
+  nodos, todos con `requires: []`) siempre da `true` — dead code defensivo a propósito, mismo
+  criterio que el resto del árbol si algún nodo futuro declara `requires`.
+- No agregué las viñetas de historia "cada prestigio 1/3/6/10 (Intendente, cargo nuevo)" que
+  lista roadmap §3.1 — NO son de la ronda 26 (ninguna ronda 23-25 las agregó tampoco); si el
+  usuario las quiere, es tarea aparte a definir, no la until until de "primera Mudanza" que sí me
+  tocaba.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 565/565 verde (40 archivos; +6 tests nuevos de ronda26c-ui-support.test.js)
+npm run test:e2e  → 84/84 verde en total (24 specs). Corriendo TODA la suite en serie
+                     (--workers=1) até 2 veces: cada corrida completa tuvo 1 fallo AISLADO de un
+                     test SIN RELACIÓN con este diff (primera vez: ronda12-regression #4 "dinero
+                     estable tras cerrar modal"; segunda vez: ronda19-quickwins #1 "racha") — cada
+                     uno pasó 100% al re-correrlo solo o repetido 5 veces. Mismo patrón de
+                     flakiness de contención de recursos que ya documentó el Agente B de esta
+                     misma ronda (26.B) en su bloque de HANDOFF; no until introducida por 26.C.
+                     Recomiendo a 26.D correr specs sueltos si ve un fallo aislado no relacionado
+                     a su diff, antes de asumir regresión.
+```
+
+Manual 375px/desktop: verificado con capturas Playwright reales (Prestigio con Mudanza bloqueada/
+desbloqueada, panel de confirmación, árbol de Escrituras — lista vertical en el sidebar angosto de
+320px en desktop, igual que el árbol de prestigio; Tienda y Escarbar con la tarjeta del tier
+procedural). Nada roto en el layout existente; las capturas eran scratch, no se commitean.
+
+### Estado del DoD (agente C de 4, ronda 26)
+
+```
+[x] ROADMAPv4.md §26.C implementado (UI + e2e; sin PLAN.md propio para esta sección)
+[x] Engine: solo 2 funciones puras nuevas, con test RED→GREEN real
+[x] UI: lee estado y despacha acciones (doGalaxyMove/buyDeedsNode/startManualDig), no recalcula
+    economía — todo costo/preview sale de @dumpster/engine
+[x] Estados de UI: bloqueado con tooltip / confirmación de dos pasos / con datos (Mudanza),
+    ausente-si-no-corresponde (tarjeta procedural en Tienda/Escarbar)
+[x] Mobile-first verificado a 375px y desktop 1280px (capturas reales)
+[x] Cero emojis, ícono nuevo SVG propio (galaxySwirl) al registro icons.js
+[x] Copy nuevo en es.js Y en.js real, verificado contra ronda16-i18n.test.js
+[x] npm test → 565/565 verde
+[x] npm run test:e2e → 84/84 verde (recontado; ver nota de flakiness preexistente arriba)
+[x] Cero console.log / TODO en los archivos tocados
+[x] git commit — a continuación
+[x] HANDOFF (este bloque)
+[x] Push de la rama — soy el agente C de 4; el D (auditoría) sigue en esta misma rama antes del
+    PR, así que TAMPOCO pusheo yo — dejo la rama lista localmente para 26.D.
+```

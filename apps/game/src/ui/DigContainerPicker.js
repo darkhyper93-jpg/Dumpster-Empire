@@ -7,7 +7,17 @@
  * es "elegí y escarbá ya", no explorar el catálogo completo.
  */
 
-import { formatMoney, getContainerCost, isContainerUnlocked, getContainerLevel } from '@dumpster/engine';
+import {
+  formatMoney,
+  getContainerCost,
+  isContainerUnlocked,
+  getContainerLevel,
+  hasProceduralContainersUnlocked,
+  nextProceduralTier,
+  proceduralContainer,
+  isProceduralTierUnlocked,
+  PROCEDURAL_CONTAINER_MAX_N,
+} from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { t } from '../i18n/i18n.js';
 
@@ -30,6 +40,35 @@ function renderEventBanner(event) {
   );
 }
 
+/**
+ * Tarjeta de escarbado del próximo tier procedural post-Big Bang (PLAN.md §4.37/§4.39, ronda
+ * 26.C) — MISMA acción `data-start-dig` que un contenedor real; `store.js` (resolveDigContainer)
+ * reconstruye el objeto en runtime a partir del id `bigbangPlus<n>`. Ausente si `ecoDelBigBang`
+ * no está comprado o si el jugador ya tiene todos los tiers (§26.B: tope duro de `n`).
+ * @param {import('@dumpster/engine').GameState} state
+ * @param {import('@dumpster/engine').EngineData} data
+ * @param {Array<Object>} allContainers
+ * @returns {string}
+ */
+function renderProceduralDigCard(state, data, allContainers) {
+  if (!hasProceduralContainersUnlocked(state, data)) return '';
+  const bigBang = allContainers.find((c) => c.id === 'vertederoBigBang');
+  const n = nextProceduralTier(state);
+  if (!bigBang || n > PROCEDURAL_CONTAINER_MAX_N || !isProceduralTierUnlocked(state, n, data)) return '';
+  const tier = proceduralContainer(n, bigBang);
+  const cost = getContainerCost(state, tier, data);
+  const canAfford = state.money >= cost;
+  const reason = canAfford ? '' : t('common.missingMoney', { amount: formatMoney(cost - state.money) });
+  return (
+    `<button type="button" class="dig-picker-card" data-start-dig="${tier.id}" ${canAfford ? '' : 'disabled'} title="${reason}">` +
+    `<span class="dig-picker-card-icon">${iconMarkup(bigBang.icon, { size: 26 })}</span>` +
+    `<span class="dig-picker-card-name">${tier.name}${t('shop.proceduralSuffix', { n })}</span>` +
+    `<span class="dig-picker-card-cost">${formatMoney(cost)}</span>` +
+    `<span class="dig-picker-card-level">${t('digPicker.level', { level: getContainerLevel(state, tier.id) })}</span>` +
+    `</button>`
+  );
+}
+
 export const DigContainerPicker = {
   /**
    * @param {HTMLElement} container - `#dig-empty`
@@ -48,7 +87,8 @@ export const DigContainerPicker = {
 
     const { allContainers, data } = store.ctx;
     const unlocked = allContainers.filter((c) => isContainerUnlocked(state, c, allContainers));
-    if (!unlocked.length) {
+    const proceduralCard = renderProceduralDigCard(state, data, allContainers);
+    if (!unlocked.length && !proceduralCard) {
       container.innerHTML = `<p class="empty-state">${t('digPicker.empty')}</p>`;
       return;
     }
@@ -78,6 +118,6 @@ export const DigContainerPicker = {
 
     container.innerHTML =
       `<p class="dig-picker-prompt">${t('digPicker.prompt')}</p>` +
-      `<div class="dig-picker-list">${cards.join('')}</div>`;
+      `<div class="dig-picker-list">${cards.join('')}${proceduralCard}</div>`;
   },
 };

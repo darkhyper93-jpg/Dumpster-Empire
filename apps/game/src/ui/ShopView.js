@@ -22,6 +22,10 @@ import {
   getLevelValueMult,
   digsNeededForNextLevel,
   CONTAINER_LEVEL_MAX,
+  hasProceduralContainersUnlocked,
+  nextProceduralTier,
+  proceduralContainer,
+  PROCEDURAL_CONTAINER_MAX_N,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { t } from '../i18n/i18n.js';
@@ -53,6 +57,42 @@ function renderStallCard(state, data) {
     `<button type="button" data-action="buy-stall" ${canAfford ? '' : 'disabled'} title="${
       canAfford ? '' : t('common.missingMoney', { amount: formatMoney(data.stall.stallCost - state.money) })
     }">${t('shop.stallBuyFor', { amount: formatMoney(data.stall.stallCost) })}</button>` +
+    `</article>`
+  );
+}
+
+/**
+ * Tarjeta informativa del próximo tier procedural post-Big Bang (PLAN.md §4.37/§4.39, ronda
+ * 26.C) — SOLO informativa, igual que el resto de la Tienda: comprar es escarbar (dispara desde
+ * `DigContainerPicker`, no acá). Ausente si `ecoDelBigBang` no está comprado (mismo criterio
+ * opcional que `renderStallCard`/`data.stall`).
+ * @param {import('@dumpster/engine').GameState} state
+ * @param {import('@dumpster/engine').EngineData} data
+ * @param {Array<Object>} allContainers
+ * @returns {string}
+ */
+function renderProceduralCard(state, data, allContainers) {
+  if (!hasProceduralContainersUnlocked(state, data)) return '';
+  const bigBang = allContainers.find((c) => c.id === 'vertederoBigBang');
+  if (!bigBang) return '';
+  const n = nextProceduralTier(state);
+  if (n > PROCEDURAL_CONTAINER_MAX_N) {
+    return (
+      `<article class="shop-card">` +
+      `<span class="shop-card-icon">${iconMarkup(bigBang.icon, { size: 28 })}</span>` +
+      `<h3>${bigBang.name}</h3>` +
+      `<p>${t('shop.proceduralAllOwned')}</p>` +
+      `</article>`
+    );
+  }
+  const tier = proceduralContainer(n, bigBang);
+  const cost = getContainerCost(state, tier, data);
+  return (
+    `<article class="shop-card">` +
+    `<span class="shop-card-icon">${iconMarkup(bigBang.icon, { size: 28 })}</span>` +
+    `<h3>${tier.name}${t('shop.proceduralSuffix', { n })}</h3>` +
+    `<p>${t('shop.cost', { label: formatMoney(cost) })}</p>` +
+    `<p>${t('shop.owned', { count: Number(state.ownedContainers[tier.id]) || 0 })}</p>` +
     `</article>`
   );
 }
@@ -157,6 +197,7 @@ export const ShopView = {
       );
     });
 
-    container.innerHTML = `<div class="shop-grid">${stallCard}${cards.join('')}</div>`;
+    const proceduralCard = renderProceduralCard(state, data, allContainers);
+    container.innerHTML = `<div class="shop-grid">${stallCard}${cards.join('')}${proceduralCard}</div>`;
   },
 };

@@ -57,6 +57,8 @@ export const CONDITION_EVALUATORS = {
     cond.nodeIds.some((nodeId) => (state.prestigeTreeLevels[nodeId] || 0) >= cond.value),
   specializationsUsedAtLeast: (state, cond) => state.specializationsUsed >= cond.value,
   challengesCompletedAtLeast: (state, cond) => state.challengesCompleted.length >= cond.value,
+  // Ronda 26.C (PLAN.md §2.10/§4.34): cantidad de Mudanzas de Galaxia realizadas.
+  galaxyMoveCountAtLeast: (state, cond) => state.galaxyMoveCount >= cond.value,
 };
 
 /**

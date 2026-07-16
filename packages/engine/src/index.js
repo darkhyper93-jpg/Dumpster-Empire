@@ -94,6 +94,7 @@ export {
   applyContainerResult,
   proceduralContainer,
   isProceduralTierUnlocked,
+  nextProceduralTier,
 } from './systems/containers.js';
 
 export {
@@ -133,6 +134,7 @@ export {
   isPrestigeNodeUnlocked,
   buyPrestigeNode,
   doPrestige,
+  GALAXY_MOVE_PRESTIGE_THRESHOLD,
   canGalaxyMove,
   galaxyMoveDeedsPreview,
   doGalaxyMove,

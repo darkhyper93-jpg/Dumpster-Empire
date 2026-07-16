@@ -29,6 +29,12 @@ import {
   setAutoTarget as engineSetAutoTarget,
   buyPrestigeNode as engineBuyPrestigeNode,
   doPrestige as engineDoPrestige,
+  doGalaxyMove as engineDoGalaxyMove,
+  buyDeedsNode as engineBuyDeedsNode,
+  proceduralContainer,
+  isProceduralTierUnlocked,
+  nextProceduralTier,
+  proceduralTierN,
   checkAchievements,
   applyOfflineProgress,
   buyTool as engineBuyTool,
@@ -81,6 +87,24 @@ export function createStore(ctx) {
   // limpiar referencias huérfanas en autoQueue/autoProcessing de saves viejos (post-rebalanceo) o
   // manipulados, antes de que lleguen a automationTick.
   const containerIds = new Set(allContainers.map((c) => c.id));
+
+  // Ronda 26.C (PLAN.md §4.37/§4.39): los tiers procedurales NUNCA están en `allContainers`
+  // (contrato §3.5.6) — se reconstruyen en runtime a partir de `vertederoBigBang` + `n`. Único
+  // punto del store que resuelve un id de contenedor a su objeto real, así startManualDig no
+  // duplica la lógica de detección.
+  const bigBangContainer = allContainers.find((c) => c.id === 'vertederoBigBang');
+  /**
+   * @param {string} containerId
+   * @returns {{ container: Object, unlocked: boolean } | null} `null` si el id no existe (ni
+   *   real ni procedural válido).
+   */
+  function resolveDigContainer(containerId) {
+    const real = allContainers.find((c) => c.id === containerId);
+    if (real) return { container: real, unlocked: isContainerUnlocked(state, real, allContainers) };
+    const n = proceduralTierN(containerId);
+    if (n === null || !bigBangContainer) return null;
+    return { container: proceduralContainer(n, bigBangContainer), unlocked: isProceduralTierUnlocked(state, n, data) };
+  }
 
   // Ronda 22 (PLAN.md §4.26): ids de legendarios que existen en la data actual — un save.js
   // manipulado (o de una data renombrada) puede traer ids que ya no existen en legendaries.json;
@@ -243,9 +267,12 @@ export function createStore(ctx) {
 
     startManualDig(containerId) {
       if (pendingDig) return { ok: false, error: 'Ya hay un escarbado en curso.' };
-      const container = allContainers.find((c) => c.id === containerId);
-      if (!container) return { ok: false, error: 'Contenedor desconocido.' };
-      if (!isContainerUnlocked(state, container, allContainers)) {
+      // Ronda 26.C: `containerId` puede ser un tier procedural (`bigbangPlus<n>`, nunca en
+      // `allContainers` — contrato §3.5.6); resolveDigContainer lo reconstruye en runtime.
+      const resolved = resolveDigContainer(containerId);
+      if (!resolved) return { ok: false, error: 'Contenedor desconocido.' };
+      const { container, unlocked } = resolved;
+      if (!unlocked) {
         return { ok: false, error: 'Contenedor bloqueado.' };
       }
       const result = engineBuyContainer(state, container, data);
@@ -478,6 +505,33 @@ export function createStore(ctx) {
         pendingDig = null;
         runAchievements();
         detectContainerUnlocks();
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /** Ejecuta la Mudanza de Galaxia (PLAN.md §2.10/§4.34, ronda 26.A/26.C). */
+    doGalaxyMove() {
+      const result = engineDoGalaxyMove(state, data);
+      if (result.ok) {
+        pendingDig = null;
+        runAchievements();
+        runStory();
+        detectContainerUnlocks();
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /** Compra un nivel de un nodo del árbol de Escrituras (PLAN.md §4.36, ronda 26.A/26.C). */
+    buyDeedsNode(nodeId) {
+      const node = (data.deedsTree || []).find((n) => n.id === nodeId);
+      if (!node) return { ok: false, error: 'Nodo desconocido.' };
+      const result = engineBuyDeedsNode(state, node);
+      if (result.ok) {
+        runAchievements();
         persist();
         notify();
       }

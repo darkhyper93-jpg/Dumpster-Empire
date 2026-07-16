@@ -52,5 +52,8 @@
   { "id": "a52", "name": "Primer Desafío", "icon": "bone-cracked", "cond": { "type": "challengesCompletedAtLeast", "value": 1 }, "reward": { "type": "money", "amount": 5000 } },
   { "id": "a53", "name": "Maestro de Desafíos", "icon": "bone-cracked", "hidden": true, "cond": { "type": "challengesCompletedAtLeast", "value": 4 }, "reward": { "type": "keys", "amount": 8 } },
   { "id": "a54", "name": "Apuesta Infinita", "icon": "bank-vault", "cond": { "type": "anyPrestigeNodeLevelAtLeast", "nodeIds": ["codiciaEterna", "paladaEterna", "imanDeSuerte"], "value": 10 }, "reward": { "type": "keys", "amount": 6 } },
-  { "id": "a55", "name": "Especialista", "icon": "archive-box", "cond": { "type": "specializationsUsedAtLeast", "value": 5 }, "reward": { "type": "money", "amount": 10000 } }
+  { "id": "a55", "name": "Especialista", "icon": "archive-box", "cond": { "type": "specializationsUsedAtLeast", "value": 5 }, "reward": { "type": "money", "amount": 10000 } },
+  { "id": "a56", "name": "Primera Mudanza", "icon": "galaxy-move", "cond": { "type": "galaxyMoveCountAtLeast", "value": 1 }, "reward": { "type": "keys", "amount": 10 } },
+  { "id": "a57", "name": "Nómade Galáctico", "icon": "galaxy-move", "hidden": true, "cond": { "type": "galaxyMoveCountAtLeast", "value": 3 }, "reward": { "type": "keys", "amount": 20 } },
+  { "id": "a58", "name": "Eco de Quinta", "icon": "echo-bigbang", "cond": { "type": "containerOwnedAtLeast", "containerId": "bigbangPlus5", "value": 1 }, "reward": { "type": "money", "amount": 5000000 } }
 ]

@@ -22,6 +22,7 @@ export default {
   'common.free': 'Gratis',
   'common.missingMoney': 'Te faltan {amount}',
   'common.missingKeys': 'Te faltan {amount} llaves',
+  'common.missingDeeds': 'Te faltan {amount} Escrituras',
   'common.effectFlat': '+{amount} {label} por nivel',
   'common.effectPercent': '+{pct}% {label} por nivel',
   'common.emptyContainers': 'No hay contenedores configurados.',
@@ -146,6 +147,24 @@ export default {
   'prestige.rewardDigPowerPercent': '+{pct}% Fuerza de Escarbado',
   'prestige.rewardMarketFluctuationMinFlat': '+{amount} al piso de la cotización de mercado',
 
+  // Ronda 26.C (PLAN.md §2.10/§4.34-§4.36): Mudanza de Galaxia y árbol de Escrituras.
+  'prestige.galaxyMoveHeading': 'Mudanza de Galaxia',
+  'prestige.galaxyMoveLocked': 'Se desbloquea al llegar a {count} prestigios.',
+  'prestige.galaxyMoveDesc':
+    'Reseteá tu progreso de prestigio (Llaves, árbol y contador) y empezá de nuevo en una galaxia distinta, a cambio de Escrituras permanentes.',
+  'prestige.galaxyMoveCount': 'Mudanzas realizadas: {count}',
+  'prestige.deedsLabel': 'Escrituras: {amount}',
+  'prestige.galaxyMoveButton': 'Mudarse de Galaxia',
+  'prestige.galaxyMovePreview': 'Si te mudás ahora ganás: {amount} Escrituras.',
+  'prestige.galaxyMoveConfirmTitle': '¿Confirmás la Mudanza de Galaxia?',
+  'prestige.galaxyMoveKeeps':
+    'Se conserva: logros, colección, vitrina, sets, desafíos completados, herramientas, el Puesto y su nivel, las Escrituras y su árbol, tu mejor racha y los contadores históricos.',
+  'prestige.galaxyMoveLoses':
+    'Se pierde: Llaves de Ciudad, árbol de prestigio, especialización/desafío activo, y el inventario del Puesto (se liquida a venta instantánea).',
+  'prestige.galaxyMoveConfirmButton': 'Confirmar Mudanza',
+  'prestige.deedsTreeHeading': 'Árbol de Escrituras',
+  'prestige.deedsUpgradeFor': 'Mejorar por {amount} Escrituras',
+
   // SettingsView.js
   'settings.on': 'Encendido',
   'settings.off': 'Apagado',
@@ -202,6 +221,8 @@ export default {
 
   // Tiers procedurales post-Big Bang (PLAN.md §4.37, ronda 26.B): sufijo del nombre, {n} = tier.
   'shop.proceduralSuffix': ' (Eco {n})',
+  // Ronda 26.C: tarjeta informativa del próximo tier procedural en la Tienda.
+  'shop.proceduralAllOwned': 'Ya tenés todos los tiers procedurales disponibles.',
 
   // StallView.js (PLAN.md §2.9/§4.27-§4.30, ronda 23.C)
   'stall.lockedTeaser': 'Se desbloquea comprando el Puesto de Chatarra en la Tienda.',
@@ -251,6 +272,7 @@ export default {
   // Ronda 24 — misiones diarias, eventos de contenedor y ciclo día/noche (PLAN.md §4.30-§4.33).
   'npc.chispa.storyFirstMission': 'Chispa: "¡Ahí está! Cumpliste tu primera misión. Yo te voy a estar tirando desafíos todos los días, ¿eh?"',
   'npc.zoraida.storyFirstEvent': 'Madame Zoraida: "Lo vi venir en las cartas... un contenedor especial, y vos ahí, aprovechando el momento. Así me gusta."',
+  'npc.intendente.storyGalaxyMove': 'El Intendente: "¿Así que te mudás de galaxia? Yo también me mudo, ¿eh? Allá me van a nombrar Intendente Galáctico. Llevate las Escrituras, que en la ciudad nueva valen lo mismo."',
 
   // MissionsSection.js
   'missions.title': 'Misiones de Chispa',
