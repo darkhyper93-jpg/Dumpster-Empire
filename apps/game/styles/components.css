@@ -980,7 +980,8 @@ textarea {
 
 /* Mobile-first (CLAUDE.md): la grilla de 5 ramas solo tiene sentido con ancho de sobra.
    Debajo de ese punto, los nodos caen a lista simple (sin conectores). */
-.prestige-tree {
+.prestige-tree,
+.deeds-tree {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -999,7 +1000,8 @@ textarea {
      `minmax(150px, 1fr)` fuerza un ancho mínimo por columna; si las 5 no entran, la grilla se
      agranda hacia la derecha y `overflow-x: auto` en el propio contenedor deja scrollear hasta
      la última rama en vez de perderla fuera de la pantalla. */
-  .prestige-tree {
+  .prestige-tree,
+  .deeds-tree {
     display: grid;
     grid-template-columns: repeat(5, minmax(150px, 1fr));
     grid-auto-rows: min-content;
@@ -1088,6 +1090,20 @@ textarea {
   display: flex;
   gap: var(--space-2);
   justify-content: center;
+}
+
+/* --- Mudanza de Galaxia + árbol de Escrituras (PLAN.md §2.10/§4.34-§4.36, ronda 26.C) --- */
+
+.prestige-galaxy-move {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--outline);
+}
+
+.prestige-galaxy-move h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 /* --- Tarjeta de escarbado (`scavenge-card`, mockup main_game) --- */

@@ -1,0 +1,68 @@
+[
+  {
+    "id": "ventajaGalactica",
+    "name": "Ventaja Galáctica",
+    "icon": "dust-firststar",
+    "costoBase": 3,
+    "factorCrecimiento": 2.2,
+    "nivelMaximo": 4,
+    "desc": "+25% valor de venta global por nivel.",
+    "effects": [{ "type": "sellPercentGlobalPerNivel", "percentPerNivel": 0.25 }],
+    "requires": []
+  },
+  {
+    "id": "memoriaDeCiudades",
+    "name": "Memoria de Ciudades",
+    "icon": "city-skyline",
+    "costoBase": 2,
+    "factorCrecimiento": 2.0,
+    "nivelMaximo": 3,
+    "desc": "+1 Llave de Ciudad por prestigio, por nivel.",
+    "effects": [{ "type": "keysFlatPerNivel", "flatPerNivel": 1 }],
+    "requires": []
+  },
+  {
+    "id": "bolsilloCosmico",
+    "name": "Bolsillo Cósmico",
+    "icon": "archive-multiverse",
+    "costoBase": 4,
+    "factorCrecimiento": 2.1,
+    "nivelMaximo": 3,
+    "desc": "+6 slots de inventario del Puesto de Chatarra por nivel.",
+    "effects": [{ "type": "stallCapacityFlatPerNivel", "flatPerNivel": 6 }],
+    "requires": []
+  },
+  {
+    "id": "agendaLlena",
+    "name": "Agenda Llena",
+    "icon": "quest-board",
+    "costoBase": 5,
+    "factorCrecimiento": 2.3,
+    "nivelMaximo": 2,
+    "desc": "+1 misión diaria por nivel.",
+    "effects": [{ "type": "extraDailyMissionSlotsPerNivel", "flatPerNivel": 1 }],
+    "requires": []
+  },
+  {
+    "id": "flotaFundadora",
+    "name": "Flota Fundadora",
+    "icon": "drone-network",
+    "costoBase": 6,
+    "factorCrecimiento": 2.4,
+    "nivelMaximo": 2,
+    "desc": "+1 slot de robot de automatización por nivel.",
+    "effects": [{ "type": "parallelSlotsFlatPerNivel", "flatPerNivel": 1 }],
+    "requires": []
+  },
+  {
+    "id": "ecoDelBigBang",
+    "name": "Eco del Big Bang",
+    "icon": "echo-bigbang",
+    "costoBase": 10,
+    "factorCrecimiento": 1,
+    "nivelMaximo": 1,
+    "desc": "Desbloquea los contenedores procedurales post-Big Bang.",
+    "effects": [{ "type": "unlockProceduralContainers" }],
+    "requires": []
+  }
+]

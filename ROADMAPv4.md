@@ -781,7 +781,55 @@ visible aplicado).
   deja claro ("Se descartará el 43% de lo que encontrás al ritmo actual" — dato del engine) y
   el default es off.
 
-## 27.5 — DoD patrón estándar.
+## 27.5 Tareas adicionales delegadas por la post-auditoría de la ronda 26 (usuario, 2026-07-17)
+
+> Origen: segunda pasada Verif&Audit.md sobre el diff de la ronda 26 (ver el bloque
+> "Post-auditoría del usuario" en agentes/HANDOFF.md). Se suman a las tareas de 27.3, NO las
+> reemplazan. Orden = prioridad.
+
+1. **🟡 Y1 — clamp anti-Infinity de `money` (con test RED)**: `validateDeepContent` acepta
+   `deedsTreeLevels`/`prestigeTreeLevels` con cualquier valor finito (sin enteros/rango): un
+   save hostil con `ventajaGalactica: 1e305` pasa validación, `getSellMult` explota y
+   `state.money += total` (containers.js:363; ídem stall.js:87, achievements.js:88,
+   missions.js:232, offline.js:111) desborda a Infinity → `JSON.stringify` → `null` → el
+   próximo boot RECHAZA el save entero (wipe — misma clase que el 🔴 de 26.D). Fix: helper
+   `addMoney(state, x)` clampeado a `Number.MAX_VALUE` en los 5 puntos (patrón `state.deeds` de
+   `doGalaxyMove`), o validar los niveles de ambos árboles como enteros en rango contra la data
+   (precedente de enhebrar data: migración v14). Test de regresión con el save hostil.
+2. **R26.3 (ya contractual de esta ronda)**: el loop de flota/"Auto" DEBE considerar los tiers
+   procedurales (`getQueueMax`/selección de target con contenedores fuera de containers.json) —
+   anotado 3 veces por 26.B/26.C/26.D.
+3. **OfflineModal muestra `stallEarnings`** (deuda 23.E): `applyOfflineProgress` ya lo devuelve
+   y el dinero ya se suma bien; solo falta surfacearlo en el modal (abrirlo también cuando
+   `stallEarnings > 0` y sumar la línea al resumen, copy es+en).
+4. **`migrate()` se extrae a funciones por paso** (deuda 16.E): esta ronda agrega la migración
+   v16 (novena) — es el momento de la extracción con typedef de entrada/salida por paso, sin
+   cambiar comportamiento (los tests de migración existentes deben quedar verdes sin tocarse).
+5. **`persist()` con try/catch en `localStorage.setItem`** (deuda 18): quota excedida / storage
+   deshabilitado no debe tirar en cada acción; degradar en silencio (el guardado a archivo de
+   Electron es independiente).
+6. **`boot()` no muestra `err.message` crudo** (deuda 16.E): mensaje genérico en `#boot-status`
+   + detalle a `console.error` (excepción permitida al "sin console.log": es el manejador de
+   error de boot, documentarlo inline).
+7. **CSS `.deeds-tree` declara sus 6 columnas**: hoy reusa `repeat(5, ...)` del árbol de
+   prestigio y el 6º nodo cae en columna implícita sin `minmax` (ver HANDOFF post-auditoría);
+   1 línea + verificación visual desktop.
+8. **Decidir la liquidación de la mudanza vs misiones**: `doGalaxyMove` suma `inventory.length`
+   a `stallSoldCount` y puede completar "gratis" una misión `sellAtStallCount` activa. Decidir
+   (excluir o documentar como feature) y dejar test o comentario `DECISIÓN:`.
+
+Notas sin acción (solo conocimiento): `formatNumber` topea en QiDc (1e48) — suficiente para
+todos los costos del juego; recién importaría con un sink de dinero lategame. `isFirstRareFind`
+es por-tier en procedurales (cosmético). `loadState()` silencioso ante save inválido queda para
+v1.1 (decisión de la ronda 18, no de esta).
+
+**NO TOCAR (política explícita del repo — 15.E/23.E la declararon para que nadie lo "arregle"
+por error; se re-declara acá y NO se debe cambiar):** `getAutoSpeedMult` llamado por slot
+dentro del loop de `automationTick` (≤4 slots × 12 máquinas/s, irrelevante); `trapsDiscarded`
+negativo pasando la validación del save (política uniforme de contadores); `stallLevel` sin
+cota superior en el save (consistente con containerLevels/prestige, solo auto-perjudica).
+
+## 27.6 — DoD patrón estándar.
 
 ---
 

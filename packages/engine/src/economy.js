@@ -139,6 +139,11 @@ export function trapProbability(probTrampaBaseDelContenedor, suerte) {
  * @property {Array<{id:string,modifiers:Array<Object>,goal:Object,reward:Object}>} [challenges]
  *   desafíos de prestigio (data/challenges.json, ronda 25). Opcional: ver activeChallengeModifier/
  *   getSellMult/getLuck/getDigPowerMult/getEffectiveTrapProbability/resolveMarketFluctuation.
+ * @property {Array<{id:string,costoBase:number,factorCrecimiento:number,nivelMaximo:number,effects:Array<Object>,requires:string[]}>} [deedsTree]
+ *   árbol de Escrituras, segunda capa de prestigio (data/deedsTree.json, ronda 26, PLAN.md §4.36).
+ *   Opcional: ver getSellMult/getStallCapacity/getParallelAutoSlots/getExtraDailyMissionSlots/
+ *   hasProceduralContainersUnlocked/getDeedsKeysBonusFlat — sin él, ningún nodo suma nada
+ *   (mismo patrón que data.specializations/data.challenges).
  */
 
 function upgradeDef(data, id) {
@@ -213,6 +218,77 @@ function challengeEffectsOfType(data, type) {
     if (challenge.reward && challenge.reward.type === type) out.push({ challengeId: challenge.id, effect: challenge.reward });
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Árbol de Escrituras — segunda capa de prestigio (PLAN.md §4.36, ronda 26). `data.deedsTree`
+// es opcional (mismo patrón que data.streak/data.stall/data.challenges): sin él, ningún nodo
+// suma nada (comportamiento idéntico a antes de la ronda 26). Nunca se resetea con una mudanza
+// de galaxia (§4.34) — por eso vive en su propio mapa `state.deedsTreeLevels`, separado de
+// `state.prestigeTreeLevels`.
+// ---------------------------------------------------------------------------
+
+function deedsLevel(state, id) {
+  return state.deedsTreeLevels[id] || 0;
+}
+
+/**
+ * Todos los nodos de `data.deedsTree` con un efecto del `type` pedido — espejo de
+ * `prestigeEffectsOfType`/`automationEffectsOfType`, pero sobre el árbol de Escrituras.
+ * @param {EngineData} data
+ * @param {string} type
+ * @returns {Array<{ nodeId: string, effect: Object }>}
+ */
+function deedsEffectsOfType(data, type) {
+  const out = [];
+  for (const node of data.deedsTree || []) {
+    for (const effect of node.effects || []) {
+      if (effect.type === type) out.push({ nodeId: node.id, effect });
+    }
+  }
+  return out;
+}
+
+/**
+ * Bonus flat de Llaves de Ciudad por prestigio otorgado por `memoriaDeCiudades` (PLAN.md §4.36),
+ * sumado a `prestigeKeysEarned(...)` dentro de `doPrestige` (systems/prestige.js).
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getDeedsKeysBonusFlat(state, data) {
+  let bonus = 0;
+  for (const { nodeId, effect } of deedsEffectsOfType(data, 'keysFlatPerNivel')) {
+    bonus += deedsLevel(state, nodeId) * effect.flatPerNivel;
+  }
+  return bonus;
+}
+
+/**
+ * Slots extra de misión diaria otorgados por `agendaLlena` (PLAN.md §4.36), sumados a las 3
+ * base en `systems/missions.js`.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getExtraDailyMissionSlots(state, data) {
+  let extra = 0;
+  for (const { nodeId, effect } of deedsEffectsOfType(data, 'extraDailyMissionSlotsPerNivel')) {
+    extra += deedsLevel(state, nodeId) * effect.flatPerNivel;
+  }
+  return extra;
+}
+
+/**
+ * ¿`ecoDelBigBang` (PLAN.md §4.36) está comprado? Desbloquea los tiers procedurales post-Big
+ * Bang que consumirá la ronda 26.B (`isContainerUnlocked`/factory procedural) — acá solo se
+ * expone la lectura del flag, ronda 26.A no genera contenedores procedurales.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {boolean}
+ */
+export function hasProceduralContainersUnlocked(state, data) {
+  return deedsEffectsOfType(data, 'unlockProceduralContainers').some(({ nodeId }) => deedsLevel(state, nodeId) >= 1);
 }
 
 /**
@@ -371,6 +447,11 @@ export function getParallelAutoSlots(state, data) {
   for (const { automationId, effect } of automationEffectsOfType(data, 'parallelSlots')) {
     if (state.automationOwned[automationId]) slots += effect.flat;
   }
+  // PLAN.md §4.36 (ronda 26): `flotaFundadora` del árbol de Escrituras — la ronda 27 construye
+  // la asignación real de robots sobre este slot extra.
+  for (const { nodeId, effect } of deedsEffectsOfType(data, 'parallelSlotsFlatPerNivel')) {
+    slots += deedsLevel(state, nodeId) * effect.flatPerNivel;
+  }
   return slots;
 }
 
@@ -394,6 +475,10 @@ export function getSellMult(state, categoria, data) {
   // PLAN.md §4.32 (ronda 25): recompensa permanente del desafío `manosVacias`, una vez completado.
   for (const { challengeId, effect } of challengeEffectsOfType(data, 'sellPercentGlobal')) {
     if (state.challengesCompleted.includes(challengeId)) mult *= 1 + effect.percent;
+  }
+  // PLAN.md §4.36 (ronda 26): `ventajaGalactica` del árbol de Escrituras — sobrevive mudanzas.
+  for (const { nodeId, effect } of deedsEffectsOfType(data, 'sellPercentGlobalPerNivel')) {
+    mult *= 1 + deedsLevel(state, nodeId) * effect.percentPerNivel;
   }
   // PLAN.md §4.31 (ronda 25): especialización elegida al último prestigio — ×bonusMult en sus
   // categorías, ×penaltyMult en el resto (nunca ambas a la vez para la misma categoría).
@@ -676,6 +761,9 @@ export function getLevelValueMult(state, container) {
  * @returns {boolean}
  */
 export function isSetComplete(state, container, itemsData) {
+  // Ronda 26.B (contrato §3.5.6): los tiers procedurales post-Big Bang NUNCA forman sets —
+  // explícito acá para no depender de que su id, sin pool propio en items.json, resuelva a [].
+  if (container.isProcedural) return false;
   const pool = itemsData.containers[container.id] || [];
   if (!pool.length) return false;
   const found = state.itemsFoundByItem[container.id] || {};
@@ -928,7 +1016,12 @@ export function getToolRhythmMult(state, data) {
  */
 export function getStallCapacity(state, data) {
   if (state.stallLevel < 1) return 0;
-  return data.stall.stallCapacityBase + data.stall.stallCapacityPorNivel * (state.stallLevel - 1);
+  let capacity = data.stall.stallCapacityBase + data.stall.stallCapacityPorNivel * (state.stallLevel - 1);
+  // PLAN.md §4.36 (ronda 26): `bolsilloCosmico` del árbol de Escrituras — sobrevive mudanzas.
+  for (const { nodeId, effect } of deedsEffectsOfType(data, 'stallCapacityFlatPerNivel')) {
+    capacity += deedsLevel(state, nodeId) * effect.flatPerNivel;
+  }
+  return capacity;
 }
 
 /**

@@ -23,6 +23,7 @@ import dataEn from './data-en.js';
  * @property {{ legendaryChance: number, items: Array<{id: string, name: string}> }} legendaries
  * @property {Array<{id: string, name: string, desc: string}>} [specializations]
  * @property {Array<{id: string, name: string, desc: string}>} [challenges]
+ * @property {Array<{id: string, name: string, desc: string}>} [deedsTree]
  */
 
 /** Baseline español capturado en init: mapas `id → string` por colección. */
@@ -58,6 +59,8 @@ export function initDataLocalization(loaded) {
     // automations/prestigeTree. `|| []` porque son opcionales (mismo patrón que data.stall/etc.).
     specializations: Object.fromEntries((loaded.specializations || []).map((s) => [s.id, { name: s.name, desc: s.desc }])),
     challenges: Object.fromEntries((loaded.challenges || []).map((c) => [c.id, { name: c.name, desc: c.desc }])),
+    // Ronda 26.C: árbol de Escrituras, mismo shape {name, desc} que prestigeTree.
+    deedsTree: Object.fromEntries((loaded.deedsTree || []).map((n) => [n.id, { name: n.name, desc: n.desc }])),
   };
 }
 
@@ -122,5 +125,11 @@ export function applyDataLanguage(loaded, lang) {
     const base = baseline.challenges[c.id];
     c.name = en && typeof en.name === 'string' ? en.name : base.name;
     c.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
+  }
+  for (const n of loaded.deedsTree || []) {
+    const en = useEn ? dataEn.deedsTree[n.id] : undefined;
+    const base = baseline.deedsTree[n.id];
+    n.name = en && typeof en.name === 'string' ? en.name : base.name;
+    n.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
   }
 }

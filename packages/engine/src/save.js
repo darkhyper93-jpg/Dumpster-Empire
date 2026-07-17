@@ -5,6 +5,7 @@
 
 import { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, INVENTORY_MAX_SAFETY, freshState } from './state.js';
 import { MISSION_TYPES, MISSION_DIFFICULTIES } from './systems/missions.js';
+import { isProceduralContainerId } from './procedural.js';
 
 /** Idiomas soportados por el módulo i18n (apps/game/src/i18n). Fuente de verdad del allow-list. */
 export const SUPPORTED_LANGUAGES = ['es', 'en'];
@@ -17,6 +18,7 @@ const NUMERIC_MAP_FIELDS = [
   'containerLevelProgress',
   'prestigeTreeLevels',
   'itemsFoundByCategory',
+  'deedsTreeLevels',
 ];
 
 /** Mapa plano `id -> boolean` (compras de un solo uso). */
@@ -137,12 +139,15 @@ function isValidStallOrders(arr) {
 }
 
 /**
- * Valida `dailyMissions` (PLAN.md §4.30/§4.31, ronda 24): hasta 3 misiones activas del día.
+ * Valida `dailyMissions` (PLAN.md §4.30/§4.31, ronda 24): hasta 3 misiones activas del día, más
+ * hasta 2 slots extra del nodo `agendaLlena` del árbol de Escrituras (PLAN.md §4.36, ronda 26) —
+ * 5 en total como techo de seguridad (save.js es agnóstico de deedsTree.json, igual que del resto
+ * de la data de balance; la validación de cantidad exacta no le corresponde).
  * @param {unknown} arr
  * @returns {boolean}
  */
 function isValidDailyMissions(arr) {
-  if (!Array.isArray(arr) || arr.length > 3) return false;
+  if (!Array.isArray(arr) || arr.length > 5) return false;
   return arr.every(
     (m) =>
       isPlainObject(m) &&
@@ -276,6 +281,29 @@ function validateDeepContent(migrated) {
   if (!Number.isFinite(migrated.totalKeysEarned) || migrated.totalKeysEarned < 0) {
     return 'Contenido inválido en totalKeysEarned: debe ser un número >= 0.';
   }
+  // AJUSTE (ronda 26, PLAN.md §2.11/§4.34-§4.36): Mudanza de Galaxia y Escrituras.
+  if (!Number.isFinite(migrated.deeds) || migrated.deeds < 0) {
+    return 'Contenido inválido en deeds: debe ser un número >= 0.';
+  }
+  if (!Number.isInteger(migrated.galaxyMoveCount) || migrated.galaxyMoveCount < 0) {
+    return 'Contenido inválido en galaxyMoveCount: debe ser un entero >= 0.';
+  }
+  if (!Number.isFinite(migrated.totalKeysEarnedRun) || migrated.totalKeysEarnedRun < 0) {
+    return 'Contenido inválido en totalKeysEarnedRun: debe ser un número >= 0.';
+  }
+  // AJUSTE (auditoría 26.D, regla dura §1.13 de ROADMAPv4 — coherencia entre campos): todo save
+  // legítimo cumple `totalKeysEarnedRun <= totalKeysEarned`: ambos se incrementan JUNTOS y por
+  // el mismo monto solo en doPrestige, la migración v15 los iguala, y la mudanza solo BAJA el
+  // run (a 0). Un run por encima del histórico es manipulación para inflar Escrituras (§4.35).
+  if (migrated.totalKeysEarnedRun > migrated.totalKeysEarned) {
+    return 'Contenido inválido: totalKeysEarnedRun no puede superar totalKeysEarned.';
+  }
+  // AJUSTE (auditoría 26.D): prestigeCount es el otro factor de la fórmula de Escrituras — antes
+  // solo se exigía finitud (loop de REQUIRED_FIELDS); acá el rango y que no sea fraccionario
+  // (mismo criterio que digStreak/gravesHit).
+  if (!Number.isInteger(migrated.prestigeCount) || migrated.prestigeCount < 0) {
+    return 'Contenido inválido en prestigeCount: debe ser un entero >= 0.';
+  }
   return null;
 }
 
@@ -288,9 +316,16 @@ function validateDeepContent(migrated) {
  * @param {Set<string>} validIds - ids de contenedores que existen en la data actual
  */
 function sanitizeContainerRefs(migrated, validIds) {
-  migrated.autoQueue = migrated.autoQueue.filter((id) => validIds.has(id));
-  migrated.autoProcessing = migrated.autoProcessing.filter((slot) => validIds.has(slot.containerId));
-  if (migrated.autoTargetContainerId !== null && !validIds.has(migrated.autoTargetContainerId)) {
+  // Ronda 26.B: los tiers procedurales post-Big Bang (`bigbangPlus<n>`) nunca están en
+  // containers.json, así que jamás entran a `validIds` — sin este OR, un jugador legítimo que
+  // los tenga en autoQueue/autoProcessing los perdería en cada recarga (falso positivo de
+  // "referencia huérfana"). `isProceduralContainerId` valida patrón Y tope de n, así que un id
+  // hostil (`bigbangPlus999`, `bigbangPlus01`, `bigbangPlus1e2`, `bigbangPlus-1`) se sigue
+  // filtrando igual que cualquier otro id inexistente.
+  const isValidRef = (id) => validIds.has(id) || isProceduralContainerId(id);
+  migrated.autoQueue = migrated.autoQueue.filter(isValidRef);
+  migrated.autoProcessing = migrated.autoProcessing.filter((slot) => isValidRef(slot.containerId));
+  if (migrated.autoTargetContainerId !== null && !isValidRef(migrated.autoTargetContainerId)) {
     migrated.autoTargetContainerId = null;
   }
 }
@@ -350,6 +385,10 @@ const REQUIRED_FIELDS = {
   challengesCompleted: 'object',
   specializationsUsed: 'number',
   totalKeysEarned: 'number',
+  deeds: 'number',
+  deedsTreeLevels: 'object',
+  galaxyMoveCount: 'number',
+  totalKeysEarnedRun: 'number',
 };
 // autoTargetContainerId/specialization/activeChallenge NO van en REQUIRED_FIELDS: son unión
 // `string|null` y `typeof null === 'object'` rompería el chequeo de tipo; su validación de
@@ -556,6 +595,20 @@ function migrate(raw, itemNameToId, prestigeTreeData) {
       specializationsUsed: 0,
       totalKeysEarned: (Number.isFinite(migrated.prestigeKeys) ? migrated.prestigeKeys : 0) + investedCost,
       saveVersion: 14,
+    };
+  }
+  // v14 -> v15 (ronda 26, PLAN.md §2.11/§4.34-§4.36): Mudanza de Galaxia. Saves viejos arrancan
+  // sin Escrituras ni mudanzas (comportamiento actual sin cambios visibles) y
+  // `totalKeysEarnedRun` se backfillea con `totalKeysEarned` (el save nunca se mudó todavía, así
+  // que la "ventana desde la última mudanza" es toda la vida de la partida).
+  if (migrated.saveVersion < 15) {
+    migrated = {
+      ...migrated,
+      deeds: 0,
+      deedsTreeLevels: {},
+      galaxyMoveCount: 0,
+      totalKeysEarnedRun: Number.isFinite(migrated.totalKeysEarned) ? migrated.totalKeysEarned : 0,
+      saveVersion: 15,
     };
   }
   return migrated;

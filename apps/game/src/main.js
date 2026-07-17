@@ -33,6 +33,7 @@ const DATA_FILES = {
   events: './data/events.json',
   specializations: './data/specializations.json',
   challenges: './data/challenges.json',
+  deedsTree: './data/deedsTree.json',
 };
 
 async function loadData() {
@@ -112,6 +113,11 @@ async function boot() {
     // no aplican ningún modificador ni recompensa.
     specializations: loaded.specializations,
     challenges: loaded.challenges,
+    // Ronda 26.A había dejado `deedsTree` en DATA_FILES pero sin cablear acá (el engine nunca lo
+    // consumió porque nadie lo compraba sin la UI de 26.C) — mismo patrón opcional que
+    // specializations/challenges: sin él, getDeedsKeysBonusFlat/getExtraDailyMissionSlots/
+    // hasProceduralContainersUnlocked devuelven su neutro (0/0/false).
+    deedsTree: loaded.deedsTree,
   };
   const itemsData = loaded.items;
   const allContainers = loaded.containers;

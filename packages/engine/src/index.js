@@ -58,6 +58,9 @@ export {
   activeChallengeModifier,
   getMarketFluctuationMinBonus,
   resolveMarketFluctuation,
+  getDeedsKeysBonusFlat,
+  getExtraDailyMissionSlots,
+  hasProceduralContainersUnlocked,
 } from './economy.js';
 
 export { clampedElapsedMs, localDayStamp } from './time.js';
@@ -89,7 +92,17 @@ export {
   buyContainer,
   rollContainerResult,
   applyContainerResult,
+  proceduralContainer,
+  isProceduralTierUnlocked,
+  nextProceduralTier,
 } from './systems/containers.js';
+
+export {
+  PROCEDURAL_CONTAINER_MAX_N,
+  isProceduralContainerId,
+  proceduralTierN,
+  proceduralContainerId,
+} from './procedural.js';
 
 export { nextUpgradeCost, buyUpgrade } from './systems/upgrades.js';
 
@@ -121,6 +134,13 @@ export {
   isPrestigeNodeUnlocked,
   buyPrestigeNode,
   doPrestige,
+  GALAXY_MOVE_PRESTIGE_THRESHOLD,
+  canGalaxyMove,
+  galaxyMoveDeedsPreview,
+  doGalaxyMove,
+  nextDeedsNodeCost,
+  isDeedsNodeUnlocked,
+  buyDeedsNode,
 } from './systems/prestige.js';
 
 export { checkAchievements } from './systems/achievements.js';

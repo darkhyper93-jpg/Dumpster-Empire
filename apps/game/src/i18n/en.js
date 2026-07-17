@@ -21,6 +21,7 @@ export default {
   'common.free': 'Free',
   'common.missingMoney': 'You need {amount} more',
   'common.missingKeys': 'You need {amount} more keys',
+  'common.missingDeeds': 'You need {amount} more Deeds',
   'common.effectFlat': '+{amount} {label} per level',
   'common.effectPercent': '+{pct}% {label} per level',
   'common.emptyContainers': 'No containers configured.',
@@ -144,6 +145,24 @@ export default {
   'prestige.rewardDigPowerPercent': '+{pct}% Dig Power',
   'prestige.rewardMarketFluctuationMinFlat': '+{amount} to the market quote floor',
 
+  // Round 26.C (PLAN.md §2.10/§4.34-§4.36): Galaxy Move and the Deeds tree.
+  'prestige.galaxyMoveHeading': 'Galaxy Move',
+  'prestige.galaxyMoveLocked': 'Unlocks at {count} prestiges.',
+  'prestige.galaxyMoveDesc':
+    'Reset your prestige progress (Keys, tree and counter) and start over in a different galaxy, in exchange for permanent Deeds.',
+  'prestige.galaxyMoveCount': 'Moves made: {count}',
+  'prestige.deedsLabel': 'Deeds: {amount}',
+  'prestige.galaxyMoveButton': 'Move to Another Galaxy',
+  'prestige.galaxyMovePreview': "If you move now you'll gain: {amount} Deeds.",
+  'prestige.galaxyMoveConfirmTitle': 'Confirm the Galaxy Move?',
+  'prestige.galaxyMoveKeeps':
+    'Kept: achievements, collection, showcase, sets, completed challenges, tools, the Stall and its level, Deeds and its tree, your best streak and historical counters.',
+  'prestige.galaxyMoveLoses':
+    'Lost: City Keys, prestige tree, active specialization/challenge, and the Stall inventory (liquidated at instant sale).',
+  'prestige.galaxyMoveConfirmButton': 'Confirm Move',
+  'prestige.deedsTreeHeading': 'Deeds Tree',
+  'prestige.deedsUpgradeFor': 'Upgrade for {amount} Deeds',
+
   // SettingsView.js
   'settings.on': 'On',
   'settings.off': 'Off',
@@ -198,6 +217,10 @@ export default {
   'shop.stallBuyFor': 'Buy for {amount}',
   'shop.stallOwned': "You already have it — check the Stall tab.",
 
+  // Post-Big Bang procedural tiers (PLAN.md §4.37, round 26.B): name suffix, {n} = tier.
+  'shop.proceduralSuffix': ' (Echo {n})',
+  'shop.proceduralAllOwned': "You already own every procedural tier available.",
+
   // StallView.js (PLAN.md §2.9/§4.27-§4.30, ronda 23.C)
   'stall.lockedTeaser': 'Unlocked by buying the Junk Stall in the Shop.',
   'stall.quote': "Today's price: {arrow} {pct}%",
@@ -245,6 +268,7 @@ export default {
   // Ronda 24 — daily missions, container events and day/night cycle (PLAN.md §4.30-§4.33).
   'npc.chispa.storyFirstMission': 'Chispa: "There it is! You cleared your first mission. I\'m gonna throw you a new challenge every day, got it?"',
   'npc.zoraida.storyFirstEvent': 'Madame Zoraida: "I saw it coming in the cards... a special container, and there you were, seizing the moment. That\'s how I like it."',
+  'npc.intendente.storyGalaxyMove': 'The Mayor: "So you\'re moving to another galaxy? I\'m moving too, you know — they\'ll name me Galactic Mayor over there. Take your Deeds with you, they\'re worth the same in the new city."',
 
   // MissionsSection.js
   'missions.title': "Chispa's Missions",

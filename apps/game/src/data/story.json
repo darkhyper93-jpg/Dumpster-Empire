@@ -22,5 +22,11 @@
     "npcId": "zoraida",
     "cond": { "type": "eventsUsedAtLeast", "value": 1 },
     "textKey": "npc.zoraida.storyFirstEvent"
+  },
+  {
+    "id": "firstGalaxyMoveIntendente",
+    "npcId": "intendente",
+    "cond": { "type": "galaxyMoveCountAtLeast", "value": 1 },
+    "textKey": "npc.intendente.storyGalaxyMove"
   }
 ]

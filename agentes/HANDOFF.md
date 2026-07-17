@@ -6076,3 +6076,580 @@ Manual 375px + desktop-1440 (Playwright temporal, borrado tras verificar — no 
 [ ] HANDOFF (este bloque) — a continuación
 [ ] Push de la rama + link de PR — a continuación (soy el único agente de la ronda 25)
 ```
+
+## Ronda 26 — Agente A: engine de la segunda capa de prestigio (rama `feat/lategame-ronda26`, save v15)
+
+### Qué hice (SOLO mi sección, 26.A — no avancé 26.B/C/D)
+
+Implementé ÚNICAMENTE el engine de la Mudanza de Galaxia y las Escrituras
+(ROADMAPv4.md §26.A, PLAN.md §2.11/§4.34-§4.36). No toqué UI, i18n de presentación, e2e ni
+logros nuevos — esos son 26.B (procedurales/sufijos), 26.C (UI+e2e) y 26.D (auditoría).
+
+- **PLAN.md primero**: agregué §2.11 (concepto de Mudanza de Galaxia) y §4.34/§4.35/§4.36
+  (tabla campo-por-campo de qué resetea/conserva, fórmula de Escrituras, árbol de Escrituras).
+  AJUSTE de numeración (roadmap §3.6): el último § real de PLAN.md era §4.33 (nodos infinitos,
+  ronda 25) — el roadmap cita esta ronda como §4.37/§4.38 asumiendo secciones intermedias que
+  la ronda 24 nunca llegó a escribir (mismo gap que dejó anotado la ronda 25); usé §4.34-§4.36
+  reales, con el mismo comentario AJUSTE que dejó la ronda 25 para la próxima.
+- **Data**: `apps/game/src/data/deedsTree.json` (6 nodos: `ventajaGalactica`, `memoriaDeCiudades`,
+  `bolsilloCosmico`, `agendaLlena`, `flotaFundadora`, `ecoDelBigBang` — TODOS con `nivelMaximo`
+  finito, a diferencia de los 3 nodos infinitos del árbol de prestigio de la ronda 25: el roadmap
+  no pidió ninguno infinito acá). Iconos: reusé aliases YA registrados en `icons.js`
+  (`dust-firststar`, `city-skyline`, `archive-multiverse`, `quest-board`, `drone-network`,
+  `echo-bigbang`) — cero íconos nuevos, no le tocaba a mi sección. Sumé `deedsTree` a
+  `DATA_FILES` de `main.js` (1 línea) para que fluya al bag `data` que ya recibe todo getter.
+- **Engine** (save v15): `state.js` — `deeds`/`deedsTreeLevels`/`galaxyMoveCount`/
+  `totalKeysEarnedRun`. `save.js` — REQUIRED_FIELDS/NUMERIC_MAP_FIELDS/validateDeepContent +
+  migración v14→v15 (`totalKeysEarnedRun` backfillea con `totalKeysEarned`, mismo criterio que
+  usó la ronda 25 para backfillear ese campo: "toda la vida de la partida" si nunca hubo mudanza
+  previa). También subí el techo de `isValidDailyMissions` de 3 a 5 (3 base + hasta 2 de
+  `agendaLlena`) — save.js sigue agnóstico del valor exacto de balance, solo el techo de
+  seguridad cambia.
+  `economy.js`: `deedsLevel`/`deedsEffectsOfType` (espejo de `prestigeEffectsOfType`, sobre
+  `state.deedsTreeLevels`), y 3 getters nuevos (`getDeedsKeysBonusFlat`,
+  `getExtraDailyMissionSlots`, `hasProceduralContainersUnlocked`) para que 26.B/27 los consuman.
+  Efectos wireados en getters YA existentes: `getSellMult` (+`sellPercentGlobalPerNivel` de
+  `ventajaGalactica`), `getStallCapacity` (+`stallCapacityFlatPerNivel` de `bolsilloCosmico`,
+  solo con `stallLevel >= 1`), `getParallelAutoSlots` (+`parallelSlotsFlatPerNivel` de
+  `flotaFundadora`). `data.deedsTree` es opcional (mismo patrón que `data.stall`/
+  `data.challenges`): sin él, cero efecto, comportamiento previo intacto.
+  `systems/prestige.js`: `doPrestige` ahora suma `getDeedsKeysBonusFlat` (memoriaDeCiudades)
+  a `keysEarned` ANTES de acumular a `totalKeysEarned`/`totalKeysEarnedRun` (campo nuevo, sube
+  en cada prestigio, la mudanza lo resetea). Funciones nuevas: `canGalaxyMove`/
+  `galaxyMoveDeedsPreview`/`doGalaxyMove` (Mudanza completa, ver tabla abajo) y
+  `nextDeedsNodeCost`/`isDeedsNodeUnlocked`/`buyDeedsNode` (mecanismo del árbol de Escrituras,
+  espejo exacto de `nextPrestigeNodeCost`/`isPrestigeNodeUnlocked`/`buyPrestigeNode`, pagado en
+  `deeds` en vez de `prestigeKeys`).
+  `systems/missions.js`: extraje `reachableTemplates()` (antes inline en `rollThreeMissions`) y
+  sumé el loop de slots extra de `agendaLlena` (`getExtraDailyMissionSlots`) DESPUÉS de las 3
+  misiones base — de cualquier dificultad alcanzable, puede repetir tipo. Sin `agendaLlena`
+  comprado, comportamiento idéntico a antes (0 slots extra).
+  `index.js`: exporté todo lo nuevo (`getDeedsKeysBonusFlat`, `getExtraDailyMissionSlots`,
+  `hasProceduralContainersUnlocked`, `canGalaxyMove`, `galaxyMoveDeedsPreview`, `doGalaxyMove`,
+  `nextDeedsNodeCost`, `isDeedsNodeUnlocked`, `buyDeedsNode`) para que 26.C los use desde la UI.
+
+### Tabla campo-por-campo de la Mudanza (R26.1, la trampa de este agente)
+
+Escribí el test RED primero (`ronda26-lategame.test.js`, describe "tabla campo-por-campo") con
+UN estado sembrado con basura en TODOS los campos relevantes, y aserté campo por campo qué
+resetea / qué no. La implementación de `doGalaxyMove` es deliberadamente explícita (sin loops
+genéricos "resetear todo excepto X") para que quede autodocumentada contra esa tabla. Verifiqué
+que el test realmente atrapa una regresión: comenté `state.prestigeCount = 0;` a mano, corrí
+la suite (1 test cae con el mensaje esperado), y revertí — no fue un ejercicio de fe, se vio
+caer con el motivo correcto antes de confirmar GREEN.
+
+Puntos no obvios que dejo documentados en el código:
+- El desafío activo se CANCELA sin evaluar su `goal` en la mudanza (a diferencia de un
+  prestigio normal, que si llama a `resolveActiveChallengeGoal`) — R26.D. Cubierto con un test
+  que planta `campoMinado` (goal `always`, se completaría instantáneo en un prestigio normal) y
+  verifica que NO entra a `challengesCompleted`.
+- El inventario del Puesto se liquida: se vacía y `stallSoldCount` suma la cantidad liquidada
+  (el dinero resultante es intrascendente porque `money` se pisa con `startMoney` en el mismo
+  paso — no hice el cálculo de venta real, sería trabajo sin efecto observable).
+- `getPrestigeStartMoney` se llama DESPUÉS de vaciar `prestigeTreeLevels` (mismo orden que ya
+  usaba `doPrestige`), así que tras una mudanza el dinero inicial es 0 salvo que las Escrituras
+  compensen a futuro (nodo nuevo que sume startMoney no existe todavía en `deedsTree.json` — el
+  roadmap no lo pidió).
+
+### Corrección a tests preexistentes por el bump de SAVE_VERSION (14→15)
+
+`ronda25-prestigio.test.js` tenía 2 asserts con el literal `14` hardcodeado
+(`expect(SAVE_VERSION).toBe(14)` y `expect(result.data.saveVersion).toBe(14)`) que rompían con
+el bump — mismo patrón que dejaron las rondas 24/25 en los tests de las rondas anteriores
+("recontar desde el import, no un literal roto por el bump"). Cambié el primero a
+`toBeGreaterThanOrEqual(14)` (el test verifica campos de la ronda 25, no la versión exacta) y el
+segundo a comparar contra `SAVE_VERSION` importado. Documenté el motivo en un comentario AJUSTE
+para que la ronda 27 no se sorprenda con el mismo patrón otra vez.
+
+### Riesgos que dejo para 26.B/C/D
+
+- `hasProceduralContainersUnlocked(state, data)` está expuesto pero NADIE lo consume todavía —
+  26.B lo cablea en `isContainerUnlocked`/la factory procedural (`bigbangPlus<n>`).
+  `getExtraDailyMissionSlots` y el wiring en `rollThreeMissions` SÍ están activos ya (no
+  necesitan a 26.B), pero como `agendaLlena` no es comprable sin UI del árbol de Escrituras,
+  en la práctica no se ve hasta que 26.C construya esa pantalla.
+- `getParallelAutoSlots` ahora incluye el bonus de `flotaFundadora`, pero HOY no hay ningún
+  sistema que "asigne" robots a esos slots extra más allá de lo que ya hacía automatización —
+  la ronda 27 ("Flota de robots asignables") es quien construye la asignación real; mientras
+  tanto el slot extra simplemente amplía `getParallelAutoSlots` sin UI que lo explique (aceptable:
+  el nodo tampoco es comprable sin la UI del árbol de Escrituras de 26.C).
+- `doGalaxyMove`/`buyDeedsNode` NO están cableados a ninguna acción de `store.js` todavía — le
+  toca a 26.C (mismo patrón que `doPrestige`/`buyPrestigeNode` en `PrestigeView.js`).
+- Logros de la mudanza ("primera mudanza / 3 mudanzas / Eco 5 comprado") son tarea de 26.C según
+  el roadmap — no los toqué (ni until `achievements.json` ni `CONDITION_EVALUATORS` nuevos como
+  `galaxyMoveCountAtLeast`, que 26.C va a necesitar agregar).
+- Copy en inglés de `deedsTree.json` (overlay `data-en.js`, patrón de `prestigeTree`/
+  `specializations`/`challenges`) tampoco lo agregué — es parte de la UI/i18n de presentación
+  que le toca a 26.C, y agregarlo sin la pantalla que lo consuma hubiera sido trabajo a ciegas.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 542/542 verde (38 archivos; +33 tests nuevos de ronda26-lategame.test.js,
+                     +ajuste de 2 asserts en ronda25-prestigio.test.js por el bump 14→15)
+npm run test:e2e  → 81/81 verde (sin cambios: esta sección no tocó UI, así que la suite
+                     existente corre exactamente igual — confirma el contrato §18, "el juego es
+                     EXACTAMENTE el de hoy" para todo lo que no compré/desbloqueé)
+```
+
+No hice verificación manual de UI a 375px/desktop: esta sección no agregó NINGUNA pantalla ni
+tocó ningún componente visual (el único archivo de `apps/game/src` que toqué es `main.js`, una
+línea para sumar `deedsTree` a `DATA_FILES`, sin efecto visible sin la UI de 26.C). El smoke
+test de Playwright (`smoke.spec.js`, corrido arriba) sí cubre los anchos de referencia y confirma
+que el boot no se rompió con el archivo nuevo.
+
+### Estado del DoD (agente A de 4, ronda 26)
+
+```
+[x] ROADMAPv4.md §26.A y PLAN.md §2.11/§4.34-§4.36 implementados literalmente
+[x] Engine puro, sin DOM
+[x] Tests de Vitest verdes para la lógica nueva (33 casos), con verificación RED real
+    (mutación deliberada + revert) en el caso más crítico (tabla de reseteo)
+[x] Save v15: migración + validación completa
+[x] npm test → 542/542 verde
+[x] npm run test:e2e → 81/81 verde (sin cambios, esta sección no tocó UI)
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit — a continuación
+[x] HANDOFF (este bloque)
+[ ] Push de la rama — NO me corresponde: soy el agente A de 4 (B/C/D siguen en esta misma rama)
+```
+
+## Ronda 26 — Agente B: contenedores procedurales post-Big Bang + sufijos (rama `feat/lategame-ronda26`, save v15)
+
+### Qué hice (SOLO mi sección, 26.B — no avancé 26.C/D)
+
+Implementé el engine de los tiers procedurales post-Big Bang y la extensión de sufijos
+numéricos (ROADMAPv4.md §26.B, PLAN.md §4.37 nuevo). No toqué UI de Tienda/Prestigio, e2e, ni
+logros nuevos de mudanza — esos son 26.C; auditoría es 26.D.
+
+- **PLAN.md primero**: agregué §4.37 (fórmulas literales de costo/resistencia/probTrampa/
+  mechanicValueMult, tope duro `PROCEDURAL_CONTAINER_MAX_N=25` con la cuenta que lo justifica,
+  contrato de exclusión de colección/sets/misiones). AJUSTE de numeración (mismo criterio que
+  dejó anotado 26.A en §4.34): el roadmap cita esta sección como §4.39 asumiendo numeración
+  intermedia que nunca se escribió; usé §4.37 real.
+- **Módulo nuevo `packages/engine/src/procedural.js`** (hoja, sin dependencias, para que
+  `save.js` y `systems/containers.js` lo importen sin ciclo): `PROCEDURAL_CONTAINER_MAX_N=25`,
+  `isProceduralContainerId(id, maxN)` (patrón `^bigbangPlus([1-9][0-9]?)$` + tope — rechaza
+  `bigbangPlus999`/`bigbangPlus01`/`bigbangPlus1e2`/`bigbangPlus-1`/`bigbangPlus0`), `proceduralTierN(id)`,
+  `proceduralContainerId(n)`.
+- **Factory (`systems/containers.js`)**: `proceduralContainer(n, baseContainer)` — pura,
+  reconstruible desde `n` + `vertederoBigBang`, NUNCA se escribe a containers.json. Fórmulas
+  literales (mismo criterio que la escritura de Escrituras de 26.A: el número es el contrato,
+  no un valor tuneable de JSON): `costoInicial×15^n`, `resistencia×1.32^n`,
+  `probTrampaBase=min(0.5, 0.44+0.005n)`, y reusa `mechanicValueMult` (ronda 20) para el ×13^n
+  del pool de ítems (evita duplicar `itemSaleValue`). `poolContainerId: baseContainer.id` le
+  dice a `rollContainerResult` de dónde sacar el pool de `itemsData.containers` (los
+  procedurales no tienen pool propio en items.json — ronda 29 reusará el mismo mecanismo para
+  el arte ilustrado). `isProcedural: true` + `proceduralN: n` para que 26.C/otros sistemas lo
+  detecten. `name` queda en el nombre SIN sufijo (el del Big Bang) a propósito: el sufijo
+  "(Eco {n})" es i18n (`shop.proceduralSuffix`, es+en, agregado a es.js/en.js) — 26.C lo
+  compone con `t('shop.proceduralSuffix', {n})` al renderizar, el engine no hornea idioma.
+  `isProceduralTierUnlocked(state, n, data)`: requiere `hasProceduralContainersUnlocked`
+  (getter de 26.A sobre `ecoDelBigBang`) Y, salvo `n=1`, poseer el tier `n-1` — nunca pasa por
+  la cadena de `isContainerUnlocked` (los procedurales no están en `allContainers`).
+- **`rollContainerResult`**: único cambio de comportamiento sobre contenedores REALES es cero —
+  `containerPool = itemsData.containers[container.poolContainerId || container.id]`, y ningún
+  contenedor de containers.json declara `poolContainerId`, así que el fallback nunca se activa
+  para ellos (mismo patrón "opcional, sin efecto si no está" de toda la ronda).
+- **Exclusión de colección/sets/misiones (contrato §3.5.6), gratis por diseño**: confirmé que
+  `getCollectionCompletion` (ronda 19), `isSetComplete`/`getSetBonus` (ronda 22, `CONDITION_EVALUATORS.setsCompletedAtLeast`)
+  y `rollThreeMissions`/`ownedContainerIds` (ronda 24) reciben `allContainers` como PARÁMETRO en
+  toda la cadena — como los procedurales nunca se agregan a ese array (construido en
+  `apps/game/src/main.js` desde containers.json), quedan afuera sin tocar esas funciones. Sí
+  agregué un guard EXPLÍCITO `if (container.isProcedural) return false;` al inicio de
+  `isSetComplete` (economy.js) para no depender implícitamente de que el pool inexistente en
+  items.json resuelva a `[]` — más robusto y autodocumentado contra el contrato. Sus hallazgos
+  SÍ suman `itemsFoundCount`/`itemsFoundByCategory` (logros generales los siguen contando) bajo
+  la clave propia `itemsFoundByItem['bigbangPlus<n>']`, nunca mezclada con `vertederoBigBang`
+  (test explícito).
+- **`format.js`**: extendí `SUFFIXES` de `[Qa,T,B,M,K]` a la tabla completa `K M B T Qa Qi Sx Sp
+  Oc No Dc UDc DDc TDc QaDc QiDc` (1e3..1e48, escala corta). El tope de 25 en
+  `PROCEDURAL_CONTAINER_MAX_N` se eligió justo para que ningún costo/valor procedural necesite
+  un sufijo por encima de `QiDc` — documentado con la cuenta exacta en `procedural.js` y en
+  PLAN.md §4.37.
+- **`save.js`**: `sanitizeContainerRefs` ahora acepta `id` válido si está en el `Set` de
+  containers.json O si `isProceduralContainerId(id)` — sin este OR, un jugador legítimo con
+  tiers procedurales en `autoQueue`/`autoProcessing`/`autoTargetContainerId` los perdía en cada
+  recarga (falso positivo de "referencia huérfana"), y sin el chequeo de patrón+tope un save
+  manipulado con `bigbangPlus999` pasaría. Documentado el motivo inline.
+- **`index.js`**: exporté `proceduralContainer`, `isProceduralTierUnlocked` (de containers.js) y
+  `PROCEDURAL_CONTAINER_MAX_N`/`isProceduralContainerId`/`proceduralTierN`/`proceduralContainerId`
+  (de procedural.js nuevo) para que 26.C los consuma desde la UI.
+- **i18n**: `shop.proceduralSuffix` en es.js (`' (Eco {n})'`) y en.js (`' (Echo {n})'`) — clave
+  lista, sin wiring de UI todavía (26.C la usa al renderizar Tienda).
+
+### Tests (RED primero, `packages/engine/tests/ronda26b-procedural.test.js`, 17 casos)
+
+Escribí el archivo completo de tests ANTES de correr contra la implementación final: los primeros
+intentos con `random = () => 0.01` cayeron en trampa (probTrampaBase 0.445 del tier 1 > 0.01) y
+mostraron el mensaje esperado del roll — recién ahí ajusté el random determinístico a 0.99 y
+agregué `prestigeTree` a la data de prueba (faltaba, tiraba `data.prestigeTree is not iterable`
+dentro de `getLuck`). Cobertura: bordes de cada sufijo nuevo + "nunca e+" en un costo procedural
+extremo; validación de ids (válidos 1-25, hostiles 999/01/1e2/-1/0/vacío); factory (escalas
+exactas, tope de probTrampaBase, nunca en containers.json); `isProceduralTierUnlocked` (bloqueado
+sin `ecoDelBigBang`, cadena tier-a-tier, tope duro); `rollContainerResult`/`applyContainerResult`
+sobre un tier (pool del Big Bang, clave de colección propia); contrato de exclusión
+(`isSetComplete`/`getSetBonus`, `getCollectionCompletion` sin cambios, `rollThreeMissions` nunca
+elige un id procedural); `sanitizeContainerRefs` (conserva legítimos, descarta los 4 hostiles del
+roadmap en autoQueue+autoProcessing+autoTargetContainerId).
+
+### Riesgos que dejo para 26.C/27 (sin tocar, no me correspondía)
+
+- Nada wireado a UI: `proceduralContainer`/`isProceduralTierUnlocked` no los llama nadie todavía
+  (ni ShopView ni AutomationView). 26.C construye la Tienda del tier siguiente y compone el
+  nombre con `t('shop.proceduralSuffix', {n})`.
+- R26.3 (roadmap, "el Auto del robot debe considerar los tiers generados") sigue abierto — a
+  propósito NO inyecté contenedores procedurales al array `allContainers` que alimenta
+  `bestAffordableUnlockedContainer`/`getQueueMax` (economy.js:1114/1150) porque ESE MISMO array
+  también alimenta INDEX/sets/misiones (contrato §3.5.6): mezclarlos ahí rompería la exclusión.
+  26.C necesita una vía separada (no `allContainers`) para que "Auto" contemple los tiers.
+- `AutomationView.js` (selector manual de target) tampoco ofrece tiers procedurales como opción
+  — mismo motivo, no hardcodeado a `allContainers`, tarea de 26.C si el roadmap lo pide.
+- Logros de mudanza ("primera mudanza/3 mudanzas/Eco 5 comprado") son 26.C, no los toqué.
+- `data-en.js` (paridad de nombres) no necesita entrada para `bigbangPlus<n>` — los procedurales
+  nunca están en containers.json, así que el test de paridad de la ronda 16 no los ve (confirmado
+  corriendo `apps/game/tests/ronda16-i18n.test.js`, sigue verde sin cambios).
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 559/559 verde (39 archivos; +17 tests nuevos de ronda26b-procedural.test.js
+                     sobre los 542 que dejó 26.A)
+npm run test:e2e   → 81/81 verde con `npx playwright test --workers=1` (serial). Con el default
+                     de workers en paralelo salió flaky en ESTA corrida (un test distinto y no
+                     relacionado cayó cada vez: ronda15-contenido, después ronda24-retencion,
+                     después ronda19-quickwins — ninguno toca contenedores/sufijos/save). Repetí
+                     el mismo test 3 veces en aislamiento (`--repeat-each=3`) y pasó las 3 —
+                     confirmé además contra el commit de 26.A ANTES de mis cambios (git stash)
+                     que la corrida en paralelo también puede fallar ahí. Es flakiness de
+                     contención de recursos del entorno, preexistente, no introducida por esta
+                     sección — recomiendo a 26.C/D correr con `--workers=1` si ven un fallo
+                     aislado no relacionado a su diff.
+```
+
+Manual 375px/desktop: esta sección no tocó NINGÚN archivo de `apps/game/src/ui` ni CSS —
+`smoke.spec.js` (dentro de la corrida serial verde) cubre los 3 anchos de referencia y confirma
+que el boot no se rompió. Sin UI nueva que verificar a mano (contrato §18: "el juego es
+EXACTAMENTE el de hoy" para todo lo que la UI de 26.C todavía no expone).
+
+### Estado del DoD (agente B de 4, ronda 26)
+
+```
+[x] ROADMAPv4.md §26.B y PLAN.md §4.37 implementados literalmente
+[x] Engine puro, sin DOM
+[x] Tests de Vitest verdes para la lógica nueva (17 casos)
+[x] Save v15 sin cambios de esquema (26.B no agrega campos persistidos)
+[x] npm test → 559/559 verde
+[x] npm run test:e2e → 81/81 verde (serial, --workers=1; ver nota de flakiness paralela arriba)
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit — a continuación
+[x] HANDOFF (este bloque)
+[ ] Push de la rama — NO me corresponde: soy el agente B de 4 (C/D siguen en esta misma rama)
+```
+
+## Ronda 26 — Agente C: UI + e2e de Mudanza de Galaxia y tiers procedurales (rama `feat/lategame-ronda26`, save v15)
+
+### Qué hice (SOLO mi sección, 26.C — no toqué logros/e2e/auditoría más allá de lo pedido)
+
+Construí la UI y los e2e de la Mudanza de Galaxia (§4.34-§4.36, engine de 26.A) y de los
+contenedores procedurales post-Big Bang (§4.37/§4.39, engine de 26.B). No había "PLAN.md primero"
+propio en el roadmap para 26.C (a diferencia de 26.A/26.B) — no toqué PLAN.md.
+
+- **Bug de wiring que arrastraban 26.A/26.B**: `main.js` cargaba `deedsTree.json` en `DATA_FILES`
+  pero nunca lo sumaba al objeto `data` que se pasa al engine — `getDeedsKeysBonusFlat`/
+  `getExtraDailyMissionSlots`/`hasProceduralContainersUnlocked` siempre devolvían su neutro,
+  invisibles hasta hoy porque nadie compraba nodos sin esta UI. Lo até (`data.deedsTree =
+  loaded.deedsTree`) y sumé el overlay de idioma completo (`dataI18n.js`: `initDataLocalization`/
+  `applyDataLanguage` para `deedsTree`, mismo patrón `{name, desc}` que `prestigeTree`; `data-en.js`
+  con los 6 nodos traducidos).
+- **Engine, mínimo y con TDD** (`packages/engine/tests/ronda26c-ui-support.test.js`, 6 casos RED
+  antes de implementar): `nextProceduralTier(state)` en `systems/containers.js` (próximo tier sin
+  poseer, para que Tienda/Escarbar sepan cuál ofrecer — mayor `n` con `ownedContainers[bigbangPlusN]
+  >= 1` más uno, exportado desde `index.js`) y el evaluador `galaxyMoveCountAtLeast` en
+  `CONDITION_EVALUATORS` (achievements.js) para los logros de mudanza. También exporté
+  `GALAXY_MOVE_PRESTIGE_THRESHOLD` desde `index.js` (26.A lo dejó sin exportar) para que
+  `PrestigeView` arme el tooltip de bloqueo con el número real, no hardcodeado.
+- **store.js**: `resolveDigContainer(containerId)` — único punto que resuelve un id de contenedor
+  a su objeto real, sea de `allContainers` o un tier procedural (`bigbangPlus<n>`, reconstruido con
+  `proceduralContainer(n, vertederoBigBang)`, nunca en `allContainers` por el contrato §3.5.6).
+  `startManualDig` lo usa en vez de `allContainers.find` directo, así escarbar un tier procedural
+  funciona con el mismo flujo (compra al iniciar, roll, revelado) sin código duplicado. Acciones
+  nuevas `doGalaxyMove()`/`buyDeedsNode(nodeId)` — mismo patrón que `doPrestige`/`buyPrestigeNode`.
+- **PrestigeView.js**: sección "Mudanza de Galaxia" (bloqueada con tooltip antes del prestigio 10,
+  vía `canGalaxyMove`; panel de confirmación de dos pasos como "Hacer Prestigio" con preview de
+  Escrituras y el resumen literal de qué se pierde/conserva) + árbol de Escrituras. El árbol de
+  Escrituras usa una clase CSS **distinta** (`.deeds-tree`, no `.prestige-tree`) aunque comparte
+  100% el CSS (reglas `.prestige-tree, .deeds-tree { ... }`) — `deedsTree.json` no tiene
+  `requires` en ningún nodo (es plano, a diferencia del árbol de prestigio), así que no usé
+  `buildTreeLayout`, solo `--branch: index` en una fila. Detecté en el primer full e2e run que
+  reusar literalmente `.prestige-tree` rompía `ronda4-regression.spec.js` P3 (`page.locator`
+  en "strict mode": 2 elementos) — lo dejo documentado inline para que nadie lo reintente.
+- **ShopView.js / DigContainerPicker.js**: tarjeta informativa (Tienda) y tarjeta de escarbado real
+  (Escarbar, mismo `data-start-dig` que un contenedor normal) del próximo tier procedural, solo
+  visibles con `hasProceduralContainersUnlocked`. Ambas reusan `t('shop.proceduralSuffix', {n})`
+  (clave que ya había dejado 26.B sin wiring de UI).
+- **Data/i18n**: 3 logros nuevos `a56`/`a57`/`a58` (Primera Mudanza, Nómade Galáctico oculto, Eco
+  de Quinta — `containerOwnedAtLeast` con `containerId: "bigbangPlus5"`, ya existente desde la
+  ronda 22) + traducción en `data-en.js`. 1 viñeta de historia nueva (`firstGalaxyMoveIntendente`,
+  `npc.intendente.storyGalaxyMove`, es+en) — el Intendente se vuelve "Intendente Galáctico" en la
+  primera mudanza, siguiendo el running gag de roadmap §3.1. Ícono nuevo `galaxySwirl`/
+  `galaxy-move` (espiral orbital, SVG propio, cero emojis). Todas las claves i18n nuevas en es.js
+  Y en.js real (nunca placeholder) — verificado contra `ronda16-i18n.test.js`.
+- **AJUSTE de balance**: `a58` (Eco de Quinta) arrancó con recompensa de $50.000.000 y rompió
+  `fase9-balance.test.js` (el total de recompensas de dinero de TODOS los logros se sale del techo
+  de 5% del umbral de Prestigio, y ese logro solo ya se comía más del 100% del techo por-logro de
+  1%) — bajado a $5.000.000, documentado en el propio commit (no hay comentarios en JSON).
+
+### e2e nuevo (`ronda26-lategame.spec.js`, 3 casos, todos verdes)
+
+1. Seed prestigio 10 → "Mudarse de Galaxia" habilitado, confirmar resetea Llaves/árbol/contador
+   Y CONSERVA logros (comparé el array `achievementsUnlocked` completo antes/después, no un
+   conteo). Nota: los logros que se desbloquean en memoria al bootear (`runAchievements()` en
+   `store.js`) NO se persisten a `localStorage` hasta la siguiente acción real — el test fuerza un
+   `toggle-sound` ida y vuelta antes de leer el "antes", si no el snapshot inicial siempre da
+   vacío (no es un bug de esta ronda, es cómo `store.js` viene funcionando desde antes).
+2. Seed con `ecoDelBigBang` comprado → `bigbangPlus1` aparece en Escarbar y es escarbable con
+   money alto (compra real, `ownedContainers.bigbangPlus1` queda en 1 tras el click).
+3. Seed con `bigbangPlus1`/`bigbangPlus2` poseídos → el costo de `bigbangPlus3` (≈3.375e21) se ve
+   con sufijo (`Sx`) en Tienda y Escarbar, nunca "e+".
+
+### Riesgos / cosas para la 26.D (auditoría) y más allá
+
+- R26.3 del roadmap (el robot de automatización debe considerar tiers procedurales) sigue
+  DELIBERADAMENTE sin resolver — ni `bestAffordableUnlockedContainer` ni el selector de
+  `AutomationView` los ven. 26.B ya lo había dejado anotado; yo tampoco lo toqué (fuera de
+  alcance de "UI + e2e de Mudanza/Tienda/Escarbar", es un tema de automatización).
+  `data-start-dig="bigbangPlusN"` SOLO funciona para escarbado manual.
+- `isDeedsNodeUnlocked` se llama en `PrestigeView` pero con la data actual (`deedsTree.json`, 6
+  nodos, todos con `requires: []`) siempre da `true` — dead code defensivo a propósito, mismo
+  criterio que el resto del árbol si algún nodo futuro declara `requires`.
+- No agregué las viñetas de historia "cada prestigio 1/3/6/10 (Intendente, cargo nuevo)" que
+  lista roadmap §3.1 — NO son de la ronda 26 (ninguna ronda 23-25 las agregó tampoco); si el
+  usuario las quiere, es tarea aparte a definir, no la until until de "primera Mudanza" que sí me
+  tocaba.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 565/565 verde (40 archivos; +6 tests nuevos de ronda26c-ui-support.test.js)
+npm run test:e2e  → 84/84 verde en total (24 specs). Corriendo TODA la suite en serie
+                     (--workers=1) até 2 veces: cada corrida completa tuvo 1 fallo AISLADO de un
+                     test SIN RELACIÓN con este diff (primera vez: ronda12-regression #4 "dinero
+                     estable tras cerrar modal"; segunda vez: ronda19-quickwins #1 "racha") — cada
+                     uno pasó 100% al re-correrlo solo o repetido 5 veces. Mismo patrón de
+                     flakiness de contención de recursos que ya documentó el Agente B de esta
+                     misma ronda (26.B) en su bloque de HANDOFF; no until introducida por 26.C.
+                     Recomiendo a 26.D correr specs sueltos si ve un fallo aislado no relacionado
+                     a su diff, antes de asumir regresión.
+```
+
+Manual 375px/desktop: verificado con capturas Playwright reales (Prestigio con Mudanza bloqueada/
+desbloqueada, panel de confirmación, árbol de Escrituras — lista vertical en el sidebar angosto de
+320px en desktop, igual que el árbol de prestigio; Tienda y Escarbar con la tarjeta del tier
+procedural). Nada roto en el layout existente; las capturas eran scratch, no se commitean.
+
+### Estado del DoD (agente C de 4, ronda 26)
+
+```
+[x] ROADMAPv4.md §26.C implementado (UI + e2e; sin PLAN.md propio para esta sección)
+[x] Engine: solo 2 funciones puras nuevas, con test RED→GREEN real
+[x] UI: lee estado y despacha acciones (doGalaxyMove/buyDeedsNode/startManualDig), no recalcula
+    economía — todo costo/preview sale de @dumpster/engine
+[x] Estados de UI: bloqueado con tooltip / confirmación de dos pasos / con datos (Mudanza),
+    ausente-si-no-corresponde (tarjeta procedural en Tienda/Escarbar)
+[x] Mobile-first verificado a 375px y desktop 1280px (capturas reales)
+[x] Cero emojis, ícono nuevo SVG propio (galaxySwirl) al registro icons.js
+[x] Copy nuevo en es.js Y en.js real, verificado contra ronda16-i18n.test.js
+[x] npm test → 565/565 verde
+[x] npm run test:e2e → 84/84 verde (recontado; ver nota de flakiness preexistente arriba)
+[x] Cero console.log / TODO en los archivos tocados
+[x] git commit — a continuación
+[x] HANDOFF (este bloque)
+[x] Push de la rama — soy el agente C de 4; el D (auditoría) sigue en esta misma rama antes del
+    PR, así que TAMPOCO pusheo yo — dejo la rama lista localmente para 26.D.
+```
+
+## Ronda 26 — Agente D: auditoría Verif&Audit del diff completo (rama `feat/lategame-ronda26`, save v15 sin cambios)
+
+### Qué hice (SOLO mi sección, 26.D — auditoría del diff, fixes con TDD)
+
+Revisión adversarial del diff completo de la ronda 26 (26.A→26.C, `git diff main...HEAD`) con la
+metodología de Verif&Audit.md, foco en lo que pide el roadmap 26.D: factory procedural con `n`
+hostil, mudanza durante desafío activo, overflow de números grandes, y Escrituras con contadores
+manipulados.
+
+**3 hallazgos reales (1 🔴, 2 🟡), los tres arreglados con TDD (RED verificado antes del fix:
+6 de los 9 tests nuevos fallaban contra el código de 26.A-26.C). El resto del diff pasó limpio.**
+
+### 🔴 Hallazgo 1 (arreglado): overflow de la fórmula de Escrituras → wipe TOTAL de la partida
+
+- **Vector**: `galaxyMoveDeedsPreview` calcula `sqrt(prestigeCount × totalKeysEarnedRun)`. Dos
+  valores finitos que pasan TODA la validación del save (Number.isFinite) pueden multiplicar a
+  `Infinity` en float64 (p. ej. 1e308 × 1e308). El `Infinity` fluía a `deeds`,
+  `JSON.stringify(Infinity)` serializa `null`, y el próximo boot rechazaba el save ENTERO
+  (`validateSave` es todo-o-nada) → `freshState()`, partida borrada. Misma clase de bug que el
+  🔴 de la ronda 24 (`target: 0`): un save VÁLIDO que el propio juego vuelve inválido al persistir.
+- **Fix** (`systems/prestige.js`): si el producto no es finito, se usa `sqrt(a) × sqrt(b)`
+  (matemáticamente idéntico; máximo ~1.3e154 × 1.3e154, siempre finito). Además `doGalaxyMove`
+  clampea la acumulación con `Math.min(Number.MAX_VALUE, deeds + deedsEarned)`. La fórmula de
+  PLAN.md §4.35 NO cambia para ningún input alcanzable jugando (test de no-regresión: 10 prestigios
+  × 300 llaves → 10 Escrituras, igual que antes).
+
+### 🟡 Hallazgo 2 (arreglado): `proceduralContainer(n)` fabricaba contenedores corruptos con `n` hostil
+
+- **Vector**: la factory aceptaba `n` = 0, negativo, fraccionario, `1e9`, `NaN` y devolvía un
+  contenedor con `costoInicial` `Infinity`/`NaN` que rompía la economía aguas abajo
+  (`getContainerCost`/`buyContainer` sin error visible, botón muerto — "lo que nunca debés hacer"
+  de CLAUDE.md). Los llamadores legítimos ya validan antes (`proceduralTierN` devuelve null,
+  `nextProceduralTier` acota a 1..MAX), así que llegar con `n` inválido es bug de programación.
+- **Fix** (`systems/containers.js`): guard fail-fast al tope — `!Number.isInteger(n) || n < 1 ||
+  n > PROCEDURAL_CONTAINER_MAX_N` → `RangeError` con mensaje claro. Bordes 1 y MAX testeados como
+  válidos.
+
+### 🟡 Hallazgo 3 (arreglado): los dos inputs de la fórmula de Escrituras sin validación de coherencia
+
+- **Vector**: `validateDeepContent` no chequeaba la invariante `totalKeysEarnedRun <=
+  totalKeysEarned` (ambos se incrementan JUNTOS solo en `doPrestige`; la migración v15 los
+  iguala; la mudanza solo BAJA el run — un save con run > total es imposible legítimamente y es
+  la manipulación exacta que infla Escrituras). Tampoco exigía `prestigeCount` entero >= 0
+  (un 2.5 o -1 pasaba el typeof genérico). Regla dura §1.13: coherencia entre campos.
+- **Fix** (`save.js`): dos chequeos nuevos en `validateDeepContent` con mensaje específico.
+  Los seeds de tests/e2e de la ronda que sembraban run sin total se hicieron coherentes
+  (`ronda26-lategame.test.js`, `ronda26-lategame.spec.js` — 1 línea cada uno, comentada).
+
+### Lo que audité y pasó limpio (para no re-auditar en la 27+)
+
+- **Mudanza durante desafío activo**: se CANCELA sin recompensa — ya implementado y testeado por
+  26.A (`doGalaxyMove` → `abandonChallenge`), verificado el test existente; no dupliqué.
+- **`automationTick` con ids procedurales/desconocidos** en `ownedContainers`: guards resilientes
+  (skip silencioso), sin crash. R26.3 (robot NO escarba procedurales) sigue abierto como lo
+  dejaron 26.B/26.C — es feature, no bug de esta auditoría.
+- **XSS**: barrido de los sinks nuevos de 26.C (`PrestigeView`, tarjetas procedurales en
+  `ShopView`/`DigContainerPicker`): todo interpolado viene de data propia o pasa por coerción
+  numérica (`n`, sufijos); ningún string libre del save llega a `innerHTML`.
+- **`sanitizeContainerRefs`**: la aceptación OR de ids procedurales (`bigbangPlus\d+` válido con
+  n en rango) es correcta — un id fuera de rango se descarta, no se conserva.
+- **`deedsTreeLevels`**: validación con la misma paridad que `prestigeTreeLevels` (allow-list de
+  nodos + niveles enteros en rango). Sufijos numéricos completos hasta 1e48, sin "e+" en UI.
+- **Cap de misiones 3→5** (`getExtraDailyMissionSlots`): justificado por data (nodo de Escrituras),
+  validación del save ya acepta hasta 5 — coherente.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 574/574 verde (41 archivos; +9 tests nuevos de ronda26d-audit.test.js sobre
+                     los 565 de 26.C)
+npm run test:e2e  → 84/84 verde con --workers=1 (recomendación de 26.B/26.C por la flakiness de
+                     contención en paralelo; en esta corrida serial NO hubo ningún fallo aislado)
+Manual 375px + desktop 1280px (drive Playwright scripted en scratchpad, borrado, no comiteado):
+  Mudanza bloqueada→confirmación→post-move, compra de nodo de Escrituras, tarjeta "Eco 1" en
+  Tienda/Escarbar, sin "e+" en ningún texto. OJO: el header de dinero es un conteo TWEENED — tras
+  la mudanza muestra valores intermedios fantasma ($66Sx→$1.6Sx) durante ~8s; el save persistido
+  confirma money=0/deeds=10/prestigeKeys=10. No es bug; verificar contra el save, no el header.
+```
+
+### Estado del DoD (agente D de 4, ÚLTIMO de la ronda 26)
+
+```
+[x] Auditoría del diff completo con la metodología de Verif&Audit.md (focos del roadmap 26.D)
+[x] 3 hallazgos arreglados con TDD (RED verificado: 6/9 tests fallaban antes del fix)
+[x] npm test → 574/574 verde
+[x] npm run test:e2e → 84/84 verde (--workers=1)
+[x] Manual 375px + desktop: mudanza completa, Escrituras, tier procedural, sin notación científica
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push de la rama + link de PR — a continuación (soy el último agente de la ronda 26)
+```
+
+### Qué necesita saber la ronda 27
+
+- La ronda 26 completa (A→D) queda mergeable (save v15): `SAVE_VERSION = 15`, baselines 574
+  unit / 84 e2e. Recontar al ejecutar (regla §0).
+- **Invariante nueva del save**: `totalKeysEarnedRun <= totalKeysEarned` y `prestigeCount`
+  entero >= 0. Cualquier seed de test/e2e que siembre `totalKeysEarnedRun` DEBE sembrar
+  también `totalKeysEarned >= run` o el save se rechaza (los seeds de la 26 ya están
+  corregidos; usar de precedente).
+- **Patrón anti-overflow para fórmulas con productos de contadores del save**: si dos campos
+  finitos pueden multiplicar a Infinity, usar `sqrt(a)×sqrt(b)` (u otra reescritura) — un
+  Infinity persistido serializa `null` y el próximo boot WIPEA la partida (dos rondas seguidas
+  con esta clase de bug: 24 y 26).
+- `proceduralContainer(n)` ahora TIRA `RangeError` con `n` fuera de 1..PROCEDURAL_CONTAINER_MAX_N:
+  todo llamador nuevo debe validar antes (como hacen `proceduralTierN`/`nextProceduralTier`) o
+  atrapar el throw.
+- R26.3 sigue abierto (robot de automatización no considera tiers procedurales) — anotado por
+  26.B, 26.C y esta auditoría; si la 27 toca automatización, es el primer candidato.
+
+## Ronda 26 — Post-auditoría del usuario: segunda pasada Verif&Audit sobre el diff (2026-07-17, docs-only)
+
+### Qué se hizo
+
+A pedido del usuario, segunda pasada adversarial de Verif&Audit.md sobre el diff completo
+`main...HEAD` de la ronda 26 (A→D), DESPUÉS de la auditoría de 26.D y ANTES del push/PR.
+Los 3 fixes de 26.D se verificaron correctos (overflow de Escrituras vía `sqrt(a)×sqrt(b)`,
+`RangeError` de `n` hostil, coherencia `totalKeysEarnedRun <= totalKeysEarned`).
+`npm test` re-corrido: 574/574 verde (coincide con el baseline de 26.D). **Esta pasada NO tocó
+código**: los hallazgos quedan registrados acá y DELEGADOS a la ronda 27 (ROADMAPv4 §27.5,
+agregado en este mismo commit).
+
+### 🟡 Y1 (NO arreglado — delegado a la ronda 27): `state.money` sin clamp anti-Infinity — la clase "wipe al persistir" sigue abierta por otra puerta
+
+- **Vector**: `validateDeepContent` valida `deedsTreeLevels` (y `prestigeTreeLevels`) solo como
+  "mapa de números finitos" — sin enteros, sin rango, sin allow-list de nodos. Un save hostil con
+  `deedsTreeLevels: { ventajaGalactica: 1e305 }` pasa TODA la validación; `getSellMult` devuelve
+  ~2.5e304 y en 2-3 ventas `state.money += total` (containers.js:363; ídem stall.js:87,
+  achievements.js:88, missions.js:232, offline.js:111 — ninguno clampea) cruza a Infinity →
+  `JSON.stringify` → `null` → el próximo boot rechaza el save entero → wipe. Es el mismo
+  argumento del 🔴 de 26.D ("un save VÁLIDO que el propio juego vuelve inválido al persistir").
+- **Matiz**: clase PREEXISTENTE desde la ronda 25 vía `codiciaEterna` (nodo infinito, mismo mapa
+  débil) — superficie ampliada por la 26, no regresión de la 26. Por eso no bloquea este PR.
+- **Fix delegado**: helper `addMoney(state, x)` con `Math.min(Number.MAX_VALUE, ...)` en los 5
+  puntos de suma (patrón ya sentado por `state.deeds` en `doGalaxyMove`), con test de regresión
+  de save hostil finito-gigante; o validar los niveles de ambos árboles como enteros en rango
+  contra la data (precedente de enhebrar data: migración v14).
+
+### 🔵 MEJORAS DE CALIDAD (nuevas de esta pasada, no bloqueantes — delegadas a la 27)
+
+- **La liquidación de la mudanza infla `stallSoldCount`** (`doGalaxyMove` suma
+  `inventory.length`): una misión activa `sellAtStallCount` (n=5) puede completarse "gratis"
+  mudándose con inventario. Sin exploit económico real (mudarse cuesta toda la run) — decidir en
+  la 27 si se excluye o se documenta como feature.
+- **El 6º nodo del árbol de Escrituras cae en columna implícita**: `.deeds-tree` reusa
+  `repeat(5, minmax(150px,1fr))` + `grid-column: calc(var(--branch)+1)`; con 6 nodos el índice 5
+  va a una 6ª columna no declarada (auto-sized, sin el minmax). Con `overflow-x: auto` no se
+  pierde, pero puede renderizar más angosta — fix de 1 línea
+  (`.deeds-tree { grid-template-columns: repeat(6, ...) }`), verificar en desktop.
+- **`formatNumber` topea en QiDc (1e48)**: el tope procedural n=25 cubre los COSTOS (~2.5e47),
+  pero `money` no tiene techo — en idle muy largo post-tier-25 el header mostraría "1000QiDc"+
+  con dígitos crecientes (no viola la regla de "nunca e+", pero el sufijo deja de comprimir).
+  Solo documentación; sin acción hasta que exista un sink de dinero lategame.
+- **`isFirstRareFind` es por-tier en procedurales** (cada `bigbangPlus<n>` tiene su propia
+  entrada en `itemsFoundByItem` aunque comparten pool): celebración de "primer hallazgo"
+  repetida por tier. Cosmético, posiblemente deseable. Sin acción.
+
+### ✅ Veredicto de la segunda pasada
+
+El diff de la ronda 26 es APTO PARA MERGEAR: XSS limpio (toda interpolación de estado va
+coercida con `Number()` o resuelta contra data propia), validación de save reforzada con
+coherencia entre campos, ids procedurales con patrón+tope correctos, cero
+secretos/console.log/TODO/emojis, 574/574 verde. Y1 no bloquea (requiere save manipulado) pero
+entra a la ronda 27 con test propio.
+
+### Registro consolidado de deudas 🔵 históricas aún abiertas (relevado de todo este HANDOFF)
+
+Delegadas a la ronda 27 en ROADMAPv4 §27.5 (ver ahí el detalle y las prioridades):
+R26.3 (robot Auto vs tiers procedurales — 26.B/C/D), `stallEarnings` invisible en OfflineModal
+(23.E), `loadState()` silencioso ante save inválido (18), `persist()` sin try/catch (18),
+`migrate()` como cadena de spreads (16.E — con la migración v16 de la 27 es el momento),
+`boot()` con `err.message` crudo (16.E), `notify()` por segundo con Puesto activo (23.E),
+venta manual por índice con robot de fondo (23.E).
+
+**NO TOCAR (política explícita del repo, 15.E/23.E — se re-declara para que nadie lo "arregle"
+por error)**: `getAutoSpeedMult` por slot dentro del loop de `automationTick`; `trapsDiscarded`
+negativo pasando validación; `stallLevel` sin cota superior en el save.
+
+### Napkin
+
+Ítem 8 del napkin ampliado: la clase "Infinity brickea el save" ahora documenta sus DOS
+direcciones (leer sin `Number.isFinite` y ESCRIBIR una acumulación sin clamp), con el patrón
+`Math.min(Number.MAX_VALUE, ...)` / `sqrt(a)×sqrt(b)` como "Do instead".

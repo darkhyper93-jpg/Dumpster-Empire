@@ -16,11 +16,13 @@ import {
   getSetBonus,
   getStallCapacity,
   getTrapPenalty,
+  hasProceduralContainersUnlocked,
   registerContainerDig,
   itemSaleValue,
   resolveMarketFluctuation,
 } from '../economy.js';
 import { rollCategory, rollItem, rollItemVariance, rollIsTrap, rollTrapGrade, rollLegendary } from '../rng.js';
+import { PROCEDURAL_CONTAINER_MAX_N, proceduralContainerId } from '../procedural.js';
 
 /**
  * @typedef {Object} DigResult
@@ -55,6 +57,86 @@ export function isContainerUnlocked(state, container, allContainers) {
   if (index <= 0) return true;
   const previous = allContainers[index - 1];
   return (state.ownedContainers[previous.id] || 0) >= 1;
+}
+
+/**
+ * Genera en runtime el tier procedural `n` post-Big Bang (PLAN.md §4.37, ronda 26.B). Pura y
+ * determinística: reconstruible desde `n` + el contenedor base (`vertederoBigBang`), NUNCA se
+ * escribe a containers.json (contrato §3.5.6/§3.5.7 de ROADMAPv4). `poolContainerId` le indica a
+ * `rollContainerResult` que reuse el pool de ítems del Big Bang (mismo criterio que la ronda 29
+ * reusará para el arte ilustrado); `mechanicValueMult` reaprovecha el multiplicador de la ronda 20
+ * para aplicar el ×13^n sin duplicar `itemSaleValue`. `isProcedural: true` es el flag que excluye
+ * este contenedor de sets/colección (getSetBonus/isSetComplete de economy.js) — nunca entra al
+ * array `allContainers` que alimenta INDEX (19), sets (22) y los generadores de misión (24).
+ * @param {number} n - tier, entero 1..PROCEDURAL_CONTAINER_MAX_N
+ * @param {Object} baseContainer - `vertederoBigBang` tal cual viene de containers.json
+ * @returns {Object} contenedor sintético, misma forma que uno real de containers.json
+ */
+export function proceduralContainer(n, baseContainer) {
+  // AJUSTE (auditoría 26.D): rechazo de `n` hostil (0, negativo, fraccionario, 1e9, NaN). Los
+  // llamadores legítimos ya validan antes (proceduralTierN devuelve null, nextProceduralTier
+  // acota a 1..MAX), así que llegar acá con un n inválido es un bug de programación: fail-fast
+  // en vez de fabricar un contenedor con costoInicial Infinity/NaN que rompería la economía
+  // aguas abajo (getContainerCost/buyContainer sin error visible).
+  if (!Number.isInteger(n) || n < 1 || n > PROCEDURAL_CONTAINER_MAX_N) {
+    throw new RangeError(`Tier procedural inválido: n debe ser un entero entre 1 y ${PROCEDURAL_CONTAINER_MAX_N}.`);
+  }
+  // AJUSTE (PLAN.md §4.37): fórmulas literales del roadmap (mismo criterio que la ronda 26.A
+  // usó para la fórmula de Escrituras) — los coeficientes son el contrato, no un valor tuneable
+  // de data/*.json.
+  return {
+    id: proceduralContainerId(n),
+    icon: baseContainer.icon,
+    name: baseContainer.name,
+    categorias: baseContainer.categorias,
+    slots: baseContainer.slots,
+    digTime: baseContainer.digTime,
+    areaRecomendada: baseContainer.areaRecomendada,
+    trapPenaltyMult: baseContainer.trapPenaltyMult,
+    levelUpDigsBase: baseContainer.levelUpDigsBase,
+    levelUpDigsGrowth: baseContainer.levelUpDigsGrowth,
+    levelRarityShiftPerLevel: baseContainer.levelRarityShiftPerLevel,
+    levelValueMultPerLevel: baseContainer.levelValueMultPerLevel,
+    costoInicial: baseContainer.costoInicial * Math.pow(15, n),
+    resistencia: baseContainer.resistencia * Math.pow(1.32, n),
+    probTrampaBase: Math.min(0.5, 0.44 + 0.005 * n),
+    mechanicValueMult: Math.pow(13, n),
+    poolContainerId: baseContainer.id,
+    isProcedural: true,
+    proceduralN: n,
+  };
+}
+
+/**
+ * ¿El tier procedural `n` está desbloqueado? Nunca usa la cadena de `isContainerUnlocked`
+ * (los procedurales no están en `allContainers`): requiere `ecoDelBigBang` comprado (Escrituras,
+ * ronda 26.A) y, salvo el tier 1, poseer el tier `n-1`.
+ * @param {import('../state.js').GameState} state
+ * @param {number} n
+ * @param {import('../economy.js').EngineData} data
+ * @returns {boolean}
+ */
+export function isProceduralTierUnlocked(state, n, data) {
+  if (!hasProceduralContainersUnlocked(state, data)) return false;
+  if (n < 1 || n > PROCEDURAL_CONTAINER_MAX_N) return false;
+  if (n === 1) return true;
+  return (state.ownedContainers[proceduralContainerId(n - 1)] || 0) >= 1;
+}
+
+/**
+ * Próximo tier procedural sin poseer, para que la UI (ShopView/DigContainerPicker, ronda 26.C)
+ * sepa cuál ofrecer a continuación: el mayor `n` YA poseído (`ownedContainers[bigbangPlusN] >= 1`)
+ * más uno, o `1` si ninguno se posee. Puede devolver `PROCEDURAL_CONTAINER_MAX_N + 1` (todos
+ * poseídos) — el llamador lo chequea contra el tope antes de mostrar/comprar nada.
+ * @param {import('../state.js').GameState} state
+ * @returns {number}
+ */
+export function nextProceduralTier(state) {
+  let maxOwned = 0;
+  for (let n = 1; n <= PROCEDURAL_CONTAINER_MAX_N; n++) {
+    if ((state.ownedContainers[proceduralContainerId(n)] || 0) >= 1) maxOwned = n;
+  }
+  return maxOwned + 1;
 }
 
 /**
@@ -115,7 +197,10 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
   const levelShift = getLevelRarityShift(state, container);
   // PLAN.md §11.3 (ronda 9): a mayor nivel del contenedor, más valen sus ítems.
   const levelValueMult = getLevelValueMult(state, container);
-  const containerPool = itemsData.containers[container.id];
+  // Ronda 26.B: los tiers procedurales no tienen pool propio en items.json — reusan el del
+  // contenedor base (`poolContainerId`, ver proceduralContainer arriba). Los contenedores reales
+  // no declaran `poolContainerId`, así que el fallback nunca se activa para ellos.
+  const containerPool = itemsData.containers[container.poolContainerId || container.id];
   const items = [];
   const rarest = container.categorias[container.categorias.length - 1];
   // Un contenedor multi-slot puede sacar el mismo ítem dos veces en el MISMO roll — solo la

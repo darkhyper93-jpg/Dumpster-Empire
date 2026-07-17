@@ -175,6 +175,9 @@ const SHAPES = {
   // Ronda 24 — misiones diarias, ciclo día/noche y eventos de contenedor (PLAN.md §4.30-§4.33).
   sun: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.5" y1="4.5" x2="6.6" y2="6.6"/><line x1="17.4" y1="17.4" x2="19.5" y2="19.5"/><line x1="4.5" y1="19.5" x2="6.6" y2="17.4"/><line x1="17.4" y1="6.6" x2="19.5" y2="4.5"/>',
   flame: '<path d="M12 2c2 4-2 5-2 9a4 4 0 0 0 8 0c0-2-1-3-1-5 2 2 3 5 3 8a6 6 0 0 1-12 0c0-5 3-6 4-12z"/>',
+  // Ronda 26.C — Mudanza de Galaxia (PLAN.md §2.10/§4.34): espiral orbital con dos astros.
+  galaxySwirl:
+    '<path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3a5.5 5.5 0 0 1 5.5 5.5"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="7.5" r="1.1"/>',
 };
 
 /** Mapea cada clave `icon` de la data (items/containers/upgrades/automations/prestigeTree/achievements) a una forma. */
@@ -480,6 +483,9 @@ const ICON_MAP = {
   'legend-muse': 'crystalHeart',
   'legend-relic': 'sealedRelic',
   'legend-seed': 'seed',
+
+  // Ronda 26.C: Mudanza de Galaxia (sección de PrestigeView y logros a56/a57).
+  'galaxy-move': 'galaxySwirl',
 };
 
 /**

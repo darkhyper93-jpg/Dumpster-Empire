@@ -16,6 +16,10 @@ import {
   nextPrestigeNodeCost,
   isPrestigeNodeUnlocked,
   PRESTIGE_MONEY_THRESHOLD,
+  GALAXY_MOVE_PRESTIGE_THRESHOLD,
+  canGalaxyMove,
+  galaxyMoveDeedsPreview,
+  nextDeedsNodeCost,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { t } from '../i18n/i18n.js';
@@ -26,6 +30,10 @@ import { t } from '../i18n/i18n.js';
 let choiceOpen = false;
 /** @type {{ type: 'specialization'|'challenge', id: string } | null} */
 let selectedChoice = null;
+
+// Ronda 26.C (PLAN.md §2.10/§4.34): panel de confirmación de la Mudanza de Galaxia, mismo patrón
+// de estado local que `choiceOpen` — se resetea al confirmar/cancelar.
+let galaxyMoveConfirmOpen = false;
 
 /**
  * Texto legible del objetivo de un desafío (PLAN.md §4.32): los dos goal types de esta ronda son
@@ -153,6 +161,33 @@ export const PrestigeView = {
           choiceOpen = false;
           selectedChoice = null;
           store.actions.doPrestige(choice);
+          return;
+        }
+        // Ronda 26.C (PLAN.md §2.10/§4.34): "Mudarse de Galaxia" abre un panel de confirmación
+        // (mismo patrón de dos pasos que "Hacer Prestigio") antes de despachar la acción real.
+        const openGalaxyBtn = evt.target.closest('[data-action="open-galaxy-move"]');
+        if (openGalaxyBtn && !openGalaxyBtn.disabled) {
+          galaxyMoveConfirmOpen = true;
+          this.render(container, store.getState(), store);
+          return;
+        }
+        const cancelGalaxyBtn = evt.target.closest('[data-action="cancel-galaxy-move"]');
+        if (cancelGalaxyBtn) {
+          galaxyMoveConfirmOpen = false;
+          this.render(container, store.getState(), store);
+          return;
+        }
+        const confirmGalaxyBtn = evt.target.closest('[data-action="confirm-galaxy-move"]');
+        if (confirmGalaxyBtn) {
+          // Mismo criterio que confirm-prestige: resetear el estado local ANTES de despachar
+          // (doGalaxyMove notifica sincrónicamente y re-renderiza esta vista durante la llamada).
+          galaxyMoveConfirmOpen = false;
+          store.actions.doGalaxyMove();
+          return;
+        }
+        const deedsNodeBtn = evt.target.closest('[data-action="buy-deeds-node"]');
+        if (deedsNodeBtn && !deedsNodeBtn.disabled) {
+          store.actions.buyDeedsNode(deedsNodeBtn.dataset.id);
         }
       });
     }
@@ -246,7 +281,88 @@ export const PrestigeView = {
           }">${t('prestige.doButton')}</button>`) +
       `</section>` +
       choicePanel +
-      `<div class="prestige-tree">${nodes}</div>`;
+      `<div class="prestige-tree">${nodes}</div>` +
+      this.renderGalaxyMoveSection(state, data);
+  },
+
+  /**
+   * "Mudanza de Galaxia" (PLAN.md §2.10/§4.34-§4.36, ronda 26.C): bloqueada con tooltip antes
+   * del prestigio 10; una vez desbloqueada, botón que abre un panel de confirmación (mismo
+   * patrón de dos pasos que "Hacer Prestigio") con el resumen de lo que se pierde/conserva, y
+   * el árbol de Escrituras (nodos SIN dependencias entre sí — reusa las clases `.prestige-node`
+   * del árbol de prestigio para verse igual, pero en una sola fila: `deedsTree.json` no declara
+   * `requires`, así que no hace falta `buildTreeLayout`).
+   * @param {import('@dumpster/engine').GameState} state
+   * @param {Object} data
+   * @returns {string}
+   */
+  renderGalaxyMoveSection(state, data) {
+    const eligible = canGalaxyMove(state);
+    const preview = galaxyMoveDeedsPreview(state);
+
+    const confirmPanel = galaxyMoveConfirmOpen
+      ? `<div class="prestige-choice-panel">` +
+        `<h4>${t('prestige.galaxyMoveConfirmTitle')}</h4>` +
+        `<p>${t('prestige.galaxyMovePreview', { amount: formatNumber(preview) })}</p>` +
+        `<p>${t('prestige.galaxyMoveKeeps')}</p>` +
+        `<p>${t('prestige.galaxyMoveLoses')}</p>` +
+        `<div class="prestige-choice-actions">` +
+        `<button type="button" class="prestige-btn-main" data-action="confirm-galaxy-move">${t('prestige.galaxyMoveConfirmButton')}</button>` +
+        `<button type="button" data-action="cancel-galaxy-move">${t('prestige.cancelButton')}</button>` +
+        `</div>` +
+        `</div>`
+      : '';
+
+    const moveButton = galaxyMoveConfirmOpen
+      ? ''
+      : `<button type="button" class="prestige-btn-main" data-action="open-galaxy-move" ${eligible ? '' : 'disabled'} title="${
+          eligible ? '' : t('prestige.galaxyMoveLocked', { count: GALAXY_MOVE_PRESTIGE_THRESHOLD })
+        }">${t('prestige.galaxyMoveButton')}</button>`;
+
+    const deedsTree = data.deedsTree || [];
+    const deedsNodes = deedsTree
+      .map((node, index) => {
+        const level = Number(state.deedsTreeLevels[node.id]) || 0;
+        const maxed = level >= node.nivelMaximo;
+        const cost = maxed ? 0 : nextDeedsNodeCost(state, node);
+        const canAfford = state.deeds >= cost;
+        // `deedsTree.json` (PLAN.md §4.38) no declara `requires` en ninguno de sus 6 nodos — a
+        // diferencia del árbol de prestigio, es plano: `isDeedsNodeUnlocked` siempre da `true`
+        // con la data actual, así que solo quedan los estados maxed/comprable.
+        let action;
+        if (maxed) {
+          action = `<span class="badge">${t('prestige.maxed')}</span>`;
+        } else {
+          action = `<button type="button" data-action="buy-deeds-node" data-id="${node.id}" ${canAfford ? '' : 'disabled'} title="${
+            canAfford ? '' : t('common.missingDeeds', { amount: formatNumber(cost - state.deeds) })
+          }">${t('prestige.deedsUpgradeFor', { amount: formatNumber(cost) })}</button>`;
+        }
+        const stateClass = maxed ? 'prestige-node--maxed' : level > 0 ? 'prestige-node--active' : '';
+        return (
+          `<article class="prestige-node ${stateClass}" style="--branch:${index};--depth:0">` +
+          `<span class="prestige-node-icon">${iconMarkup(node.icon, { size: 26 })}</span>` +
+          `<h3>${node.name} (${level}/${node.nivelMaximo})</h3>` +
+          `<p>${node.desc}</p>` +
+          action +
+          `</article>`
+        );
+      })
+      .join('');
+
+    return (
+      `<section class="prestige-galaxy-move">` +
+      `<h3>${iconMarkup('galaxy-move', { size: 22 })} ${t('prestige.galaxyMoveHeading')}</h3>` +
+      `<p>${t('prestige.galaxyMoveDesc')}</p>` +
+      `<p>${t('prestige.deedsLabel', { amount: formatNumber(state.deeds) })}</p>` +
+      `<p>${t('prestige.galaxyMoveCount', { count: Number(state.galaxyMoveCount) || 0 })}</p>` +
+      moveButton +
+      confirmPanel +
+      // `.deeds-tree` (no `.prestige-tree`, aunque comparte todo su CSS): el árbol de prestigio
+      // ya usa esa clase como locator ÚNICO en varios e2e (ronda4-regression P3) — duplicarla acá
+      // rompía `page.locator('.prestige-tree')` en "strict mode" (2 elementos).
+      (deedsTree.length ? `<h4>${t('prestige.deedsTreeHeading')}</h4><div class="deeds-tree">${deedsNodes}</div>` : '') +
+      `</section>`
+    );
   },
 
   /**

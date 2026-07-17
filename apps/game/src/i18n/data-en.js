@@ -256,6 +256,9 @@ export default {
     a53: 'Challenge Master',
     a54: 'Infinite Bet',
     a55: 'Specialist',
+    a56: 'First Move',
+    a57: 'Galactic Nomad',
+    a58: 'Fifth Echo',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },
@@ -370,5 +373,14 @@ export default {
       name: 'Black Market',
       desc: "Today's quote is fixed at 0.8 (bad) for the whole run.",
     },
+  },
+  // Ronda 26.A/26.C (PLAN.md §4.38): árbol de Escrituras, ganado con la Mudanza de Galaxia.
+  deedsTree: {
+    ventajaGalactica: { name: 'Galactic Advantage', desc: '+25% global sale value per level.' },
+    memoriaDeCiudades: { name: 'Memory of Cities', desc: '+1 City Key per prestige, per level.' },
+    bolsilloCosmico: { name: 'Cosmic Pocket', desc: '+6 Junk Stall inventory slots per level.' },
+    agendaLlena: { name: 'Full Agenda', desc: '+1 daily mission per level.' },
+    flotaFundadora: { name: 'Founding Fleet', desc: '+1 automation robot slot per level.' },
+    ecoDelBigBang: { name: 'Echo of the Big Bang', desc: 'Unlocks the post-Big Bang procedural containers.' },
   },
 };

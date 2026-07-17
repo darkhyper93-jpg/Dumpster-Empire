@@ -53,7 +53,16 @@
 // `prestigeKeys + costoAcumulado(prestigeTreeLevels)` porque es el mejor estimado posible de lo
 // ganado históricamente a partir de lo que el save YA tiene (Llaves sin gastar + Llaves ya
 // invertidas en el árbol); un save nuevo simplemente empieza en 0 real desde acá en adelante.
-export const SAVE_VERSION = 14;
+// AJUSTE (ronda 26, 26.A): v15 agrega la Mudanza de Galaxia (PLAN.md §2.11/§4.34) y su segunda
+// capa de prestigio: `deeds` (Escrituras acumuladas, NUNCA se resetean con una mudanza — todo
+// el punto de esta capa es sobrevivirla) y `deedsTreeLevels` (nivel por nodo de
+// data/deedsTree.json, mismo mecanismo que prestigeTreeLevels pero en su propia moneda).
+// `galaxyMoveCount` cuenta mudanzas realizadas (para su logro). `totalKeysEarnedRun` acumula
+// Llaves de Ciudad ganadas en `doPrestige` desde la ÚLTIMA mudanza (o desde el inicio si nunca
+// se mudó) — a diferencia de `totalKeysEarned` (histórico, nunca se resetea), éste SÍ vuelve a 0
+// en cada mudanza porque la fórmula de Escrituras (PLAN.md §4.35) lo necesita como "ventana desde
+// la última vez".
+export const SAVE_VERSION = 15;
 
 // AJUSTE (ronda 23): cota de seguridad para `inventory` en validateDeepContent (save.js). No es
 // la capacidad de diseño real (esa vive en data/stall.json y save.js es deliberadamente
@@ -150,6 +159,15 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  * @property {number} totalKeysEarned - Llaves de Ciudad ganadas históricamente, nunca se
  *   resetea (a diferencia de `prestigeKeys`, que se gasta). La ronda 26 lo necesita para la
  *   fórmula de Escrituras.
+ * @property {number} deeds - Escrituras acumuladas (PLAN.md §4.35, ronda 26); moneda de la
+ *   segunda capa de prestigio, ganada SOLO al mudarse de galaxia. Nunca se resetea.
+ * @property {Object<string, number>} deedsTreeLevels - nivel por id de nodo de
+ *   `data/deedsTree.json` (PLAN.md §4.36); sobrevive CADA mudanza de galaxia (a diferencia de
+ *   `prestigeTreeLevels`, que la mudanza sí vacía).
+ * @property {number} galaxyMoveCount - mudanzas de galaxia realizadas históricamente, para su logro.
+ * @property {number} totalKeysEarnedRun - Llaves de Ciudad ganadas desde la última mudanza (o
+ *   desde el inicio de la partida si nunca se mudó); se resetea a 0 en cada mudanza, a diferencia
+ *   de `totalKeysEarned`. La fórmula de Escrituras (PLAN.md §4.35) lo consume.
  */
 
 /**
@@ -246,5 +264,9 @@ export function freshState() {
     challengesCompleted: [],
     specializationsUsed: 0,
     totalKeysEarned: 0,
+    deeds: 0,
+    deedsTreeLevels: {},
+    galaxyMoveCount: 0,
+    totalKeysEarnedRun: 0,
   };
 }

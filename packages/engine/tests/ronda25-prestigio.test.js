@@ -33,8 +33,11 @@ function primedState(money = 2_000_000_000) {
 }
 
 describe('save v14: prestigio profundo', () => {
-  it('SAVE_VERSION es 14 y freshState trae los campos nuevos', () => {
-    expect(SAVE_VERSION).toBe(14);
+  // AJUSTE (ronda 26): SAVE_VERSION ya no es 14 (bump a 15 por la Mudanza de Galaxia,
+  // ronda26-lategame.test.js) — se recuenta desde el import en vez de un literal roto por el
+  // bump, mismo patrón que dejaron las rondas 24/25 en sus propios tests anteriores.
+  it('SAVE_VERSION >= 14 y freshState trae los campos nuevos de la ronda 25', () => {
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(14);
     const state = freshState();
     expect(state.specialization).toBeNull();
     expect(state.activeChallenge).toBeNull();
@@ -52,7 +55,7 @@ describe('save v14: prestigio profundo', () => {
     delete v13.totalKeysEarned;
     const result = validateSave(v13, undefined, undefined, prestigeTree);
     expect(result.valid).toBe(true);
-    expect(result.data.saveVersion).toBe(14);
+    expect(result.data.saveVersion).toBe(SAVE_VERSION);
     expect(result.data.specialization).toBeNull();
     expect(result.data.activeChallenge).toBeNull();
     expect(result.data.challengesCompleted).toEqual([]);
