@@ -6579,3 +6579,77 @@ Manual 375px + desktop 1280px (drive Playwright scripted en scratchpad, borrado,
   atrapar el throw.
 - R26.3 sigue abierto (robot de automatización no considera tiers procedurales) — anotado por
   26.B, 26.C y esta auditoría; si la 27 toca automatización, es el primer candidato.
+
+## Ronda 26 — Post-auditoría del usuario: segunda pasada Verif&Audit sobre el diff (2026-07-17, docs-only)
+
+### Qué se hizo
+
+A pedido del usuario, segunda pasada adversarial de Verif&Audit.md sobre el diff completo
+`main...HEAD` de la ronda 26 (A→D), DESPUÉS de la auditoría de 26.D y ANTES del push/PR.
+Los 3 fixes de 26.D se verificaron correctos (overflow de Escrituras vía `sqrt(a)×sqrt(b)`,
+`RangeError` de `n` hostil, coherencia `totalKeysEarnedRun <= totalKeysEarned`).
+`npm test` re-corrido: 574/574 verde (coincide con el baseline de 26.D). **Esta pasada NO tocó
+código**: los hallazgos quedan registrados acá y DELEGADOS a la ronda 27 (ROADMAPv4 §27.5,
+agregado en este mismo commit).
+
+### 🟡 Y1 (NO arreglado — delegado a la ronda 27): `state.money` sin clamp anti-Infinity — la clase "wipe al persistir" sigue abierta por otra puerta
+
+- **Vector**: `validateDeepContent` valida `deedsTreeLevels` (y `prestigeTreeLevels`) solo como
+  "mapa de números finitos" — sin enteros, sin rango, sin allow-list de nodos. Un save hostil con
+  `deedsTreeLevels: { ventajaGalactica: 1e305 }` pasa TODA la validación; `getSellMult` devuelve
+  ~2.5e304 y en 2-3 ventas `state.money += total` (containers.js:363; ídem stall.js:87,
+  achievements.js:88, missions.js:232, offline.js:111 — ninguno clampea) cruza a Infinity →
+  `JSON.stringify` → `null` → el próximo boot rechaza el save entero → wipe. Es el mismo
+  argumento del 🔴 de 26.D ("un save VÁLIDO que el propio juego vuelve inválido al persistir").
+- **Matiz**: clase PREEXISTENTE desde la ronda 25 vía `codiciaEterna` (nodo infinito, mismo mapa
+  débil) — superficie ampliada por la 26, no regresión de la 26. Por eso no bloquea este PR.
+- **Fix delegado**: helper `addMoney(state, x)` con `Math.min(Number.MAX_VALUE, ...)` en los 5
+  puntos de suma (patrón ya sentado por `state.deeds` en `doGalaxyMove`), con test de regresión
+  de save hostil finito-gigante; o validar los niveles de ambos árboles como enteros en rango
+  contra la data (precedente de enhebrar data: migración v14).
+
+### 🔵 MEJORAS DE CALIDAD (nuevas de esta pasada, no bloqueantes — delegadas a la 27)
+
+- **La liquidación de la mudanza infla `stallSoldCount`** (`doGalaxyMove` suma
+  `inventory.length`): una misión activa `sellAtStallCount` (n=5) puede completarse "gratis"
+  mudándose con inventario. Sin exploit económico real (mudarse cuesta toda la run) — decidir en
+  la 27 si se excluye o se documenta como feature.
+- **El 6º nodo del árbol de Escrituras cae en columna implícita**: `.deeds-tree` reusa
+  `repeat(5, minmax(150px,1fr))` + `grid-column: calc(var(--branch)+1)`; con 6 nodos el índice 5
+  va a una 6ª columna no declarada (auto-sized, sin el minmax). Con `overflow-x: auto` no se
+  pierde, pero puede renderizar más angosta — fix de 1 línea
+  (`.deeds-tree { grid-template-columns: repeat(6, ...) }`), verificar en desktop.
+- **`formatNumber` topea en QiDc (1e48)**: el tope procedural n=25 cubre los COSTOS (~2.5e47),
+  pero `money` no tiene techo — en idle muy largo post-tier-25 el header mostraría "1000QiDc"+
+  con dígitos crecientes (no viola la regla de "nunca e+", pero el sufijo deja de comprimir).
+  Solo documentación; sin acción hasta que exista un sink de dinero lategame.
+- **`isFirstRareFind` es por-tier en procedurales** (cada `bigbangPlus<n>` tiene su propia
+  entrada en `itemsFoundByItem` aunque comparten pool): celebración de "primer hallazgo"
+  repetida por tier. Cosmético, posiblemente deseable. Sin acción.
+
+### ✅ Veredicto de la segunda pasada
+
+El diff de la ronda 26 es APTO PARA MERGEAR: XSS limpio (toda interpolación de estado va
+coercida con `Number()` o resuelta contra data propia), validación de save reforzada con
+coherencia entre campos, ids procedurales con patrón+tope correctos, cero
+secretos/console.log/TODO/emojis, 574/574 verde. Y1 no bloquea (requiere save manipulado) pero
+entra a la ronda 27 con test propio.
+
+### Registro consolidado de deudas 🔵 históricas aún abiertas (relevado de todo este HANDOFF)
+
+Delegadas a la ronda 27 en ROADMAPv4 §27.5 (ver ahí el detalle y las prioridades):
+R26.3 (robot Auto vs tiers procedurales — 26.B/C/D), `stallEarnings` invisible en OfflineModal
+(23.E), `loadState()` silencioso ante save inválido (18), `persist()` sin try/catch (18),
+`migrate()` como cadena de spreads (16.E — con la migración v16 de la 27 es el momento),
+`boot()` con `err.message` crudo (16.E), `notify()` por segundo con Puesto activo (23.E),
+venta manual por índice con robot de fondo (23.E).
+
+**NO TOCAR (política explícita del repo, 15.E/23.E — se re-declara para que nadie lo "arregle"
+por error)**: `getAutoSpeedMult` por slot dentro del loop de `automationTick`; `trapsDiscarded`
+negativo pasando validación; `stallLevel` sin cota superior en el save.
+
+### Napkin
+
+Ítem 8 del napkin ampliado: la clase "Infinity brickea el save" ahora documenta sus DOS
+direcciones (leer sin `Number.isFinite` y ESCRIBIR una acumulación sin clamp), con el patrón
+`Math.min(Number.MAX_VALUE, ...)` / `sqrt(a)×sqrt(b)` como "Do instead".
