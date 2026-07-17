@@ -6468,3 +6468,114 @@ procedural). Nada roto en el layout existente; las capturas eran scratch, no se 
 [x] Push de la rama — soy el agente C de 4; el D (auditoría) sigue en esta misma rama antes del
     PR, así que TAMPOCO pusheo yo — dejo la rama lista localmente para 26.D.
 ```
+
+## Ronda 26 — Agente D: auditoría Verif&Audit del diff completo (rama `feat/lategame-ronda26`, save v15 sin cambios)
+
+### Qué hice (SOLO mi sección, 26.D — auditoría del diff, fixes con TDD)
+
+Revisión adversarial del diff completo de la ronda 26 (26.A→26.C, `git diff main...HEAD`) con la
+metodología de Verif&Audit.md, foco en lo que pide el roadmap 26.D: factory procedural con `n`
+hostil, mudanza durante desafío activo, overflow de números grandes, y Escrituras con contadores
+manipulados.
+
+**3 hallazgos reales (1 🔴, 2 🟡), los tres arreglados con TDD (RED verificado antes del fix:
+6 de los 9 tests nuevos fallaban contra el código de 26.A-26.C). El resto del diff pasó limpio.**
+
+### 🔴 Hallazgo 1 (arreglado): overflow de la fórmula de Escrituras → wipe TOTAL de la partida
+
+- **Vector**: `galaxyMoveDeedsPreview` calcula `sqrt(prestigeCount × totalKeysEarnedRun)`. Dos
+  valores finitos que pasan TODA la validación del save (Number.isFinite) pueden multiplicar a
+  `Infinity` en float64 (p. ej. 1e308 × 1e308). El `Infinity` fluía a `deeds`,
+  `JSON.stringify(Infinity)` serializa `null`, y el próximo boot rechazaba el save ENTERO
+  (`validateSave` es todo-o-nada) → `freshState()`, partida borrada. Misma clase de bug que el
+  🔴 de la ronda 24 (`target: 0`): un save VÁLIDO que el propio juego vuelve inválido al persistir.
+- **Fix** (`systems/prestige.js`): si el producto no es finito, se usa `sqrt(a) × sqrt(b)`
+  (matemáticamente idéntico; máximo ~1.3e154 × 1.3e154, siempre finito). Además `doGalaxyMove`
+  clampea la acumulación con `Math.min(Number.MAX_VALUE, deeds + deedsEarned)`. La fórmula de
+  PLAN.md §4.35 NO cambia para ningún input alcanzable jugando (test de no-regresión: 10 prestigios
+  × 300 llaves → 10 Escrituras, igual que antes).
+
+### 🟡 Hallazgo 2 (arreglado): `proceduralContainer(n)` fabricaba contenedores corruptos con `n` hostil
+
+- **Vector**: la factory aceptaba `n` = 0, negativo, fraccionario, `1e9`, `NaN` y devolvía un
+  contenedor con `costoInicial` `Infinity`/`NaN` que rompía la economía aguas abajo
+  (`getContainerCost`/`buyContainer` sin error visible, botón muerto — "lo que nunca debés hacer"
+  de CLAUDE.md). Los llamadores legítimos ya validan antes (`proceduralTierN` devuelve null,
+  `nextProceduralTier` acota a 1..MAX), así que llegar con `n` inválido es bug de programación.
+- **Fix** (`systems/containers.js`): guard fail-fast al tope — `!Number.isInteger(n) || n < 1 ||
+  n > PROCEDURAL_CONTAINER_MAX_N` → `RangeError` con mensaje claro. Bordes 1 y MAX testeados como
+  válidos.
+
+### 🟡 Hallazgo 3 (arreglado): los dos inputs de la fórmula de Escrituras sin validación de coherencia
+
+- **Vector**: `validateDeepContent` no chequeaba la invariante `totalKeysEarnedRun <=
+  totalKeysEarned` (ambos se incrementan JUNTOS solo en `doPrestige`; la migración v15 los
+  iguala; la mudanza solo BAJA el run — un save con run > total es imposible legítimamente y es
+  la manipulación exacta que infla Escrituras). Tampoco exigía `prestigeCount` entero >= 0
+  (un 2.5 o -1 pasaba el typeof genérico). Regla dura §1.13: coherencia entre campos.
+- **Fix** (`save.js`): dos chequeos nuevos en `validateDeepContent` con mensaje específico.
+  Los seeds de tests/e2e de la ronda que sembraban run sin total se hicieron coherentes
+  (`ronda26-lategame.test.js`, `ronda26-lategame.spec.js` — 1 línea cada uno, comentada).
+
+### Lo que audité y pasó limpio (para no re-auditar en la 27+)
+
+- **Mudanza durante desafío activo**: se CANCELA sin recompensa — ya implementado y testeado por
+  26.A (`doGalaxyMove` → `abandonChallenge`), verificado el test existente; no dupliqué.
+- **`automationTick` con ids procedurales/desconocidos** en `ownedContainers`: guards resilientes
+  (skip silencioso), sin crash. R26.3 (robot NO escarba procedurales) sigue abierto como lo
+  dejaron 26.B/26.C — es feature, no bug de esta auditoría.
+- **XSS**: barrido de los sinks nuevos de 26.C (`PrestigeView`, tarjetas procedurales en
+  `ShopView`/`DigContainerPicker`): todo interpolado viene de data propia o pasa por coerción
+  numérica (`n`, sufijos); ningún string libre del save llega a `innerHTML`.
+- **`sanitizeContainerRefs`**: la aceptación OR de ids procedurales (`bigbangPlus\d+` válido con
+  n en rango) es correcta — un id fuera de rango se descarta, no se conserva.
+- **`deedsTreeLevels`**: validación con la misma paridad que `prestigeTreeLevels` (allow-list de
+  nodos + niveles enteros en rango). Sufijos numéricos completos hasta 1e48, sin "e+" en UI.
+- **Cap de misiones 3→5** (`getExtraDailyMissionSlots`): justificado por data (nodo de Escrituras),
+  validación del save ya acepta hasta 5 — coherente.
+
+### Baselines (recontados al ejecutar, regla §0)
+
+```
+npm test          → 574/574 verde (41 archivos; +9 tests nuevos de ronda26d-audit.test.js sobre
+                     los 565 de 26.C)
+npm run test:e2e  → 84/84 verde con --workers=1 (recomendación de 26.B/26.C por la flakiness de
+                     contención en paralelo; en esta corrida serial NO hubo ningún fallo aislado)
+Manual 375px + desktop 1280px (drive Playwright scripted en scratchpad, borrado, no comiteado):
+  Mudanza bloqueada→confirmación→post-move, compra de nodo de Escrituras, tarjeta "Eco 1" en
+  Tienda/Escarbar, sin "e+" en ningún texto. OJO: el header de dinero es un conteo TWEENED — tras
+  la mudanza muestra valores intermedios fantasma ($66Sx→$1.6Sx) durante ~8s; el save persistido
+  confirma money=0/deeds=10/prestigeKeys=10. No es bug; verificar contra el save, no el header.
+```
+
+### Estado del DoD (agente D de 4, ÚLTIMO de la ronda 26)
+
+```
+[x] Auditoría del diff completo con la metodología de Verif&Audit.md (focos del roadmap 26.D)
+[x] 3 hallazgos arreglados con TDD (RED verificado: 6/9 tests fallaban antes del fix)
+[x] npm test → 574/574 verde
+[x] npm run test:e2e → 84/84 verde (--workers=1)
+[x] Manual 375px + desktop: mudanza completa, Escrituras, tier procedural, sin notación científica
+[x] Cero console.log / TODO / emojis en los archivos tocados
+[x] git commit
+[x] HANDOFF (este bloque)
+[ ] Push de la rama + link de PR — a continuación (soy el último agente de la ronda 26)
+```
+
+### Qué necesita saber la ronda 27
+
+- La ronda 26 completa (A→D) queda mergeable (save v15): `SAVE_VERSION = 15`, baselines 574
+  unit / 84 e2e. Recontar al ejecutar (regla §0).
+- **Invariante nueva del save**: `totalKeysEarnedRun <= totalKeysEarned` y `prestigeCount`
+  entero >= 0. Cualquier seed de test/e2e que siembre `totalKeysEarnedRun` DEBE sembrar
+  también `totalKeysEarned >= run` o el save se rechaza (los seeds de la 26 ya están
+  corregidos; usar de precedente).
+- **Patrón anti-overflow para fórmulas con productos de contadores del save**: si dos campos
+  finitos pueden multiplicar a Infinity, usar `sqrt(a)×sqrt(b)` (u otra reescritura) — un
+  Infinity persistido serializa `null` y el próximo boot WIPEA la partida (dos rondas seguidas
+  con esta clase de bug: 24 y 26).
+- `proceduralContainer(n)` ahora TIRA `RangeError` con `n` fuera de 1..PROCEDURAL_CONTAINER_MAX_N:
+  todo llamador nuevo debe validar antes (como hacen `proceduralTierN`/`nextProceduralTier`) o
+  atrapar el throw.
+- R26.3 sigue abierto (robot de automatización no considera tiers procedurales) — anotado por
+  26.B, 26.C y esta auditoría; si la 27 toca automatización, es el primer candidato.

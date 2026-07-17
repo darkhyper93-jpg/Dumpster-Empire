@@ -92,6 +92,8 @@ describe('save v15: Mudanza de Galaxia', () => {
     state.deedsTreeLevels = { ventajaGalactica: 2 };
     state.galaxyMoveCount = 1;
     state.totalKeysEarnedRun = 7;
+    // Coherencia (auditoría 26.D): run <= total en todo save legítimo — sin esto el seed se rechaza.
+    state.totalKeysEarned = 7;
     const result = validateSave(JSON.parse(JSON.stringify(state)));
     expect(result.valid).toBe(true);
     expect(result.data.deeds).toBe(12);

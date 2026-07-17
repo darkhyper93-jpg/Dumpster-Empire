@@ -291,6 +291,19 @@ function validateDeepContent(migrated) {
   if (!Number.isFinite(migrated.totalKeysEarnedRun) || migrated.totalKeysEarnedRun < 0) {
     return 'Contenido inválido en totalKeysEarnedRun: debe ser un número >= 0.';
   }
+  // AJUSTE (auditoría 26.D, regla dura §1.13 de ROADMAPv4 — coherencia entre campos): todo save
+  // legítimo cumple `totalKeysEarnedRun <= totalKeysEarned`: ambos se incrementan JUNTOS y por
+  // el mismo monto solo en doPrestige, la migración v15 los iguala, y la mudanza solo BAJA el
+  // run (a 0). Un run por encima del histórico es manipulación para inflar Escrituras (§4.35).
+  if (migrated.totalKeysEarnedRun > migrated.totalKeysEarned) {
+    return 'Contenido inválido: totalKeysEarnedRun no puede superar totalKeysEarned.';
+  }
+  // AJUSTE (auditoría 26.D): prestigeCount es el otro factor de la fórmula de Escrituras — antes
+  // solo se exigía finitud (loop de REQUIRED_FIELDS); acá el rango y que no sea fraccionario
+  // (mismo criterio que digStreak/gravesHit).
+  if (!Number.isInteger(migrated.prestigeCount) || migrated.prestigeCount < 0) {
+    return 'Contenido inválido en prestigeCount: debe ser un entero >= 0.';
+  }
   return null;
 }
 

@@ -30,6 +30,8 @@ test.describe('Dumpster Empire — ronda 26.C (Mudanza de Galaxia + tiers proced
     seeded.prestigeCount = 10;
     seeded.prestigeKeys = 500;
     seeded.totalKeysEarnedRun = 300;
+    // Coherencia (auditoría 26.D): run <= total en todo save legítimo — sin esto el seed se rechaza.
+    seeded.totalKeysEarned = 300;
     // Dinero alto: al cargar, runAchievements() desbloquea varios logros de dinero — sirven de
     // prueba real de "se conserva" (no un array vacío que trivializaría el assert).
     seeded.money = 2_000_000_000;

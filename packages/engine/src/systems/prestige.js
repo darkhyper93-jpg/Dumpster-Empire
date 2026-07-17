@@ -175,7 +175,17 @@ export function canGalaxyMove(state) {
  * @returns {number}
  */
 export function galaxyMoveDeedsPreview(state) {
-  return Math.max(1, Math.floor(Math.sqrt(state.prestigeCount * state.totalKeysEarnedRun) / 5));
+  // AJUSTE (auditoría 26.D): dos contadores FINITOS y válidos (hasta ~1.8e308 cada uno) pueden
+  // desbordar el producto a Infinity; sqrt(a×b) = sqrt(a)×sqrt(b) es matemáticamente idéntico y
+  // su resultado máximo queda finito (~1.3e154 × 1.3e154 < Number.MAX_VALUE). El fallback solo
+  // se usa si el producto desbordó, para no mover ni un ulp la fórmula literal de §4.35 en el
+  // rango normal. Sin este guard, doGalaxyMove escribía `deeds: Infinity`, JSON.stringify lo
+  // vuelve `null` y el PRÓXIMO boot rechazaba el save entero (wipe de la partida).
+  const product = state.prestigeCount * state.totalKeysEarnedRun;
+  const root = Number.isFinite(product)
+    ? Math.sqrt(product)
+    : Math.sqrt(state.prestigeCount) * Math.sqrt(state.totalKeysEarnedRun);
+  return Math.max(1, Math.floor(root / 5));
 }
 
 /**
@@ -227,7 +237,10 @@ export function doGalaxyMove(state, data) {
   state.money = startMoney;
   state.totalMoneyEarned = startMoney;
 
-  state.deeds += deedsEarned;
+  // AJUSTE (auditoría 26.D): la acumulación se clampea a MAX_VALUE — un `deeds` previo
+  // astronómico (finito, pasa validación) más lo ganado no debe desbordar a Infinity, que JSON
+  // no serializa (mismo escenario de wipe que el guard de galaxyMoveDeedsPreview).
+  state.deeds = Math.min(Number.MAX_VALUE, state.deeds + deedsEarned);
   state.galaxyMoveCount += 1;
 
   return { ok: true, deedsEarned };

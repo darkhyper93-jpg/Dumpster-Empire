@@ -73,6 +73,14 @@ export function isContainerUnlocked(state, container, allContainers) {
  * @returns {Object} contenedor sintético, misma forma que uno real de containers.json
  */
 export function proceduralContainer(n, baseContainer) {
+  // AJUSTE (auditoría 26.D): rechazo de `n` hostil (0, negativo, fraccionario, 1e9, NaN). Los
+  // llamadores legítimos ya validan antes (proceduralTierN devuelve null, nextProceduralTier
+  // acota a 1..MAX), así que llegar acá con un n inválido es un bug de programación: fail-fast
+  // en vez de fabricar un contenedor con costoInicial Infinity/NaN que rompería la economía
+  // aguas abajo (getContainerCost/buyContainer sin error visible).
+  if (!Number.isInteger(n) || n < 1 || n > PROCEDURAL_CONTAINER_MAX_N) {
+    throw new RangeError(`Tier procedural inválido: n debe ser un entero entre 1 y ${PROCEDURAL_CONTAINER_MAX_N}.`);
+  }
   // AJUSTE (PLAN.md §4.37): fórmulas literales del roadmap (mismo criterio que la ronda 26.A
   // usó para la fórmula de Escrituras) — los coeficientes son el contrato, no un valor tuneable
   // de data/*.json.
