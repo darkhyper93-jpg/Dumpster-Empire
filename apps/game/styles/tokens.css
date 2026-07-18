@@ -1,42 +1,44 @@
-/* Tokens: identidad "The Workshop" (PLAN.md §5.3, mockup canónico
-   reference/ui/stitch_est_tica_de_vanguardia/dumpster_empire_clean_scavenge_area/code.html). */
-/* AJUSTE (Agente 8): reemplaza la paleta "fusión ámbar+Stitch" de la Fase 4 por los tonos
-   exactos del mockup canónico (fondo #191208 + superficies de madera/taller, acentos
-   ámbar-durazno/verde), Plus Jakarta Sans como única familia tipográfica, y las sombras
-   "tactile"/"squishy" del mockup. Se conservan los nombres de variable ya usados en todo
-   `apps/game` (--amber, --bg-*, --fg-*, --shadow-extrude, etc.) para no tener que tocar cada
-   selector de components.css/layout.css uno por uno — solo cambian los VALORES. */
+/* Tokens: identidad "The Workshop" (PLAN.md §5.3) — paleta «Turno Noche» (ronda 28).
+   El patio de chatarra de noche: fondos azul pizarra profundo (aire frío nocturno) contra el
+   ámbar cálido de las lámparas de sodio (--amber #ffb627, el ámbar del prototipo original,
+   CLAUDE.md). El banco de madera queda como isla cálida sobre el fondo frío. */
+/* AJUSTE (ronda 28): reemplaza el rango marrón mono-tono del mockup Stitch (#191208→#3c3427 +
+   acento #f0bc92) que el usuario desaprobó ("marrón IA", 2026-07-14). Elegida por el usuario
+   sobre otras 2 propuestas (2026-07-18) con matriz de screenshots 375/1280px. Solo cambian
+   VALORES; los nombres de variable se conservan para no tocar components.css/layout.css
+   (regla §28.1). Todos los pares de texto reales pasan contraste AA (contrast-check de la
+   ronda, ver HANDOFF); las 8 rarezas van a tonos francamente distintos con glow creciente. */
 :root {
-  /* --- Superficies (paleta del mockup: surface/surface-container-*) --- */
-  --bg-0: #191208; /* surface / background */
-  --bg-1: #221a0f; /* surface-container-low */
-  --bg-2: #261e13; /* surface-container */
-  --bg-3: #3c3427; /* surface-variant */
-  --bg-surface-highest: #41382b; /* surface-bright / surface-container-highest */
+  /* --- Superficies: azul pizarra nocturno, de casi negro a acero --- */
+  --bg-0: #0e1420; /* surface / background */
+  --bg-1: #16202f; /* surface-container-low */
+  --bg-2: #1b2738; /* surface-container */
+  --bg-3: #2e3b54; /* surface-variant */
+  --bg-surface-highest: #374763; /* surface-bright / surface-container-highest */
 
-  /* --- Acentos: ámbar-durazno (primary) y verde (secondary), warm no frío --- */
-  --amber: #f0bc92; /* primary */
-  --amber-dark: #623f1e; /* on-primary-fixed-variant, usado como sombra/borde de extrusión */
-  --amber-container: #5d3a1a; /* primary-container, fondo de chips/íconos ámbar */
-  --olive: #78dc77; /* secondary (verde), reemplaza el oliva del intento anterior */
-  --olive-dark: #00761f; /* secondary-container, sombra/borde de extrusión verde */
-  --tertiary: #ffb870; /* naranja secundario del mockup (ej. "Dig Strength") */
-  --tertiary-container: #633800;
+  /* --- Acentos: ámbar sodio (primary) y verde (secondary) --- */
+  --amber: #ffb627; /* primary: lámpara de sodio, el ámbar del prototipo */
+  --amber-dark: #7a5200; /* sombra/borde de extrusión ámbar */
+  --amber-container: #4a3708; /* fondo de chips/íconos ámbar */
+  --olive: #74dd80; /* secondary (verde dinero/positivo) */
+  --olive-dark: #0e7c2a; /* sombra/borde de extrusión verde */
+  --tertiary: #ff9d5c; /* naranja secundario */
+  --tertiary-container: #74400f;
 
-  --fg-0: #efe0cd; /* on-surface */
-  --fg-1: #d4c3b8; /* on-surface-variant */
-  --fg-2: #9d8e84; /* outline */
-  --danger: #ffb4ab; /* error */
-  --danger-container: #93000a; /* error-container */
-  --trap: #c0392b; /* rojo del "objeto" trampa en el canvas de escarbado (DigCanvas lo resuelve vía resolveCssColor) */
-  --outline: #50453c; /* outline-variant, bordes de tarjetas/inputs */
+  --fg-0: #edf2fa; /* on-surface, blanco frío */
+  --fg-1: #b9c5da; /* on-surface-variant */
+  --fg-2: #8291aa; /* outline */
+  --danger: #ff9f96; /* error */
+  --danger-container: #93140b; /* error-container */
+  --trap: #d64545; /* rojo del "objeto" trampa en el canvas de escarbado (DigCanvas lo resuelve vía resolveCssColor) */
+  --outline: #3b4a68; /* outline-variant, bordes de tarjetas/inputs */
 
-  /* --- Tipografía: Plus Jakarta Sans única familia (titulares, números, cuerpo, labels) --- */
+  /* --- Tipografía: Plus Jakarta Sans única familia (sin cambios en ronda 28, §28.1) --- */
   --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono: 'Plus Jakarta Sans', system-ui, sans-serif;
 
-  /* --- Radios (mockup: DEFAULT .25rem, lg .5rem, xl .75rem, full) + escala grande de tarjetas --- */
+  /* --- Radios (sin cambios) --- */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 16px;
@@ -53,7 +55,7 @@
   --touch-target: 44px;
   --container-max: 1440px;
 
-  /* --- Sombras "tactile"/"squishy" del mockup: extrusión sólida que se hunde al presionar --- */
+  /* --- Sombras "tactile"/"squishy" del mockup (sin cambios) --- */
   --shadow-extrude: 0 6px 0 0 rgba(0, 0, 0, 0.4); /* .squishy-button */
   --shadow-extrude-pressed: 0 2px 0 0 rgba(0, 0, 0, 0.4);
   --shadow-tactile: 0 8px 0 0 rgba(0, 0, 0, 0.4); /* .tactile-card */
@@ -64,43 +66,37 @@
 
   --hazard-stripe: #ffd600;
 
-  /* Colores de rareza (PLAN.md §2.5/§5.3): progresión de opaco/común a vívido/futurista,
-     cada uno con su color de "bloom" (glow) a intensidad creciente. Se conservan del pase
-     anterior (ya validados sobre fondo oscuro), solo se retocó levemente el contraste sobre
-     el nuevo --bg-0 #191208. */
-  --r-common: #9c9484;
-  --r-common-glow: rgba(156, 148, 132, 0.35);
-  --r-reusable: #8fae53;
-  --r-reusable-glow: rgba(143, 174, 83, 0.4);
-  --r-electronics: #4fb8d1;
-  --r-electronics-glow: rgba(79, 184, 209, 0.45);
-  --r-antiques: #c98a4b;
-  --r-antiques-glow: rgba(201, 138, 75, 0.45);
-  --r-historic: #b5763a;
-  --r-historic-glow: rgba(181, 118, 58, 0.5);
-  --r-art: #c65fae;
-  --r-art-glow: rgba(198, 95, 174, 0.55);
-  --r-relics: #7d5fd9;
-  --r-relics-glow: rgba(125, 95, 217, 0.6);
-  --r-future: #58e6c9;
-  --r-future-glow: rgba(88, 230, 201, 0.7);
+  /* Colores de rareza (PLAN.md §2.5/§5.3): 8 TONOS francamente distintos (gris → verde →
+     azul → oro → naranja-rojo → magenta → violeta → menta) para que se distingan de un
+     vistazo (antes antiques/historic eran dos marrones casi iguales); el glow crece en
+     intensidad con la rareza. */
+  --r-common: #a6adb8;
+  --r-common-glow: rgba(166, 173, 184, 0.35);
+  --r-reusable: #8bdb60;
+  --r-reusable-glow: rgba(139, 219, 96, 0.4);
+  --r-electronics: #52c2ff;
+  --r-electronics-glow: rgba(82, 194, 255, 0.45);
+  --r-antiques: #e8ae54;
+  --r-antiques-glow: rgba(232, 174, 84, 0.45);
+  --r-historic: #ff8248;
+  --r-historic-glow: rgba(255, 130, 72, 0.5);
+  --r-art: #ef6bd3;
+  --r-art-glow: rgba(239, 107, 211, 0.55);
+  --r-relics: #a583ff;
+  --r-relics-glow: rgba(165, 131, 255, 0.6);
+  --r-future: #50ffd6;
+  --r-future-glow: rgba(80, 255, 214, 0.7);
 
-  /* --- Texturas del mockup, 100% CSS (sin imágenes/CDN externos: DECISIÓN de abajo) --- */
-  /* DECISIÓN (Agente 8): el mockup carga `.wood-texture` desde transparenttextures.com (CDN
-     externo). apps/game debe poder servirse offline para el build de Steam (CLAUDE.md/PLAN.md
-     §6.4), así que la veta de madera se genera 100% con gradientes CSS (`--wood-grain`, usado
-     por `.wood-texture` en components.css) en vez de una imagen remota — mismo criterio que el
-     Agente 3 ya aplicó a íconos/sonido (evitar assets de terceros que compliquen el offline). */
+  /* --- Texturas del mockup, 100% CSS (sin imágenes/CDN externos: DECISIÓN del Agente 8) --- */
   --wood-grain:
     repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 34px),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 17px);
-  --wood-surface: #3d2b1f;
-  --scratch-a: #3c3427;
-  --scratch-b: #261e13;
+  --wood-surface: #40301f; /* el banco de trabajo queda CÁLIDO a propósito: isla de madera sobre la noche fría */
+  --scratch-a: #2a3650;
+  --scratch-b: #1b2738;
 
-  /* --- Placa del botón JUGAR (ronda 19, reference/ui/JUGARBUTTON.png): verde oliva oscuro con
-     marco dorado biselado — NO se reutiliza --olive (verde vívido de acentos secundarios, es
-     otro rol de color). Ver TitleScreen skin en components.css (.title-play-btn). */
+  /* --- Placa del botón JUGAR (ronda 19, reference/ui/JUGARBUTTON.png): se conserva INTACTA
+     (§28.1) — verde oliva oscuro con marco dorado biselado, otro rol de color que --olive. */
   --plate-olive: #3a4526;
   --plate-olive-dark: #1f2814;
   --plate-gold: #e0be6b;

@@ -6693,3 +6693,87 @@ direcciones (leer sin `Number.isFinite` y ESCRIBIR una acumulación sin clamp), 
 `loadState()` silencioso ante save inválido (18, decidido para v1.1), `notify()` por segundo con Puesto activo (23.E), venta manual por índice con robot de fondo (23.E), `formatNumber` topea en QiDc (documentación, sin sink lategame), `isFirstRareFind` por-tier procedural (cosmético).
 
 **NO TOCAR (re-declarado de §27.5)**: `getAutoSpeedMult` por slot dentro del loop de `automationTick`; `trapsDiscarded` negativo pasando validación; `stallLevel` sin cota superior.
+
+## Ronda 28 — Rediseño estético: paleta «Turno Noche» (rama `feat/estetica-ronda28`, agente único, sin bump de save)
+
+### Qué se hizo
+
+- **Proceso §28.2 cumplido**: 3 propuestas de paleta como tokens.css completos (A «Turno Noche»:
+  azul pizarra nocturno + ámbar de sodio #ffb627; B «Óxido y Patina»: verde petróleo + naranja
+  óxido + verdín + latón; C «Señalética Industrial»: acero grafito + amarillo de seguridad),
+  aplicadas al juego REAL interceptando `tokens.css` por HTTP con `page.route` (napkin №4 — el
+  working tree no se tocó durante la exploración). Matriz comparativa de 40 screenshots
+  (actual+A+B+C × 375/1280px × Escarbar activo/Tienda/Índice/celebración/Prestigio) presentada
+  en una galería HTML. **El usuario eligió la A con OK visual explícito ANTES de commitear**
+  (2026-07-18).
+- **Cambio real**: SOLO valores de `apps/game/styles/tokens.css` (mismos nombres de variable;
+  cero reglas nuevas en components.css/layout.css). Fondos `#0e1420→#374763` (azul pizarra),
+  acento primario `--amber #ffb627` (el ámbar del prototipo original, CLAUDE.md), `--olive
+  #74dd80` (dinero/positivo), `--tertiary #ff9d5c`. Las 8 rarezas van a tonos francamente
+  distintos (gris→verde→azul→oro→naranja-rojo→magenta→violeta→menta) con glow creciente: antes
+  `antiques #c98a4b` y `historic #b5763a` eran dos marrones casi iguales y `historic` estaba en
+  4.4:1 sobre bg-2. Se conservan INTACTOS: tipografía, radios, espaciado, sombras táctiles,
+  `--wood-*` estructura (la madera del banco queda cálida a propósito: isla cálida sobre la
+  noche fría), `--hazard-stripe` y los 4 tokens `--plate-*` del botón JUGAR (ronda 19).
+- **Docs**: PLAN.md §5.3 actualizado (la paleta del mockup era contrato "Warm, no frío" — ahora
+  documenta «Turno Noche» y por qué); decisión registrada en DESARROLLO.md §10.
+
+### Verificación (§28.3)
+
+- **Contraste AA**: script `contrast-check.mjs` sobre los pares fg/bg REALES relevados de
+  components/layout.css (fg-0/1 sobre bg-0/1/2, fg-2 hints, --amber como texto y como fondo de
+  botón con texto bg-0, badge --olive, tertiary/danger sobre bg-2, y las 8 rarezas sobre bg-2).
+  Resultado: 24/24 pares OK (peor par de texto: fg-2/bg-2 4.72:1, que es hint de-enfatizado;
+  todo texto normal ≥ 8:1).
+- **e2e no asertan colores**: grep de hex/rgb en `apps/game/e2e` → 1 solo hit
+  (`ronda5-regression.spec.js:43`): mide píxeles `#f4ede1` de la etiqueta del canvas, que está
+  HARDCODEADO en DigCanvas.js (no es token) — intacto por diseño.
+- **Baselines (recontados, regla §1.6)**: unit **650/650 en 43 archivos**; e2e **86/86** —
+  ambos idénticos al baseline de la ronda 27, SIN tocar un solo spec.
+- **Manual jugando de verdad** (Chromium, tokens.css real sin interceptación, a 375×667 y
+  1280×800): escarbado completo del Tacho con gestos de puntero reales → venta acreditada en
+  `#money`, compra de mejora rápida con feedback (label/costo cambia), paso por las 7 tabs sin
+  pantallas rotas. Matriz final de screenshots verificada a ojo en ambos tamaños:
+
+  | Vista | 375px | 1280px |
+  |---|---|---|
+  | Escarbar activo (objeto revelado) | OK | OK |
+  | Tienda (Contenedores) | OK | OK |
+  | Índice (sidebar 320px en desktop, por diseño) | OK | OK |
+  | Modal de celebración | OK | OK |
+  | Prestigio (nodo comprable + bloqueados con rayas) | OK | OK |
+
+  (Los PNG se generaron en el scratchpad de la sesión — efímero a propósito, regla §1.1 de no
+  committear assets ajenos al alcance; el diff de la ronda es 100% reproducible: son solo
+  valores de tokens.)
+- **Greps de cierre**: diff = `tokens.css` + PLAN.md + DESARROLLO.md + este HANDOFF (ningún
+  color hardcodeado nuevo fuera de tokens.css); cero console.log/TODO/emojis nuevos.
+
+### Decisiones registradas
+
+- **La madera NO se enfría**: `--wood-surface` sigue marrón cálido (#40301f). Es EL contraste
+  temático de la propuesta (banco de trabajo cálido sobre noche fría), no un resto de la paleta
+  vieja. Ídem el sustrato del canvas de escarbado (#4a3526, hardcodeado en DigCanvas: es
+  tierra, y además §28.1 prohíbe tocar componentes).
+- **`--scratch-a/b` se derivan de los azules** (rayas de cards bloqueadas/nodos): si quedaran
+  marrones, cada card bloqueada parecería de otra paleta.
+- **Seeds de screenshots**: save rico construido con `freshState()` + overrides (napkin №5,
+  nunca `delete`), con TODOS los logros/story marcados para que ninguna celebración tape la
+  vista — salvo la vista "celebración", que omite `a3` (ya satisfecho) para encolarla al boot.
+  Guard anti-falso-verde: si `validateSave` rechazara el seed, `loadState()` cae a freshState
+  en silencio → el script poll-ea que `#money` llegue a millones antes de capturar.
+
+### Deudas que quedan abiertas (sin cambios de esta ronda)
+
+Las mismas del cierre de la ronda 27 (`loadState()` silencioso, `notify()` por segundo con
+Puesto, venta manual por índice, `formatNumber` topa en QiDc, `isFirstRareFind` por-tier).
+**NO TOCAR** re-declarado: `getAutoSpeedMult` por slot; `trapsDiscarded` negativo; `stallLevel`
+sin cota superior.
+
+### Para la ronda 29 (arte ilustrado)
+
+- El arte se ilustra SOBRE esta paleta (contrato §3.5.7 — por eso la 28 corrió antes). Los
+  colores de rareza que el canvas resuelve vía `resolveCssColor('--r-*')` ya son los nuevos.
+- El sustrato del escarbado (#4a3526) y la etiqueta (#f4ede1) siguen hardcodeados en
+  DigCanvas.js; si la 29 los toca, el spec de ronda 5 que mide píxeles de la etiqueta
+  (`labelRegion`, umbrales r>200/g>195/b>180) es la primera regresión a vigilar.
