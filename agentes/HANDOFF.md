@@ -6777,3 +6777,91 @@ sin cota superior.
 - El sustrato del escarbado (#4a3526) y la etiqueta (#f4ede1) siguen hardcodeados en
   DigCanvas.js; si la 29 los toca, el spec de ronda 5 que mide píxeles de la etiqueta
   (`labelRegion`, umbrales r>200/g>195/b>180) es la primera regresión a vigilar.
+
+## Ronda 29 — Agente A: sistema de objetos ilustrados (rama `feat/arte-ronda29`, commit "feat: ronda 29.A — …")
+
+### Qué se hizo
+
+- **PLAN.md primero**: §5.5 "Sistema de objetos ilustrados" (contrato completo: viewBox 96,
+  tres capas body/material/details, calidad mínima "reconocible a 40px", presentación
+  enterrada con escala 0.7-1.4 + rotación ±15° + sombra + viñeta, etiqueta pill, pipeline con
+  pre-rasterizado y fallback incremental). Decisión de arquitectura anotada en DESARROLLO.md §10.
+- **`apps/game/src/icons/objectArt.js`** (nuevo): registro hermano de icons.js con OTRO
+  contrato. API: `composeObjectArt(def, {size, uid})` (pura, sin DOM — corre en Node),
+  `getObjectArtMarkup` / `getObjectImage` (data-URL + caché, mismo mecanismo que
+  `getIconImage`), `hasObjectArt`, `getObjectScale` (+`clampArtScale`), `artRotationFor(x, y)`
+  (hash determinístico → ±15° en radianes), `paletteFrom(baseHex)` (deriva
+  base/light/dark/deep/accent de UN hex — los agentes de arte solo eligen un color).
+  Vocabulario inicial: 2 **bodies de referencia** (`can`: gradiente lineal de cilindro;
+  `bottle`: lineal + radial de vidrio) que documentan el contrato `{defs, paint, clip}` (ids
+  namespaciados por uid; el clipPath recorta material/details a la silueta), y los **6
+  materiales** del roadmap (`metal`, `glass`, `wood`, `fabric`, `ceramic`, `rust`) como
+  overlays genéricos reutilizables.
+- **`DigCanvas.js`**: `drawEntry` bifurca — con arte CARGADO pinta sombra de apoyo → arte
+  rotado/escalado (`ctx.translate/rotate/drawImage`) → viñeta de tierra → etiqueta pill
+  (`ctx.roundRect`, texto #f4ede1 en la MISMA posición de siempre); sin arte (o imagen
+  rota/no cargada) el render clásico queda BIT-IDÉNTICO. `drawEntryTracked` centraliza el
+  redibujado por carga tardía (ícono Y arte, guardado por `digGeneration`). `start()`
+  pre-rasteriza a 128px una vez por escarbado (`ART_RASTER_SIZE`); `ART_BASE_SIZE = 68` →
+  arte entre ~48 y ~95px según escala. El chequeo `complete && naturalWidth > 0` se aplica
+  igual al arte (regla napkin).
+- **Tests** (`apps/game/tests/objectArt.test.js`, 9, RED primero): cobertura DERIVADA de la
+  data (todo icon id de items+legendaries tiene arte o está en `PENDING_ART`; sin dobles; sin
+  ids muertos — tools permitidos porque B los ilustra), sanity xmlns + buena-formación XML por
+  CADA body×material (parser de pila propio, sin deps), null limpio para artKey desconocido,
+  rotación determinística/en rango/variable entre posiciones, clamp de escala, paletteFrom.
+
+### Estado para B y C (tandas de arte)
+
+- `ART` está **VACÍO a propósito** y `PENDING_ART` tiene los 137 ids (125 de items + 8
+  legendarios + 4 herramientas), agrupados por contenedor en orden de pool para cortar por
+  tanda. Flujo por ítem: agregar bodies/details al vocabulario según haga falta → entrada en
+  `ART` (`{ body, material, palette: '#hex', details, scale }`) → borrar el id de
+  `PENDING_ART`. El test de cobertura vigila ambas listas (y valida gratis todo lo que
+  agreguen: xmlns + parse por entrada de ART).
+- `palette` acepta un hex pelado (pasa por `paletteFrom`) o el objeto completo si un ítem
+  necesita paleta manual. `scale`: la huella jugable NO cambia (R29.2), es solo estética.
+- Los tiers procedurales NO llevan entrada: reusan el pool del Big Bang (comentado en ART).
+- Verificación visual sin ensuciar el working tree: el script del scratchpad de esta sesión
+  (`verify-arte-29a.mjs`) intercepta `objectArt.js` por HTTP (`page.route`, napkin №4) — les
+  sirve de base para la matriz de screenshots por tanda.
+
+### Para el Agente D (e2e + auditoría)
+
+- `window.__digDebug` HOY expone positions/revealed/isComplete — falta agregarle los campos de
+  arte por entry (si usa arte ilustrado + `naturalWidth > 0`) para el spec `ronda29-arte`;
+  no lo agregué para no pisar tu letra.
+- Dato medido en la verificación de A: el repintado desde el modelo NO es bit-idéntico al
+  primer frame NI EN EL BASELINE de main (redraw doble de texto antialiased en `revealEntry`,
+  preexistente); dos repintados consecutivos SÍ son idénticos (modelo determinístico). Si tu
+  e2e compara frames, comparar repintado-vs-repintado, no historia-vs-repintado.
+- Nota para tu auditoría de sinks: los artKeys que llegan a `getObjectImage` salen de
+  `entry.icon`, que DigCanvas recibe del engine ya resuelto contra la data estática (la
+  trampa usa el id fijo `'artifact'` → sin arte → fallback). `hasObjectArt`/lookups usan
+  `Object.hasOwn` (un icon id `'constructor'` no resuelve contra el prototipo).
+
+### Verificación
+
+- **Unit (Vitest): 659/659 en 44 archivos** (baseline 650/650 en 43 + 9 de objectArt).
+- **e2e (Playwright): 86/86** — idéntico al baseline de rondas 27/28, SIN tocar un solo spec
+  (con ART vacío el juego es exactamente el de hoy — regla §1.18 de degradación limpia).
+- **Manual** (Chromium vía Playwright, screenshots revisados a ojo): baseline 375px sin
+  interceptar = render clásico intacto; con arte demo interceptado (6 ítems del Tacho sobre
+  can/bottle) a 375×667 y 1280×800: volumen por gradiente, rotación/escala visibles, sombra,
+  viñeta, pill legible sobre arte claro y oscuro, objeto reconocible a medio destapar, cero
+  errores de consola. El e2e de ronda 5 (píxeles de etiqueta) pasa porque el texto conserva
+  color y posición exactos en ambos renders.
+- Greps de cierre: cero console.log / TODO / emojis en lo nuevo; sin colores nuevos en CSS
+  (los colores de dibujo del canvas siguen el patrón hardcodeado documentado de DigCanvas).
+
+### Decisiones registradas (detalle en DESARROLLO.md §10)
+
+- Paleta por ítem derivada de UN hex (`paletteFrom`) — el SVG standalone no puede resolver
+  tokens CSS; coherencia de catálogo por construcción.
+- Rotación determinística por posición ya rolleada + escala de data: el canvas nunca decide
+  presentación (napkin: el canvas solo PINTA lo que dice el modelo).
+- `ART_BASE_SIZE = 68` (arte algo más grande que el círculo clásico de 56px): el punch-out y
+  `OBJECT_RADIUS` NO cambian; un objeto grande queda parcialmente bajo la suciedad hasta el
+  revelado final (semi-enterrado por diseño, R29.2).
+- El rect de limpieza local del redraw de arte se acota a ±50px (huella clásica): con
+  MIN_SPACING 110 no muerde entradas vecinas.
