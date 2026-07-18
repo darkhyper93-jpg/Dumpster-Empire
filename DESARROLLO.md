@@ -626,6 +626,14 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
     `id → { name, desc }` que `main.js` aplicará sobre la data cargada cuando `language !== 'es'`.
     La data cruda no se bifurca, los ids no cambian, el engine jamás ve texto de UI.
 
+- **Ronda 28 — paleta «Turno Noche» (solo valores de tokens.css)**: el usuario desaprobó el
+  rango marrón mono-tono del mockup Stitch ("marrón IA", 2026-07-14) y eligió (2026-07-18, por
+  matriz de screenshots 375/1280px contra otras 2 propuestas) fondos azul pizarra nocturno con
+  acento ámbar `#ffb627` (el del prototipo original). Ningún selector de components/layout.css
+  cambió; el banco de madera sigue cálido a propósito y el botón JUGAR queda intacto. Las 8
+  rarezas pasan a tonos francamente distintos (antes antiques/historic eran dos marrones casi
+  iguales). Contraste AA verificado en los pares de texto reales. PLAN.md §5.3 actualizado.
+
 ---
 
 ## 11. Qué queda como postre (no tocar en V1)

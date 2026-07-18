@@ -866,8 +866,14 @@ Dirección de arte **canónica y única**: el mockup
 ("The Workshop"). Todas las pantallas se re-anclan a ese diseño; reemplaza cualquier "fusión"
 anterior. Es el mejor diseño disponible y la fuente de verdad visual.
 
-- **Paleta:** fondo muy oscuro cálido tipo taller/madera (`#191208` de base), superficies de
-  madera/banco de trabajo, acentos ámbar/verde para acciones. Warm, no frío.
+- **Paleta «Turno Noche» (ronda 28, elegida por el usuario el 2026-07-18 sobre matriz de
+  screenshots):** el patio de chatarra de noche — fondos azul pizarra profundo (`#0e1420` de
+  base), acento primario ámbar "lámpara de sodio" (`#ffb627`, el ámbar del prototipo original),
+  verde para dinero/positivo y naranja secundario. Reemplaza el rango marrón mono-tono del
+  mockup (`#191208`→`#3c3427` + acento `#f0bc92`), que el usuario desaprobó ("marrón IA",
+  2026-07-14). El banco de trabajo conserva su madera CÁLIDA a propósito (isla cálida sobre la
+  noche fría) y el botón JUGAR de placa metálica (ronda 19) queda intacto. Contraste AA en
+  todos los pares de texto reales.
 - **Tipografía:** **Plus Jakarta Sans** (400/500/700/800) para todo — titulares, números y cuerpo.
   (Reemplaza Fredoka/Nunito/JetBrains Mono del intento anterior.)
 - **Componentes táctiles del mockup:** tarjetas con extrusión fuerte (`box-shadow: 0 8px 0 0
