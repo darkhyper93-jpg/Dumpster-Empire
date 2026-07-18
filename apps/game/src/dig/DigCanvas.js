@@ -20,6 +20,7 @@
 import { DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX } from '@dumpster/engine';
 import { attachDigInput } from './digInput.js';
 import { getIconImage, iconMarkup } from '../icons/icons.js';
+import { hasObjectArt, getObjectImage, getObjectScale, artRotationFor } from '../icons/objectArt.js';
 import { startScratchSound, stopScratchSound } from '../fx/audio.js';
 import { t } from '../i18n/i18n.js';
 import {
@@ -61,6 +62,17 @@ const MIN_SPACING = 110;
 // franja del texto quedaba fuera del área rascada).
 const PUNCH_PAD = 10;
 const LABEL_PUNCH_HEIGHT = 24;
+// Objetos ilustrados (ronda 29, PLAN.md §5.5): tamaño del pre-rasterizado (una sola composición
+// SVG→bitmap por ítem al iniciar el escarbado; drawImage después solo escala) y diámetro visual
+// del arte a escala 1. Con el rango de escala 0.7-1.4 el arte queda entre ~48 y ~95px — más
+// grande que el círculo clásico de 56px, pero SOLO estética: la huella jugable sigue siendo
+// OBJECT_RADIUS (R29.2 del roadmap; un objeto grande queda "semi-enterrado" bajo la suciedad).
+const ART_RASTER_SIZE = 128;
+const ART_BASE_SIZE = 68;
+// Pill de la etiqueta sobre arte (PLAN.md §5.5): entra dentro de la franja que punchOutEntry ya
+// destapa (LABEL_PUNCH_HEIGHT 24 centrada en LABEL_OFFSET_Y), así el nombre sigue visible siempre.
+const LABEL_PILL_HEIGHT = 18;
+const LABEL_PILL_PAD_X = 7;
 
 export class DigCanvas {
   /**
@@ -228,6 +240,13 @@ export class DigCanvas {
       isComplete: () => isComplete(this.model),
     };
 
+    // Pre-rasterizado del arte ilustrado (PLAN.md §5.5/§6.4): se pide UNA vez por escarbado —
+    // el data-URL se compone acá y drawImage después solo escala el bitmap cacheado. Los ids
+    // vienen de la data estática vía el engine (digResult), jamás del save.
+    for (const entry of this.entries) {
+      if (hasObjectArt(entry.icon)) getObjectImage(entry.icon, { size: ART_RASTER_SIZE });
+    }
+
     this.idlePrompt.hidden = false;
     this.drawBottomLayer();
     this.drawTopLayer();
@@ -274,42 +293,60 @@ export class DigCanvas {
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     const positions = getPositions(this.model);
-    // El ítem se dibuja completo y síncrono (garantiza que el nombre SIEMPRE esté pintado). Si el
-    // ícono todavía no cargó, al llegar se redibuja el ítem completo (círculo + ícono + nombre),
-    // guardado por generación de escarbado (PUNTOS_A_MEJORAR_2.md §1).
-    const gen = this.digGeneration;
     this.entries.forEach((entry, i) => {
-      const pos = positions[i];
-      const iconImg = getIconImage(entry.icon, { size: 64, color: '#161310' });
-      this.drawEntry(ctx, entry, pos, iconImg);
-      if (!iconImg.complete) {
-        iconImg.addEventListener(
-          'load',
-          () => {
-            if (this.active && this.digGeneration === gen) this.drawEntry(ctx, entry, pos, iconImg);
-          },
-          { once: true }
-        );
-      }
+      this.drawEntryTracked(ctx, entry, positions[i]);
     });
   }
 
   /**
-   * Dibuja un ítem completo en la capa de abajo, en orden círculo → ícono → nombre y seteando el
-   * estado del contexto adentro (se llama también desde el callback async de carga de ícono).
+   * Dibuja un ítem completo y síncrono (garantiza que el nombre SIEMPRE esté pintado) y deja
+   * armado el redibujado por carga tardía: si el ícono o el arte ilustrado todavía no cargaron,
+   * al llegar se redibuja el ítem completo, guardado por generación de escarbado
+   * (PUNTOS_A_MEJORAR_2.md §1). Mientras el arte no está listo se ve el render clásico —
+   * fallback incremental de PLAN.md §5.5: una imagen rota/ausente nunca corta el gesto.
    * @param {CanvasRenderingContext2D} ctx
-   * @param {{name:string, colorHex:string}} entry
+   * @param {{icon:string, name:string, colorHex:string}} entry
+   * @param {{x:number,y:number}} pos
+   */
+  drawEntryTracked(ctx, entry, pos) {
+    const gen = this.digGeneration;
+    const iconImg = getIconImage(entry.icon, { size: 64, color: '#161310' });
+    const artImg = hasObjectArt(entry.icon) ? getObjectImage(entry.icon, { size: ART_RASTER_SIZE }) : null;
+    this.drawEntry(ctx, entry, pos, iconImg, artImg);
+    const redraw = () => {
+      if (this.active && this.digGeneration === gen) this.drawEntry(ctx, entry, pos, iconImg, artImg);
+    };
+    if (artImg && !artImg.complete) artImg.addEventListener('load', redraw, { once: true });
+    if (!iconImg.complete) iconImg.addEventListener('load', redraw, { once: true });
+  }
+
+  /**
+   * Dibuja un ítem completo en la capa de abajo y seteando el estado del contexto adentro (se
+   * llama también desde el callback async de carga de ícono/arte). Dos renders (ronda 29,
+   * PLAN.md §5.5): si el ítem tiene arte ilustrado CARGADO se pinta el objeto "enterrado"
+   * (sombra → arte con rotación/escala → viñeta → etiqueta pill); si no, el render clásico
+   * (círculo + glifo + nombre), idéntico al de siempre — un ítem sin arte o con imagen rota
+   * nunca rompe el canvas.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {{icon:string, name:string, colorHex:string}} entry
    * @param {{x:number,y:number}} pos
    * @param {HTMLImageElement} iconImg
+   * @param {HTMLImageElement|null} [artImg] - pre-rasterizado de objectArt.js (null = sin arte)
    */
-  drawEntry(ctx, entry, pos, iconImg) {
+  drawEntry(ctx, entry, pos, iconImg, artImg = null) {
+    // `complete` también es true para una imagen ROTA (src que falló): dibujarla lanza
+    // InvalidStateError y cortaría el gesto de rascado entero. naturalWidth 0 = no dibujable
+    // (regla dura: nunca confiar en `complete` solo — aplica igual al arte que al glifo).
+    if (artImg && artImg.complete && artImg.naturalWidth > 0) {
+      this.drawEntryArt(ctx, entry, pos, artImg);
+      return;
+    }
+
     ctx.beginPath();
     ctx.fillStyle = entry.colorHex;
     ctx.arc(pos.x, pos.y, OBJECT_RADIUS, 0, Math.PI * 2);
     ctx.fill();
 
-    // `complete` también es true para una imagen ROTA (src que falló): dibujarla lanza
-    // InvalidStateError y cortaría el gesto de rascado entero. naturalWidth 0 = no dibujable.
     if (iconImg.complete && iconImg.naturalWidth > 0) {
       ctx.drawImage(iconImg, pos.x - 16, pos.y - 16, 32, 32);
     }
@@ -317,6 +354,72 @@ export class DigCanvas {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#f4ede1';
+    ctx.fillText(entry.name, pos.x, pos.y + LABEL_OFFSET_Y, LABEL_MAX_WIDTH);
+  }
+
+  /**
+   * Render ilustrado de un ítem (ronda 29, PLAN.md §5.5): sombra de apoyo elíptica → arte con
+   * rotación leve y escala natural → viñeta de tierra (semi-enterrado) → etiqueta con pill.
+   * Rotación y escala son DETERMINÍSTICAS (posición ya rolleada por el modelo + data del arte):
+   * el repintado completo desde el modelo (focus/visibilitychange) reproduce el frame idéntico.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {{icon:string, name:string}} entry
+   * @param {{x:number,y:number}} pos
+   * @param {HTMLImageElement} artImg
+   */
+  drawEntryArt(ctx, entry, pos, artImg) {
+    const size = ART_BASE_SIZE * getObjectScale(entry.icon);
+    const half = size / 2;
+
+    // El arte puede llegar tarde sobre el render clásico ya pintado (carga async del data-URL):
+    // se repone el sustrato local antes de pintar. Mismo color que el fondo de drawBottomLayer,
+    // acotado a la huella clásica (círculo + etiqueta) para no morder entradas vecinas
+    // (MIN_SPACING 110 garantiza que este rect de ±50 no llega al vecino).
+    ctx.fillStyle = '#2c261a';
+    ctx.fillRect(pos.x - 50, pos.y - OBJECT_RADIUS - 6, 100, OBJECT_RADIUS + LABEL_OFFSET_Y + LABEL_PUNCH_HEIGHT / 2 + 6);
+
+    // Sombra de apoyo: el objeto está apoyado en la tierra, no flotando.
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.ellipse(pos.x, pos.y + half * 0.72, half * 0.92, half * 0.26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Arte con rotación/escala del modelo (deterministas por posición, PLAN.md §5.5).
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+    ctx.rotate(artRotationFor(pos.x, pos.y));
+    ctx.drawImage(artImg, -half, -half, size, size);
+    ctx.restore();
+
+    // Viñeta de tierra: tapa el borde inferior del objeto (semi-enterrado). Mismo color del
+    // sustrato — fuera de la silueta del arte es invisible sobre el fondo.
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#2c261a';
+    ctx.beginPath();
+    ctx.ellipse(pos.x, pos.y + half * 0.98, half * 1.2, half * 0.34, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Etiqueta con pill semitransparente (legibilidad sobre arte claro u oscuro). Misma
+    // posición y color de texto que el render clásico: el e2e de ronda 5 mide píxeles claros
+    // (#f4ede1) en la franja de la etiqueta y debe seguir midiendo lo mismo.
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '13px sans-serif';
+    const textWidth = Math.min(ctx.measureText(entry.name).width, LABEL_MAX_WIDTH);
+    const pillWidth = textWidth + LABEL_PILL_PAD_X * 2;
+    ctx.save();
+    ctx.globalAlpha = 0.72;
+    ctx.fillStyle = '#161310';
+    ctx.beginPath();
+    ctx.roundRect(pos.x - pillWidth / 2, pos.y + LABEL_OFFSET_Y - LABEL_PILL_HEIGHT / 2, pillWidth, LABEL_PILL_HEIGHT, LABEL_PILL_HEIGHT / 2);
+    ctx.fill();
+    ctx.restore();
     ctx.fillStyle = '#f4ede1';
     ctx.fillText(entry.name, pos.x, pos.y + LABEL_OFFSET_Y, LABEL_MAX_WIDTH);
   }
@@ -438,8 +541,7 @@ export class DigCanvas {
   revealEntry(index, pos) {
     this.punchOutEntry(pos);
     const entry = this.entries[index];
-    const iconImg = getIconImage(entry.icon, { size: 64, color: '#161310' });
-    this.drawEntry(this.ctxBottom, entry, pos, iconImg);
+    this.drawEntryTracked(this.ctxBottom, entry, pos);
     if (this.callbacks.onObjectRevealed) {
       this.callbacks.onObjectRevealed(entry, {
         xPct: (pos.x / CANVAS_WIDTH) * 100,

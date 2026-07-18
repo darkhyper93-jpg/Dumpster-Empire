@@ -634,6 +634,19 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   rarezas pasan a tonos francamente distintos (antes antiques/historic eran dos marrones casi
   iguales). Contraste AA verificado en los pares de texto reales. PLAN.md §5.3 actualizado.
 
+- **Ronda 29.A — sistema de objetos ilustrados (`objectArt.js`, PLAN.md §5.5)**: registro
+  hermano de `icons.js` con viewBox 96 y composición por partes (body con gradientes + material
+  overlay recortado a la silueta + details por ítem). Decisiones: (1) la paleta de cada ítem se
+  deriva de UN hex base con `paletteFrom()` (luces/sombras coherentes en todo el catálogo sin
+  tokens CSS — el SVG compuesto no puede resolver `var(--...)` y el canvas ya documenta sus
+  colores de dibujo hardcodeados); (2) rotación "enterrada" determinística por posición ya
+  rolleada (`artRotationFor`, hash imul → ±15°) y escala por ítem clampeada 0.7-1.4 — el canvas
+  nunca decide presentación, el repintado desde el modelo reproduce el frame (napkin); (3)
+  fallback incremental: sin entrada en `ART` se dibuja el render clásico intacto, `PENDING_ART`
+  lista los ids sin ilustrar y el test de cobertura (derivado de la data, cero conteos) obliga a
+  decidir por cada ítem nuevo; (4) ids internos del SVG namespaciados por `uid` para poder
+  inyectar composiciones inline en el mismo DOM (Vitrina de la 29.C).
+
 ---
 
 ## 11. Qué queda como postre (no tocar en V1)
