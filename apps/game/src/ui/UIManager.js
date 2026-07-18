@@ -280,7 +280,9 @@ export class UIManager {
     this.tutorial.render(state);
 
     const offline = this.store.consumeOfflineSummary();
-    if (offline && offline.ganancia > 0) {
+    // §27.5.3 (ronda 27): también se abre cuando SOLO facturó el robot vendedor (ganancia de
+    // flota 0) — el store ya filtra el caso todo-cero, pero este gate duplicado lo tapaba.
+    if (offline && (offline.ganancia > 0 || offline.stallEarnings > 0)) {
       OfflineModal.show(this.offlineModalEl, offline, this.store);
     }
 

@@ -240,6 +240,20 @@ propio árbol (`deeds`/`deedsTreeLevels`), que sobreviven CADA mudanza (ver 4.34
 Intendente presenta la mudanza con una viñeta de historia (reaparece con "otro cargo", running
 gag de `story.json`).
 
+### 2.12 Flota de robots y filtros (ronda 27)
+
+El robot de automatización deja de ser único: pasa a ser el **robot 1 de una flota** de hasta 4.
+DECISIÓN de diseño (ROADMAPv4 §27.1): los slots paralelos EXISTENTES que dan las máquinas
+(`parallelSlots` de `robotClasificador`/`redDrones`, `getParallelAutoSlots`) pasan a ser
+**"brazos" del robot 1**; la flota multiplica **robots enteros**, cada uno con su propio
+contenedor objetivo y sus propios filtros (ver 4.38-4.39). Los robots extra los dan
+`flotaFundadora` (árbol de Escrituras, +1 robot por nivel, hasta 2 — su descripción de la ronda
+26 ya prometía "+1 slot de robot por nivel") y la máquina `hangarRobots` (+1 robot). La cola
+(`autoQueue`) sigue siendo GLOBAL y los robots toman de ahí (menor cambio de esquema). El robot
+vendedor del Puesto (4.29) sigue siendo independiente de la flota; la ronda 27 le agrega el
+toggle `mantenerStockPedidos` (4.39). Chispa (2.10) aporta el flavor de la flota en la vista de
+Automatización.
+
 ---
 
 ## 3. CONTRATO DE EXPERIENCIA — RITMO ESPERADO
@@ -667,7 +681,7 @@ acumuladas en esa ventana) paga ~9-12 Escrituras — `sqrt(10 × 300) / 5 ≈ 10
 | `memoriaDeCiudades` | +1 Llave de Ciudad por prestigio/nivel (`keysFlatPerNivel`, nuevo effect type: se suma a `prestigeKeysEarned(...)` dentro de `doPrestige`, ANTES de acumular a `totalKeysEarned`/`totalKeysEarnedRun`) | 2 | 2.0 | 3 |
 | `bolsilloCosmico` | +6 slots de inventario del Puesto/nivel (`stallCapacityFlatPerNivel`, se suma dentro de `getStallCapacity`) | 4 | 2.1 | 3 |
 | `agendaLlena` | +1 misión diaria/nivel (`extraDailyMissionSlotsPerNivel`; `rollThreeMissions`/`rerollDailyMissionsIfNeeded` pasan de "una por dificultad fija" a rellenar slots extra con más plantillas alcanzables de cualquier dificultad) | 5 | 2.3 | 2 |
-| `flotaFundadora` | +1 slot de robot de automatización/nivel (`parallelSlotsFlatPerNivel`, se suma dentro de `getParallelAutoSlots` — la ronda 27 construye la asignación real de robots sobre este slot) | 6 | 2.4 | 2 |
+| `flotaFundadora` | +1 slot de robot de automatización/nivel (`fleetRobotsFlatPerNivel`, se suma dentro de `getFleetSize` — AJUSTE ronda 27: el effect type original de la 26 era `parallelSlotsFlatPerNivel` dentro de `getParallelAutoSlots`; al construirse la flota real (§4.38) el nivel pasa a dar un ROBOT entero con target/filtros propios en vez de un brazo más del robot 1 — mismo throughput, más control, y la descripción visible del nodo no cambia) | 6 | 2.4 | 2 |
 | `ecoDelBigBang` | desbloquea los tiers procedurales post-Big Bang (flag booleano, sin efecto numérico — la ronda 26.B lo consume en `isContainerUnlocked`/la factory procedural) | 10 | 1 | 1 |
 
 `data.deedsTree` es opcional en `EngineData` (mismo patrón que `data.streak`/`data.stall`/
@@ -709,7 +723,8 @@ cruza a `QiDc` (1e48, el sufijo más alto de `format.js`); el tope se fija en 25
 costo/valor visible se quede sin sufijo definido.
 
 **Ids de save**: `bigbangPlus<n>` entra a `ownedContainers`/`autoQueue`/`autoProcessing`/
-`autoTargetContainerId` de un jugador con tiers comprados. `isProceduralContainerId` (patrón
+`autoTargetContainerId` de un jugador con tiers comprados (desde el save v16, ronda 27, el
+target vive en `robots[i].targetContainerId` — §4.38). `isProceduralContainerId` (patrón
 `^bigbangPlus([1-9][0-9]?)$` + `n` dentro del tope) valida esos ids en `sanitizeContainerRefs`
 (`save.js`) además del `Set` de ids de `containers.json` — rechaza ids hostiles
 (`bigbangPlus999`, `bigbangPlus01`, `bigbangPlus1e2`, `bigbangPlus-1`) sin descartar los tiers
@@ -723,6 +738,81 @@ misión (`ownedContainerIds`/`rollThreeMissions`, ronda 24), que solo iteran `al
 no depender de que el pool inexistente en `items.json` resuelva a `[]`. Sus hallazgos SÍ suman
 `itemsFoundCount`/`itemsFoundByCategory` (logros generales los siguen contando) pero bajo la
 clave propia `itemsFoundByItem['bigbangPlus<n>']`, nunca mezclada con la de `vertederoBigBang`.
+
+### 4.38 Flota de robots (ronda 27)
+
+AJUSTE (roadmap §3.6): ROADMAPv4.md cita esta sección como §4.40; el numerado real siguiente de
+PLAN.md es §4.38 (y §4.39 para los filtros que el roadmap cita como §4.41).
+
+Tamaño de la flota (robots enteros, cada uno con target y filtros propios — ver §2.12):
+
+```
+flota = 1 + nivel(flotaFundadora) × 1 + (hangarRobots comprado ? 1 : 0)      // 1..4
+brazos(robot 1) = getParallelAutoSlots(state, data)                          // solo máquinas
+brazos(robot k>1) = 1
+```
+
+- `flotaFundadora` cambia su effect type a `fleetRobotsFlatPerNivel` (leído por `getFleetSize`,
+  nuevo getter de economy.js) y `getParallelAutoSlots` deja de sumar Escrituras: queda como "los
+  brazos del robot 1" (solo efectos `parallelSlots` de máquinas). `hangarRobots` es una máquina
+  nueva (cost 5e9, la más cara de automations.json) con effect type `fleetRobots` (flat 1).
+- Estado (save v16): `robots: [{ targetContainerId: string|null, filters: {…} }]` — el robot 1
+  siempre existe; los slots ganados se materializan on-demand (`ensureFleet`). Un array más largo
+  que la flota vigente NO se recorta (la config sobrevive a perder `hangarRobots` por prestigio;
+  esos robots quedan inactivos). La migración v15→v16 ABSORBE `autoTargetContainerId` como
+  target del robot 1 y ELIMINA el campo del esquema (patrón "migración que borra campos" de la
+  v10). Los slots de `autoProcessing` ganan `robotIndex` (backfill 0 en la migración): identifica
+  qué robot procesa cada contenedor, para aplicarle SUS filtros al completarse.
+- Tick (`automationTick`): cada robot toma de la cola GLOBAL prefiriendo entradas que coincidan
+  con su target; la autocompra recorre los robots EN ORDEN dentro del mismo tick (round-robin),
+  cada uno paga su pick con el dinero ya descontado por los anteriores (nunca se compra dos veces
+  el mismo dinero — R27.2). Un robot con target fijo sin fondos espera/ahorra (D5, ronda 14); un
+  robot en Auto compra el más caro afordable. El modo Auto y el selector de target consideran
+  TAMBIÉN los tiers procedurales desbloqueados (§4.37) — cierra R26.3: antes un id `bigbangPlus<n>`
+  en la cola/target no resolvía contra `allContainers` y el robot lo ignoraba.
+- Prestigio y Mudanza resetean el TARGET de cada robot a null (D6, ronda 14); los FILTROS
+  sobreviven (son configuración del jugador, mismo criterio que `keepThreshold`).
+- Offline (§4.5): la tasa estimada suma robot por robot —
+  `Σ_r valorEsperado(contenedor_r) / tiempoEfectivo(contenedor_r) × getAutoSpeedMult × brazos(r) × (1 − proporciónDescartada_r)`
+  donde `contenedor_r` es el target del robot (o su mejor afordable en Auto) y
+  `proporciónDescartada_r` viene de `estimateDiscardShare` (§4.39) — sin este último factor,
+  poner un umbral de descarte altísimo haría que el robot rinda MÁS offline que online (exploit).
+
+### 4.39 Filtros por robot y del vendedor (ronda 27)
+
+Los filtros los evalúa SIEMPRE el engine (`automationTick`/`applyContainerResult`/el robot
+vendedor), NUNCA la UI. Por robot de flota (`robots[i].filters`):
+
+```
+descartarBajoValor: number      // 0 = off; un ítem con value < X se descarta directamente
+reservarCategorias: string[]    // ids de categoría (rarities de items.json)
+```
+
+Prioridad por ítem del roll de un robot (los legendarios no aplican: jamás salen de un roll
+automático, §4.26): **reserva > descarte > captura por umbral global (§4.27) > venta
+instantánea**. Un ítem reservado va al inventario del Puesto AUNQUE esté bajo `keepThreshold` (o
+con el puesto en pausa, `keepThreshold = 0`) — requiere `stallLevel >= 1` y capacidad libre; sin
+puesto o sin lugar cae al camino normal. Un ítem descartado NO paga dinero ni entra al
+inventario, pero SÍ cuenta para colección/contadores (`itemsFoundCount`/`itemsFoundByCategory`/
+`itemsFoundByItem`): el robot lo encontró y lo tiró, no lo des-encontró. `filteredProcessedCount`
+(save v16) suma +1 por contenedor procesado por un robot con al menos un filtro activo
+(`descartarBajoValor > 0` o `reservarCategorias.length > 0`), para su logro.
+
+`estimateDiscardShare(state, container, filters, itemsData, data)` (engine) estima la fracción
+esperada de hallazgos que el umbral descartaría en ese contenedor — por conteo (`countShare`,
+para el aviso de UI "Se descartará el N% de lo que encontrás") y por valor (`valueShare`, para
+la tasa offline de §4.38). Determinística: pesos de categoría de §4.7 × pool uniforme
+(`rollItem`) con varianza media 1.
+
+Robot vendedor (§4.29), toggle `mantenerStockPedidos: boolean` (save v16, default false): si
+está activo, el vendedor NO vende un ítem cuya categoría exige un pedido activo cuando el stock
+de esa categoría en el inventario es <= lo que falta del pedido (`Σ cantidad − progress` de los
+pedidos activos de esa categoría) — mantiene stock suficiente para que el jugador cumpla los
+pedidos con su propio timing de mercado (§4.27). El excedente por encima de lo exigido se vende
+normal, pero SIN matchear pedidos (no avanza `progress` ni cobra el mult del pedido): con el
+toggle activo, los pedidos quedan enteros para la venta manual — si la venta de excedente los
+avanzara, cada venta achicaría la demanda restante y liberaría "nuevo excedente" en cascada
+hasta vaciar el stock que el toggle promete reservar. La venta MANUAL nunca se filtra.
 
 ---
 

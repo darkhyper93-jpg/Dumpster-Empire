@@ -31,6 +31,9 @@ for (const [containerId, pool] of Object.entries(itemsData.containers)) {
 function v6Base() {
   const v6 = freshState();
   v6.saveVersion = 6;
+  // Ronda 27 (v16): un save v6 real traía autoTargetContainerId (existía desde la v5); se
+  // repone porque freshState ya no lo tiene (campo borrado por la migración v16).
+  v6.autoTargetContainerId = null;
   return v6;
 }
 
@@ -115,6 +118,9 @@ describe('auditoría ronda 16 — import de un save v5 real conserva la colecci�
     // migración de esa versión no backfillea — ver napkin).
     const v5 = JSON.parse(JSON.stringify(freshState()));
     v5.saveVersion = 5;
+    // Ronda 27 (v16): se repone autoTargetContainerId — un save v5 real lo traía (nació con la
+    // v5) y freshState ya no lo tiene (la migración v16 lo borró del esquema).
+    v5.autoTargetContainerId = null;
     delete v5.trapsDiscarded;
     v5.money = 1234;
     v5.itemsFoundByItem = {

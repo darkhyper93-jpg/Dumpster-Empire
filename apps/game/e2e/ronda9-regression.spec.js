@@ -14,7 +14,7 @@
 import { test, expect } from '@playwright/test';
 import { freshState } from '../../../packages/engine/src/state.js';
 import { serializeState } from '../../../packages/engine/src/save.js';
-import { entrarAlJuego, iniciarEscarbado, getDigPositions, rascarObjeto } from './helpers/dig.js';
+import { entrarAlJuego, iniciarEscarbado, getDigPositions, rascarObjeto, cerrarCelebraciones } from './helpers/dig.js';
 
 /** Save con el tacho a nivel 7 y 3 escarbados de progreso (7→8 pide 31 = ceil(5·1.35^6)). */
 function nivelesSave() {
@@ -91,11 +91,20 @@ test.describe('Dumpster Empire — regresión ronda 9 (niveles visibles y automa
   test('5: automatización CON robot muestra la cola real, sin callout', async ({ page }) => {
     await seed(page, conRobotSave());
     await entrarAlJuego(page);
-    await page.locator('[data-tab="automatizacion"]').click();
+    // AJUSTE (ronda 27, R27.2): la compra round-robin llena la cola en el MISMO tick, así que
+    // el robot escala de contenedor (y dispara celebraciones de "¡Contenedor nuevo!") mucho más
+    // rápido que antes — el click al tab se reintenta cerrando modales, patrón de ronda 14/23.
+    await expect(async () => {
+      await cerrarCelebraciones(page);
+      await page.locator('[data-tab="automatizacion"]').click({ timeout: 2000 });
+    }).toPass({ timeout: 15000 });
     // El tacho es gratis, así que el robot encola solo apenas corre el tick: se asserta
     // "Cola: N / max" por regex, no el 0 literal (sería flaky por diseño del juego).
-    await expect(page.locator('.automation-status')).toContainText(/Cola: \d+ \/ \d+/);
-    await expect(page.locator('.automation-status')).toContainText('Slots simultáneos: 1');
-    await expect(page.locator('.automation-callout')).toHaveCount(0);
+    await expect(async () => {
+      await cerrarCelebraciones(page);
+      await expect(page.locator('.automation-status')).toContainText(/Cola: \d+ \/ \d+/);
+      await expect(page.locator('.automation-status')).toContainText('Slots simultáneos: 1');
+      await expect(page.locator('.automation-callout')).toHaveCount(0);
+    }).toPass({ timeout: 15000 });
   });
 });

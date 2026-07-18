@@ -15,6 +15,7 @@ describe('save v6 -> v7 migra itemsFoundByItem de nombre a id (ronda 16)', () =>
   it('un save v6 con claves en español migra a ids con itemNameToId', () => {
     const v6 = freshState();
     v6.saveVersion = 6;
+    v6.autoTargetContainerId = null; // un v6 real lo traia (desde la v5); freshState v16 ya no (ronda 27)
     v6.itemsFoundByItem = { tachoVereda: { 'Lata aplastada': 3, 'Cáscara de banana': 1 } };
 
     const result = validateSave(v6, undefined, itemNameToId);
@@ -26,6 +27,7 @@ describe('save v6 -> v7 migra itemsFoundByItem de nombre a id (ronda 16)', () =>
   it('una clave desconocida (sin entrada en itemNameToId) pasa tal cual', () => {
     const v6 = freshState();
     v6.saveVersion = 6;
+    v6.autoTargetContainerId = null; // un v6 real lo traia (desde la v5); freshState v16 ya no (ronda 27)
     v6.itemsFoundByItem = { tachoVereda: { 'Objeto fantasma': 2 } };
 
     const result = validateSave(v6, undefined, itemNameToId);
@@ -36,6 +38,7 @@ describe('save v6 -> v7 migra itemsFoundByItem de nombre a id (ronda 16)', () =>
   it('doble migración es idempotente', () => {
     const v6 = freshState();
     v6.saveVersion = 6;
+    v6.autoTargetContainerId = null; // un v6 real lo traia (desde la v5); freshState v16 ya no (ronda 27)
     v6.itemsFoundByItem = { tachoVereda: { 'Lata aplastada': 3 } };
 
     const once = validateSave(v6, undefined, itemNameToId);
@@ -57,6 +60,7 @@ describe('save v6 -> v7 migra itemsFoundByItem de nombre a id (ronda 16)', () =>
   it('sin itemNameToId las claves de un save v6 quedan como están (compat)', () => {
     const v6 = freshState();
     v6.saveVersion = 6;
+    v6.autoTargetContainerId = null; // un v6 real lo traia (desde la v5); freshState v16 ya no (ronda 27)
     v6.itemsFoundByItem = { tachoVereda: { 'Lata aplastada': 3 } };
 
     const result = validateSave(v6);
@@ -67,6 +71,7 @@ describe('save v6 -> v7 migra itemsFoundByItem de nombre a id (ronda 16)', () =>
   it('un save v6 completo migra vía deserializeState con itemNameToId', () => {
     const v6 = freshState();
     v6.saveVersion = 6;
+    v6.autoTargetContainerId = null; // un v6 real lo traia (desde la v5); freshState v16 ya no (ronda 27)
     v6.itemsFoundByItem = { tachoVereda: { 'Lata aplastada': 2 } };
     const raw = JSON.stringify(v6);
 

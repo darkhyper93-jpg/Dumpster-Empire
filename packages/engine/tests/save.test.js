@@ -163,7 +163,7 @@ describe('save.js — validación profunda contra XSS almacenado (agentes/fix-xs
     state.automationOwned = { robot1: true };
     state.achievementsUnlocked = ['a1', 'a10'];
     state.autoQueue = ['tachoVereda', 'contenedorIndustrial'];
-    state.autoProcessing = [{ containerId: 'tachoVereda', totalTime: 10, remaining: 4 }];
+    state.autoProcessing = [{ robotIndex: 0, containerId: 'tachoVereda', totalTime: 10, remaining: 4 }];
 
     const raw = serializeState(state);
     const result = deserializeState(raw);
@@ -186,8 +186,8 @@ describe('validateSave — filtrado de referencias de contenedor huérfanas (aud
   it('descarta de autoProcessing los slots cuyo containerId no existe', () => {
     const state = freshState();
     state.autoProcessing = [
-      { containerId: 'tachoVereda', totalTime: 10, remaining: 4 },
-      { containerId: 'contenedorFantasma', totalTime: 10, remaining: 4 },
+      { robotIndex: 0, containerId: 'tachoVereda', totalTime: 10, remaining: 4 },
+      { robotIndex: 0, containerId: 'contenedorFantasma', totalTime: 10, remaining: 4 },
     ];
     const result = validateSave(state, validIds);
     expect(result.valid).toBe(true);
@@ -251,14 +251,17 @@ describe('save v4 -> v5 migra sin perder partidas viejas (ronda 14)', () => {
     const result = validateSave(v4);
     expect(result.valid).toBe(true);
     expect(result.data.saveVersion).toBe(SAVE_VERSION);
-    expect(result.data.autoTargetContainerId).toBeNull();
+    // Ronda 27 (v16): el target del robot ya no vive en autoTargetContainerId (campo borrado)
+    // sino en el robot 1 de la flota — el default de la v5 llega ahí tras la cadena completa.
+    expect(result.data.robots[0].targetContainerId).toBeNull();
+    expect('autoTargetContainerId' in result.data).toBe(false);
     expect(result.data.digSensitivity).toBe(1);
     expect(result.data.language).toBe('es');
   });
 
-  it('rechaza autoTargetContainerId que no sea null ni string', () => {
+  it('rechaza un target de robot que no sea null ni string', () => {
     const state = freshState();
-    state.autoTargetContainerId = 123;
+    state.robots[0].targetContainerId = 123;
     const result = validateSave(state);
     expect(result.valid).toBe(false);
   });
@@ -282,23 +285,23 @@ describe('save v4 -> v5 migra sin perder partidas viejas (ronda 14)', () => {
 
   it('target huérfano (id que no existe en containers) se sanea a null, save aceptado', () => {
     const state = freshState();
-    state.autoTargetContainerId = 'contenedorFantasma';
+    state.robots[0].targetContainerId = 'contenedorFantasma';
     const validIds = containers.map((c) => c.id);
     const result = validateSave(state, validIds);
     expect(result.valid).toBe(true);
-    expect(result.data.autoTargetContainerId).toBeNull();
+    expect(result.data.robots[0].targetContainerId).toBeNull();
   });
 
   it('export/import ida y vuelta conserva los tres campos nuevos', () => {
     const state = freshState();
-    state.autoTargetContainerId = containers[0].id;
+    state.robots[0].targetContainerId = containers[0].id;
     state.digSensitivity = 0.7;
     state.language = 'en';
 
     const encoded = exportSave(state);
     const result = importSave(encoded);
     expect(result.ok).toBe(true);
-    expect(result.state.autoTargetContainerId).toBe(containers[0].id);
+    expect(result.state.robots[0].targetContainerId).toBe(containers[0].id);
     expect(result.state.digSensitivity).toBe(0.7);
     expect(result.state.language).toBe('en');
   });

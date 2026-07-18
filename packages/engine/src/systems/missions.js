@@ -7,7 +7,7 @@
  */
 
 import { localDayStamp } from '../time.js';
-import { getTotalContainerDigs, getMissionRewardBaseValue, getExtraDailyMissionSlots } from '../economy.js';
+import { addMoney, getTotalContainerDigs, getMissionRewardBaseValue, getExtraDailyMissionSlots } from '../economy.js';
 
 /** Allow-list de tipos de misión — save.js la reusa para validar un save/import (napkin #8). */
 export const MISSION_TYPES = [
@@ -229,8 +229,8 @@ export function claimMission(state, missionId) {
   mission.claimed = true;
   state.missionsCompletedCount++;
   if (mission.reward.type === 'money') {
-    state.money += mission.reward.amount;
-    state.totalMoneyEarned += mission.reward.amount;
+    // §27.5.1 (Y1, ronda 27): toda ganancia entra por addMoney (clamp anti-Infinity).
+    addMoney(state, mission.reward.amount);
   } else {
     state.prestigeKeys += mission.reward.amount;
   }

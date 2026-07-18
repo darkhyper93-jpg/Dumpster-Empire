@@ -131,13 +131,21 @@ test.describe('Dumpster Empire — ronda 15 (contenido nuevo)', () => {
     await seed(page, serializeState(seeded));
     await entrarAlJuego(page);
 
-    const { canvas, positions } = await iniciarEscarbadoSinTrampa(page, 'tachoVereda', 1);
+    // AJUSTE (ronda 27, fix de flake preexistente): con minObjetos=1 una TRAMPA (1 solo
+    // "objeto") pasaba el filtro del helper → el escarbado no vendía nada, totalMoneyEarned no
+    // cruzaba 1e12 y a28 nunca celebraba (~5-8% de las corridas). Con 2 el helper reintenta
+    // ante trampa; el tacho sin trampa siempre da 3 objetos.
+    const { canvas, positions } = await iniciarEscarbadoSinTrampa(page, 'tachoVereda', 2);
     const box = await canvas.boundingBox();
     if (!box) throw new Error('No se pudo medir el canvas de escarbado.');
     for (const pos of positions) await rascarObjeto(page, box, pos);
     await expect(page.locator('#dig-empty')).toBeVisible({ timeout: 5000 });
 
     const modal = page.locator('#celebration-modal');
+    // AJUSTE (ronda 27): la celebración se pinta en el notify SIGUIENTE al último rascado — bajo
+    // carga puede llegar un frame después de #dig-empty y el loop de abajo salía sin iterar.
+    // Esperar el modal explícitamente antes de recorrer la cola de celebraciones.
+    await expect(modal).toBeVisible({ timeout: 5000 });
     let sawA28 = false;
     for (let i = 0; i < 10 && (await modal.isVisible().catch(() => false)); i++) {
       const text = await modal.textContent();

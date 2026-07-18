@@ -62,7 +62,14 @@
 // se mudó) — a diferencia de `totalKeysEarned` (histórico, nunca se resetea), éste SÍ vuelve a 0
 // en cada mudanza porque la fórmula de Escrituras (PLAN.md §4.35) lo necesita como "ventana desde
 // la última vez".
-export const SAVE_VERSION = 15;
+// AJUSTE (ronda 27): v16 convierte el robot único en una FLOTA (PLAN.md §2.12/§4.38/§4.39):
+// `robots` (array de configuraciones `{ targetContainerId, filters }`, una por robot),
+// `filteredProcessedCount` (contenedores procesados con algún filtro activo, para el logro a60)
+// y `mantenerStockPedidos` (el robot vendedor no vende stock que un pedido activo demanda).
+// La migración ELIMINA `autoTargetContainerId` (segunda migración del repo que borra campos;
+// precedente v9->v10) absorbiéndolo TAL CUAL como target del robot 1 — sin lavar valores
+// inválidos. Los slots de `autoProcessing` ganan `robotIndex` (backfill 0 para saves v15).
+export const SAVE_VERSION = 16;
 
 // AJUSTE (ronda 23): cota de seguridad para `inventory` en validateDeepContent (save.js). No es
 // la capacidad de diseño real (esa vive en data/stall.json y save.js es deliberadamente
@@ -70,6 +77,13 @@ export const SAVE_VERSION = 15;
 // realista (12 base + 6×4 niveles = 36) que deja margen a futuros ajustes sin falsos rechazos,
 // y a la vez rechaza un array absurdo de un save manipulado.
 export const INVENTORY_MAX_SAFETY = 200;
+
+// AJUSTE (ronda 27): cota de seguridad para `robots` en save.js, mismo criterio que
+// INVENTORY_MAX_SAFETY — la flota de diseño real es 1..4 (1 base + 2 de flotaFundadora +
+// 1 de hangarRobots, PLAN.md §4.38), pero save.js es agnóstico de la data de balance; este
+// techo generoso deja margen a futuras máquinas sin falsos rechazos y a la vez rechaza un
+// array absurdo de un save manipulado.
+export const ROBOTS_MAX_SAFETY = 8;
 
 // AJUSTE (auditoría post-ronda 14): rango de diseño de `digSensitivity`, exportado como única
 // fuente de verdad. Antes el 0.5–1.5 estaba repetido como número mágico en save.js (validación),
@@ -84,6 +98,23 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  * @property {string} containerId
  * @property {number} totalTime
  * @property {number} remaining
+ * @property {number} robotIndex - índice del robot de la flota que ocupa este slot (ronda 27,
+ *   PLAN.md §4.38); sus filtros se aplican al resolver el contenedor.
+ */
+
+/**
+ * @typedef {Object} RobotFilters
+ * @property {number} descartarBajoValor - los ítems con valor final por debajo de este umbral se
+ *   descartan ($0, pero SÍ cuentan en la colección); 0 = filtro apagado (PLAN.md §4.39).
+ * @property {string[]} reservarCategorias - categorías que van al inventario del Puesto aunque
+ *   estén por debajo del umbral global de captura; [] = filtro apagado.
+ */
+
+/**
+ * @typedef {Object} RobotConfig
+ * @property {string|null} targetContainerId - contenedor fijo que compra/procesa este robot;
+ *   null = modo Auto (el más caro afordable). Acepta ids procedurales (`bigbangPlus<n>`).
+ * @property {RobotFilters} filters
  */
 
 /**
@@ -117,7 +148,9 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  * @property {boolean} soundOn
  * @property {number} volume - volumen maestro de SFX, 0..1 (PUNTOS_A_MEJORAR_2.md §5)
  * @property {number} lastSavedAt - epoch ms, usado para calcular progreso offline
- * @property {string|null} autoTargetContainerId - contenedor fijo que compra el robot; null = Auto (el más caro afordable)
+ * @property {RobotConfig[]} robots - flota de robots (ronda 27, PLAN.md §4.38): configuración por
+ *   robot (target + filtros). El robot 1 conserva los "brazos" (getParallelAutoSlots); los demás
+ *   procesan 1 contenedor a la vez. Reemplaza a `autoTargetContainerId` (borrado en la v16).
  * @property {number} digSensitivity - multiplicador del pincel de escarbado, rango 0.5–1.5
  * @property {string} language - idioma de la UI: 'es' | 'en'
  * @property {number} digStreak - racha actual de escarbados manuales sin trampa (PLAN.md §4.20);
@@ -168,6 +201,10 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  * @property {number} totalKeysEarnedRun - Llaves de Ciudad ganadas desde la última mudanza (o
  *   desde el inicio de la partida si nunca se mudó); se resetea a 0 en cada mudanza, a diferencia
  *   de `totalKeysEarned`. La fórmula de Escrituras (PLAN.md §4.35) lo consume.
+ * @property {number} filteredProcessedCount - contenedores procesados por la flota con algún
+ *   filtro activo (ronda 27, PLAN.md §4.39); +1 por contenedor (no por ítem), para el logro a60.
+ * @property {boolean} mantenerStockPedidos - si el robot vendedor debe RESERVAR el stock que un
+ *   pedido activo todavía demanda (ronda 27, PLAN.md §4.39); la venta manual nunca se filtra.
  */
 
 /**
@@ -203,6 +240,16 @@ export const DIG_SENSITIVITY_MAX = 1.5;
  */
 
 /**
+ * Configuración por defecto de un robot de la flota (PLAN.md §4.38): modo Auto, sin filtros.
+ * Devuelve SIEMPRE una instancia nueva (los filtros son mutables por robot; compartir la
+ * referencia haría que configurar un robot pise a los demás).
+ * @returns {RobotConfig}
+ */
+export function defaultRobotConfig() {
+  return { targetContainerId: null, filters: { descartarBajoValor: 0, reservarCategorias: [] } };
+}
+
+/**
  * Crea un estado nuevo de partida, tal cual arranca un jugador desde cero.
  * @returns {GameState}
  */
@@ -235,7 +282,7 @@ export function freshState() {
     soundOn: true,
     volume: 1,
     lastSavedAt: Date.now(),
-    autoTargetContainerId: null,
+    robots: [defaultRobotConfig()],
     digSensitivity: 1,
     language: 'es',
     digStreak: 0,
@@ -268,5 +315,7 @@ export function freshState() {
     deedsTreeLevels: {},
     galaxyMoveCount: 0,
     totalKeysEarnedRun: 0,
+    filteredProcessedCount: 0,
+    mantenerStockPedidos: false,
   };
 }

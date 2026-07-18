@@ -52,9 +52,18 @@ async function loadData() {
   return Object.fromEntries(entries);
 }
 
-function renderFatalError(app, message) {
+/**
+ * §27.5.6 (ronda 27): al jugador se le muestra un mensaje genérico y accionable; el detalle
+ * técnico (mensaje de error real, stack) va a `console.error`. Este `console.error` es la
+ * excepción documentada a la regla "sin console.log" de CLAUDE.md: es diagnóstico de un
+ * fallo fatal de arranque, no un log de debug olvidado.
+ * @param {HTMLElement} app
+ * @param {Error} err
+ */
+function renderFatalError(app, err) {
   const status = app.querySelector('#boot-status');
-  status.textContent = t('boot.fatalError', { message });
+  status.textContent = t('boot.fatalErrorGeneric');
+  console.error('Dumpster Empire: fallo fatal de arranque —', err);
 }
 
 /**
@@ -82,7 +91,7 @@ async function boot() {
     loaded = await loadData();
   } catch (err) {
     app.dataset.state = 'error';
-    renderFatalError(app, err.message);
+    renderFatalError(app, err);
     return;
   }
 

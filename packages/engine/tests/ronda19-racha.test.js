@@ -108,7 +108,7 @@ describe('logro oculto digStreakAtLeast (evalúa bestDigStreak)', () => {
 
 describe('migración de save v7 -> v8', () => {
   it('un save v7 sin digStreak/bestDigStreak/vibrationOn migra con defaults', () => {
-    const v7 = { ...freshState(), saveVersion: 7 };
+    const v7 = { ...freshState(), saveVersion: 7, autoTargetContainerId: null }; // repuesto: freshState v16 ya no lo trae (ronda 27)
     delete v7.digStreak;
     delete v7.bestDigStreak;
     delete v7.vibrationOn;

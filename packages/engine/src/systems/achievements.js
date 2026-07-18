@@ -3,7 +3,8 @@
  * evaluadas genéricamente acá. Ningún logro está hardcodeado en el engine.
  */
 
-import { isSetComplete } from '../economy.js';
+import { addMoney, getFleetSize, isSetComplete } from '../economy.js';
+import { hasAutoDig } from './automation.js';
 
 // Exportado (ronda 23.C, roadmap §3.2): "un solo motor de condiciones para logros, historia y
 // misiones" — systems/story.js lo reusa en vez de duplicar la lista de evaluadores.
@@ -59,6 +60,14 @@ export const CONDITION_EVALUATORS = {
   challengesCompletedAtLeast: (state, cond) => state.challengesCompleted.length >= cond.value,
   // Ronda 26.C (PLAN.md §2.10/§4.34): cantidad de Mudanzas de Galaxia realizadas.
   galaxyMoveCountAtLeast: (state, cond) => state.galaxyMoveCount >= cond.value,
+  // Ronda 27 (PLAN.md §4.38): "N robots ACTIVOS" — el tamaño de flota configurado solo cuenta si
+  // hay un robot escarbando de verdad (hasAutoDig). ctx.data ausente (llamador previo a esta
+  // ronda, o resolveActiveChallengeGoal, que evalúa goals sin ctx) nunca desbloquea este logro —
+  // mismo criterio defensivo que allToolsOwned/setsCompletedAtLeast.
+  fleetSizeAtLeast: (state, cond, ctx) =>
+    Boolean(ctx?.data) && hasAutoDig(state, ctx.data) && getFleetSize(state, ctx.data) >= cond.value,
+  // Ronda 27 (PLAN.md §4.39): contenedores procesados con algún filtro activo.
+  filteredProcessedCountAtLeast: (state, cond) => state.filteredProcessedCount >= cond.value,
 };
 
 /**
@@ -85,8 +94,8 @@ function applyAchievementReward(state, achievement) {
   const reward = achievement.reward;
   if (!reward) return;
   if (reward.type === 'money') {
-    state.money += reward.amount;
-    state.totalMoneyEarned += reward.amount;
+    // §27.5.1 (Y1, ronda 27): toda ganancia entra por addMoney (clamp anti-Infinity).
+    addMoney(state, reward.amount);
   } else if (reward.type === 'keys') {
     state.prestigeKeys += reward.amount;
   } else {

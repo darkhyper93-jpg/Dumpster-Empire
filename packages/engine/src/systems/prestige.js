@@ -145,9 +145,11 @@ export function doPrestige(state, data, choice = null) {
   state.automationOwned = {};
   state.autoQueue = [];
   state.autoProcessing = [];
-  // DECISIÓN (ronda 14, D6): un target apuntando a un contenedor re-bloqueado por el prestigio
-  // dejaría al robot idle sin explicación; vuelve a modo Auto igual que el resto de automatización.
-  state.autoTargetContainerId = null;
+  // DECISIÓN (ronda 14, D6; extendida a la flota en la 27): un target apuntando a un contenedor
+  // re-bloqueado por el prestigio dejaría al robot idle sin explicación; TODOS los robots vuelven
+  // a modo Auto. Los FILTROS sí sobreviven (§4.39): son preferencia del jugador, no dependen de
+  // qué contenedores existen en la run nueva.
+  for (const robot of state.robots) robot.targetContainerId = null;
   applyPrestigeChoice(state, data, choice);
 
   return { ok: true, keysEarned };
@@ -210,6 +212,16 @@ export function doGalaxyMove(state, data) {
 
   // R26.D: la mudanza liquida el inventario a venta instantánea — nunca se pierde, pero tampoco
   // viaja intacto (el dinero resultante no importa: se pisa con startMoney más abajo).
+  // DECISIÓN (§27.5.8, ronda 27): la liquidación NO cuenta como progreso de una misión
+  // `sellAtStallCount` activa (no es una venta real del jugador; sería progreso gratis por
+  // mudarse). Las misiones progresan por delta contra su `snapshot` del contador
+  // (updateMissionsProgress), así que correr el snapshot en el mismo monto las excluye sin
+  // tocar el contador histórico ni el motor de misiones.
+  for (const mission of state.dailyMissions) {
+    if (mission.type === 'sellAtStallCount' && !mission.claimed) {
+      mission.snapshot += state.inventory.length;
+    }
+  }
   state.stallSoldCount += state.inventory.length;
   state.inventory = [];
 
@@ -224,7 +236,8 @@ export function doGalaxyMove(state, data) {
   state.automationOwned = {};
   state.autoQueue = [];
   state.autoProcessing = [];
-  state.autoTargetContainerId = null;
+  // Ronda 27: mismo criterio que doPrestige — targets de la flota a Auto, filtros intactos.
+  for (const robot of state.robots) robot.targetContainerId = null;
 
   // Reseteado ADEMÁS, exclusivo de la mudanza (nunca de un prestigio normal).
   state.prestigeKeys = 0;

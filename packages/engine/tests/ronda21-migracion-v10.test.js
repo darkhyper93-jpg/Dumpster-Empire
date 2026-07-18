@@ -14,6 +14,9 @@ describe('save.js — migración v9 -> v10 (ronda 21, remoción de energía/espi
     return {
       ...freshState(),
       saveVersion: 9,
+      // Ronda 27 (v16): freshState ya no trae autoTargetContainerId (campo borrado), pero un
+      // save v9 real SÍ lo tenía (existía desde la v5) — se repone para fabricarlo fiel.
+      autoTargetContainerId: null,
       energy: 2,
       energyAt: 123456,
       spiesUsed: 5,

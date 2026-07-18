@@ -3,10 +3,19 @@
  * Cero DOM en todo lo que este módulo reexporta.
  */
 
-export { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, INVENTORY_MAX_SAFETY, freshState } from './state.js';
+export {
+  SAVE_VERSION,
+  DIG_SENSITIVITY_MIN,
+  DIG_SENSITIVITY_MAX,
+  INVENTORY_MAX_SAFETY,
+  ROBOTS_MAX_SAFETY,
+  defaultRobotConfig,
+  freshState,
+} from './state.js';
 export { formatNumber, formatMoney } from './format.js';
 
 export {
+  addMoney,
   upgradeCost,
   containerCost,
   prestigeKeysEarned,
@@ -20,6 +29,7 @@ export {
   getAreaMult,
   getQueueMax,
   getParallelAutoSlots,
+  getFleetSize,
   getSellMult,
   getOfflineFactor,
   getOfflineCapSeconds,
@@ -112,6 +122,7 @@ export {
   buyStall,
   upgradeStall,
   setKeepThreshold,
+  setMantenerStockPedidos,
   sellInventoryItem,
   stallVendorTick,
   applyOfflineStallSales,
@@ -123,7 +134,9 @@ export {
   automationTick,
   hasAutoDig,
   bestAffordableUnlockedContainer,
-  setAutoTarget,
+  ensureFleet,
+  setRobotTarget,
+  setRobotFilters,
 } from './systems/automation.js';
 
 export {
@@ -161,5 +174,6 @@ export { tryTriggerContainerEvent, isEventExpired } from './systems/events.js';
 export {
   expectedContainerValue,
   estimateAutomationRatePerSecond,
+  estimateDiscardShare,
   applyOfflineProgress,
 } from './systems/offline.js';

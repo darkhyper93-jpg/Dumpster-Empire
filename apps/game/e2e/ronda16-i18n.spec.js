@@ -34,6 +34,13 @@ function saveV6ConItemPorNombre() {
   const raw = JSON.parse(JSON.stringify(seeded));
   raw.itemsFoundByItem = { tachoVereda: { [CAN_CRUSHED.name]: 3 } };
   raw.saveVersion = 6;
+  // Ronda 27 (v16): un save v6 REAL tenía `autoTargetContainerId` y NO los campos de flota —
+  // la migración v16 absorbe ese campo dentro de robots[0] (mismo arreglo que las fábricas de
+  // saves viejos en packages/engine/tests).
+  raw.autoTargetContainerId = null;
+  delete raw.robots;
+  delete raw.filteredProcessedCount;
+  delete raw.mantenerStockPedidos;
   return JSON.stringify(raw);
 }
 

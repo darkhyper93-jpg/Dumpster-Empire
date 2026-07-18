@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { freshState, SAVE_VERSION } from '../src/state.js';
 import { validateSave } from '../src/save.js';
-import { getSellMult, getStallCapacity, getParallelAutoSlots, getExtraDailyMissionSlots, hasProceduralContainersUnlocked } from '../src/economy.js';
+import { getSellMult, getStallCapacity, getParallelAutoSlots, getFleetSize, getExtraDailyMissionSlots, hasProceduralContainersUnlocked } from '../src/economy.js';
 import {
   doPrestige,
   canGalaxyMove,
@@ -42,8 +42,8 @@ function primedState({ money = 2_000_000_000, prestigeCount = GALAXY_MOVE_PRESTI
 }
 
 describe('save v15: Mudanza de Galaxia', () => {
-  it('SAVE_VERSION es 15 y freshState trae los campos nuevos', () => {
-    expect(SAVE_VERSION).toBe(15);
+  it('SAVE_VERSION es >= 15 y freshState trae los campos nuevos (la ronda 27 la extendió a 16)', () => {
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(15);
     const state = freshState();
     expect(state.deeds).toBe(0);
     expect(state.deedsTreeLevels).toEqual({});
@@ -52,14 +52,14 @@ describe('save v15: Mudanza de Galaxia', () => {
   });
 
   it('migra un save v14 sin campos nuevos, backfillando totalKeysEarnedRun con totalKeysEarned', () => {
-    const v14 = { ...freshState(), saveVersion: 14, totalKeysEarned: 42 };
+    const v14 = { ...freshState(), saveVersion: 14, totalKeysEarned: 42, autoTargetContainerId: null }; // repuesto: freshState v16 ya no lo trae (ronda 27)
     delete v14.deeds;
     delete v14.deedsTreeLevels;
     delete v14.galaxyMoveCount;
     delete v14.totalKeysEarnedRun;
     const result = validateSave(v14, undefined, undefined, prestigeTree);
     expect(result.valid).toBe(true);
-    expect(result.data.saveVersion).toBe(15);
+    expect(result.data.saveVersion).toBe(SAVE_VERSION);
     expect(result.data.deeds).toBe(0);
     expect(result.data.deedsTreeLevels).toEqual({});
     expect(result.data.galaxyMoveCount).toBe(0);
@@ -215,7 +215,7 @@ describe('§4.34 — tabla campo-por-campo: qué resetea / qué conserva la muda
     expect(state.automationOwned).toEqual({});
     expect(state.autoQueue).toEqual([]);
     expect(state.autoProcessing).toEqual([]);
-    expect(state.autoTargetContainerId).toBeNull();
+    expect(state.robots.every((r) => r.targetContainerId === null)).toBe(true); // ronda 27: flota
     // startMoney recalculado con prestigeTreeLevels ya vacío -> 0 (sin nodo capitalInicial)
     expect(state.money).toBe(0);
     expect(state.totalMoneyEarned).toBe(0);
@@ -382,11 +382,13 @@ describe('§4.36 — árbol de Escrituras: 6 nodos, mecanismo espejo del árbol 
     expect(withExtra.length).toBe(baseline.length + 2);
   });
 
-  it('flotaFundadora: +1 slot de robot de automatización por nivel', () => {
+  it('flotaFundadora: +1 robot de flota por nivel (ronda 27: robots enteros, ya no brazos)', () => {
     const state = freshState();
-    const before = getParallelAutoSlots(state, dataBase);
+    const before = getFleetSize(state, dataBase);
     state.deedsTreeLevels = { flotaFundadora: 2 };
-    expect(getParallelAutoSlots(state, dataFull)).toBe(before + 2);
+    expect(getFleetSize(state, dataFull)).toBe(before + 2);
+    // Los brazos del robot 1 NO cambian con flotaFundadora (PLAN.md §4.38).
+    expect(getParallelAutoSlots(state, dataFull)).toBe(getParallelAutoSlots(state, dataBase));
   });
 
   it('ecoDelBigBang: desbloquea el flag de contenedores procedurales al comprarlo', () => {

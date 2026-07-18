@@ -486,6 +486,13 @@ const ICON_MAP = {
 
   // Ronda 26.C: Mudanza de Galaxia (sección de PrestigeView y logros a56/a57).
   'galaxy-move': 'galaxySwirl',
+
+  // Ronda 27: flota de robots (hangarRobots, logros a59/a60).
+  // DECISIÓN: robot-hangar reusa 'robot' (mismo criterio que robot-vendor: se diferencia por
+  // contexto de tarjeta y color) y filter-funnel reusa 'conveyor' (el filtro vive en la línea
+  // de procesamiento del robot) — cero emojis, cero shapes nuevos que mantener.
+  'robot-hangar': 'robot',
+  'filter-funnel': 'conveyor',
 };
 
 /**

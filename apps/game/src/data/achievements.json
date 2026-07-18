@@ -55,5 +55,7 @@
   { "id": "a55", "name": "Especialista", "icon": "archive-box", "cond": { "type": "specializationsUsedAtLeast", "value": 5 }, "reward": { "type": "money", "amount": 10000 } },
   { "id": "a56", "name": "Primera Mudanza", "icon": "galaxy-move", "cond": { "type": "galaxyMoveCountAtLeast", "value": 1 }, "reward": { "type": "keys", "amount": 10 } },
   { "id": "a57", "name": "Nómade Galáctico", "icon": "galaxy-move", "hidden": true, "cond": { "type": "galaxyMoveCountAtLeast", "value": 3 }, "reward": { "type": "keys", "amount": 20 } },
-  { "id": "a58", "name": "Eco de Quinta", "icon": "echo-bigbang", "cond": { "type": "containerOwnedAtLeast", "containerId": "bigbangPlus5", "value": 1 }, "reward": { "type": "money", "amount": 5000000 } }
+  { "id": "a58", "name": "Eco de Quinta", "icon": "echo-bigbang", "cond": { "type": "containerOwnedAtLeast", "containerId": "bigbangPlus5", "value": 1 }, "reward": { "type": "money", "amount": 5000000 } },
+  { "id": "a59", "name": "Patrón de Flota", "icon": "robot-hangar", "cond": { "type": "fleetSizeAtLeast", "value": 3 }, "reward": { "type": "money", "amount": 10000000 } },
+  { "id": "a60", "name": "Criterio Automático", "icon": "filter-funnel", "hidden": true, "cond": { "type": "filteredProcessedCountAtLeast", "value": 10000 }, "reward": { "type": "keys", "amount": 20 } }
 ]

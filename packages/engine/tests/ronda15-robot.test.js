@@ -178,7 +178,7 @@ describe('Descarte de trampas end-to-end (automationTick)', () => {
 
 describe('save.js — migración v5 -> v6 (trapsDiscarded)', () => {
   it('un save v5 sin trapsDiscarded se acepta y sale con trapsDiscarded: 0', () => {
-    const v5 = { ...freshState(), saveVersion: 5 };
+    const v5 = { ...freshState(), saveVersion: 5, autoTargetContainerId: null }; // repuesto: freshState v16 ya no lo trae (ronda 27)
     delete v5.trapsDiscarded;
     const result = validateSave(v5);
     expect(result.valid).toBe(true);

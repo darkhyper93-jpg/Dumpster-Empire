@@ -26,7 +26,9 @@ import {
   buyAutomation as engineBuyAutomation,
   automationTick,
   hasAutoDig,
-  setAutoTarget as engineSetAutoTarget,
+  setRobotTarget as engineSetRobotTarget,
+  setRobotFilters as engineSetRobotFilters,
+  setMantenerStockPedidos as engineSetMantenerStockPedidos,
   buyPrestigeNode as engineBuyPrestigeNode,
   doPrestige as engineDoPrestige,
   doGalaxyMove as engineDoGalaxyMove,
@@ -216,7 +218,16 @@ export function createStore(ctx) {
 
   function persist() {
     const text = serializeState(state);
-    localStorage.setItem(SAVE_KEY, text);
+    // §27.5.5 (ronda 27): localStorage.setItem puede lanzar (QuotaExceededError, modo privado
+    // de Safari, storage deshabilitado). El juego degrada en silencio a "sin autoguardado web"
+    // en vez de reventar la acción del jugador que disparó el persist — en Electron el guardado
+    // real sigue siendo el archivo de abajo (Steam Cloud), que no pasa por localStorage.
+    try {
+      localStorage.setItem(SAVE_KEY, text);
+    } catch {
+      // Silencio deliberado: no hay acción del jugador que pueda arreglarlo desde acá, y
+      // spamear un toast por tick de autoguardado sería peor que jugar sin persistencia web.
+    }
     // Fire-and-forget: además de localStorage, Electron guarda a archivo (userData) para que
     // Steam Cloud lo tome (PLAN.md §6.3, tarea 4 del Agente 10). No bloquea ni puede corromper
     // el estado en curso si falla (el store nunca espera esta promesa).
@@ -233,6 +244,8 @@ export function createStore(ctx) {
       allAutomations: data.automations,
       allTools: data.tools || [],
       itemsData,
+      // Ronda 27: el evaluador fleetSizeAtLeast necesita la EngineData completa (getFleetSize).
+      data,
     });
     if (unlockedIds.length) {
       newAchievements.push(...unlockedIds.map((id) => achievementsData.find((a) => a.id === id)));
@@ -245,7 +258,9 @@ export function createStore(ctx) {
   const secondsAway = Math.max(0, (Date.now() - state.lastSavedAt) / 1000);
   if (secondsAway >= OFFLINE_MIN_SECONDS) {
     const result = applyOfflineProgress(state, secondsAway, allContainers, itemsData, data);
-    if (result.ganancia > 0) offlineSummary = result;
+    // §27.5.3 (ronda 27): el robot vendedor pudo vender inventario aunque la flota no haya
+    // generado nada (jugador sin auto-escarbado) — ese dinero también merece su modal.
+    if (result.ganancia > 0 || result.stallEarnings > 0) offlineSummary = result;
   }
   runAchievements();
   runStory();
@@ -614,13 +629,46 @@ export function createStore(ctx) {
     },
 
     /**
-     * Fija (o limpia) el contenedor objetivo del robot de automatización (ronda 14).
+     * Fija (o limpia) el contenedor objetivo de UN robot de la flota (ronda 27, PLAN.md §4.38).
+     * @param {number} robotIndex - índice dentro de la flota real (0..getFleetSize-1)
      * @param {string|null} containerId - 'auto'/'' o null vuelven al modo Auto
      * @returns {{ ok: true } | { ok: false, error: string }}
      */
-    setAutoTarget(containerId) {
+    setRobotTarget(robotIndex, containerId) {
       const normalized = containerId === 'auto' || containerId === '' ? null : containerId;
-      const result = engineSetAutoTarget(state, normalized, allContainers);
+      const result = engineSetRobotTarget(state, robotIndex, normalized, allContainers, data);
+      if (result.ok) {
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /**
+     * Fija los filtros de UN robot de la flota (ronda 27, PLAN.md §4.39). El engine valida el
+     * umbral y las categorías contra la data real (la UI solo despacha el input crudo).
+     * @param {number} robotIndex
+     * @param {{ descartarBajoValor: number, reservarCategorias: string[] }} filters
+     * @returns {{ ok: true } | { ok: false, error: string }}
+     */
+    setRobotFilters(robotIndex, filters) {
+      const validCategories = itemsData.rarities.map((r) => r.id);
+      const result = engineSetRobotFilters(state, robotIndex, filters, validCategories, data);
+      if (result.ok) {
+        runAchievements();
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /**
+     * Enciende/apaga la reserva de stock para pedidos del robot vendedor (ronda 27, §4.39).
+     * @param {boolean} value
+     * @returns {{ ok: true } | { ok: false, error: string }}
+     */
+    setMantenerStockPedidos(value) {
+      const result = engineSetMantenerStockPedidos(state, value);
       if (result.ok) {
         persist();
         notify();

@@ -48,7 +48,7 @@ describe('save v13: misiones diarias + evento de contenedor', () => {
   });
 
   it('migra un save v12 sin campos nuevos rellenándolos con los defaults', () => {
-    const v12 = { ...freshState(), saveVersion: 12 };
+    const v12 = { ...freshState(), saveVersion: 12, autoTargetContainerId: null }; // repuesto: freshState v16 ya no lo trae (ronda 27)
     delete v12.dailyMissions;
     delete v12.missionsRolledAt;
     delete v12.missionsCompletedCount;
@@ -170,7 +170,7 @@ describe('misiones diarias: progreso por delta contra snapshot (roadmap §24.3, 
     ownTacho(state);
     const auto = automations.find((a) => (a.effects || []).some((e) => e.type === 'enablesAutoDig'));
     state.automationOwned[auto.id] = true;
-    state.autoTargetContainerId = tachoVereda.id;
+    state.robots[0].targetContainerId = tachoVereda.id; // ronda 27: el target vive en la flota
     state.money = 1e9;
     state.dailyMissions = [
       { id: 'm1', type: 'digContainerCount', difficulty: 'easy', params: { containerId: tachoVereda.id }, target: 3, progress: 0, claimed: false, snapshot: getTotalContainerDigs(state, tachoVereda), reward: { type: 'money', amount: 10 } },

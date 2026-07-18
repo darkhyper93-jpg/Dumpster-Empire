@@ -259,6 +259,8 @@ export default {
     a56: 'First Move',
     a57: 'Galactic Nomad',
     a58: 'Fifth Echo',
+    a59: 'Fleet Boss',
+    a60: 'Automatic Judgment',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },
@@ -286,6 +288,7 @@ export default {
     },
     servobrazosTitanio: { name: 'Titanium Servo Arms', desc: '+80% additional robot Dig Power.' },
     nucleoCuantico: { name: 'Quantum Core', desc: '+50% additional robot processing speed.' },
+    hangarRobots: { name: 'Robot Hangar', desc: '+1 fleet robot, with its own target and filters.' },
   },
   prestigeTree: {
     capitalInicial: { name: 'Starting Capital', desc: '+$100 starting money per level.' },
