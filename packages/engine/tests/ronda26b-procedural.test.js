@@ -194,29 +194,27 @@ describe('contrato §3.5.6: exclusión de colección/sets/misiones', () => {
 describe('save.js: sanitizeContainerRefs acepta tiers procedurales legítimos y rechaza hostiles', () => {
   const containerIdSet = new Set(containers.map((c) => c.id));
 
-  it('conserva bigbangPlus1 en autoQueue/autoTargetContainerId de un save real', () => {
-    const raw = {
-      ...freshState(),
-      autoQueue: ['bigbangPlus1', 'tachoVereda'],
-      autoTargetContainerId: 'bigbangPlus1',
-    };
+  // Ronda 27 (v16): el target del robot vive en state.robots[0].targetContainerId.
+  it('conserva bigbangPlus1 en autoQueue/target del robot de un save real', () => {
+    const raw = { ...freshState(), autoQueue: ['bigbangPlus1', 'tachoVereda'] };
+    raw.robots[0].targetContainerId = 'bigbangPlus1';
     const result = validateSave(raw, containerIdSet);
     expect(result.valid).toBe(true);
     expect(result.data.autoQueue).toContain('bigbangPlus1');
-    expect(result.data.autoTargetContainerId).toBe('bigbangPlus1');
+    expect(result.data.robots[0].targetContainerId).toBe('bigbangPlus1');
   });
 
-  it('descarta ids hostiles de autoQueue/autoProcessing/autoTargetContainerId', () => {
+  it('descarta ids hostiles de autoQueue/autoProcessing/target del robot', () => {
     const raw = {
       ...freshState(),
       autoQueue: ['bigbangPlus999', 'bigbangPlus01', 'bigbangPlus1e2', 'bigbangPlus-1'],
-      autoProcessing: [{ containerId: 'bigbangPlus999', totalTime: 1, remaining: 1 }],
-      autoTargetContainerId: 'bigbangPlus999',
+      autoProcessing: [{ robotIndex: 0, containerId: 'bigbangPlus999', totalTime: 1, remaining: 1 }],
     };
+    raw.robots[0].targetContainerId = 'bigbangPlus999';
     const result = validateSave(raw, containerIdSet);
     expect(result.valid).toBe(true);
     expect(result.data.autoQueue).toEqual([]);
     expect(result.data.autoProcessing).toEqual([]);
-    expect(result.data.autoTargetContainerId).toBe(null);
+    expect(result.data.robots[0].targetContainerId).toBe(null);
   });
 });

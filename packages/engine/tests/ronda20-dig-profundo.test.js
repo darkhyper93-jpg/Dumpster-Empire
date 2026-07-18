@@ -199,7 +199,7 @@ describe('§4.23 herramientas de escarbado', () => {
 
 describe('migración de save v8 -> v10 (encadena v9 y la remoción de energía de la ronda 21)', () => {
   it('un save v8 sin campos nuevos migra con defaults y sin energía/espionaje', () => {
-    const v8 = { ...freshState(), saveVersion: 8 };
+    const v8 = { ...freshState(), saveVersion: 8, autoTargetContainerId: null }; // repuesto: freshState v16 ya no lo trae (ronda 27)
     delete v8.equippedTool;
     delete v8.toolsOwned;
     delete v8.gravesHit;

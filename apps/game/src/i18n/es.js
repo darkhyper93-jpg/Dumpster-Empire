@@ -79,6 +79,18 @@ export default {
   'automation.expandCapacity': 'Ampliar Capacidad (nivel {level}) por {amount}',
   // Ronda 25 (PLAN.md §4.32): desafío `manosVacias` activo bloquea toda compra de máquinas.
   'automation.blockedByChallenge': 'El desafío activo no permite comprar máquinas.',
+  // Ronda 27 (PLAN.md §4.38/§4.39): flota de robots + filtros por robot.
+  'automation.fleetTitle': 'Flota de robots',
+  'automation.fleetSize': 'Flota: {count} robot{plural}',
+  'automation.robotTitle': 'Robot {num}',
+  'automation.robotArms': '{count} brazo{plural}',
+  'automation.robotIdle': 'Sin nada en la garra ahora mismo.',
+  'automation.filtersSummary': 'Filtros del robot',
+  'automation.filterThresholdLabel': 'Descartar hallazgos que valgan menos de',
+  'automation.filterDiscardEstimate': 'Estimado: descarta ~{pct}% de lo que encuentra.',
+  'automation.filterReserveLabel': 'Reservar para el Puesto (ignora el umbral de venta):',
+  'automation.filterReserveLocked': 'Comprá el Puesto de Chatarra en la Tienda para reservar categorías.',
+  'npc.chispa.fleetFlavor': 'Chispa: "Yo los mantengo aceitados. Vos decime qué tiene que buscar cada uno."',
 
   // CelebrationModal.js
   'celebration.close': 'Cerrar',
@@ -111,6 +123,8 @@ export default {
   'offline.title': 'Mientras no estabas...',
   'offline.summary': 'Tus robots trabajaron {minutes} min y encontraron:',
   'offline.close': 'Genial',
+  // Ronda 27 (§27.5.3): desglose de lo que facturó el robot vendedor en el Puesto.
+  'offline.stallEarnings': 'El robot vendedor facturó {amount} en el Puesto.',
 
   // PrestigeView.js
   'prestige.empty': 'No hay árbol de prestigio configurado.',
@@ -241,6 +255,9 @@ export default {
   'stall.orderProgress': 'Progreso: {progress}/{cantidad}',
   'stall.orderReward': 'Paga +{pct}% sobre el precio del puesto',
   'stall.orderTime': 'Rotan en {minutes} min',
+  // Ronda 27 (PLAN.md §4.39): toggle "mantener stock para pedidos" del robot vendedor.
+  'stall.keepStockToggle': 'Mantener stock para los pedidos de Salomón',
+  'stall.keepStockHint': 'El vendedor no vende lo que un pedido activo todavía necesita.',
 
   // TitleScreen.js
   'titleScreen.play': 'Jugar',
@@ -259,6 +276,8 @@ export default {
   // main.js
   'boot.loadFailed': 'No se pudo cargar {path} (HTTP {status}).',
   'boot.fatalError': 'No se pudo iniciar Dumpster Empire: {message}',
+  // §27.5.6 (ronda 27): mensaje genérico en pantalla; el detalle va a console.error.
+  'boot.fatalErrorGeneric': 'No se pudo iniciar Dumpster Empire. Probá recargar; el detalle técnico está en la consola.',
 
   // Ronda 23 — Agente B (data): diálogos de NPCs (apps/game/src/data/npcs.json) y viñetas de
   // historia liviana (apps/game/src/data/story.json, PLAN.md §2.9, roadmap §3.1/§3.2).

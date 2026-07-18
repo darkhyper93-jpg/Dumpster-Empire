@@ -3,7 +3,15 @@
  * y export/import en base64. Nunca corrompe la partida en curso ante un input inválido.
  */
 
-import { SAVE_VERSION, DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, INVENTORY_MAX_SAFETY, freshState } from './state.js';
+import {
+  SAVE_VERSION,
+  DIG_SENSITIVITY_MIN,
+  DIG_SENSITIVITY_MAX,
+  INVENTORY_MAX_SAFETY,
+  ROBOTS_MAX_SAFETY,
+  defaultRobotConfig,
+  freshState,
+} from './state.js';
 import { MISSION_TYPES, MISSION_DIFFICULTIES } from './systems/missions.js';
 import { isProceduralContainerId } from './procedural.js';
 
@@ -73,7 +81,7 @@ function isValidItemsFoundByItem(obj) {
 }
 
 /**
- * Valida `autoProcessing`: array de slots `{ containerId: string, totalTime: number, remaining: number }`.
+ * Valida `autoProcessing`: array de slots `{ robotIndex, containerId, totalTime, remaining }`.
  * @param {unknown} arr
  * @returns {boolean}
  */
@@ -82,6 +90,9 @@ function isValidAutoProcessing(arr) {
   // AJUSTE (auditoría post-ronda 14): además de finitud, coherencia del slot. automationTick
   // solo persiste slots con 0 < remaining <= totalTime; un slot manipulado con totalTime 0 (o
   // remaining > totalTime) producía "Contenedor: NaN%" / porcentajes negativos en AutomationView.
+  // Ronda 27 (PLAN.md §4.38): `robotIndex` entero 0..ROBOTS_MAX_SAFETY — se compara contra la
+  // cota de seguridad, no contra la flota real del save (save.js es agnóstico de balance; un
+  // índice fuera de la flota actual cae al robot 1 en el tick, ver robotFiltersFor).
   return arr.every(
     (slot) =>
       typeof slot === 'object' &&
@@ -91,7 +102,32 @@ function isValidAutoProcessing(arr) {
       Number.isFinite(slot.remaining) &&
       slot.totalTime > 0 &&
       slot.remaining >= 0 &&
-      slot.remaining <= slot.totalTime
+      slot.remaining <= slot.totalTime &&
+      Number.isInteger(slot.robotIndex) &&
+      slot.robotIndex >= 0 &&
+      slot.robotIndex <= ROBOTS_MAX_SAFETY
+  );
+}
+
+/**
+ * Valida `robots` (ronda 27, PLAN.md §4.38): la flota, 1..ROBOTS_MAX_SAFETY configuraciones
+ * `{ targetContainerId: string|null, filters: { descartarBajoValor >= 0, reservarCategorias } }`.
+ * El allow-list real de targets/categorías lo aplican sanitizeContainerRefs y store.js — acá
+ * solo forma y rangos (mismo criterio que inventory/stallOrders).
+ * @param {unknown} arr
+ * @returns {boolean}
+ */
+function isValidRobots(arr) {
+  if (!Array.isArray(arr) || arr.length < 1 || arr.length > ROBOTS_MAX_SAFETY) return false;
+  return arr.every(
+    (robot) =>
+      isPlainObject(robot) &&
+      (robot.targetContainerId === null || typeof robot.targetContainerId === 'string') &&
+      isPlainObject(robot.filters) &&
+      Number.isFinite(robot.filters.descartarBajoValor) &&
+      robot.filters.descartarBajoValor >= 0 &&
+      Array.isArray(robot.filters.reservarCategorias) &&
+      robot.filters.reservarCategorias.every((c) => typeof c === 'string')
   );
 }
 
@@ -198,10 +234,14 @@ function validateDeepContent(migrated) {
     return 'Contenido inválido en itemsFoundByItem: debe ser containerId -> { itemName -> número }.';
   }
   if (!isValidAutoProcessing(migrated.autoProcessing)) {
-    return 'Contenido inválido en autoProcessing: debe ser un array de slots { containerId, totalTime, remaining }.';
+    return 'Contenido inválido en autoProcessing: debe ser un array de slots { robotIndex, containerId, totalTime, remaining }.';
   }
-  if (migrated.autoTargetContainerId !== null && typeof migrated.autoTargetContainerId !== 'string') {
-    return 'Contenido inválido en autoTargetContainerId: debe ser null o un string.';
+  // Ronda 27 (PLAN.md §4.38): la flota reemplaza a autoTargetContainerId (borrado en la v16).
+  if (!isValidRobots(migrated.robots)) {
+    return 'Contenido inválido en robots: debe ser una flota de { targetContainerId, filters } válidos.';
+  }
+  if (!Number.isInteger(migrated.filteredProcessedCount) || migrated.filteredProcessedCount < 0) {
+    return 'Contenido inválido en filteredProcessedCount: debe ser un entero >= 0.';
   }
   if (
     !Number.isFinite(migrated.digSensitivity) ||
@@ -325,8 +365,12 @@ function sanitizeContainerRefs(migrated, validIds) {
   const isValidRef = (id) => validIds.has(id) || isProceduralContainerId(id);
   migrated.autoQueue = migrated.autoQueue.filter(isValidRef);
   migrated.autoProcessing = migrated.autoProcessing.filter((slot) => isValidRef(slot.containerId));
-  if (migrated.autoTargetContainerId !== null && !isValidRef(migrated.autoTargetContainerId)) {
-    migrated.autoTargetContainerId = null;
+  // Ronda 27: un target de robot huérfano vuelve a modo Auto (mismo criterio que tenía
+  // autoTargetContainerId antes de la v16 — descartar la referencia muerta, no rechazar el save).
+  for (const robot of migrated.robots) {
+    if (robot.targetContainerId !== null && !isValidRef(robot.targetContainerId)) {
+      robot.targetContainerId = null;
+    }
   }
 }
 
@@ -389,227 +433,326 @@ const REQUIRED_FIELDS = {
   deedsTreeLevels: 'object',
   galaxyMoveCount: 'number',
   totalKeysEarnedRun: 'number',
+  robots: 'object',
+  filteredProcessedCount: 'number',
+  mantenerStockPedidos: 'boolean',
 };
-// autoTargetContainerId/specialization/activeChallenge NO van en REQUIRED_FIELDS: son unión
-// `string|null` y `typeof null === 'object'` rompería el chequeo de tipo; su validación de
-// contenido vive en validateDeepContent().
+// specialization/activeChallenge NO van en REQUIRED_FIELDS: son unión `string|null` y
+// `typeof null === 'object'` rompería el chequeo de tipo; su validación de contenido vive en
+// validateDeepContent(). (autoTargetContainerId, el tercer caso histórico, se borró en la v16 —
+// el targetContainerId de cada robot se valida dentro de isValidRobots.)
+
+// ---------------------------------------------------------------------------
+// Migraciones, un paso por versión (§27.5.4, ronda 27): cada `migrateToN` lleva un save de la
+// versión N-1 (o anterior, ya migrada) a la N. Extraídas de la cadena monolítica de `migrate()`
+// SIN cambio de comportamiento — mismos guards, mismos backfills, mismos comentarios.
+// ---------------------------------------------------------------------------
 
 /**
- * Migra un objeto de guardado de una versión anterior a la actual. v1 es la primera versión,
- * así que hoy es una función identidad; queda el mecanismo listo para futuros bumps de esquema.
+ * Contexto opcional que algunas migraciones necesitan (se enhebra desde validateSave).
+ * @typedef {Object} MigrationContext
+ * @property {Object<string, Object<string, string>>} [itemNameToId] - mapa
+ *   `containerId -> { nombreEspañol -> id }` usado por la migración v6->v7 para remapear las
+ *   claves de `itemsFoundByItem`. Si se omite, las claves quedan tal cual (compat: saves ya en
+ *   v7 no lo necesitan).
+ * @property {Array<Object>} [prestigeTreeData] - definición de `prestigeTree.json`, usada SOLO
+ *   por la migración v13->v14 para backfillear `totalKeysEarned` (necesita `costoBase`/
+ *   `factorCrecimiento` de cada nodo ya comprado).
+ */
+
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo1(migrated, ctx) {
+  return { ...freshState(), ...migrated, saveVersion: 1 };
+}
+
+// v1 -> v2 (Fase 6, PLAN.md §11.3): agrega containerLevels/containerLevelProgress. Saves viejos
+// arrancan todos los contenedores en nivel 1 (comportamiento correcto: nunca escarbaron a ese nivel).
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo2(migrated, ctx) {
+  return {
+    ...migrated,
+    containerLevels: migrated.containerLevels || {},
+    containerLevelProgress: migrated.containerLevelProgress || {},
+    saveVersion: 2,
+  };
+}
+
+// v2 -> v3 (Fase 7, PLAN.md §11.5): agrega itemsFoundByItem. Saves viejos arrancan vacío
+// (comportamiento correcto: el INDEX no puede saber qué encontraron antes de este campo).
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo3(migrated, ctx) {
+  return {
+    ...migrated,
+    itemsFoundByItem: migrated.itemsFoundByItem || {},
+    saveVersion: 3,
+  };
+}
+
+// v3 -> v4 (PUNTOS_A_MEJORAR_2.md §5): agrega `volume` (0..1). Saves viejos arrancan con volumen
+// 1 (comportamiento actual: sonido a todo volumen si estaba encendido).
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo4(migrated, ctx) {
+  return {
+    ...migrated,
+    volume: typeof migrated.volume === 'number' ? migrated.volume : 1,
+    saveVersion: 4,
+  };
+}
+
+// v4 -> v5 (ronda 14): agrega autoTargetContainerId (selector del robot), digSensitivity
+// (slider de sensibilidad) y language (base de i18n). Saves viejos arrancan en modo Auto,
+// sensibilidad neutra y español (comportamiento actual sin cambios visibles).
+// (La v16 borra autoTargetContainerId; este paso lo sigue creando para que un save pre-v5
+// atraviese v5..v15 con la MISMA forma que tuvo históricamente.)
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo5(migrated, ctx) {
+  return {
+    ...migrated,
+    autoTargetContainerId: null,
+    digSensitivity: 1,
+    language: 'es',
+    saveVersion: 5,
+  };
+}
+
+// v5 -> v6 (ronda 15): agrega trapsDiscarded (contador de contenedores con trampa que el
+// robot descartó vía el nodo "Escáner de Trampas"). Saves viejos arrancan en 0.
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo6(migrated, ctx) {
+  return { ...migrated, trapsDiscarded: 0, saveVersion: 6 };
+}
+
+// v6 -> v7 (ronda 16): itemsFoundByItem pasa de nombre-español a id de ítem como clave, para
+// que la colección sobreviva a la traducción. Claves desconocidas pasan tal cual (idempotente).
+// AUDITORÍA (ronda 16): este paso corre ANTES de validateDeepContent, así que no puede confiar
+// en la forma del save. La versión ingenua (a) tiraba TypeError con un byItem null (brick de
+// boot con localStorage manipulado), (b) "lavaba" arrays a objetos válidos, y (c) con una clave
+// __proto__ seteaba el prototipo de remapped, dejando contenido heredado invisible para la
+// validación (bypass de la capa primaria anti-XSS del save). Fix: solo se remapea lo que ya
+// tiene la forma esperada (el resto pasa tal cual y la validación lo rechaza con su error de
+// siempre), sobre objetos sin prototipo (Object.create(null): toda clave, incluida __proto__,
+// es propiedad propia y visible), y los lookups de mapas usan Object.hasOwn (una clave
+// 'constructor' no debe resolver contra el prototipo).
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo7(migrated, ctx) {
+  if (!isPlainObject(migrated.itemsFoundByItem)) {
+    // Campo ausente o con forma inválida: NO se fabrica un `{}` que lo haga pasar — se deja
+    // tal cual para que REQUIRED_FIELDS/validateDeepContent lo rechacen (pre-ronda-16 un v6
+    // sin itemsFoundByItem válido se rechazaba; la migración no debe relajar eso).
+    return { ...migrated, saveVersion: 7 };
+  }
+  const { itemNameToId } = ctx;
+  const remapped = Object.create(null);
+  for (const [containerId, byItem] of Object.entries(migrated.itemsFoundByItem)) {
+    if (!isPlainObject(byItem)) {
+      remapped[containerId] = byItem;
+      continue;
+    }
+    const nameMap =
+      itemNameToId && Object.hasOwn(itemNameToId, containerId) ? itemNameToId[containerId] : {};
+    const target = (remapped[containerId] = Object.create(null));
+    for (const [key, count] of Object.entries(byItem)) {
+      target[Object.hasOwn(nameMap, key) ? nameMap[key] : key] = count;
+    }
+  }
+  return { ...migrated, itemsFoundByItem: remapped, saveVersion: 7 };
+}
+
+// v7 -> v8 (ronda 19): agrega digStreak/bestDigStreak (racha de escarbado sin trampa) y
+// vibrationOn (toggle de vibración táctil). Saves viejos arrancan en racha 0 y vibración
+// encendida (comportamiento actual sin cambios visibles).
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo8(migrated, ctx) {
+  return { ...migrated, digStreak: 0, bestDigStreak: 0, vibrationOn: true, saveVersion: 8 };
+}
+
+// v8 -> v9 (ronda 20): agrega energy/energyAt (Energía de espionaje), equippedTool/toolsOwned
+// (herramientas de escarbado) y spiesUsed/gravesHit (contadores de logros). Saves viejos
+// arrancan con Energía llena, solo "manos" (herramienta inicial) equipada y contadores en 0
+// (comportamiento actual sin cambios visibles).
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo9(migrated, ctx) {
+  return {
+    ...migrated,
+    energy: 3,
+    energyAt: 0,
+    equippedTool: 'manos',
+    toolsOwned: { manos: true },
+    spiesUsed: 0,
+    gravesHit: 0,
+    saveVersion: 9,
+  };
+}
+
+// v9 -> v10 (ronda 21): remueve energy/energyAt/spiesUsed (Energía y espionaje removidos por
+// decisión del usuario, 2026-07-14) y filtra el logro muerto `a39` de achievementsUnlocked.
+// PRIMERA migración del repo que ELIMINA campos en vez de agregarlos: no alcanza con no
+// setearlos (un save v9 real los trae puestos), hay que borrarlos explícitamente con
+// destructuring-omit. Filtrar `a39` no es "lavar" un save inválido (patrón
+// sanitizeContainerRefs: descartar una referencia muerta es limpieza, no relajar validación)
+// — un save con basura real en otro campo se sigue rechazando igual más abajo. Precedente para
+// la v16, que reusa este patrón para borrar `autoTargetContainerId`.
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo10(migrated, ctx) {
+  const { energy, energyAt, spiesUsed, ...rest } = migrated;
+  return {
+    ...rest,
+    achievementsUnlocked: Array.isArray(migrated.achievementsUnlocked)
+      ? migrated.achievementsUnlocked.filter((id) => id !== 'a39')
+      : migrated.achievementsUnlocked,
+    saveVersion: 10,
+  };
+}
+
+// v10 -> v11 (ronda 22, PLAN.md §4.26): agrega legendariesFound (ids de legendarios ya
+// encontrados). Saves viejos arrancan sin ninguno (comportamiento correcto: no existían).
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo11(migrated, ctx) {
+  return { ...migrated, legendariesFound: [], saveVersion: 11 };
+}
+
+// v11 -> v12 (ronda 23, PLAN.md §2.9/§4.27-§4.29): agrega el Puesto de Chatarra. Saves viejos
+// arrancan sin puesto (stallLevel 0, comportamiento actual: todo se vende instantáneo, sin
+// cambios visibles) e inventario/pedidos vacíos.
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo12(migrated, ctx) {
+  return {
+    ...migrated,
+    inventory: [],
+    stallLevel: 0,
+    keepThreshold: 0,
+    stallOrders: [],
+    ordersRotatedAt: 0,
+    stallVendorAt: 0,
+    stallSoldCount: 0,
+    ordersFulfilledCount: 0,
+    storySeen: [],
+    saveVersion: 12,
+  };
+}
+
+// v12 -> v13 (ronda 24, PLAN.md §4.30-§4.33): misiones diarias + evento de contenedor. Saves
+// viejos arrancan sin misiones activas (se rollean solas en el próximo boot, ver
+// rerollDailyMissionsIfNeeded: `missionsRolledAt: 0` siempre difiere del día de hoy), sin
+// cooldown de evento consumido y sin eventos aprovechados (logro nuevo).
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo13(migrated, ctx) {
+  return {
+    ...migrated,
+    dailyMissions: [],
+    missionsRolledAt: 0,
+    missionsCompletedCount: 0,
+    lastEventAt: 0,
+    eventsUsedCount: 0,
+    saveVersion: 13,
+  };
+}
+
+// v13 -> v14 (ronda 25, PLAN.md §4.31-§4.33): prestigio profundo. Saves viejos arrancan sin
+// especialización/desafío activo (comportamiento actual sin cambios visibles) y
+// `totalKeysEarned` se backfillea con `prestigeKeys` (lo que le queda sin gastar) más el costo
+// en Llaves ya invertido en `prestigeTreeLevels` (lo que gastó históricamente) — el mejor
+// estimado posible de lo ganado alguna vez a partir de lo que el save YA tiene. Si
+// `prestigeTreeData` no se pasa (compat: llamador previo a esa ronda), el costo invertido
+// backfillea en 0 — subestima levemente pero nunca sobreestima ni crashea.
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo14(migrated, ctx) {
+  const { prestigeTreeData } = ctx;
+  const levels = isPlainObject(migrated.prestigeTreeLevels) ? migrated.prestigeTreeLevels : {};
+  let investedCost = 0;
+  if (Array.isArray(prestigeTreeData)) {
+    for (const [nodeId, level] of Object.entries(levels)) {
+      const node = prestigeTreeData.find((n) => n.id === nodeId);
+      if (!node || !Number.isFinite(level)) continue;
+      for (let lvl = 0; lvl < level; lvl++) {
+        investedCost += Math.ceil(node.costoBase * Math.pow(node.factorCrecimiento, lvl));
+      }
+    }
+  }
+  return {
+    ...migrated,
+    specialization: null,
+    activeChallenge: null,
+    challengesCompleted: [],
+    specializationsUsed: 0,
+    totalKeysEarned: (Number.isFinite(migrated.prestigeKeys) ? migrated.prestigeKeys : 0) + investedCost,
+    saveVersion: 14,
+  };
+}
+
+// v14 -> v15 (ronda 26, PLAN.md §2.11/§4.34-§4.36): Mudanza de Galaxia. Saves viejos arrancan
+// sin Escrituras ni mudanzas (comportamiento actual sin cambios visibles) y
+// `totalKeysEarnedRun` se backfillea con `totalKeysEarned` (el save nunca se mudó todavía, así
+// que la "ventana desde la última mudanza" es toda la vida de la partida).
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo15(migrated, ctx) {
+  return {
+    ...migrated,
+    deeds: 0,
+    deedsTreeLevels: {},
+    galaxyMoveCount: 0,
+    totalKeysEarnedRun: Number.isFinite(migrated.totalKeysEarned) ? migrated.totalKeysEarned : 0,
+    saveVersion: 15,
+  };
+}
+
+// v15 -> v16 (ronda 27, PLAN.md §2.12/§4.38): la flota de robots. SEGUNDA migración que borra
+// campos (patrón destructuring-omit de la v10): `autoTargetContainerId` se absorbe TAL CUAL como
+// target del robot 1 — incluso un valor inválido (un número, p. ej.) viaja hasta isValidRobots y
+// el save se rechaza, exactamente igual que se rechazaba antes; la migración nunca "lava"
+// (napkin #7). Los slots de autoProcessing ganan `robotIndex: 0` (todos eran del robot único);
+// un slot que ya trae robotIndex propio (v16 residual u hostil) lo conserva para que la
+// validación lo juzgue. `filteredProcessedCount`/`mantenerStockPedidos` arrancan neutros.
+/** @param {Object} migrated @param {MigrationContext} ctx @returns {Object} */
+function migrateTo16(migrated, ctx) {
+  const { autoTargetContainerId, ...rest } = migrated;
+  const robot = defaultRobotConfig();
+  robot.targetContainerId = autoTargetContainerId;
+  return {
+    ...rest,
+    robots: [robot],
+    autoProcessing: Array.isArray(migrated.autoProcessing)
+      ? migrated.autoProcessing.map((slot) => (isPlainObject(slot) ? { robotIndex: 0, ...slot } : slot))
+      : migrated.autoProcessing,
+    filteredProcessedCount: 0,
+    mantenerStockPedidos: false,
+    saveVersion: 16,
+  };
+}
+
+/**
+ * Migra un objeto de guardado de una versión anterior a la actual, encadenando los pasos
+ * `migrateToN` en orden (§27.5.4: un paso por versión; cada uno chequea `saveVersion` para que
+ * un save ya migrado lo saltee — misma semántica que la cadena monolítica que reemplaza).
  * @param {Object} raw
- * @param {Object<string, Object<string, string>>} [itemNameToId] - mapa `containerId -> { nombreEspañol -> id }`
- *   usado por la migración v6->v7 para remapear las claves de `itemsFoundByItem`. Si se omite,
- *   las claves quedan tal cual (compat: saves ya en v7 no lo necesitan).
- * @param {Array<Object>} [prestigeTreeData] - definición de `prestigeTree.json`, usada SOLO por
- *   la migración v13->v14 para backfillear `totalKeysEarned` (necesita `costoBase`/
- *   `factorCrecimiento` de cada nodo ya comprado). Se enhebra igual que `itemNameToId` en v7.
+ * @param {Object<string, Object<string, string>>} [itemNameToId] - ver MigrationContext.
+ * @param {Array<Object>} [prestigeTreeData] - ver MigrationContext.
  * @returns {Object}
  */
 function migrate(raw, itemNameToId, prestigeTreeData) {
+  const steps = [
+    migrateTo1,
+    migrateTo2,
+    migrateTo3,
+    migrateTo4,
+    migrateTo5,
+    migrateTo6,
+    migrateTo7,
+    migrateTo8,
+    migrateTo9,
+    migrateTo10,
+    migrateTo11,
+    migrateTo12,
+    migrateTo13,
+    migrateTo14,
+    migrateTo15,
+    migrateTo16,
+  ];
+  /** @type {MigrationContext} */
+  const ctx = { itemNameToId, prestigeTreeData };
   let migrated = raw;
-  if (migrated.saveVersion < 1) {
-    migrated = { ...freshState(), ...migrated, saveVersion: 1 };
-  }
-  // v1 -> v2 (Fase 6, PLAN.md §11.3): agrega containerLevels/containerLevelProgress. Saves viejos
-  // arrancan todos los contenedores en nivel 1 (comportamiento correcto: nunca escarbaron a ese nivel).
-  if (migrated.saveVersion < 2) {
-    migrated = {
-      ...migrated,
-      containerLevels: migrated.containerLevels || {},
-      containerLevelProgress: migrated.containerLevelProgress || {},
-      saveVersion: 2,
-    };
-  }
-  // v2 -> v3 (Fase 7, PLAN.md §11.5): agrega itemsFoundByItem. Saves viejos arrancan vacío
-  // (comportamiento correcto: el INDEX no puede saber qué encontraron antes de este campo).
-  if (migrated.saveVersion < 3) {
-    migrated = {
-      ...migrated,
-      itemsFoundByItem: migrated.itemsFoundByItem || {},
-      saveVersion: 3,
-    };
-  }
-  // v3 -> v4 (PUNTOS_A_MEJORAR_2.md §5): agrega `volume` (0..1). Saves viejos arrancan con volumen
-  // 1 (comportamiento actual: sonido a todo volumen si estaba encendido).
-  if (migrated.saveVersion < 4) {
-    migrated = {
-      ...migrated,
-      volume: typeof migrated.volume === 'number' ? migrated.volume : 1,
-      saveVersion: 4,
-    };
-  }
-  // v4 -> v5 (ronda 14): agrega autoTargetContainerId (selector del robot), digSensitivity
-  // (slider de sensibilidad) y language (base de i18n). Saves viejos arrancan en modo Auto,
-  // sensibilidad neutra y español (comportamiento actual sin cambios visibles).
-  if (migrated.saveVersion < 5) {
-    migrated = {
-      ...migrated,
-      autoTargetContainerId: null,
-      digSensitivity: 1,
-      language: 'es',
-      saveVersion: 5,
-    };
-  }
-  // v5 -> v6 (ronda 15): agrega trapsDiscarded (contador de contenedores con trampa que el
-  // robot descartó vía el nodo "Escáner de Trampas"). Saves viejos arrancan en 0.
-  if (migrated.saveVersion < 6) {
-    migrated = { ...migrated, trapsDiscarded: 0, saveVersion: 6 };
-  }
-  // v6 -> v7 (ronda 16): itemsFoundByItem pasa de nombre-español a id de ítem como clave, para
-  // que la colección sobreviva a la traducción. Claves desconocidas pasan tal cual (idempotente).
-  // AUDITORÍA (ronda 16): este loop corre ANTES de validateDeepContent, así que no puede confiar
-  // en la forma del save. La versión ingenua (a) tiraba TypeError con un byItem null (brick de
-  // boot con localStorage manipulado), (b) "lavaba" arrays a objetos válidos, y (c) con una clave
-  // __proto__ seteaba el prototipo de remapped, dejando contenido heredado invisible para la
-  // validación (bypass de la capa primaria anti-XSS del save). Fix: solo se remapea lo que ya
-  // tiene la forma esperada (el resto pasa tal cual y la validación lo rechaza con su error de
-  // siempre), sobre objetos sin prototipo (Object.create(null): toda clave, incluida __proto__,
-  // es propiedad propia y visible), y los lookups de mapas usan Object.hasOwn (una clave
-  // 'constructor' no debe resolver contra el prototipo).
-  if (migrated.saveVersion < 7) {
-    if (isPlainObject(migrated.itemsFoundByItem)) {
-      const remapped = Object.create(null);
-      for (const [containerId, byItem] of Object.entries(migrated.itemsFoundByItem)) {
-        if (!isPlainObject(byItem)) {
-          remapped[containerId] = byItem;
-          continue;
-        }
-        const nameMap =
-          itemNameToId && Object.hasOwn(itemNameToId, containerId) ? itemNameToId[containerId] : {};
-        const target = (remapped[containerId] = Object.create(null));
-        for (const [key, count] of Object.entries(byItem)) {
-          target[Object.hasOwn(nameMap, key) ? nameMap[key] : key] = count;
-        }
-      }
-      migrated = { ...migrated, itemsFoundByItem: remapped, saveVersion: 7 };
-    } else {
-      // Campo ausente o con forma inválida: NO se fabrica un `{}` que lo haga pasar — se deja
-      // tal cual para que REQUIRED_FIELDS/validateDeepContent lo rechacen (pre-ronda-16 un v6
-      // sin itemsFoundByItem válido se rechazaba; la migración no debe relajar eso).
-      migrated = { ...migrated, saveVersion: 7 };
-    }
-  }
-  // v7 -> v8 (ronda 19): agrega digStreak/bestDigStreak (racha de escarbado sin trampa) y
-  // vibrationOn (toggle de vibración táctil). Saves viejos arrancan en racha 0 y vibración
-  // encendida (comportamiento actual sin cambios visibles).
-  if (migrated.saveVersion < 8) {
-    migrated = { ...migrated, digStreak: 0, bestDigStreak: 0, vibrationOn: true, saveVersion: 8 };
-  }
-  // v8 -> v9 (ronda 20): agrega energy/energyAt (Energía de espionaje), equippedTool/toolsOwned
-  // (herramientas de escarbado) y spiesUsed/gravesHit (contadores de logros). Saves viejos
-  // arrancan con Energía llena, solo "manos" (herramienta inicial) equipada y contadores en 0
-  // (comportamiento actual sin cambios visibles).
-  if (migrated.saveVersion < 9) {
-    migrated = {
-      ...migrated,
-      energy: 3,
-      energyAt: 0,
-      equippedTool: 'manos',
-      toolsOwned: { manos: true },
-      spiesUsed: 0,
-      gravesHit: 0,
-      saveVersion: 9,
-    };
-  }
-  // v9 -> v10 (ronda 21): remueve energy/energyAt/spiesUsed (Energía y espionaje removidos por
-  // decisión del usuario, 2026-07-14) y filtra el logro muerto `a39` de achievementsUnlocked.
-  // PRIMERA migración del repo que ELIMINA campos en vez de agregarlos: no alcanza con no
-  // setearlos (un save v9 real los trae puestos), hay que borrarlos explícitamente con
-  // destructuring-omit. Filtrar `a39` no es "lavar" un save inválido (patrón
-  // sanitizeContainerRefs: descartar una referencia muerta es limpieza, no relajar validación)
-  // — un save con basura real en otro campo se sigue rechazando igual más abajo. Precedente para
-  // la ronda 27, que reusa este patrón para borrar `autoTargetContainerId`.
-  if (migrated.saveVersion < 10) {
-    const { energy, energyAt, spiesUsed, ...rest } = migrated;
-    migrated = {
-      ...rest,
-      achievementsUnlocked: Array.isArray(migrated.achievementsUnlocked)
-        ? migrated.achievementsUnlocked.filter((id) => id !== 'a39')
-        : migrated.achievementsUnlocked,
-      saveVersion: 10,
-    };
-  }
-  // v10 -> v11 (ronda 22, PLAN.md §4.26): agrega legendariesFound (ids de legendarios ya
-  // encontrados). Saves viejos arrancan sin ninguno (comportamiento correcto: no existían).
-  if (migrated.saveVersion < 11) {
-    migrated = { ...migrated, legendariesFound: [], saveVersion: 11 };
-  }
-  // v11 -> v12 (ronda 23, PLAN.md §2.9/§4.27-§4.29): agrega el Puesto de Chatarra. Saves viejos
-  // arrancan sin puesto (stallLevel 0, comportamiento actual: todo se vende instantáneo, sin
-  // cambios visibles) e inventario/pedidos vacíos.
-  if (migrated.saveVersion < 12) {
-    migrated = {
-      ...migrated,
-      inventory: [],
-      stallLevel: 0,
-      keepThreshold: 0,
-      stallOrders: [],
-      ordersRotatedAt: 0,
-      stallVendorAt: 0,
-      stallSoldCount: 0,
-      ordersFulfilledCount: 0,
-      storySeen: [],
-      saveVersion: 12,
-    };
-  }
-  // v12 -> v13 (ronda 24, PLAN.md §4.30-§4.33): misiones diarias + evento de contenedor. Saves
-  // viejos arrancan sin misiones activas (se rollean solas en el próximo boot, ver
-  // rerollDailyMissionsIfNeeded: `missionsRolledAt: 0` siempre difiere del día de hoy), sin
-  // cooldown de evento consumido y sin eventos aprovechados (logro nuevo).
-  if (migrated.saveVersion < 13) {
-    migrated = {
-      ...migrated,
-      dailyMissions: [],
-      missionsRolledAt: 0,
-      missionsCompletedCount: 0,
-      lastEventAt: 0,
-      eventsUsedCount: 0,
-      saveVersion: 13,
-    };
-  }
-  // v13 -> v14 (ronda 25, PLAN.md §4.31-§4.33): prestigio profundo. Saves viejos arrancan sin
-  // especialización/desafío activo (comportamiento actual sin cambios visibles) y
-  // `totalKeysEarned` se backfillea con `prestigeKeys` (lo que le queda sin gastar) más el costo
-  // en Llaves ya invertido en `prestigeTreeLevels` (lo que gastó históricamente) — el mejor
-  // estimado posible de lo ganado alguna vez a partir de lo que el save YA tiene. Si
-  // `prestigeTreeData` no se pasa (compat: llamador previo a esta ronda), el costo invertido
-  // backfillea en 0 — subestima levemente pero nunca sobreestima ni crashea.
-  if (migrated.saveVersion < 14) {
-    const levels = isPlainObject(migrated.prestigeTreeLevels) ? migrated.prestigeTreeLevels : {};
-    let investedCost = 0;
-    if (Array.isArray(prestigeTreeData)) {
-      for (const [nodeId, level] of Object.entries(levels)) {
-        const node = prestigeTreeData.find((n) => n.id === nodeId);
-        if (!node || !Number.isFinite(level)) continue;
-        for (let lvl = 0; lvl < level; lvl++) {
-          investedCost += Math.ceil(node.costoBase * Math.pow(node.factorCrecimiento, lvl));
-        }
-      }
-    }
-    migrated = {
-      ...migrated,
-      specialization: null,
-      activeChallenge: null,
-      challengesCompleted: [],
-      specializationsUsed: 0,
-      totalKeysEarned: (Number.isFinite(migrated.prestigeKeys) ? migrated.prestigeKeys : 0) + investedCost,
-      saveVersion: 14,
-    };
-  }
-  // v14 -> v15 (ronda 26, PLAN.md §2.11/§4.34-§4.36): Mudanza de Galaxia. Saves viejos arrancan
-  // sin Escrituras ni mudanzas (comportamiento actual sin cambios visibles) y
-  // `totalKeysEarnedRun` se backfillea con `totalKeysEarned` (el save nunca se mudó todavía, así
-  // que la "ventana desde la última mudanza" es toda la vida de la partida).
-  if (migrated.saveVersion < 15) {
-    migrated = {
-      ...migrated,
-      deeds: 0,
-      deedsTreeLevels: {},
-      galaxyMoveCount: 0,
-      totalKeysEarnedRun: Number.isFinite(migrated.totalKeysEarned) ? migrated.totalKeysEarned : 0,
-      saveVersion: 15,
-    };
+  for (let version = 1; version <= steps.length; version++) {
+    if (migrated.saveVersion < version) migrated = steps[version - 1](migrated, ctx);
   }
   return migrated;
 }

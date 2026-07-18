@@ -434,7 +434,7 @@ describe('save v12: inventario y puesto', () => {
   });
 
   it('migra un save v11 sin campos del puesto rellenándolos con los defaults', () => {
-    const v11 = { ...freshState(), saveVersion: 11 };
+    const v11 = { ...freshState(), saveVersion: 11, autoTargetContainerId: null }; // repuesto: freshState v16 ya no lo trae (ronda 27)
     delete v11.inventory;
     delete v11.stallLevel;
     delete v11.keepThreshold;

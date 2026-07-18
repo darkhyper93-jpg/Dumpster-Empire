@@ -193,7 +193,7 @@ describe('save v11: legendariesFound', () => {
   });
 
   it('migra un save v10 sin legendariesFound agregándolo vacío', () => {
-    const v10 = { ...freshState(), saveVersion: 10 };
+    const v10 = { ...freshState(), saveVersion: 10, autoTargetContainerId: null }; // repuesto: freshState v16 ya no lo trae (ronda 27)
     delete v10.legendariesFound;
     const result = validateSave(v10);
     expect(result.valid).toBe(true);

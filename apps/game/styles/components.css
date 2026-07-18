@@ -378,6 +378,171 @@ button:hover:not(:disabled) {
   color: var(--fg-1);
 }
 
+/* --- Ronda 27 (PLAN.md §4.38/§4.39): flota de robots en Automatización --- */
+.fleet-section {
+  margin: var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fleet-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+
+/* Misma tarjeta "tactile" que .automation-card, con sus controles apilados para toque. */
+.robot-card {
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-tactile);
+}
+
+.robot-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.robot-card-header h3 {
+  margin: 0;
+  flex: 1;
+  font-size: 1rem;
+}
+
+.robot-card-icon {
+  display: inline-flex;
+  color: var(--amber);
+}
+
+.robot-card-arms {
+  font-size: 0.8rem;
+  color: var(--fg-1);
+}
+
+.robot-card-processing {
+  font-size: 0.85rem;
+  color: var(--fg-1);
+}
+
+.robot-card-processing ul {
+  margin: 0;
+  padding-left: var(--space-3);
+}
+
+.robot-card-idle {
+  margin: 0;
+}
+
+/* Filtros plegables: <details> nativo (cero JS de acordeón propio); summary con área táctil
+   generosa para Steam Deck. */
+.robot-filters {
+  background: var(--bg-1);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+
+.robot-filters summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--fg-0);
+}
+
+.robot-filter-threshold {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.85rem;
+  color: var(--fg-0);
+}
+
+.robot-filter-threshold input {
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-highest);
+  box-shadow: var(--shadow-recessed);
+  color: var(--fg-0);
+}
+
+.robot-filter-estimate,
+.robot-filter-reserve-label,
+.robot-filter-reserve-locked {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  color: var(--fg-1);
+}
+
+.robot-filter-reserve {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+/* Chip por categoría: el color de rareza entra por --rarity-color (mismo mecanismo que
+   .shop-card del inventario del Puesto), nunca un color suelto. */
+.robot-filter-category {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 34px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-highest);
+  color: var(--rarity-color, var(--fg-0));
+  font-size: 0.8rem;
+}
+
+/* Toggle "mantener stock para pedidos" del Puesto (ronda 27, PLAN.md §4.39). */
+.stall-keep-stock {
+  background: var(--bg-2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-tactile);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+}
+
+.stall-keep-stock-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-size: 0.9rem;
+  color: var(--fg-0);
+  cursor: pointer;
+}
+
+.stall-keep-stock-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--fg-1);
+}
+
+/* Desglose del vendedor en el modal offline (§27.5.3). */
+.offline-stall-line {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--fg-1);
+}
+
 .shop-card--locked,
 .achievement-card--locked {
   opacity: 0.7;
@@ -1008,6 +1173,13 @@ textarea {
     gap: var(--space-3) var(--space-2);
     overflow-x: auto;
     padding-bottom: var(--space-2);
+  }
+
+  /* AJUSTE (§27.5.7, ronda 27): deedsTree.json tiene 6 nodos — con el repeat(5) heredado del
+     árbol de prestigio el sexto caía a una columna implícita sin minmax. Una columna por nodo
+     real, SOLO acá (el árbol de prestigio sigue teniendo 5 ramas). */
+  .deeds-tree {
+    grid-template-columns: repeat(6, minmax(150px, 1fr));
   }
 }
 

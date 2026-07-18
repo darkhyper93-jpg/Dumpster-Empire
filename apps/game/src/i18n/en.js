@@ -78,6 +78,18 @@ export default {
   'automation.expandCapacity': 'Expand Capacity (level {level}) for {amount}',
   // Ronda 25 (PLAN.md §4.32): desafío `manosVacias` activo bloquea toda compra de máquinas.
   'automation.blockedByChallenge': 'The active challenge does not allow buying machines.',
+  // Ronda 27 (PLAN.md §4.38/§4.39): flota de robots + filtros por robot.
+  'automation.fleetTitle': 'Robot fleet',
+  'automation.fleetSize': 'Fleet: {count} robot{plural}',
+  'automation.robotTitle': 'Robot {num}',
+  'automation.robotArms': '{count} arm{plural}',
+  'automation.robotIdle': 'Nothing in the claw right now.',
+  'automation.filtersSummary': 'Robot filters',
+  'automation.filterThresholdLabel': 'Discard finds worth less than',
+  'automation.filterDiscardEstimate': 'Estimate: discards ~{pct}% of what it finds.',
+  'automation.filterReserveLabel': 'Reserve for the Stall (ignores the sell threshold):',
+  'automation.filterReserveLocked': 'Buy the Junk Stall in the Shop to reserve categories.',
+  'npc.chispa.fleetFlavor': 'Chispa: "I keep them oiled up. You just tell me what each one should hunt for."',
 
   // CelebrationModal.js
   'celebration.close': 'Close',
@@ -110,6 +122,8 @@ export default {
   'offline.title': 'While you were away...',
   'offline.summary': 'Your robots worked for {minutes} min and found:',
   'offline.close': 'Great',
+  // Ronda 27 (§27.5.3): desglose de lo que facturó el robot vendedor en el Puesto.
+  'offline.stallEarnings': 'The vendor robot earned {amount} at the Stall.',
 
   // PrestigeView.js
   'prestige.empty': 'No prestige tree configured.',
@@ -238,6 +252,9 @@ export default {
   'stall.orderProgress': 'Progress: {progress}/{cantidad}',
   'stall.orderReward': 'Pays +{pct}% over the stall price',
   'stall.orderTime': 'Rotates in {minutes} min',
+  // Ronda 27 (PLAN.md §4.39): toggle "mantener stock para pedidos" del robot vendedor.
+  'stall.keepStockToggle': "Keep stock for Salomón's orders",
+  'stall.keepStockHint': "The vendor won't sell what an active order still needs.",
 
   // TitleScreen.js
   'titleScreen.play': 'Play',
@@ -256,6 +273,8 @@ export default {
   // main.js
   'boot.loadFailed': 'Could not load {path} (HTTP {status}).',
   'boot.fatalError': 'Could not start Dumpster Empire: {message}',
+  // §27.5.6 (ronda 27): mensaje genérico en pantalla; el detalle va a console.error.
+  'boot.fatalErrorGeneric': 'Could not start Dumpster Empire. Try reloading; the technical details are in the console.',
 
   // Ronda 23 — Agente B (data): NPC dialogue and light story beats.
   'npc.rita.storyIntro': 'Doña Rita: "Oh, so you\'ve got your own stall now? Bring me nice things and I\'ll pay you well, dear."',

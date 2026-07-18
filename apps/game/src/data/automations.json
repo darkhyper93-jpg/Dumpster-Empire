@@ -187,5 +187,18 @@
         "percent": 0.5
       }
     ]
+  },
+  {
+    "id": "hangarRobots",
+    "name": "Hangar de Robots",
+    "icon": "robot-hangar",
+    "cost": 5000000000,
+    "desc": "+1 robot de flota, con objetivo y filtros propios.",
+    "effects": [
+      {
+        "type": "fleetRobots",
+        "flat": 1
+      }
+    ]
   }
 ]

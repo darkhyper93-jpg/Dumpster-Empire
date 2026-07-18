@@ -51,7 +51,7 @@
     "factorCrecimiento": 2.4,
     "nivelMaximo": 2,
     "desc": "+1 slot de robot de automatización por nivel.",
-    "effects": [{ "type": "parallelSlotsFlatPerNivel", "flatPerNivel": 1 }],
+    "effects": [{ "type": "fleetRobotsFlatPerNivel", "flatPerNivel": 1 }],
     "requires": []
   },
   {

@@ -12,6 +12,7 @@ import {
   getStallUpgradeCost,
   getStallSalePrice,
   getStallThresholdPresets,
+  hasStallVendor,
   clampedElapsedMs,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
@@ -106,6 +107,23 @@ function renderLevel(state, data) {
   );
 }
 
+/**
+ * Toggle "mantener stock para pedidos" del robot vendedor (ronda 27, PLAN.md §4.39): solo
+ * visible con el vendedor comprado. El engine decide qué NO vender; acá solo se despacha el
+ * booleano crudo del checkbox.
+ */
+function renderVendorToggle(state, data) {
+  if (!hasStallVendor(state, data)) return '';
+  return (
+    `<div class="stall-keep-stock">` +
+    `<label class="stall-keep-stock-label">` +
+    `<input type="checkbox" data-action="toggle-keep-stock" ${state.mantenerStockPedidos ? 'checked' : ''} />` +
+    `${t('stall.keepStockToggle')}</label>` +
+    `<p class="stall-keep-stock-hint">${t('stall.keepStockHint')}</p>` +
+    `</div>`
+  );
+}
+
 function renderInventory(state, itemsData) {
   if (!state.inventory.length) {
     return `<p class="empty-state">${t('stall.inventoryEmpty')}</p>`;
@@ -194,7 +212,12 @@ export const StallView = {
       container.dataset.boundChangeStall = 'true';
       container.addEventListener('change', (evt) => {
         const input = evt.target.closest('[data-action="set-threshold"]');
-        if (input) store.actions.setKeepThreshold(Math.max(0, Number(input.value) || 0));
+        if (input) {
+          store.actions.setKeepThreshold(Math.max(0, Number(input.value) || 0));
+          return;
+        }
+        const keepStock = evt.target.closest('[data-action="toggle-keep-stock"]');
+        if (keepStock) store.actions.setMantenerStockPedidos(keepStock.checked);
       });
     }
 
@@ -217,6 +240,7 @@ export const StallView = {
       renderQuote(state) +
       renderThreshold(state, allContainers, itemsData, data) +
       renderLevel(state, data) +
+      renderVendorToggle(state, data) +
       `<h2>${t('stall.inventoryTitle')}</h2>` +
       renderInventory(state, itemsData) +
       renderOrders(state, data, npcs, itemsData) +

@@ -93,6 +93,26 @@ export function offlineEarnings({ gananciaAutomaticaPorSegundo, segundosAusente,
   };
 }
 
+/**
+ * §27.5.1 (Y1, ronda 27) — única puerta de ENTRADA de dinero al estado. Un save hostil pero
+ * válido (p. ej. `deedsTreeLevels` con niveles finitos astronómicos) infla los multiplicadores
+ * de venta y una ganancia repetida desborda `money` a Infinity; `JSON.stringify(Infinity)` es
+ * `null` y el próximo boot rechaza el save completo (wipe — misma clase de brick que motivó el
+ * clamp de `deeds` en doGalaxyMove, 26.D). Clamp a Number.MAX_VALUE en la suma, y una ganancia
+ * Infinity/NaN se normaliza (MAX_VALUE / 0) para que NUNCA se escriba un no-finito.
+ * Los 5 puntos de ganancia (containers/stall/achievements/missions/offline) pasan por acá;
+ * los débitos (compras, castigos de trampa) restan de un valor ya finito y no pueden desbordar.
+ * @param {GameState} state
+ * @param {number} amount - ganancia a acreditar (>= 0 en todo llamador legítimo)
+ * @returns {number} la ganancia efectivamente acreditada, ya normalizada
+ */
+export function addMoney(state, amount) {
+  const gain = Number.isFinite(amount) ? amount : amount === Infinity ? Number.MAX_VALUE : 0;
+  state.money = Math.min(Number.MAX_VALUE, state.money + gain);
+  state.totalMoneyEarned = Math.min(Number.MAX_VALUE, state.totalMoneyEarned + gain);
+  return gain;
+}
+
 // AJUSTE (ronda 7, PLAN.md §4.6): piso de trampa 1% → 3%. Con el monto de trampa ahora fijo
 // por tier, el piso es lo único que garantiza que perder siga siendo posible en late-game.
 const TRAP_PROBABILITY_FLOOR = 0.03;
@@ -437,7 +457,10 @@ export function getQueueMax(state, data) {
 }
 
 /**
- * Cantidad de contenedores que el/los robot(s) pueden procesar en simultáneo.
+ * "Brazos" del robot 1 de la flota: contenedores que puede procesar en simultáneo (PLAN.md
+ * §4.38, ronda 27). Solo suma efectos de MÁQUINAS — los niveles de `flotaFundadora` del árbol
+ * de Escrituras dejaron de ser brazos y ahora son robots enteros (ver getFleetSize); mismo
+ * throughput total, más control por robot.
  * @param {GameState} state
  * @param {EngineData} data
  * @returns {number}
@@ -447,12 +470,28 @@ export function getParallelAutoSlots(state, data) {
   for (const { automationId, effect } of automationEffectsOfType(data, 'parallelSlots')) {
     if (state.automationOwned[automationId]) slots += effect.flat;
   }
-  // PLAN.md §4.36 (ronda 26): `flotaFundadora` del árbol de Escrituras — la ronda 27 construye
-  // la asignación real de robots sobre este slot extra.
-  for (const { nodeId, effect } of deedsEffectsOfType(data, 'parallelSlotsFlatPerNivel')) {
-    slots += deedsLevel(state, nodeId) * effect.flatPerNivel;
-  }
   return slots;
+}
+
+/**
+ * §4.38 (ronda 27) — tamaño de la flota de robots, literal:
+ * flota = 1 + Σ efectos `fleetRobots` de máquinas poseídas + Σ nivel(`fleetRobotsFlatPerNivel`)
+ * del árbol de Escrituras. Con la data real: 1 base + 1 (hangarRobots) + 2 (flotaFundadora
+ * nivel máx) = 4. Es el tamaño de CONFIGURACIÓN (state.robots): la flota solo procesa si
+ * hasAutoDig — un jugador sin Robot Clasificador tiene flota 1 inerte, igual que antes.
+ * @param {GameState} state
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getFleetSize(state, data) {
+  let fleet = 1;
+  for (const { automationId, effect } of automationEffectsOfType(data, 'fleetRobots')) {
+    if (state.automationOwned[automationId]) fleet += effect.flat;
+  }
+  for (const { nodeId, effect } of deedsEffectsOfType(data, 'fleetRobotsFlatPerNivel')) {
+    fleet += deedsLevel(state, nodeId) * effect.flatPerNivel;
+  }
+  return fleet;
 }
 
 /**

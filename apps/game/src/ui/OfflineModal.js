@@ -15,7 +15,7 @@ import { t } from '../i18n/i18n.js';
 export const OfflineModal = {
   /**
    * @param {HTMLElement} container - overlay raíz (`#offline-modal`, hidden por defecto).
-   * @param {{ ganancia: number, segundosEfectivos: number }} summary
+   * @param {{ ganancia: number, segundosEfectivos: number, stallEarnings: number }} summary
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   show(container, summary, store) {
@@ -45,6 +45,12 @@ export const OfflineModal = {
       `<h2>${t('offline.title')}</h2>` +
       `<p>${t('offline.summary', { minutes })}</p>` +
       `<p class="offline-money" id="offline-money-value">$0</p>` +
+      // Ronda 27 (§27.5.3): lo vendido por el robot vendedor mientras no estabas ya está sumado
+      // al total del engine — esta línea solo lo desglosa (y justifica abrir el modal cuando la
+      // ganancia de escarbado fue 0 pero el vendedor sí facturó).
+      (summary.stallEarnings > 0
+        ? `<p class="offline-stall-line">${t('offline.stallEarnings', { amount: formatMoney(summary.stallEarnings) })}</p>`
+        : '') +
       (highlightIcons ? `<div class="offline-highlights">${highlightIcons}</div>` : '') +
       `<button type="button" data-action="close-offline">${t('offline.close')}</button>` +
       `</div>`;

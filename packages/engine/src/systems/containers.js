@@ -4,6 +4,7 @@
  */
 
 import {
+  addMoney,
   getContainerCost,
   getEffectiveTrapProbability,
   getLuck,
@@ -295,9 +296,13 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
  * @param {DigResult} result
  * @param {boolean} isAuto
  * @param {import('../economy.js').EngineData} data
+ * @param {import('../state.js').RobotFilters | null} [filters] - filtros del robot que procesó
+ *   este contenedor (ronda 27, PLAN.md §4.39). Solo los pasa automationTick/offline (isAuto);
+ *   el escarbado manual NUNCA se filtra. Prioridad por ítem: reserva > descarte > captura
+ *   global > venta. `null`/omitido = comportamiento idéntico al pre-flota.
  * @returns {{ moneyDelta: number, trapPenalty: number }}
  */
-export function applyContainerResult(state, container, result, isAuto, data) {
+export function applyContainerResult(state, container, result, isAuto, data, filters = null) {
   // PLAN.md §11.3: cada escarbado (trampa o no) cuenta para el nivel propio del contenedor.
   registerContainerDig(state, container);
 
@@ -332,7 +337,13 @@ export function applyContainerResult(state, container, result, isAuto, data) {
   // data.streak/data.traps/data.tools): sin él, o sin puesto comprado, o en pausa
   // (keepThreshold 0), el camino es EXACTAMENTE el de siempre (R23.2, snapshot idéntico).
   const captureEnabled = Boolean(data.stall) && state.stallLevel >= 1 && state.keepThreshold > 0;
-  const capacity = captureEnabled ? getStallCapacity(state, data) : 0;
+  // PLAN.md §4.39 (ronda 27): la reserva por categoría ignora el umbral global (keepThreshold)
+  // y funciona aunque el puesto esté "en pausa" — pero sigue exigiendo puesto comprado y lugar.
+  const activeFilters =
+    isAuto && filters && (filters.descartarBajoValor > 0 || filters.reservarCategorias.length > 0) ? filters : null;
+  const reserveEnabled = Boolean(activeFilters) && Boolean(data.stall) && state.stallLevel >= 1;
+  const capacity = captureEnabled || reserveEnabled ? getStallCapacity(state, data) : 0;
+  if (activeFilters) state.filteredProcessedCount++;
   for (const item of result.items) {
     // PLAN.md §4.26 (ronda 22, contrato §3.5.3): los legendarios están FUERA de los pools
     // normales — nunca entran a itemsFoundByItem/itemsFoundCount/itemsFoundByCategory (la
@@ -353,6 +364,18 @@ export function applyContainerResult(state, container, result, isAuto, data) {
     if (fragmentCategories.includes(item.categoria)) {
       state.categoryFragments += 1 * getFragmentMult(state, data);
     }
+    // §4.39 (ronda 27), prioridad literal: (1) reserva por categoría del robot, (2) descarte por
+    // valor del robot, (3) captura global del Puesto, (4) venta instantánea. El descarte NO llega
+    // a `total` ($0) pero los contadores de colección de arriba ya contaron el hallazgo.
+    const reserveEligible =
+      reserveEnabled && activeFilters.reservarCategorias.includes(item.categoria) && state.inventory.length < capacity;
+    if (reserveEligible) {
+      state.inventory.push({ itemId: item.id, containerId: container.id, categoria: item.categoria, baseValue: item.baseValue });
+      continue;
+    }
+    if (activeFilters && activeFilters.descartarBajoValor > 0 && item.value < activeFilters.descartarBajoValor) {
+      continue;
+    }
     const captureEligible = captureEnabled && item.value >= state.keepThreshold && state.inventory.length < capacity;
     if (captureEligible) {
       state.inventory.push({ itemId: item.id, containerId: container.id, categoria: item.categoria, baseValue: item.baseValue });
@@ -360,8 +383,8 @@ export function applyContainerResult(state, container, result, isAuto, data) {
       total += item.value;
     }
   }
-  state.money += total;
-  state.totalMoneyEarned += total;
+  // §27.5.1 (Y1, ronda 27): toda ganancia entra por addMoney (clamp anti-Infinity).
+  addMoney(state, total);
   if (isAuto) {
     state.autoProcessedCount++;
   } else {

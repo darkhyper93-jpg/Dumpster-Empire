@@ -47,7 +47,7 @@ describe('save v14: prestigio profundo', () => {
   });
 
   it('migra un save v13 sin campos nuevos rellenándolos con los defaults', () => {
-    const v13 = { ...freshState(), saveVersion: 13, prestigeKeys: 7 };
+    const v13 = { ...freshState(), saveVersion: 13, prestigeKeys: 7, autoTargetContainerId: null }; // repuesto: freshState v16 ya no lo trae (ronda 27)
     delete v13.specialization;
     delete v13.activeChallenge;
     delete v13.challengesCompleted;
@@ -65,7 +65,7 @@ describe('save v14: prestigio profundo', () => {
   });
 
   it('backfillea totalKeysEarned sumando el costo ya invertido en prestigeTreeLevels', () => {
-    const v13 = { ...freshState(), saveVersion: 13, prestigeKeys: 3, prestigeTreeLevels: { capitalInicial: 2 } };
+    const v13 = { ...freshState(), saveVersion: 13, prestigeKeys: 3, prestigeTreeLevels: { capitalInicial: 2 }, autoTargetContainerId: null };
     delete v13.totalKeysEarned;
     const result = validateSave(v13, undefined, undefined, prestigeTree);
     // capitalInicial: costoBase 1, factor 1.5 -> nivel0: ceil(1*1.5^0)=1, nivel1: ceil(1*1.5^1)=2 => 3
@@ -73,7 +73,7 @@ describe('save v14: prestigio profundo', () => {
   });
 
   it('sin prestigeTreeData, totalKeysEarned backfillea solo con prestigeKeys (subestima, nunca crashea)', () => {
-    const v13 = { ...freshState(), saveVersion: 13, prestigeKeys: 5, prestigeTreeLevels: { capitalInicial: 2 } };
+    const v13 = { ...freshState(), saveVersion: 13, prestigeKeys: 5, prestigeTreeLevels: { capitalInicial: 2 }, autoTargetContainerId: null };
     delete v13.totalKeysEarned;
     const result = validateSave(v13);
     expect(result.valid).toBe(true);
