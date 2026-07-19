@@ -9,7 +9,13 @@ import { test, expect } from '@playwright/test';
 import { freshState } from '../../../packages/engine/src/state.js';
 import { serializeState } from '../../../packages/engine/src/save.js';
 import { formatMoney } from '../../../packages/engine/src/format.js';
-import { entrarAlJuego, iniciarEscarbadoSinTrampa, rascarObjeto, cerrarCelebraciones } from './helpers/dig.js';
+import {
+  entrarAlJuego,
+  iniciarEscarbadoSinTrampa,
+  rascarObjeto,
+  cerrarCelebraciones,
+  clickSorteandoCelebraciones,
+} from './helpers/dig.js';
 
 // AJUSTE: mismo patrón que ronda22-coleccion.spec.js — Playwright compila los specs sin
 // "type":"module" en el package.json raíz, `import.meta` no está disponible acá.
@@ -29,9 +35,10 @@ function baseState() {
 
 async function abrirPuesto(page) {
   // Un escarbado recién completado puede encolar su propia celebración ("¡Hallazgo nuevo!",
-  // ronda 14) que tapa el tabbar con su backdrop — se cierra ANTES de intentar el click.
-  await cerrarCelebraciones(page);
-  await page.locator('[data-tab="puesto"]').click();
+  // ronda 14) que tapa el tabbar con su backdrop. Cerrarlas ANTES no alcanza: otra puede
+  // encolarse en el render siguiente, ya con el click en vuelo, y entonces nada la cierra
+  // (no tienen timer) — ver `clickSorteandoCelebraciones` en helpers/dig.js.
+  await clickSorteandoCelebraciones(page, '[data-tab="puesto"]');
   await cerrarCelebraciones(page);
 }
 

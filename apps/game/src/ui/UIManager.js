@@ -241,6 +241,11 @@ export class UIManager {
     for (const el of this.topbarEl.querySelectorAll('[data-icon-ready]')) {
       delete el.dataset.iconReady;
     }
+    // Ronda 30: el reloj del topbar se repinta solo cuando su firma cambia; al cambiar de idioma
+    // hay que invalidarla a mano o el nombre de la franja se queda en el idioma anterior.
+    for (const el of this.topbarEl.querySelectorAll('[data-clock-signature]')) {
+      delete el.dataset.clockSignature;
+    }
   }
 
   render(state) {

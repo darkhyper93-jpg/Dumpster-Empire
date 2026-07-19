@@ -814,6 +814,35 @@ toggle activo, los pedidos quedan enteros para la venta manual — si la venta d
 avanzara, cada venta achicaría la demanda restante y liberaría "nuevo excedente" en cascada
 hasta vaciar el stock que el toggle promete reservar. La venta MANUAL nunca se filtra.
 
+### 4.40 Franjas horarias cosméticas (ronda 30)
+
+Decisión del usuario (2026-07-19): el jugador quiere **ver la hora** y saber en qué momento del
+día está, y que el Contenedor de Barrio **cambie de modelo según la hora** (el usuario entregó 5
+pinturas del mismo contenedor).
+
+Las franjas son **puramente estéticas**: eligen qué imagen se dibuja (§5.6) y qué rótulo muestra
+el reloj del topbar. **NO tocan la economía.** El ciclo día/noche jugable de §4.33 (binario,
+noche 20:00-06:00, `Suerte +3` y `probTrampa +0.03`) queda EXACTAMENTE como está — meter 5
+tramos con bonus propios obligaría a rebalancear la economía entera y volvería flaky todo e2e
+según la hora de corrida (R24.2/R24.4). Por eso las entradas de `timeBands` llevan SOLO `id` y
+`startHour`, y un test lo fija (`ronda30-franjas.test.js`).
+
+Constantes en `data/dayNight.json`, junto a las de §4.33:
+
+| franja | tramo (hora local) |
+|---|---|
+| `madrugada` | 00:00 – 05:59 |
+| `manana` | 06:00 – 11:59 |
+| `tarde` | 12:00 – 16:59 |
+| `atardecer` | 17:00 – 19:59 |
+| `noche` | 20:00 – 23:59 |
+
+`getTimeBand(hour, dayNightData)` (engine, `dayNight.js`) es **pura**: recibe la hora como
+parámetro y nunca lee el reloj — igual que `isNightHour`, y por el mismo motivo (testeable sin
+mock global). Devuelve la franja cuyo tramo contiene la hora; con data sin franjas devuelve
+`null`, y con una hora no finita o fuera de 0-23 cae en la primera franja (regla dura 13: lo que
+pasa el `typeof` pero rompería la UI no puede dejar una tarjeta sin imagen).
+
 ---
 
 ## 5. UI / UX
@@ -946,6 +975,43 @@ id no tiene entrada en objectArt.js, `DigCanvas.drawEntry` dibuja el render ante
 glifo) — un ítem sin arte nunca rompe el canvas; los ids sin ilustrar viven en la lista
 exportada `PENDING_ART` y un test de cobertura derivado de la data obliga a decidir por cada
 ítem nuevo. Los tiers procedurales (§4.35) reusan el arte del pool del Big Bang.
+
+### 5.6 Imágenes reales de contenedor (ronda 30 de ROADMAPv4)
+
+Cada contenedor se muestra con una **imagen real** (bitmap) en vez del ícono SVG, tanto en la
+Tienda (`ShopView`) como en el selector de Escarbar (`DigContainerPicker`). Los assets los
+provee el usuario; el agente los implementa.
+
+**Presentación: banner apaisado** (decisión del usuario, 2026-07-19). Los originales entregados
+son apaisados (1619×971) y con fondo oscuro propio, no cuadrados con transparencia: se muestran
+como **franja sangrada al ancho de la tarjeta**, no metidos en el hueco cuadrado del ícono. Un
+recorte cuadrado central los volvería una muestra de color plano (la silueta del contenedor se
+pierde). El alto se reserva por `aspect-ratio` ANTES de la carga → cero layout shift.
+
+**Formato y peso**: WebP, 768px de ancho. Los PNG originales (37 MB en total) son inviables para
+el build de Steam (R30.1); el pipeline los baja a **0.88 MB en total** sin artefactos visibles a
+tamaño de tarjeta. Los originales viven en `reference/ui/Contenedores/` como fuente; la ronda 30
+NO los committeó (37 MB inflarían el repo para siempre y la regla dura 1 prohíbe committear
+untracked ajeno) — queda como decisión del usuario si quiere versionarlos.
+Los `<img>` van con `loading="lazy"` y `decoding="async"`: la Tienda tiene ~19 tarjetas y las
+pestañas inactivas viven en el DOM, así que sin lazy el arranque disparaba ~19 descargas de golpe
+(medido: duplicaba el tiempo de carga de la página en los e2e).
+
+**Seguridad**: la ruta se resuelve SOLO contra la allow-list de
+`apps/game/src/icons/containerImages.js`; un id que no está devuelve `null`. La ruta NUNCA se
+construye concatenando el input, así que un id hostil de un save manipulado no puede salir
+interpolado en un `src`. La CSP no se toca (los assets son `'self'`).
+
+**Fallback total**: la tarjeta trae SIEMPRE su ícono SVG, oculto por CSS mientras haya banner;
+si la imagen falla, un handler (ligado con `addEventListener` — la CSP prohíbe `onerror` inline)
+quita el banner y su clase, y el ícono reaparece sin un frame intermedio en blanco. Los
+contenedores sin imagen decidida viven en la lista exportada `PENDING_IMAGES`, con un test de
+cobertura derivado de containers.json que obliga a decidir por cada contenedor nuevo (mismo
+patrón que `PENDING_ART` de §5.5). Los tiers procedurales reusan la imagen de `vertederoBigBang`.
+
+**Modelos por franja horaria**: un contenedor puede mapear franja (§4.40) → archivo en vez de un
+archivo único. Hoy solo lo usa `contenedorBarrio` (5 pinturas del mismo contenedor). El topbar
+muestra además la hora local y el nombre de la franja.
 
 ---
 

@@ -25,6 +25,37 @@ export async function cerrarCelebraciones(page) {
   }
 }
 
+/**
+ * Clickea un elemento tolerando celebraciones que aparezcan DURANTE el intento.
+ *
+ * Por qué existe (ronda 30): las celebraciones se encolan desde `render()` y solo se cierran
+ * con click — `CelebrationModal.showNext` no tiene timer que las descarte. Vaciar la cola
+ * ANTES del click no alcanza: si una se encola en el render siguiente, su backdrop intercepta
+ * el click y el reintento propio de Playwright no puede resolverlo nunca (nada la va a cerrar),
+ * así que el spec falla por algo que no estaba probando. La ronda 30 destapó esta carrera al
+ * hacer el primer render un poco más pesado, pero es LATENTE desde la ronda 12: main pasaba por
+ * ser marginalmente más rápido, no por ser correcto.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} selector - selector del elemento a clickear
+ * @param {number} [timeoutMs]
+ */
+export async function clickSorteandoCelebraciones(page, selector, timeoutMs = 15000) {
+  const target = page.locator(selector);
+  const limite = Date.now() + timeoutMs;
+  for (;;) {
+    await cerrarCelebraciones(page);
+    try {
+      // Ráfagas cortas: si una celebración aparece justo ahora, se falla rápido, se la cierra
+      // en la vuelta siguiente y se reintenta — en vez de agotar el timeout contra el backdrop.
+      await target.click({ timeout: 1000 });
+      return;
+    } catch (err) {
+      if (Date.now() > limite) throw err;
+    }
+  }
+}
+
 /** Entra al juego desde la pantalla de título y descarta el tutorial. */
 export async function entrarAlJuego(page) {
   await page.goto('/apps/game/');

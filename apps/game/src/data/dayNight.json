@@ -2,5 +2,12 @@
   "nightStartHour": 20,
   "nightEndHour": 6,
   "nightLuckBonus": 3,
-  "nightTrapProbBonus": 0.03
+  "nightTrapProbBonus": 0.03,
+  "timeBands": [
+    { "id": "madrugada", "startHour": 0 },
+    { "id": "manana", "startHour": 6 },
+    { "id": "tarde", "startHour": 12 },
+    { "id": "atardecer", "startHour": 17 },
+    { "id": "noche", "startHour": 20 }
+  ]
 }

@@ -1636,3 +1636,116 @@ textarea {
   padding: var(--space-1);
 }
 
+
+/* --- Ronda 30 (PLAN.md §5.6): imagen real del contenedor como banner de la tarjeta --------
+   Los assets son apaisados (768x461) y con fondo oscuro propio, así que se muestran como
+   franja sangrada al ancho de la tarjeta en vez de meterse en el hueco cuadrado del ícono
+   (decisión del usuario, 2026-07-19). `aspect-ratio` fija el alto ANTES de que la imagen
+   cargue: cero layout shift aunque el archivo tarde o falle. */
+
+.container-banner {
+  display: block;
+  width: 100%;
+  aspect-ratio: 768 / 461;
+  height: auto;
+  object-fit: cover;
+  background: var(--bg-1);
+}
+
+/* Sangrado hasta el borde: las tarjetas tienen padding propio, y el banner lo cancela con
+   margen negativo para quedar al ras y respetar el redondeo superior. */
+.shop-card--has-banner > .container-banner {
+  width: calc(100% + var(--space-3) * 2);
+  margin: calc(var(--space-3) * -1) calc(var(--space-3) * -1) 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.dig-picker-card--has-banner > .container-banner {
+  width: calc(100% + var(--space-2) * 2);
+  margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* Con banner el ícono SVG queda de RESERVA (sigue en el DOM, solo oculto). Si la imagen falla,
+   containerImage.js quita la clase del contenedor y esta regla deja de aplicar: el ícono
+   reaparece solo, sin un frame intermedio con la tarjeta vacía. */
+.shop-card--has-banner > .shop-card-icon,
+.dig-picker-card--has-banner > .dig-picker-card-icon {
+  display: none;
+}
+
+/* Contenedor bloqueado: se ve QUÉ es, pero apagado (no regala la sensación de tenerlo). */
+.container-banner--locked {
+  filter: grayscale(1) brightness(0.55);
+}
+
+/* --- Ronda 30: reloj del topbar (hora real + franja horaria, §4.42) --- */
+
+.topbar-clock {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.topbar-clock-time {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--fg-0);
+}
+
+.topbar-clock-band {
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+/* El reloj suma una píldora más a un topbar que a 375px ya venía justo (money + keys + los dos
+   botones circulares llenaban el ancho). En mobile va SIN fondo ni padding de píldora: el ícono
+   sol/luna y el texto se leen igual, y así entra sin empujar los botones fuera de pantalla. */
+@media (max-width: 600px) {
+  /* El topbar tiene un presupuesto horizontal fijo y su contenido es de ancho VARIABLE (el
+     dinero crece a "$999.00T", la franja más larga es "Madrugada"). Antes de esta ronda ya
+     desbordaba a 375px con dinero de partida avanzada; en vez de seguir limando píxeles, se
+     deja envolver: si no entra en una línea, las píldoras pasan a la siguiente y NADA queda
+     fuera de pantalla ni se corta. Con dinero temprano sigue entrando en una sola línea. */
+  #topbar {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+    /* A 375px el presupuesto quedaba a 4px de entrar: el padding lateral cede la mitad. */
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+  }
+
+  #daynight-indicator {
+    padding: 0;
+    background: none;
+    border-bottom: none;
+  }
+
+  /* Las otras dos píldoras también ceden aire horizontal: con la franja más larga
+     ("Madrugada"/"Atardecer") el topbar tiene que entrar a 360px sin scroll lateral. */
+  .stat-pill {
+    padding: var(--space-1) var(--space-2);
+  }
+
+  /* Con esto una partida avanzada ($8.50B + 340 llaves) entra en UNA sola línea a 375px junto
+     al reloj; el wrap de arriba queda solo de red de seguridad para valores extremos
+     ("$999.00T"), que ya desbordaban antes de esta ronda. */
+  #money-value,
+  #keys-value {
+    font-size: 0.9rem;
+  }
+
+  .topbar-stats {
+    gap: var(--space-1);
+    margin-right: 0;
+  }
+
+  .topbar-clock-time {
+    font-size: 0.7rem;
+  }
+}
