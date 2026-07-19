@@ -6865,3 +6865,76 @@ sin cota superior.
   revelado final (semi-enterrado por diseño, R29.2).
 - El rect de limpieza local del redraw de arte se acota a ±50px (huella clásica): con
   MIN_SPACING 110 no muerde entradas vecinas.
+
+## Ronda 29 — Agente B: arte tanda 1, pools 1-8 + herramientas (rama `feat/arte-ronda29`, commit "feat: ronda 29.B — …")
+
+### Qué se hizo
+
+- **59 composiciones en `ART`** (objectArt.js): los 55 ítems de los pools de los contenedores
+  1-8 de la cadena (tachoVereda → containerExtradimensional) + las 4 herramientas de la ronda
+  20. Todos esos ids salieron de `PENDING_ART` (quedan exactamente los de la tanda C: pools
+  9-16, bovedaContrarreloj/sotanoSinLuz y los 8 legendarios).
+- **~50 bodies nuevos** siguiendo el contrato `{defs, paint, clip}` de A, + el material `paper`
+  (fibras + foxing) y dos helpers para no repetir gradientes: `GRAD` (cyl/vert/diag/orb — luz
+  SIEMPRE arriba-izquierda) y `steelGrad` (acero fijo para hojas/filos: daga, espada, pala).
+- **ToolsSection**: el selector de Escarbar muestra el arte ilustrado a 40px
+  (`getObjectArtMarkup` inline — los uid por artKey conviven en el mismo DOM) con fallback al
+  ícono clásico de 20px; `.tool-row-art` nuevo en components.css (sin colores, solo layout).
+  Sin esto las 4 herramientas ilustradas no se veían en ninguna vista (no son entries del canvas).
+- **Tests**: +2 RED primero en objectArt.test.js, derivados de la data (cero conteos): todo
+  icon de los pools de los primeros 8 contenedores de containers.json y todo icon de tools.json
+  tiene arte. La validación xmlns/parse por entrada de ART ya venía gratis del test de 29.A.
+
+### Verificación
+
+- **Unit (Vitest): 661/661 en 44 archivos** (baseline de A 659/659 + 2 de la tanda).
+- **e2e (Playwright): 86/86** sin tocar un solo spec. Ojo: la suite completa flakeó una vez
+  por corrida en specs DISTINTOS y ajenos al arte (ronda27-flota test 2, ronda14 test 3);
+  ambos pasan aislados y la última corrida completa dio 86/86 limpia. Es timing de la suite
+  paralela, no regresión — si el runner de CI lo repite, mirar ahí antes que en el arte.
+- **Manual por matriz de screenshots** (scripts descartables en el scratchpad de esta sesión:
+  `gallery.mjs` — las 59 composiciones a 96px y 40px — y `matriz.mjs` — escarbado sembrado real
+  por contenedor a 375×812 y 1280×800, gestos de puntero reales, + selector de herramientas):
+  los 8 contenedores usan arte en TODOS los entries (cero fallbacks visibles), objetos
+  reconocibles a medio destapar, pill legible sobre arte claro y oscuro, rotación/escala/sombra/
+  viñeta funcionando. Dos composiciones NO pasaron la vara de 40px y se rehicieron ANTES de
+  seguir (R29.3): `newspaper-old` (leía como ladrillo marrón → la plana superior ahora domina
+  en claro con titular) y `shoe-odd` (leía como piedra → botín con caña, cordones y suela clara).
+
+### Decisiones (detalle en DESARROLLO.md §10)
+
+- **Paleta = color natural del objeto**, no el token de rareza: una banana es amarilla y un
+  casco es verde oliva; la rareza aparece como ACENTO en los details (glow `#50ffd6` en future,
+  gemas `#a583ff` en relics, dorados en antiques). Colorear el pool entero con el tono de
+  rareza mataba el "se RECONOCE el objeto", que es el criterio de éxito del pedido.
+- **Bodies de trazos sin área de relleno** (bicicleta): el `clip` se acota a los discos de
+  rueda y el desgaste del cuadro va pintado en el body. Un clipPath solo une geometría de FILL
+  — clipear al bounding box del cuadro hacía flotar el material sobre el fondo. Para la tanda
+  C: si un body es mayormente strokes, o le dan clip de sus zonas rellenas o no le ponen material.
+
+### Para el Agente C (tanda 2 + vitrina)
+
+- Vocabulario reusable ya disponible: `vase`, `frame` (ventana de contenido 30,30-66,66 — los
+  details pintan adentro: ver oil-painting/photo/engraving), `scroll`, `figurine`, `bust`,
+  `chest`, `sword`, `dagger`, `core`, `chip`, `shard`, `pendant`, `coin`, `pocketWatch`,
+  `mask`, `crown`, `scepter`, `lamp`, `book` — mapean directo a varios ids de los pools 9-16
+  (compass→pocketWatch como base NO: el compás merece body propio; pero anchor/lantern/hourglass
+  sí son bodies nuevos). Los 8 legendarios piden el nivel máximo: gradientes propios + glow.
+- `GRAD`/`steelGrad` están exportables solo dentro del módulo (const internos): agreguen ahí
+  lo que necesiten, no dupliquen stops.
+- El patrón de verificación está regalado: copien `gallery.mjs`/`matriz.mjs` del scratchpad de
+  B (o regenérenlos: gallery compone con `composeObjectArt` en Node puro y no necesita servidor;
+  matriz siembra `ownedContainers` + `prestigeCount`/`automationOwned` — containerExtradimensional
+  y siguientes tienen `requiresPrestigeCount`/`requiresAutomationId`, revisar containers.json
+  para los pools 9-16, que piden prestigio 2-5 y automatización alta).
+- El screenshot del "reveal" completo tiene una ventana de 650ms (`REVEAL_HOLD_MS`) tras
+  rascar el último objeto: capturar el estado "partial" (todos menos uno) es lo determinístico.
+
+### Para el Agente D (e2e + auditoría)
+
+- Sin cambios en `window.__digDebug` (sigue faltando exponer arte por entry — tu letra).
+- Nota para la auditoría de sinks: el único consumidor NUEVO de objectArt es
+  `ToolsSection.render`, y el artKey que le llega es `tool.icon` de `store.ctx.data.tools`
+  (data estática, jamás del save) — mismo argumento que DigCanvas.
+- Presupuesto de memoria sin cambios: el caché sigue creciendo solo con lo que se pide
+  (128px por escarbado + 40px por las 4 herramientas del selector ≈ nada).
