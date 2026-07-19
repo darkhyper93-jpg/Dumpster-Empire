@@ -9,6 +9,7 @@
 
 import { getLuck, getLevelRarityShift, categoryWeights, formatMoney, isSetComplete } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { getObjectArtMarkup } from '../icons/objectArt.js';
 import { t } from '../i18n/i18n.js';
 import { getCollectionCompletion } from '../collectionProgress.js';
 
@@ -142,9 +143,18 @@ function renderShowcase(state, data) {
           `</article>`
         );
       }
+      // Ronda 29.C: el pedestal exhibe el ARTE ilustrado a 96px (el tamaño nativo del viewBox de
+      // objectArt), no el ícono de 24px. DECISIÓN: el arte grande vive solo acá — el resto del
+      // INDEX conserva los íconos chicos porque su grilla es de densidad alta (decenas de ítems
+      // por contenedor) y a 96px dejaría de ser una tabla consultable. La vitrina son 8 piezas.
+      // Si un legendario no tuviera arte registrado, cae al ícono de siempre (fallback del §5.5).
+      const art = getObjectArtMarkup(legendary.icon, { size: 96 });
+      const figure = art
+        ? `<span class="showcase-card-art">${art}</span>`
+        : `<span class="showcase-card-icon">${iconMarkup(legendary.icon, { size: 30 })}</span>`;
       return (
         `<article class="showcase-card">` +
-        `<span class="showcase-card-icon">${iconMarkup(legendary.icon, { size: 30 })}</span>` +
+        figure +
         `<h3>${legendary.name}</h3>` +
         `<p>${t('collection.baseValue', { amount: formatMoney(legendary.valorBase) })}</p>` +
         `</article>`

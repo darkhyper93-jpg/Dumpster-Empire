@@ -901,6 +901,52 @@ anterior. Es el mejor diseño disponible y la fuente de verdad visual.
 El selector de herramientas de escarbado (§4.23) vive como sección de la vista Escarbar (no de
 Configuración) desde la ronda 21 de ROADMAPv4.
 
+### 5.5 Sistema de objetos ilustrados (ronda 29 de ROADMAPv4)
+
+Al escarbar, lo enterrado son **objetos de verdad**, no un círculo de color con un pictograma
+de 32px encima. El arte vive en un registro nuevo `apps/game/src/icons/objectArt.js`, hermano
+de `icons.js` pero con OTRO contrato: viewBox **96** (no 24) y un vocabulario de **partes** en
+tres capas por objeto:
+
+1. **`body`** — la silueta/forma principal (lata, botella, engranaje, ancla, cuadro…), rellena
+   con **gradientes** SVG (`<defs>` lineales/radiales) que dan volumen. Cada body aporta además
+   su silueta como `clipPath`, para que las capas de arriba nunca se salgan del objeto.
+2. **`material`** — overlay de material (metal rayado, vidrio con brillo especular, madera
+   vetada, tela, cerámica craquelada, óxido) como paths semitransparentes reutilizables,
+   recortados a la silueta del body.
+3. **`details`** — 1-3 detalles propios del ítem (abolladuras, etiqueta despegada, gema,
+   inscripción) que lo hacen ESE objeto y no uno genérico.
+
+Cada ítem se define como composición `{ body, material, palette, details, scale }` — mismo
+espíritu compositivo que `SHAPES` de icons.js, pero ilustrativo. La paleta base sale del tono
+de la categoría (los colores de rareza de §5.3, ya definitivos tras la ronda 28) con
+variaciones por ítem; un helper `paletteFrom(baseHex)` deriva luces/sombras/profundidad de un
+solo color base.
+
+**Calidad mínima exigible** (la vara del "realista" en un juego 2D buildless): volumen por
+gradiente + sombra propia, silueta reconocible a 40px de alto en un canvas de 375px de ancho,
+coherencia con la identidad de §5.3 — NO fotorealismo, NO assets bitmap externos (el juego
+sigue siendo SVG generado, offline, sin build).
+
+**Presentación "enterrada" en el canvas de escarbado**: cada objeto se pinta con (a) **escala
+natural relativa** (`scale` 0.7-1.4 por ítem: una lata es chica, un ancla es grande — clampeada
+y SOLO estética: la huella jugable/`OBJECT_RADIUS` no cambia), (b) **rotación leve** (±15°),
+(c) **sombra de apoyo** elíptica bajo el objeto, (d) **viñeta de tierra** en el borde inferior
+(semi-enterrado). Rotación y escala son parte del MODELO del escarbado en curso (determinísticas
+por posición ya rolleada), NUNCA del canvas: el repintado completo en `focus`/`visibilitychange`
+reproduce el frame idéntico (el canvas solo PINTA lo que dice el modelo). La etiqueta con el
+nombre se conserva (es información de juego), debajo del objeto y con un fondo pill
+semitransparente para legibilidad sobre el arte.
+
+**Pipeline**: `getObjectImage(artKey, { size })` compone el SVG (SIEMPRE con `xmlns`), lo sirve
+como data-URL y cachea el `HTMLImageElement` (mismo mecanismo que `getIconImage`). Las imágenes
+se piden UNA vez al iniciar el escarbado (pre-rasterizado a 128px; el `drawImage` escala) —
+nada de recomponer SVG por frame (presupuesto de §6.4). **Fallback incremental**: si un `icon`
+id no tiene entrada en objectArt.js, `DigCanvas.drawEntry` dibuja el render anterior (círculo +
+glifo) — un ítem sin arte nunca rompe el canvas; los ids sin ilustrar viven en la lista
+exportada `PENDING_ART` y un test de cobertura derivado de la data obliga a decidir por cada
+ítem nuevo. Los tiers procedurales (§4.35) reusan el arte del pool del Big Bang.
+
 ---
 
 ## 6. ARQUITECTURA TÉCNICA

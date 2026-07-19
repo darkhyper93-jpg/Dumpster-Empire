@@ -634,6 +634,54 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   rarezas pasan a tonos francamente distintos (antes antiques/historic eran dos marrones casi
   iguales). Contraste AA verificado en los pares de texto reales. PLAN.md §5.3 actualizado.
 
+- **Ronda 29.A — sistema de objetos ilustrados (`objectArt.js`, PLAN.md §5.5)**: registro
+  hermano de `icons.js` con viewBox 96 y composición por partes (body con gradientes + material
+  overlay recortado a la silueta + details por ítem). Decisiones: (1) la paleta de cada ítem se
+  deriva de UN hex base con `paletteFrom()` (luces/sombras coherentes en todo el catálogo sin
+  tokens CSS — el SVG compuesto no puede resolver `var(--...)` y el canvas ya documenta sus
+  colores de dibujo hardcodeados); (2) rotación "enterrada" determinística por posición ya
+  rolleada (`artRotationFor`, hash imul → ±15°) y escala por ítem clampeada 0.7-1.4 — el canvas
+  nunca decide presentación, el repintado desde el modelo reproduce el frame (napkin); (3)
+  fallback incremental: sin entrada en `ART` se dibuja el render clásico intacto, `PENDING_ART`
+  lista los ids sin ilustrar y el test de cobertura (derivado de la data, cero conteos) obliga a
+  decidir por cada ítem nuevo; (4) ids internos del SVG namespaciados por `uid` para poder
+  inyectar composiciones inline en el mismo DOM (Vitrina de la 29.C).
+
+- **Ronda 29.B — arte tanda 1 (pools de contenedores 1-8 + herramientas)**: 59 composiciones
+  (55 ítems + 4 herramientas), ~50 bodies nuevos y el material `paper`. Decisiones: (1) helpers
+  de gradiente compartidos (`GRAD.cyl/vert/diag/orb`, luz siempre arriba-izquierda) + `steelGrad`
+  fijo para hojas/filos — el acero pulido no sale de la paleta del ítem, mismo criterio literal
+  que los MATERIALS; (2) la paleta por ítem es el color NATURAL del objeto (una banana es
+  amarilla) y la rareza aparece en acentos de details (glow teal en future, gemas violetas en
+  relics) — colorear todo el pool con el token de rareza volvía irreconocible la silueta;
+  (3) los bodies de trazos sin área de relleno (bicicleta) acotan su `clip` a los discos de
+  rueda y pintan el desgaste en el propio body (el clipPath solo une geometría de fill: un
+  material sobre el rect del cuadro flotaría sobre el fondo); (4) el selector de herramientas
+  (`ToolsSection`) pasa a mostrar el arte ilustrado a 40px vía `getObjectArtMarkup` inline (es
+  la única vista donde las herramientas se lucen — no son entries del canvas), con fallback al
+  ícono clásico de 20px; (5) dos composiciones se rehicieron tras la revisión por screenshot a
+  40px (R29.3): el diario leía como ladrillo (la plana superior pasó a dominar en claro) y el
+  zapato como piedra (botín con caña, cordones y suela clara de contraste).
+
+- **Ronda 29.C — arte tanda 2 (pools 9-16 + especiales de la ronda 20 + legendarios) y vitrina**:
+  78 composiciones que cierran el catálogo (`PENDING_ART` queda VACÍA). Decisiones: (1) el bloom
+  de rareza alta de los 8 legendarios (§5.2) se pinta en el `paint` del body y NO en `details`,
+  porque el overlay de details se recorta al clipPath de la silueta y un aura ahí sería invisible
+  — el `paint` no se recorta, así que el halo puede desbordar el objeto (helper `halo`, mismo
+  patrón que `GRAD`/`steelGrad`: const interno del módulo); (2) los legendarios llevan **body
+  propio no reutilizable** (`legendCan`, `legendBike`, …) con gradientes de más paradas y rim
+  light, y escala alta (1.15-1.4): son el premio aspiracional y tienen que dominar el canvas
+  apenas asoman; (3) la **Vitrina del INDEX** exhibe el arte a 96px (tamaño nativo del viewBox)
+  con `.showcase-card-art`, cuyo drop-shadow es más suave que el del ícono plano porque la pieza
+  ya trae su halo compuesto — el resto del INDEX conserva los íconos de 24px: su grilla tiene
+  decenas de ítems por contenedor y a 96px dejaría de ser una tabla consultable, mientras que la
+  vitrina son 8 piezas; (4) cinco composiciones se rehicieron tras la revisión por screenshot a
+  40px (R29.3): partitura y boceto leían como papel en blanco (indistinguibles entre sí y del
+  manifiesto de carga) → pentagrama con notas y garabato de carbonilla gruesos; el libro contable
+  era un rectángulo gris → quemadura que ocupa media tapa con borde de brasa; el eslabón de cadena
+  eran dos aros borrosos → pared de aro engrosada a 10 unidades de viewBox; y la Semilla del Vacío
+  (legendario) leía como mancha oscura sobre la tierra del canvas → paleta subida a valor medio.
+
 ---
 
 ## 11. Qué queda como postre (no tocar en V1)

@@ -6777,3 +6777,344 @@ sin cota superior.
 - El sustrato del escarbado (#4a3526) y la etiqueta (#f4ede1) siguen hardcodeados en
   DigCanvas.js; si la 29 los toca, el spec de ronda 5 que mide píxeles de la etiqueta
   (`labelRegion`, umbrales r>200/g>195/b>180) es la primera regresión a vigilar.
+
+## Ronda 29 — Agente A: sistema de objetos ilustrados (rama `feat/arte-ronda29`, commit "feat: ronda 29.A — …")
+
+### Qué se hizo
+
+- **PLAN.md primero**: §5.5 "Sistema de objetos ilustrados" (contrato completo: viewBox 96,
+  tres capas body/material/details, calidad mínima "reconocible a 40px", presentación
+  enterrada con escala 0.7-1.4 + rotación ±15° + sombra + viñeta, etiqueta pill, pipeline con
+  pre-rasterizado y fallback incremental). Decisión de arquitectura anotada en DESARROLLO.md §10.
+- **`apps/game/src/icons/objectArt.js`** (nuevo): registro hermano de icons.js con OTRO
+  contrato. API: `composeObjectArt(def, {size, uid})` (pura, sin DOM — corre en Node),
+  `getObjectArtMarkup` / `getObjectImage` (data-URL + caché, mismo mecanismo que
+  `getIconImage`), `hasObjectArt`, `getObjectScale` (+`clampArtScale`), `artRotationFor(x, y)`
+  (hash determinístico → ±15° en radianes), `paletteFrom(baseHex)` (deriva
+  base/light/dark/deep/accent de UN hex — los agentes de arte solo eligen un color).
+  Vocabulario inicial: 2 **bodies de referencia** (`can`: gradiente lineal de cilindro;
+  `bottle`: lineal + radial de vidrio) que documentan el contrato `{defs, paint, clip}` (ids
+  namespaciados por uid; el clipPath recorta material/details a la silueta), y los **6
+  materiales** del roadmap (`metal`, `glass`, `wood`, `fabric`, `ceramic`, `rust`) como
+  overlays genéricos reutilizables.
+- **`DigCanvas.js`**: `drawEntry` bifurca — con arte CARGADO pinta sombra de apoyo → arte
+  rotado/escalado (`ctx.translate/rotate/drawImage`) → viñeta de tierra → etiqueta pill
+  (`ctx.roundRect`, texto #f4ede1 en la MISMA posición de siempre); sin arte (o imagen
+  rota/no cargada) el render clásico queda BIT-IDÉNTICO. `drawEntryTracked` centraliza el
+  redibujado por carga tardía (ícono Y arte, guardado por `digGeneration`). `start()`
+  pre-rasteriza a 128px una vez por escarbado (`ART_RASTER_SIZE`); `ART_BASE_SIZE = 68` →
+  arte entre ~48 y ~95px según escala. El chequeo `complete && naturalWidth > 0` se aplica
+  igual al arte (regla napkin).
+- **Tests** (`apps/game/tests/objectArt.test.js`, 9, RED primero): cobertura DERIVADA de la
+  data (todo icon id de items+legendaries tiene arte o está en `PENDING_ART`; sin dobles; sin
+  ids muertos — tools permitidos porque B los ilustra), sanity xmlns + buena-formación XML por
+  CADA body×material (parser de pila propio, sin deps), null limpio para artKey desconocido,
+  rotación determinística/en rango/variable entre posiciones, clamp de escala, paletteFrom.
+
+### Estado para B y C (tandas de arte)
+
+- `ART` está **VACÍO a propósito** y `PENDING_ART` tiene los 137 ids (125 de items + 8
+  legendarios + 4 herramientas), agrupados por contenedor en orden de pool para cortar por
+  tanda. Flujo por ítem: agregar bodies/details al vocabulario según haga falta → entrada en
+  `ART` (`{ body, material, palette: '#hex', details, scale }`) → borrar el id de
+  `PENDING_ART`. El test de cobertura vigila ambas listas (y valida gratis todo lo que
+  agreguen: xmlns + parse por entrada de ART).
+- `palette` acepta un hex pelado (pasa por `paletteFrom`) o el objeto completo si un ítem
+  necesita paleta manual. `scale`: la huella jugable NO cambia (R29.2), es solo estética.
+- Los tiers procedurales NO llevan entrada: reusan el pool del Big Bang (comentado en ART).
+- Verificación visual sin ensuciar el working tree: el script del scratchpad de esta sesión
+  (`verify-arte-29a.mjs`) intercepta `objectArt.js` por HTTP (`page.route`, napkin №4) — les
+  sirve de base para la matriz de screenshots por tanda.
+
+### Para el Agente D (e2e + auditoría)
+
+- `window.__digDebug` HOY expone positions/revealed/isComplete — falta agregarle los campos de
+  arte por entry (si usa arte ilustrado + `naturalWidth > 0`) para el spec `ronda29-arte`;
+  no lo agregué para no pisar tu letra.
+- Dato medido en la verificación de A: el repintado desde el modelo NO es bit-idéntico al
+  primer frame NI EN EL BASELINE de main (redraw doble de texto antialiased en `revealEntry`,
+  preexistente); dos repintados consecutivos SÍ son idénticos (modelo determinístico). Si tu
+  e2e compara frames, comparar repintado-vs-repintado, no historia-vs-repintado.
+- Nota para tu auditoría de sinks: los artKeys que llegan a `getObjectImage` salen de
+  `entry.icon`, que DigCanvas recibe del engine ya resuelto contra la data estática (la
+  trampa usa el id fijo `'artifact'` → sin arte → fallback). `hasObjectArt`/lookups usan
+  `Object.hasOwn` (un icon id `'constructor'` no resuelve contra el prototipo).
+
+### Verificación
+
+- **Unit (Vitest): 659/659 en 44 archivos** (baseline 650/650 en 43 + 9 de objectArt).
+- **e2e (Playwright): 86/86** — idéntico al baseline de rondas 27/28, SIN tocar un solo spec
+  (con ART vacío el juego es exactamente el de hoy — regla §1.18 de degradación limpia).
+- **Manual** (Chromium vía Playwright, screenshots revisados a ojo): baseline 375px sin
+  interceptar = render clásico intacto; con arte demo interceptado (6 ítems del Tacho sobre
+  can/bottle) a 375×667 y 1280×800: volumen por gradiente, rotación/escala visibles, sombra,
+  viñeta, pill legible sobre arte claro y oscuro, objeto reconocible a medio destapar, cero
+  errores de consola. El e2e de ronda 5 (píxeles de etiqueta) pasa porque el texto conserva
+  color y posición exactos en ambos renders.
+- Greps de cierre: cero console.log / TODO / emojis en lo nuevo; sin colores nuevos en CSS
+  (los colores de dibujo del canvas siguen el patrón hardcodeado documentado de DigCanvas).
+
+### Decisiones registradas (detalle en DESARROLLO.md §10)
+
+- Paleta por ítem derivada de UN hex (`paletteFrom`) — el SVG standalone no puede resolver
+  tokens CSS; coherencia de catálogo por construcción.
+- Rotación determinística por posición ya rolleada + escala de data: el canvas nunca decide
+  presentación (napkin: el canvas solo PINTA lo que dice el modelo).
+- `ART_BASE_SIZE = 68` (arte algo más grande que el círculo clásico de 56px): el punch-out y
+  `OBJECT_RADIUS` NO cambian; un objeto grande queda parcialmente bajo la suciedad hasta el
+  revelado final (semi-enterrado por diseño, R29.2).
+- El rect de limpieza local del redraw de arte se acota a ±50px (huella clásica): con
+  MIN_SPACING 110 no muerde entradas vecinas.
+
+## Ronda 29 — Agente B: arte tanda 1, pools 1-8 + herramientas (rama `feat/arte-ronda29`, commit "feat: ronda 29.B — …")
+
+### Qué se hizo
+
+- **59 composiciones en `ART`** (objectArt.js): los 55 ítems de los pools de los contenedores
+  1-8 de la cadena (tachoVereda → containerExtradimensional) + las 4 herramientas de la ronda
+  20. Todos esos ids salieron de `PENDING_ART` (quedan exactamente los de la tanda C: pools
+  9-16, bovedaContrarreloj/sotanoSinLuz y los 8 legendarios).
+- **~50 bodies nuevos** siguiendo el contrato `{defs, paint, clip}` de A, + el material `paper`
+  (fibras + foxing) y dos helpers para no repetir gradientes: `GRAD` (cyl/vert/diag/orb — luz
+  SIEMPRE arriba-izquierda) y `steelGrad` (acero fijo para hojas/filos: daga, espada, pala).
+- **ToolsSection**: el selector de Escarbar muestra el arte ilustrado a 40px
+  (`getObjectArtMarkup` inline — los uid por artKey conviven en el mismo DOM) con fallback al
+  ícono clásico de 20px; `.tool-row-art` nuevo en components.css (sin colores, solo layout).
+  Sin esto las 4 herramientas ilustradas no se veían en ninguna vista (no son entries del canvas).
+- **Tests**: +2 RED primero en objectArt.test.js, derivados de la data (cero conteos): todo
+  icon de los pools de los primeros 8 contenedores de containers.json y todo icon de tools.json
+  tiene arte. La validación xmlns/parse por entrada de ART ya venía gratis del test de 29.A.
+
+### Verificación
+
+- **Unit (Vitest): 661/661 en 44 archivos** (baseline de A 659/659 + 2 de la tanda).
+- **e2e (Playwright): 86/86** sin tocar un solo spec. Ojo: la suite completa flakeó una vez
+  por corrida en specs DISTINTOS y ajenos al arte (ronda27-flota test 2, ronda14 test 3);
+  ambos pasan aislados y la última corrida completa dio 86/86 limpia. Es timing de la suite
+  paralela, no regresión — si el runner de CI lo repite, mirar ahí antes que en el arte.
+- **Manual por matriz de screenshots** (scripts descartables en el scratchpad de esta sesión:
+  `gallery.mjs` — las 59 composiciones a 96px y 40px — y `matriz.mjs` — escarbado sembrado real
+  por contenedor a 375×812 y 1280×800, gestos de puntero reales, + selector de herramientas):
+  los 8 contenedores usan arte en TODOS los entries (cero fallbacks visibles), objetos
+  reconocibles a medio destapar, pill legible sobre arte claro y oscuro, rotación/escala/sombra/
+  viñeta funcionando. Dos composiciones NO pasaron la vara de 40px y se rehicieron ANTES de
+  seguir (R29.3): `newspaper-old` (leía como ladrillo marrón → la plana superior ahora domina
+  en claro con titular) y `shoe-odd` (leía como piedra → botín con caña, cordones y suela clara).
+
+### Decisiones (detalle en DESARROLLO.md §10)
+
+- **Paleta = color natural del objeto**, no el token de rareza: una banana es amarilla y un
+  casco es verde oliva; la rareza aparece como ACENTO en los details (glow `#50ffd6` en future,
+  gemas `#a583ff` en relics, dorados en antiques). Colorear el pool entero con el tono de
+  rareza mataba el "se RECONOCE el objeto", que es el criterio de éxito del pedido.
+- **Bodies de trazos sin área de relleno** (bicicleta): el `clip` se acota a los discos de
+  rueda y el desgaste del cuadro va pintado en el body. Un clipPath solo une geometría de FILL
+  — clipear al bounding box del cuadro hacía flotar el material sobre el fondo. Para la tanda
+  C: si un body es mayormente strokes, o le dan clip de sus zonas rellenas o no le ponen material.
+
+### Para el Agente C (tanda 2 + vitrina)
+
+- Vocabulario reusable ya disponible: `vase`, `frame` (ventana de contenido 30,30-66,66 — los
+  details pintan adentro: ver oil-painting/photo/engraving), `scroll`, `figurine`, `bust`,
+  `chest`, `sword`, `dagger`, `core`, `chip`, `shard`, `pendant`, `coin`, `pocketWatch`,
+  `mask`, `crown`, `scepter`, `lamp`, `book` — mapean directo a varios ids de los pools 9-16
+  (compass→pocketWatch como base NO: el compás merece body propio; pero anchor/lantern/hourglass
+  sí son bodies nuevos). Los 8 legendarios piden el nivel máximo: gradientes propios + glow.
+- `GRAD`/`steelGrad` están exportables solo dentro del módulo (const internos): agreguen ahí
+  lo que necesiten, no dupliquen stops.
+- El patrón de verificación está regalado: copien `gallery.mjs`/`matriz.mjs` del scratchpad de
+  B (o regenérenlos: gallery compone con `composeObjectArt` en Node puro y no necesita servidor;
+  matriz siembra `ownedContainers` + `prestigeCount`/`automationOwned` — containerExtradimensional
+  y siguientes tienen `requiresPrestigeCount`/`requiresAutomationId`, revisar containers.json
+  para los pools 9-16, que piden prestigio 2-5 y automatización alta).
+- El screenshot del "reveal" completo tiene una ventana de 650ms (`REVEAL_HOLD_MS`) tras
+  rascar el último objeto: capturar el estado "partial" (todos menos uno) es lo determinístico.
+
+### Para el Agente D (e2e + auditoría)
+
+- Sin cambios en `window.__digDebug` (sigue faltando exponer arte por entry — tu letra).
+- Nota para la auditoría de sinks: el único consumidor NUEVO de objectArt es
+  `ToolsSection.render`, y el artKey que le llega es `tool.icon` de `store.ctx.data.tools`
+  (data estática, jamás del save) — mismo argumento que DigCanvas.
+- Presupuesto de memoria sin cambios: el caché sigue creciendo solo con lo que se pide
+  (128px por escarbado + 40px por las 4 herramientas del selector ≈ nada).
+
+## Ronda 29 — Agente C: arte tanda 2 (pools 9-16 + especiales + legendarios) + vitrina (rama `feat/arte-ronda29`, commit "feat: ronda 29.C — …")
+
+### Qué se hizo
+
+- **78 composiciones nuevas en `ART`** (objectArt.js), que CIERRAN el catálogo: los pools de los
+  contenedores 9-16 de la cadena (convoyFantasma, criptaColeccionista, estacionOrbital,
+  vertederoDivino, chatarreriaTitanes, naufragioTemporal, archivoMultiverso, vertederoBigBang),
+  los dos especiales `fueraDeCadena` de la ronda 20 (bovedaContrarreloj, sotanoSinLuz) y los
+  **8 legendarios** de la ronda 22. **`PENDING_ART` queda VACÍA** (la lista sigue exportada a
+  propósito: un ítem nuevo de una ronda futura tiene que entrar ahí o en ART, y el test de
+  cobertura falla si no se decidió ninguna de las dos).
+- **~30 bodies nuevos** con el contrato `{defs, paint, clip}` de 29.A: `lantern`, `compass`,
+  `strongbox`, `ring`, `crate`, `bell`, `goblet`, `shrine`, `heart`, `platePanel`, `wrench`,
+  `gyro`, `orb`, `reactor`, `bolt`, `coil`, `seed`, `rivet`, `chainLink`, `anvil`, `gear`,
+  `piston`, `figurehead`, `hourglass`, `anchor`, `shipWheel`, `penrose`, `key`, `starburst`,
+  `monolith`, `alarmClock`, `vaultDoor`, `gem`, `magnifier`.
+- **8 bodies propios y NO reutilizables para los legendarios** (`legendCan`, `legendBike`,
+  `legendCore`, `legendWatch`, `legendAnchor`, `legendMuse`, `legendRelic`, `legendSeed`):
+  gradientes con más paradas, rim light y escala alta (1.15-1.4).
+- **Helper `halo`** (const interno del módulo, mismo patrón que `GRAD`/`steelGrad`): el bloom de
+  rareza alta de PLAN.md §5.2 se pinta en el **`paint` del body, NUNCA en `details`** — el
+  overlay de details se recorta al clipPath de la silueta, así que un aura ahí sería invisible;
+  el `paint` no se recorta y el halo puede desbordar el objeto, que es el efecto pedido.
+- **Vitrina del INDEX** (`CollectionView.renderShowcase`): los pedestales de legendario obtenido
+  exhiben el arte ilustrado a **96px** vía `getObjectArtMarkup`, con fallback al ícono de 30px si
+  un legendario no tuviera arte. CSS nuevo `.showcase-card-art` (solo layout + un drop-shadow con
+  `var(--amber)`, cero colores nuevos): su bloom es MÁS SUAVE que el de `.showcase-card-icon`
+  porque la pieza ya trae su halo compuesto dentro del SVG y el drop-shadow fuerte se comía los
+  gradientes.
+- **Tests**: +3 en objectArt.test.js, RED primero, derivados de la data (cero conteos
+  hardcodeados): cobertura de los pools de la tanda 2 (`chain.slice(8)` + los `fueraDeCadena`),
+  cobertura de los 8 legendarios, y `PENDING_ART` vacía. La validación xmlns + buena-formación
+  XML por cada entrada de ART venía gratis del test de 29.A y cubrió las 78 composiciones nuevas.
+
+### Verificación
+
+- **Unit (Vitest): 664/664 en 44 archivos** (baseline de B 661/661 + 3 de esta tanda).
+- **e2e (Playwright): 86/86** — idéntico al baseline de las rondas 27/28/29.A/29.B, SIN tocar un
+  solo spec. Corrida limpia, sin los flakes que reportó B.
+- **Manual por matriz de screenshots** (scripts descartables en el scratchpad de esta sesión:
+  `gallery.mjs` — las 78 composiciones a 96px y 40px, compone con `composeObjectArt` en Node puro
+  sin servidor — y `matriz.mjs` — escarbado REAL con gestos de puntero por cada uno de los 10
+  contenedores de la tanda a 375×812, más la Vitrina a 375px y 1280px): los 10 contenedores usan
+  arte en TODOS los entries (cero fallbacks visibles), objetos reconocibles a medio destapar,
+  pill legible sobre arte claro y oscuro. Vitrina a 375px: dos columnas, arte de 96px con halo,
+  nombre y valor legibles; en desktop entra en el sidebar de 320px sin desbordar.
+- **Cinco composiciones NO pasaron la vara de 40px y se rehicieron ANTES de seguir** (R29.3):
+  `score-silent` y `sketch-blind` leían como papel en blanco e indistinguibles entre sí y de
+  `cargo-manifest` (→ pentagrama con notas negras gruesas / garabato de carbonilla enmarañado);
+  `ledger-burnt` era un rectángulo gris (→ quemadura que ocupa media tapa con borde de brasa y
+  chispas); `chain-titanic` eran dos aros borrosos (→ pared del aro engrosada a 10 unidades de
+  viewBox ≈ 4px a 40px); y `legend-seed` leía como mancha oscura sobre la tierra del canvas
+  (→ paleta de #33445e a #56709a: un legendario no puede desaparecer contra el sustrato).
+- Greps de cierre: cero console.log / TODO / emojis en lo nuevo; cero colores hardcodeados nuevos
+  en CSS (los del canvas siguen el patrón documentado de DigCanvas).
+
+### Decisiones (detalle en DESARROLLO.md §10)
+
+- El halo de los legendarios va en `paint`, no en `details` (el clipPath lo mataría).
+- Legendarios con body propio no reutilizable: son 8 piezas, no vale la pena generalizarlas.
+- **Vitrina a 96px, resto del INDEX a 24px**: la grilla del INDEX tiene decenas de ítems por
+  contenedor y a 96px dejaría de ser una tabla consultable; la vitrina son 8 piezas y es
+  justamente el lugar donde el arte se luce (decisión que el roadmap §29.C pedía documentar).
+- Los tiers procedurales de la ronda 26 NO llevan entrada propia: reusan el pool del Big Bang,
+  ya ilustrado en esta tanda (contrato §3.5.7) — anotado en el comentario de `ART`.
+
+### Para el Agente D (e2e + auditoría) — lo que te queda
+
+- **`window.__digDebug` sigue SIN exponer los campos de arte por entry** (si usa arte ilustrado y
+  si `naturalWidth > 0`). Ni A ni B ni yo lo tocamos para no pisar tu letra: es lo primero que
+  necesitás para el spec `ronda29-arte.spec.js`. OJO: `window.__digDebug` es un **objeto**
+  (`{positions, revealed, isComplete}`), no una función — me comí 30s de timeout asumiendo lo
+  segundo.
+- **Trampas de seeding que me costaron tres corridas** (anotalas antes de escribir el spec):
+  `ownedContainers` es un **mapa `{id: cantidad}`**, NO un array — sembrarlo como array lo
+  serializa a `{}` y el save entra "válido" pero con cero contenedores, así que el picker solo
+  muestra tachoVereda (variante del napkin №5: el seed malo pasa silencioso). `legendariesFound`
+  sí es un array de ids. Los contenedores 9-16 piden `requiresPrestigeCount` 2..9.
+- Selectores reales, por si reusás mi `matriz.mjs`: tab `[data-tab="escarbar"]` (no `"dig"`),
+  tarjeta del picker `[data-start-dig="<id>"]`, canvas `.dig-canvas-top`, host
+  `#dig-canvas-host`, abandonar `#dig-abandon-btn`.
+- Para destapar un objeto entero con gestos reales hace falta un barrido denso (filas + columnas
+  cada 4px sobre ±30 unidades internas alrededor del centro): un arrastre diagonal simple deja un
+  parche y no permite juzgar la composición.
+- Para tu auditoría de sinks: el consumidor NUEVO de objectArt es `CollectionView.renderShowcase`,
+  y el artKey que le llega es `legendary.icon` de `data.legendaries.items` (data estática) — el
+  id del save (`state.legendariesFound`) se usa SOLO como clave de un `Set` para saber si está
+  encontrado, jamás llega a `getObjectImage`/`getObjectArtMarkup`. Mismo argumento que DigCanvas
+  y ToolsSection.
+- Presupuesto de memoria: la vitrina usa `getObjectArtMarkup` (SVG inline, sin caché de
+  `HTMLImageElement`), así que no suma al caché de imágenes de 128px del canvas.
+- Rendimiento: no medí FPS del rascado (el roadmap pide la comparación antes/después en el
+  hardware del usuario, y es tu punto 2) — queda entero para vos.
+
+## Ronda 29 — Agente D: e2e + auditoría visual y de rendimiento (rama `feat/arte-ronda29`, commit "feat: ronda 29.D — …")
+
+### Qué se hizo
+
+- **`window.__digDebug.art()`** (DigCanvas): hook de SOLO lectura que expone por entry
+  `{ icon, hasArt, settled, loaded }`. `loaded` usa la MISMA condición que `drawEntry`
+  (`complete && naturalWidth > 0`, nunca `complete` solo) y `settled` (= `complete`) existe para
+  poder esperar a que una imagen resuelva —cargada O rota— sin caer en el falso verde de
+  assertar una ausencia con auto-retry (napkin №2).
+- **`ronda29-arte.spec.js`, 3 tests, RED antes de implementar**:
+  1. Todos los entries del escarbado inicial usan arte ilustrado CARGADO (cero fallbacks).
+  2. Con el arte saboteado por interceptación de módulo (se le quita el `xmlns` a
+     `composeObjectArt` vía `page.route`, patrón napkin) el gesto NO se corta: barra al 100%,
+     vuelta al picker, cobro, y cero `pageerror` (un `drawImage` de imagen rota tiraría
+     `InvalidStateError`). Se verifica primero que las imágenes quedaron rotas de verdad
+     (`settled` sí, `loaded` no) — si el sabotaje no prendiera, el test no probaría nada.
+  3. El repintado desde el modelo (`focus`) reproduce el frame IDÉNTICO (R29.1).
+- **Bug real cazado por el test 3 y arreglado**: la capa de objetos ahora se repinta ENTERA
+  (`paintBottomEntries`) en vez de que cada entrada repusiera su sustrato con un rect local de
+  ±50px. Ese rect era más chico que la huella real del arte (68px × escala ≤1.4, rotado ±15°
+  ⇒ hasta ±58px), así que los bordes semitransparentes que sobresalían quedaban pintados DOS
+  veces —el ícono y el arte disparan cada uno su callback de carga— y el frame divergía del
+  repintado completo. **1044 píxeles de diferencia → 0.** Agrandar el rect no servía: a ±58 con
+  `MIN_SPACING` 110 empezaba a morder la entrada vecina. Repintar 3-8 entradas cuesta ~0.16ms.
+  `drawEntryTracked` se reemplazó por `paintBottomEntries` (sin efectos) + `trackPendingImages`
+  (único lugar que registra listeners, así un repintado no puede encadenar otros).
+
+### Verificación
+
+- **Unit (Vitest): 664/664 en 44 archivos** (sin cambios: la ronda D no toca lógica pura).
+- **e2e (Playwright): 89/89** = baseline 86 de la ronda 29.C + los 3 nuevos, sin tocar ningún
+  spec existente. El spec nuevo pasó `--repeat-each=3` (9/9) sin flakes.
+- **Rendimiento medido en el hardware del usuario** (script descartable, Chromium a 390×844,
+  comparando CON arte vs SIN arte —`hasObjectArt` interceptado para forzar el render clásico
+  previo a la ronda 29—):
+
+  | Métrica | SIN arte ("antes") | CON arte (ronda 29) |
+  |---|---|---|
+  | Gesto de rascado sostenido (240 moves) | 16.67 ms/frame — **60.0 FPS** | 16.67 ms/frame — **60.0 FPS** |
+  | Repintado completo de la capa de objetos | 0.08 ms (p95 0.20) | 0.16 ms (p95 0.20) |
+  | Arrancar un escarbado (click → canvas) | 58.0 ms media (p50 49) | 66.3 ms media (p50 51) |
+
+  Lectura: **el rascado no se movió un pelo** (60 FPS con vsync en ambos) porque el arte vive en
+  la capa de ABAJO y el gesto solo toca la de arriba. El costo del arte son ~8ms de
+  rasterización una vez por escarbado, y el repintado sigue siendo sub-milisegundo (los valores
+  están en el piso de resolución de `performance.now()`).
+- **Presupuesto de memoria del caché** (auditoría, números derivados de la data): **137 entradas
+  en `ART`**, bitmap de 128px = 64 KiB ⇒ **techo de 8.56 MiB** (+224 KiB de markup SVG), y solo
+  si el jugador escarba TODOS los pools en una misma sesión. Acotado por construcción: las
+  claves salen de la allow-list estática `ART` (`Object.hasOwn`), no del save — por eso no
+  necesita evicción. Documentado en el JSDoc de `getObjectImage`.
+- **Auditoría de sinks (data-URL / `innerHTML`)**: los tres consumidores del pipeline
+  (`DigCanvas` ← `digResult.items[].icon` del roll del engine sobre `items.json`/`legendaries.json`;
+  `CollectionView.renderShowcase` ← `legendary.icon` de la data; `ToolsSection.render` ←
+  `tool.icon` de la data) reciben ids de **data estática**. El save solo se usa como GATE booleano
+  (`legendariesFound` como Set de "encontrado", `toolsOwned` como flag), nunca como artKey. Y
+  aunque llegara uno hostil, `hasObjectArt` (`Object.hasOwn`) lo rechaza antes de que el artKey
+  se interpole como `uid` en los ids internos del SVG. **Sin sinks nuevos.**
+- **Manual, matriz completa de capturas con gestos de puntero reales**: los **16 contenedores de
+  la cadena a 375×812** + muestra en 1280×800 → **cero entries sin arte cargado**. Objetos
+  reconocibles a medio destapar (criterio de éxito del pedido) y pill legible sobre arte claro y
+  oscuro. Verificados también el selector de herramientas a 375px (4 piezas a 40px) y la
+  **Vitrina** (8 piezas con arte de 96px y halo) a 375px y desktop.
+
+### Hallazgo para el usuario (decisión suya, NO la tomé yo)
+
+- **La trampa es el único fallback vivo del juego**: cuando el escarbado sale trampa, el canvas
+  pinta un solo entry con `icon: 'artifact'`, que NO tiene arte ilustrado y usa el render clásico
+  (círculo + glifo). Es coherente —una trampa no es un objeto que se recolecta, y el círculo
+  plano la distingue de un hallazgo— y no rompe nada, pero si querés que la trampa también sea
+  una ilustración, es una composición nueva en `ART` y sale en una ronda futura.
+
+### Decisiones (detalle en DESARROLLO.md §10)
+
+- La capa de objetos se repinta entera en vez de por-entrada: elimina la clase de bug
+  "sustrato local mal dimensionado" y hace que cargar tarde y repintar sean el MISMO camino de
+  código (frame idéntico por construcción). Costo medido: ~0.16ms.
+- `art()` expone `settled` además de `loaded` para que los tests puedan esperar a una imagen
+  ROTA sin asserts de ausencia con auto-retry.
+
+### Estado de la ronda 29
+
+Las cuatro letras (A sistema, B tanda 1, C tanda 2 + vitrina, D e2e + auditoría) están
+completas: `PENDING_ART` vacía, 137 composiciones, DoD verde (664 unit + 89 e2e + manual a
+375px y desktop + FPS documentados). Queda el push y el PR.
