@@ -7032,3 +7032,89 @@ sin cota superior.
   `HTMLImageElement`), así que no suma al caché de imágenes de 128px del canvas.
 - Rendimiento: no medí FPS del rascado (el roadmap pide la comparación antes/después en el
   hardware del usuario, y es tu punto 2) — queda entero para vos.
+
+## Ronda 29 — Agente D: e2e + auditoría visual y de rendimiento (rama `feat/arte-ronda29`, commit "feat: ronda 29.D — …")
+
+### Qué se hizo
+
+- **`window.__digDebug.art()`** (DigCanvas): hook de SOLO lectura que expone por entry
+  `{ icon, hasArt, settled, loaded }`. `loaded` usa la MISMA condición que `drawEntry`
+  (`complete && naturalWidth > 0`, nunca `complete` solo) y `settled` (= `complete`) existe para
+  poder esperar a que una imagen resuelva —cargada O rota— sin caer en el falso verde de
+  assertar una ausencia con auto-retry (napkin №2).
+- **`ronda29-arte.spec.js`, 3 tests, RED antes de implementar**:
+  1. Todos los entries del escarbado inicial usan arte ilustrado CARGADO (cero fallbacks).
+  2. Con el arte saboteado por interceptación de módulo (se le quita el `xmlns` a
+     `composeObjectArt` vía `page.route`, patrón napkin) el gesto NO se corta: barra al 100%,
+     vuelta al picker, cobro, y cero `pageerror` (un `drawImage` de imagen rota tiraría
+     `InvalidStateError`). Se verifica primero que las imágenes quedaron rotas de verdad
+     (`settled` sí, `loaded` no) — si el sabotaje no prendiera, el test no probaría nada.
+  3. El repintado desde el modelo (`focus`) reproduce el frame IDÉNTICO (R29.1).
+- **Bug real cazado por el test 3 y arreglado**: la capa de objetos ahora se repinta ENTERA
+  (`paintBottomEntries`) en vez de que cada entrada repusiera su sustrato con un rect local de
+  ±50px. Ese rect era más chico que la huella real del arte (68px × escala ≤1.4, rotado ±15°
+  ⇒ hasta ±58px), así que los bordes semitransparentes que sobresalían quedaban pintados DOS
+  veces —el ícono y el arte disparan cada uno su callback de carga— y el frame divergía del
+  repintado completo. **1044 píxeles de diferencia → 0.** Agrandar el rect no servía: a ±58 con
+  `MIN_SPACING` 110 empezaba a morder la entrada vecina. Repintar 3-8 entradas cuesta ~0.16ms.
+  `drawEntryTracked` se reemplazó por `paintBottomEntries` (sin efectos) + `trackPendingImages`
+  (único lugar que registra listeners, así un repintado no puede encadenar otros).
+
+### Verificación
+
+- **Unit (Vitest): 664/664 en 44 archivos** (sin cambios: la ronda D no toca lógica pura).
+- **e2e (Playwright): 89/89** = baseline 86 de la ronda 29.C + los 3 nuevos, sin tocar ningún
+  spec existente. El spec nuevo pasó `--repeat-each=3` (9/9) sin flakes.
+- **Rendimiento medido en el hardware del usuario** (script descartable, Chromium a 390×844,
+  comparando CON arte vs SIN arte —`hasObjectArt` interceptado para forzar el render clásico
+  previo a la ronda 29—):
+
+  | Métrica | SIN arte ("antes") | CON arte (ronda 29) |
+  |---|---|---|
+  | Gesto de rascado sostenido (240 moves) | 16.67 ms/frame — **60.0 FPS** | 16.67 ms/frame — **60.0 FPS** |
+  | Repintado completo de la capa de objetos | 0.08 ms (p95 0.20) | 0.16 ms (p95 0.20) |
+  | Arrancar un escarbado (click → canvas) | 58.0 ms media (p50 49) | 66.3 ms media (p50 51) |
+
+  Lectura: **el rascado no se movió un pelo** (60 FPS con vsync en ambos) porque el arte vive en
+  la capa de ABAJO y el gesto solo toca la de arriba. El costo del arte son ~8ms de
+  rasterización una vez por escarbado, y el repintado sigue siendo sub-milisegundo (los valores
+  están en el piso de resolución de `performance.now()`).
+- **Presupuesto de memoria del caché** (auditoría, números derivados de la data): **137 entradas
+  en `ART`**, bitmap de 128px = 64 KiB ⇒ **techo de 8.56 MiB** (+224 KiB de markup SVG), y solo
+  si el jugador escarba TODOS los pools en una misma sesión. Acotado por construcción: las
+  claves salen de la allow-list estática `ART` (`Object.hasOwn`), no del save — por eso no
+  necesita evicción. Documentado en el JSDoc de `getObjectImage`.
+- **Auditoría de sinks (data-URL / `innerHTML`)**: los tres consumidores del pipeline
+  (`DigCanvas` ← `digResult.items[].icon` del roll del engine sobre `items.json`/`legendaries.json`;
+  `CollectionView.renderShowcase` ← `legendary.icon` de la data; `ToolsSection.render` ←
+  `tool.icon` de la data) reciben ids de **data estática**. El save solo se usa como GATE booleano
+  (`legendariesFound` como Set de "encontrado", `toolsOwned` como flag), nunca como artKey. Y
+  aunque llegara uno hostil, `hasObjectArt` (`Object.hasOwn`) lo rechaza antes de que el artKey
+  se interpole como `uid` en los ids internos del SVG. **Sin sinks nuevos.**
+- **Manual, matriz completa de capturas con gestos de puntero reales**: los **16 contenedores de
+  la cadena a 375×812** + muestra en 1280×800 → **cero entries sin arte cargado**. Objetos
+  reconocibles a medio destapar (criterio de éxito del pedido) y pill legible sobre arte claro y
+  oscuro. Verificados también el selector de herramientas a 375px (4 piezas a 40px) y la
+  **Vitrina** (8 piezas con arte de 96px y halo) a 375px y desktop.
+
+### Hallazgo para el usuario (decisión suya, NO la tomé yo)
+
+- **La trampa es el único fallback vivo del juego**: cuando el escarbado sale trampa, el canvas
+  pinta un solo entry con `icon: 'artifact'`, que NO tiene arte ilustrado y usa el render clásico
+  (círculo + glifo). Es coherente —una trampa no es un objeto que se recolecta, y el círculo
+  plano la distingue de un hallazgo— y no rompe nada, pero si querés que la trampa también sea
+  una ilustración, es una composición nueva en `ART` y sale en una ronda futura.
+
+### Decisiones (detalle en DESARROLLO.md §10)
+
+- La capa de objetos se repinta entera en vez de por-entrada: elimina la clase de bug
+  "sustrato local mal dimensionado" y hace que cargar tarde y repintar sean el MISMO camino de
+  código (frame idéntico por construcción). Costo medido: ~0.16ms.
+- `art()` expone `settled` además de `loaded` para que los tests puedan esperar a una imagen
+  ROTA sin asserts de ausencia con auto-retry.
+
+### Estado de la ronda 29
+
+Las cuatro letras (A sistema, B tanda 1, C tanda 2 + vitrina, D e2e + auditoría) están
+completas: `PENDING_ART` vacía, 137 composiciones, DoD verde (664 unit + 89 e2e + manual a
+375px y desktop + FPS documentados). Queda el push y el PR.
