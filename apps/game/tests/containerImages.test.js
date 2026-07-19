@@ -108,7 +108,7 @@ describe('containerImageSrc — allow-list, jamás interpolación de un id del s
   });
 });
 
-describe('variantes por franja horaria (§4.40): el contenedor de barrio cambia de modelo', () => {
+describe('variantes por franja horaria (§4.41): el contenedor de barrio cambia de modelo', () => {
   const VARIANT_ID = 'contenedorBarrio';
   const bandIds = dayNight.timeBands.map((b) => b.id);
 

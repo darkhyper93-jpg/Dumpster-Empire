@@ -131,7 +131,7 @@ export const ShopView = {
     }
 
     const rarityNames = new Map(itemsData.rarities.map((r) => [r.id, r.name]));
-    // Ronda 30 (§4.40): la franja sale de la hora REAL del sistema, igual que el indicador
+    // Ronda 30 (§4.41): la franja sale de la hora REAL del sistema, igual que el indicador
     // día/noche del Topbar — es presentación pura, nunca estado persistido.
     const band = getTimeBand(new Date().getHours(), data.dayNight);
 

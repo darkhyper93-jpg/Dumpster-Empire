@@ -15,7 +15,7 @@
 import { test, expect } from '@playwright/test';
 import { freshState } from '../../../packages/engine/src/state.js';
 import { serializeState } from '../../../packages/engine/src/save.js';
-import { entrarAlJuego, iniciarEscarbadoSinTrampa, rascarObjeto } from './helpers/dig.js';
+import { entrarAlJuego, iniciarEscarbadoSinTrampa, rascarObjeto, cerrarCelebraciones } from './helpers/dig.js';
 
 async function seed(page, save) {
   await page.addInitScript(([key, value]) => localStorage.setItem(key, value), ['dumpsterEmpireSave', save]);
@@ -88,9 +88,9 @@ test.describe('Dumpster Empire — regresión ronda 12 (celebraciones)', () => {
     // del toast. Verificado que falla reintroduciendo el toast viejo (sabotaje en UIManager).
     expect(await page.locator('.toast').filter({ hasText: 'Logro desbloqueado' }).count()).toBe(0);
     // Cierra las celebraciones encoladas y vuelve a chequear tras la interacción.
-    while (await page.locator('[data-action="close-celebration"]').isVisible().catch(() => false)) {
-      await page.locator('[data-action="close-celebration"]').click();
-    }
+    // Drain robusto (helpers/dig.js): el botón puede ser reemplazado por el de la celebración
+    // siguiente entre el isVisible y el click, y el click quedaría esperando de gusto.
+    await cerrarCelebraciones(page);
     expect(await page.locator('.toast').filter({ hasText: 'Logro desbloqueado' }).count()).toBe(0);
   });
 
@@ -117,14 +117,34 @@ test.describe('Dumpster Empire — regresión ronda 12 (celebraciones)', () => {
     await completarEscarbadoDelTacho(page);
 
     await expect(page.locator('#money')).not.toHaveText('$100', { timeout: 5000 });
-    // El contador de dinero tweenea 300-500ms (PLAN.md §5.2): esperar a que se asiente antes
-    // de capturar el valor "estable" para comparar, si no la lectura cae a mitad de animación.
-    await page.waitForTimeout(600);
-    const moneyStable = await page.locator('#money').textContent();
+    // El contador de dinero tweenea 300-500ms (PLAN.md §5.2) sobre rAF. Un `waitForTimeout(600)`
+    // fijo alcanzaba en una máquina ociosa, pero con varios workers de Chromium en paralelo los
+    // frames se atrasan y la lectura caía a mitad de animación: se capturaba un valor intermedio
+    // y la comparación de abajo fallaba contra el valor ya asentado. En vez de esperar un tiempo,
+    // se espera a que el texto DEJE de cambiar (dos lecturas iguales seguidas).
+    // Además del tween, el dinero puede seguir moviéndose un rato por CASCADA de logros: uno
+    // paga su recompensa, la plata nueva hace que el siguiente `runAchievements` desbloquee otro
+    // ("ganá $X"), y así. Dos lecturas iguales seguidas pueden caer justo en un hueco de esa
+    // cascada, así que se exige que el texto quede quieto de verdad (varias muestras seguidas).
+    const leerMoney = () => page.locator('#money').textContent();
+    let ultimo = null;
+    let estables = 0;
+    await expect
+      .poll(
+        async () => {
+          const actual = await leerMoney();
+          estables = actual === ultimo ? estables + 1 : 0;
+          ultimo = actual;
+          return estables;
+        },
+        { timeout: 20000, intervals: [200] }
+      )
+      .toBeGreaterThanOrEqual(5);
+    const moneyStable = ultimo;
 
-    while (await page.locator('[data-action="close-celebration"]').isVisible().catch(() => false)) {
-      await page.locator('[data-action="close-celebration"]').click();
-    }
+    // Drain robusto (helpers/dig.js): el botón puede ser reemplazado por el de la celebración
+    // siguiente entre el isVisible y el click, y el click quedaría esperando de gusto.
+    await cerrarCelebraciones(page);
     await expect(page.locator('#celebration-modal')).toBeHidden();
     await expect(page.locator('#money')).toHaveText(moneyStable);
   });

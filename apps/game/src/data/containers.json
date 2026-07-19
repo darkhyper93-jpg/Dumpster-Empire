@@ -322,5 +322,43 @@
     "fueraDeCadena": true,
     "mode": "dark",
     "mechanicValueMult": 1.4
+  },
+  {
+    "id": "reactorDeCuasar",
+    "name": "Reactor de Cuásar",
+    "icon": "reactor-quasar",
+    "costoInicial": 420000000000000000,
+    "categorias": ["relics", "future"],
+    "probTrampaBase": 0.44,
+    "digTime": 60,
+    "slots": 8,
+    "resistencia": 82,
+    "areaRecomendada": 76,
+    "trapPenaltyMult": 1.95,
+    "levelUpDigsBase": 12,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05,
+    "requiresPrestigeCount": 9,
+    "fueraDeCadena": true
+  },
+  {
+    "id": "horizonteDeSucesos",
+    "name": "Horizonte de Sucesos",
+    "icon": "horizon-events",
+    "costoInicial": 2400000000000000000,
+    "categorias": ["art", "future"],
+    "probTrampaBase": 0.44,
+    "digTime": 64,
+    "slots": 8,
+    "resistencia": 98,
+    "areaRecomendada": 92,
+    "trapPenaltyMult": 2.05,
+    "levelUpDigsBase": 12,
+    "levelUpDigsGrowth": 1.35,
+    "levelRarityShiftPerLevel": 2.5,
+    "levelValueMultPerLevel": 0.05,
+    "requiresPrestigeCount": 10,
+    "fueraDeCadena": true
   }
 ]

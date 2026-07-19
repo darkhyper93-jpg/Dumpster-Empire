@@ -960,6 +960,108 @@
         "valorBase": 3323724530317,
         "categoria": "relics"
       }
+    ],
+    "reactorDeCuasar": [
+      {
+        "id": "shard-quasar",
+        "icon": "shard-quasar",
+        "name": "Esquirla de cuásar",
+        "valorBase": 971900000000,
+        "categoria": "future"
+      },
+      {
+        "id": "coil-supercharged",
+        "icon": "coil-supercharged",
+        "name": "Bobina sobrecargada",
+        "valorBase": 1186000000000,
+        "categoria": "future"
+      },
+      {
+        "id": "lens-gravitational",
+        "icon": "lens-gravitational",
+        "name": "Lente gravitacional",
+        "valorBase": 1448000000000,
+        "categoria": "future"
+      },
+      {
+        "id": "core-collapsed",
+        "icon": "core-collapsed",
+        "name": "Núcleo colapsado",
+        "valorBase": 1767000000000,
+        "categoria": "future"
+      },
+      {
+        "id": "seal-plasma",
+        "icon": "seal-plasma",
+        "name": "Sello de plasma",
+        "valorBase": 1541000000000,
+        "categoria": "relics"
+      },
+      {
+        "id": "crown-ionized",
+        "icon": "crown-ionized",
+        "name": "Corona ionizada",
+        "valorBase": 1881000000000,
+        "categoria": "relics"
+      },
+      {
+        "id": "relic-firstlight",
+        "icon": "relic-firstlight",
+        "name": "Reliquia de la primera luz",
+        "valorBase": 2295000000000,
+        "categoria": "relics"
+      }
+    ],
+    "horizonteDeSucesos": [
+      {
+        "id": "frame-eventhorizon",
+        "icon": "frame-eventhorizon",
+        "name": "Marco del horizonte",
+        "valorBase": 5466000000000,
+        "categoria": "art"
+      },
+      {
+        "id": "mask-singularity",
+        "icon": "mask-singularity",
+        "name": "Máscara de la singularidad",
+        "valorBase": 6672000000000,
+        "categoria": "art"
+      },
+      {
+        "id": "orb-spaghettified",
+        "icon": "orb-spaghettified",
+        "name": "Orbe estirado hasta el hilo",
+        "valorBase": 8144999999999.999,
+        "categoria": "art"
+      },
+      {
+        "id": "clock-frozen-fall",
+        "icon": "clock-frozen-fall",
+        "name": "Reloj en caída eterna",
+        "valorBase": 7080000000000,
+        "categoria": "future"
+      },
+      {
+        "id": "gyro-tidal",
+        "icon": "gyro-tidal",
+        "name": "Giroscopio de marea",
+        "valorBase": 8638999999999.999,
+        "categoria": "future"
+      },
+      {
+        "id": "monolith-inverted",
+        "icon": "monolith-inverted",
+        "name": "Monolito invertido",
+        "valorBase": 10540000000000,
+        "categoria": "future"
+      },
+      {
+        "id": "heart-accretion",
+        "icon": "heart-accretion",
+        "name": "Corazón de acreción",
+        "valorBase": 12860000000000,
+        "categoria": "future"
+      }
     ]
   }
 }

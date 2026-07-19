@@ -32,7 +32,7 @@ export function getDayNightModifiers(hour, dayNightData) {
 }
 
 /**
- * §4.40 (ronda 30) — franja horaria COSMÉTICA a la que pertenece una hora.
+ * §4.41 (ronda 30) — franja horaria COSMÉTICA a la que pertenece una hora.
  *
  * DECISIÓN (usuario, 2026-07-19): las franjas son estéticas y NADA más — eligen qué modelo de
  * contenedor se dibuja y qué rótulo muestra el reloj del topbar. El día/noche jugable (§4.33,

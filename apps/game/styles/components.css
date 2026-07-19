@@ -1701,6 +1701,13 @@ textarea {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--fg-2);
+  /* Sin esto, "ATARDECER"/"MADRUGADA" se parten al medio ("ATARD ECER") cuando el topbar queda
+     justo de ancho: el nombre de la franja se lee de un saque o no se lee. */
+  white-space: nowrap;
+}
+
+.topbar-clock-time {
+  white-space: nowrap;
 }
 
 /* El reloj suma una píldora más a un topbar que a 375px ya venía justo (money + keys + los dos

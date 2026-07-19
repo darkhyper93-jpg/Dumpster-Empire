@@ -1,5 +1,5 @@
 /**
- * Ronda 30 — franjas horarias COSMÉTICAS (PLAN.md §4.40).
+ * Ronda 30 — franjas horarias COSMÉTICAS (PLAN.md §4.41).
  *
  * Contrato central de la ronda: las 5 franjas son puramente estéticas (eligen qué modelo de
  * contenedor se dibuja). El día/noche JUGABLE de la ronda 24 (§4.33, binario, noche 20-06 con
@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { getTimeBand, isNightHour, getDayNightModifiers } from '../src/index.js';
 import dayNight from '../../../apps/game/src/data/dayNight.json' with { type: 'json' };
 
-describe('getTimeBand — franjas cosméticas (§4.40)', () => {
+describe('getTimeBand — franjas cosméticas (§4.41)', () => {
   it('las franjas salen de la data, cubren las 24 horas sin huecos ni solapes y arrancan en 0', () => {
     const bands = dayNight.timeBands;
     expect(Array.isArray(bands)).toBe(true);

@@ -153,6 +153,14 @@ const SHAPES = {
 
   // Ronda 20 — Agente B: contenedores con mecánica propia + indicios de grado de trampa +
   // herramientas de escarbado (PLAN.md §4.24).
+  // Ronda 30.B — Reactor de Cuásar y Horizonte de Sucesos (contenedores especiales nuevos) y
+  // los objetos de sus pools que no tenían una forma reusable con la que no se confundieran.
+  reactorQuasar: '<circle cx="12" cy="12" r="3"/><path d="M12 3a9 9 0 0 1 0 18"/><path d="M12 3a9 9 0 0 0 0 18" stroke-dasharray="2 2"/><line x1="12" y1="1" x2="12" y2="3.5"/><line x1="12" y1="20.5" x2="12" y2="23"/>',
+  horizonEvents: '<circle cx="12" cy="12" r="3.5"/><ellipse cx="12" cy="12" rx="10" ry="3.6"/><ellipse cx="12" cy="12" rx="6.6" ry="2.2"/>',
+  coilSupercharged: '<path d="M8 4c6 0 6 4 0 4s-6 4 0 4 6 4 0 4"/><line x1="8" y1="4" x2="16" y2="4"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="18" y1="7" x2="21" y2="5"/><line x1="18" y1="17" x2="21" y2="19"/>',
+  orbStretched: '<ellipse cx="12" cy="12" rx="4" ry="8.5"/><path d="M8 6c-2 3-2 9 0 12"/><path d="M16 6c2 3 2 9 0 12"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>',
+  gyroTidal: '<circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="9" ry="3.5"/><ellipse cx="12" cy="12" rx="3.5" ry="9"/><circle cx="12" cy="12" r="1.6"/>',
+  monolithInverted: '<path d="M4 3h16l-3 18H7z"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="8" y1="15" x2="16" y2="15"/>',
   vaultTimed: '<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="5"/><line x1="12" y1="12" x2="12" y2="9"/><line x1="12" y1="12" x2="14.5" y2="13.5"/>',
   basementDark: '<path d="M4 21V10l8-6 8 6v11"/><line x1="4" y1="21" x2="20" y2="21"/><circle cx="12" cy="15" r="3" stroke-dasharray="1.4 1.4"/>',
   clockCountdown: '<circle cx="12" cy="13" r="7"/><line x1="12" y1="13" x2="12" y2="8"/><line x1="12" y1="13" x2="15" y2="15"/><line x1="9" y1="3" x2="15" y2="3"/><line x1="12" y1="3" x2="12" y2="6"/>',
@@ -441,6 +449,37 @@ const ICON_MAP = {
   'eye-glass-dark': 'eyeGlassDark',
   // DECISIÓN: relic-unlit reusa 'sealedRelic' (misma reliquia sellada que relic-sealed).
   'relic-unlit': 'sealedRelic',
+
+  // Ronda 30.B — dos contenedores especiales nuevos y sus 14 objetos.
+  'reactor-quasar': 'reactorQuasar',
+  'horizon-events': 'horizonEvents',
+  // Reactor de Cuásar.
+  // DECISIÓN: shard-quasar reusa 'shard' (misma esquirla que void-shard) — se diferencia por
+  // color de rareza, mismo criterio que el resto de los reusos de este archivo.
+  'shard-quasar': 'shard',
+  'coil-supercharged': 'coilSupercharged',
+  // DECISIÓN: lens-gravitational reusa 'loupe' (misma lente que magnifying-glass).
+  'lens-gravitational': 'loupe',
+  // DECISIÓN: core-collapsed reusa 'fusionCore' (mismo núcleo que fusion-core).
+  'core-collapsed': 'fusionCore',
+  // DECISIÓN: seal-plasma reusa 'waxSeal' (mismo sello que seal-wax-ancient).
+  'seal-plasma': 'waxSeal',
+  // DECISIÓN: crown-ionized reusa 'crown' (misma corona que royal-crown).
+  'crown-ionized': 'crown',
+  // DECISIÓN: relic-firstlight reusa 'sparkGenesis' (misma chispa primigenia que spark-genesis).
+  'relic-firstlight': 'sparkGenesis',
+  // Horizonte de Sucesos.
+  // DECISIÓN: frame-eventhorizon reusa 'photoFrame' (mismo marco que picture-frame).
+  'frame-eventhorizon': 'photoFrame',
+  // DECISIÓN: mask-singularity reusa 'ritualMask' (misma máscara que ritual-mask).
+  'mask-singularity': 'ritualMask',
+  'orb-spaghettified': 'orbStretched',
+  // DECISIÓN: clock-frozen-fall reusa 'clockCountdown' (mismo reloj que clock-countdown).
+  'clock-frozen-fall': 'clockCountdown',
+  'gyro-tidal': 'gyroTidal',
+  'monolith-inverted': 'monolithInverted',
+  // DECISIÓN: heart-accretion reusa 'crystalHeart' (mismo corazón que crystal-heart).
+  'heart-accretion': 'crystalHeart',
 
   // Ronda 23 — Agente B: Puesto de Chatarra (data/stall.json, achievements.json, automations.json).
   'stall-chatarra': 'marketStall',

@@ -20,8 +20,17 @@ export const DIG_H = 330;
  */
 export async function cerrarCelebraciones(page) {
   const closeBtn = page.locator('[data-action="close-celebration"]');
-  while (await closeBtn.isVisible().catch(() => false)) {
-    await closeBtn.click();
+  const overlay = page.locator('#celebration-modal');
+  // El `while (isVisible) click()` de siempre tenía dos carreras que sólo se ven bajo carga
+  // (varios workers de Chromium en paralelo): (1) el botón puede DESAPARECER entre el
+  // `isVisible` y el `click` — o ser reemplazado por el de la celebración siguiente —, y ahí
+  // el click se queda esperando hasta agotar el timeout del test; (2) el bucle terminaba mirando
+  // el BOTÓN, no el overlay. Se acota el intento y se tolera su fallo: si algo cambió, se
+  // reevalúa en la vuelta siguiente. La cota superior evita un bucle infinito si algo quedara
+  // trabado mostrando el modal.
+  for (let intento = 0; intento < 25; intento += 1) {
+    if (!(await overlay.isVisible().catch(() => false))) return;
+    await closeBtn.click({ timeout: 2000 }).catch(() => {});
   }
 }
 
@@ -101,7 +110,13 @@ export async function iniciarEscarbadoSinTrampa(page, containerId, minObjetos = 
   for (let attempt = 0; attempt < 8; attempt++) {
     const canvas = await iniciarEscarbado(page, containerId);
     const positions = await getDigPositions(page);
-    if (positions.length >= minObjetos) return { canvas, positions };
+    // BUG (encontrado en la ronda 30.B): hasta acá el helper decidía "sin trampa" SOLO por
+    // `positions.length >= minObjetos`, aprovechando que una trampa produce siempre 1 objeto.
+    // Con `minObjetos = 1` (lo que pasa ronda19 sobre tachoVereda) una trampa PASABA el filtro,
+    // reseteaba la racha y el spec fallaba ~10% de las veces (probTrampaBase 0.05 × 2 escarbados)
+    // — se leía como flakiness de carga y no lo era. Ahora la trampa se detecta por lo que es.
+    const esTrampa = await page.evaluate(() => window.__digDebug.art().some((entry) => entry.isTrap));
+    if (!esTrampa && positions.length >= minObjetos) return { canvas, positions };
     await page.locator('#dig-abandon-btn').click();
     await expect(page.locator('#dig-empty')).toBeVisible();
   }

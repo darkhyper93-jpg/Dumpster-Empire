@@ -7239,3 +7239,107 @@ seguridad. Resultado a 375px: **una sola línea** hasta partida avanzada ($8.50B
 - **R30.2 (estilo heterogéneo) no aplicó**: la serie ya es visualmente coherente (misma silueta,
   misma iluminación, riqueza creciente por tier), así que no hizo falta ningún tratamiento
   unificador.
+
+---
+
+## RONDA 30.B — cierre del catálogo de imágenes + DOS contenedores nuevos (misma rama `feat/imagenes-ronda30`)
+
+Pedido del usuario (2026-07-19, con la ronda 30 ya commiteada y sin PR todavía): subió
+`contenedor17` para cerrar el pendiente, y `contenedor18`/`contenedor19` para **llegar a 20
+contenedores** implementándolos como nuevos. Sin bump de save (no hay estado persistido nuevo).
+
+### Decisiones consultadas con el usuario (las tres, antes de escribir código)
+
+1. **Ubicación**: fuera de cadena (`fueraDeCadena: true`), como los especiales de la ronda 20.
+   Descartada la alternativa de sumarlos como tiers al final: `vertederoBigBang` es el ANCLA de
+   los contenedores procedurales (§4.37) y habría que mover ese ancla y revisar el tope de `n`
+   contra float64. Un test fija que el último de la cadena sigue siendo el Big Bang.
+2. **Pools**: 14 ítems nuevos con arte ilustrado propio (no reciclado), para no romper el
+   contrato de la ronda 29 ni llenar el INDEX de visuales repetidos.
+3. **Alcance de "arreglá los bugs"**: solo lo documentado en esta ronda; NADA de la ronda 31
+   (los logros de racha a36-a38, los $250k del a45 y el rebalanceo de resistencias siguen
+   intactos y pendientes para su ronda).
+
+### Contenido nuevo (PLAN.md §4.40)
+
+| id | costo | prestigio | categorías | resist./área | trampa | Suerte rec. |
+|---|---|---|---|---|---|---|
+| `reactorDeCuasar` (Reactor de Cuásar) | 4.2e17 | 9 | relics, future | 82 / 76 | 44% | 950 |
+| `horizonteDeSucesos` (Horizonte de Sucesos) | 2.4e18 | 10 | art, future | 98 / 92 | 44% | 970 |
+
+- 14 ítems (7 por pool) con nombre es/en, ícono en `icons.js` y composición ilustrada en
+  `objectArt.js`. 6 formas SVG nuevas; el resto reusa formas existentes con su `DECISIÓN:`.
+- **Ningún cambio de engine**: `mode`/`mechanicValueMult` son opcionales incluso fuera de
+  cadena, así que los dos nuevos son data pura. Se documentó en PLAN.md.
+- `PENDING_IMAGES` quedó **vacía**: los 20 contenedores tienen imagen. Assets: 24 WebP, **1.3 MB**.
+
+### Dos violaciones de balance propias, encontradas por los tests derivados
+
+1. **`probTrampaBase: 0.45`** en el Horizonte — PLAN.md §11.2 fija un techo de 44% y
+   `fase9-balance.test.js` lo rechazó. Corregido a 0.44.
+2. **Suerte recomendada fuera de la secuencia**: el test exige que crezca estrictamente
+   contenedor a contenedor y quede < 1000; después de `sotanoSinLuz` (930) la ventana es
+   angosta y mis valores a ojo daban 361 y 1143. Se calibraron a **950 y 970** escalando SOLO
+   los `valorBase` de sus pools con `agentes/scripts/calibrate-luck-ronda30.mjs` (bisección con
+   el engine de oráculo, mismo método de las rondas 10/11; verifica el target exacto y no
+   escribe nada si falla). Las fórmulas no se tocaron (regla dura 4).
+
+### Cacería de flakiness: UNO era un bug de verdad, no carga
+
+La suite e2e venía fallando ~1 test por corrida, cada vez uno distinto. Vale la pena el detalle
+porque el diagnóstico "es flakiness de carga" era **falso** en el caso más repetido:
+
+- **`iniciarEscarbadoSinTrampa` no detectaba trampas** (helpers/dig.js). Decidía "sin trampa"
+  SOLO por `positions.length >= minObjetos`, aprovechando que una trampa produce 1 objeto. Con
+  `minObjetos = 1` —lo que pasa `ronda19` sobre `tachoVereda`— **una trampa pasaba el filtro**,
+  reseteaba la racha y el spec fallaba ~10% de las veces (probTrampaBase 0.05 × 2 escarbados).
+  Se leía como flakiness pero era determinista y estaba ahí desde la ronda 19. Ahora el hook
+  `__digDebug.art()` expone `isTrap` (solo lectura, una línea en DigCanvas) y el helper lo usa.
+  Verificado: 32/32 con `--repeat-each=8 --workers=4`.
+- **Drain de celebraciones racy** (`cerrarCelebraciones`): el `while (isVisible) click()` se
+  quedaba esperando el timeout completo si el botón desaparecía o era reemplazado por el de la
+  celebración siguiente entre el `isVisible` y el `click`. Ahora el intento es acotado y
+  tolerante, y el bucle mira el OVERLAY y no el botón.
+- **Cascada de logros leída como tween** (`ronda12` test 4): el dinero sigue moviéndose después
+  del escarbado porque un logro paga, la plata nueva desbloquea el siguiente, etc. El
+  `waitForTimeout(600)` fijo capturaba un valor intermedio. Ahora espera a que el texto quede
+  quieto varias muestras seguidas.
+- **`abrirLogros` de `ronda24`**: mismo patrón que `abrirPuesto` de la 30 → usa
+  `clickSorteandoCelebraciones`.
+- **Mi propio spec**: `ShopView` re-renderiza por innerHTML en cada notify (~1/s), así que el
+  `<img>` se desprendía del DOM entre el locator y el `scrollIntoViewIfNeeded`
+  ("Element is not attached to the DOM"). Ahora el helper `esperarBannerCargado` re-resuelve el
+  locator en cada vuelta del poll y tolera el desprendimiento.
+
+### Un bug de UI que encontró una captura, no un test
+
+El rótulo de la franja se partía al medio en el topbar (**"ATARD ECER"**) cuando el ancho
+quedaba justo. `white-space: nowrap` en `.topbar-clock-band` y `.topbar-clock-time`. Verificado
+a 360/375/390px con las dos etiquetas más largas ("Atardecer" y "Madrugada") y dinero de $5.00Qi:
+una sola línea y cero scroll horizontal en todos los casos.
+
+### Verificación
+
+- **Unit: 706/706 en 47 archivos** (baseline 684 + 22: 13 del spec nuevo de contenedores, +1 por
+  partir el guard de la ronda 20 en dos, +8 que `fase9-balance` deriva solo de la data nueva).
+- **e2e: 98/98**, **cinco corridas completas seguidas en verde** tras los arreglos de arriba
+  (antes: ~1 fallo por corrida, siempre uno distinto). Los specs estresados con
+  `--repeat-each` y `--workers=4` también verdes.
+- **Manual a 375px y 1280px** con partida de prestigio 10: los 20 contenedores en la Tienda
+  (21 tarjetas con la del Puesto), los dos nuevos con su imagen CARGADA, picker con los 7
+  desbloqueados, **cero errores de consola y cero requests fallidos**, sin scroll horizontal.
+  Las metas de la tarjeta salen del engine y coinciden con la data (Suerte 970, Fuerza ×98,
+  Búsqueda ×92 en el Horizonte).
+
+### Ajuste de numeración para la ronda 31
+
+El último § real de PLAN.md §4 era **4.39**, no 4.41 como asumía el roadmap. Esta ronda tomó
+**§4.40** (contenedores nuevos) y **§4.41** (franjas horarias), más **§5.6** (imágenes).
+**La ronda 31 corre sus dos secciones a §4.42 y §4.43** (§3.6: el contenido manda, no el número).
+
+### Pendiente para el usuario
+
+- **Los PNG originales siguen SIN committear** (regla dura 1, y ya son >40 MB). Viven en
+  `reference/ui/Contenedores/`. Si los querés versionados, decilo y se hace aparte.
+- **Derechos de uso**: las imágenes van al build de Steam y tienen que ser libres de uso
+  comercial; la elección de los assets es del usuario (§30.1).

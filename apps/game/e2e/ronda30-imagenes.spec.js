@@ -1,6 +1,6 @@
 /**
  * e2e (Playwright/Chromium) de la Ronda 30: imágenes reales de contenedor (PLAN.md §5.6) y
- * franjas horarias cosméticas (§4.40). Verifica en el navegador real:
+ * franjas horarias cosméticas (§4.41). Verifica en el navegador real:
  *   1. Las tarjetas de la Tienda muestran su imagen CARGADA (`naturalWidth > 0`).
  *   2. Con la ruta saboteada, la tarjeta cae al ícono SVG sin romper la vista ni el escarbado.
  *   3. Un contenedor sin imagen (PENDING_IMAGES) usa el SVG y no deja un `<img>` roto.
@@ -34,6 +34,32 @@ async function irATienda(page) {
   await expect(page.locator('.shop-grid')).toBeVisible();
 }
 
+/**
+ * Espera a que un banner esté REALMENTE cargado (píxeles decodificados).
+ *
+ * Dos cosas obligan a re-resolver el locator en cada intento en vez de guardarse un handle:
+ * (1) los banners son `loading="lazy"`, así que hay que traerlos al viewport para que lleguen a
+ * pedirse; y (2) `ShopView` re-renderiza por innerHTML en cada notify del store (el tick de
+ * automatización notifica ~1 vez por segundo), así que el `<img>` de hace un instante puede
+ * estar YA desprendido del DOM — de ahí el "Element is not attached to the DOM" que hacía
+ * flakear este spec. Cada vuelta del poll vuelve a resolver y tolera el desprendimiento.
+ */
+async function esperarBannerCargado(locator) {
+  await expect
+    .poll(
+      async () => {
+        try {
+          await locator.scrollIntoViewIfNeeded({ timeout: 2000 });
+          return await locator.evaluate((img) => img.complete && img.naturalWidth > 0);
+        } catch {
+          return false; // el nodo se re-renderizó en el medio: se reintenta con uno fresco
+        }
+      },
+      { timeout: 15000 }
+    )
+    .toBe(true);
+}
+
 test.describe('Dumpster Empire — ronda 30 (imágenes reales de contenedor)', () => {
   test('1: las tarjetas de la Tienda muestran su imagen realmente cargada', async ({ page }) => {
     await seed(page, serializeState(estadoConContenedores()));
@@ -48,11 +74,7 @@ test.describe('Dumpster Empire — ronda 30 (imágenes reales de contenedor)', (
     // dejaría naturalWidth en 0 (y el fallback lo habría sacado del DOM).
     const aVerificar = Math.min(3, await banners.count());
     for (let i = 0; i < aVerificar; i += 1) {
-      const banner = banners.nth(i);
-      await banner.scrollIntoViewIfNeeded();
-      await expect
-        .poll(async () => banner.evaluate((img) => img.complete && img.naturalWidth > 0), { timeout: 10000 })
-        .toBe(true);
+      await esperarBannerCargado(banners.nth(i));
     }
 
     // Con banner, el ícono SVG de esa tarjeta queda oculto (es la reserva del fallback).
@@ -83,17 +105,24 @@ test.describe('Dumpster Empire — ronda 30 (imágenes reales de contenedor)', (
     await expect(page.locator('#dig-active')).toBeVisible();
   });
 
-  test('3: un contenedor sin imagen decidida usa el SVG, sin dejar un <img> roto', async ({ page }) => {
-    test.skip(PENDING_IMAGES.length === 0, 'no hay contenedores pendientes: nada que verificar');
-    const seeded = estadoConContenedores();
-    // Se siembra el pendiente como poseído para que su tarjeta exista en la Tienda.
-    for (const id of PENDING_IMAGES) seeded.ownedContainers[id] = 1;
-    await seed(page, serializeState(seeded));
+  test('3: cada tarjeta de la Tienda muestra su imagen O su ícono SVG, nunca un hueco', async ({ page }) => {
+    await seed(page, serializeState(estadoConContenedores()));
     await entrarAlJuego(page);
     await irATienda(page);
 
+    // Invariante que vale con PENDING_IMAGES vacía o no: toda tarjeta tiene algo que mostrar, y
+    // un contenedor pendiente NUNCA emite un banner (no hay archivo que pedir, sería un 404).
+    const cards = page.locator('.shop-card');
+    await expect(cards.first()).toBeVisible();
+    const total = await cards.count();
+    expect(total).toBeGreaterThan(0);
+    for (let i = 0; i < total; i += 1) {
+      const card = cards.nth(i);
+      const conBanner = (await card.locator('.container-banner').count()) > 0;
+      const conIcono = (await card.locator('.shop-card-icon').count()) > 0;
+      expect(conBanner || conIcono, `la tarjeta ${i} no muestra ni imagen ni ícono`).toBe(true);
+    }
     for (const id of PENDING_IMAGES) {
-      // Nunca debe emitirse un banner para un id pendiente (no hay archivo que pedir).
       await expect(page.locator(`.container-banner[data-container-banner="${id}"]`)).toHaveCount(0);
     }
   });
@@ -124,11 +153,7 @@ test.describe('Dumpster Empire — ronda 30 (imágenes reales de contenedor)', (
       // oculta y también emite su banner del barrio (si no, el locator matchea 2 elementos).
       const banner = page.locator('.shop-card .container-banner[data-container-banner="contenedorBarrio"]');
       await expect(banner).toHaveAttribute('src', `assets/containers/contenedorBarrio-${band}.webp`);
-      // `loading="lazy"`: hay que traerlo al viewport para que llegue a pedirse.
-      await banner.scrollIntoViewIfNeeded();
-      await expect
-        .poll(async () => banner.evaluate((i) => i.complete && i.naturalWidth > 0), { timeout: 10000 })
-        .toBe(true);
+      await esperarBannerCargado(banner);
     });
   }
 });

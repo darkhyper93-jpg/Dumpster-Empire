@@ -16,12 +16,12 @@
  * 3. **Cobertura derivada de la data.** `tests/containerImages.test.js` exige que todo id de
  *    containers.json esté acá o en `PENDING_IMAGES`: un contenedor nuevo obliga a decidir.
  *
- * Formato: WebP. DECISIÓN (ronda 30): los originales que entregó el usuario son PNG de
- * 1619×971 y ~1.8 MB cada uno (37 MB en total) — inviable para el build de Steam (R30.1). El
- * pipeline los baja a 768px de ancho y los recodifica a WebP: **37 MB → 0.88 MB** sin
- * artefactos visibles a tamaño de tarjeta. Los PNG originales quedan versionados en
- * `reference/ui/Contenedores/` como fuente. Chromium (navegador y Electron) soporta WebP
- * nativo, así que no hace falta ni polyfill ni doble formato.
+ * Formato: WebP. DECISIÓN (ronda 30): los originales que entregó el usuario son PNG de ~1620px
+ * de ancho y 0.5-3.7 MB cada uno (más de 40 MB en total) — inviable para el build de Steam
+ * (R30.1). El pipeline los baja a 768px de ancho y los recodifica a WebP: **~1.3 MB para los 24
+ * archivos**, sin artefactos visibles a tamaño de tarjeta. Chromium (navegador y Electron)
+ * soporta WebP nativo, así que no hace falta ni polyfill ni doble formato. Los PNG originales
+ * viven en `reference/ui/Contenedores/` como fuente y NO están versionados (regla dura 1).
  */
 
 /** Directorio de los assets, relativo a `apps/game/` (raíz que sirve index.html). */
@@ -29,19 +29,20 @@ export const CONTAINER_IMAGE_DIR = 'assets/containers';
 
 /**
  * Mapa `containerId` → archivo, o `containerId` → `{ franjaHoraria: archivo }` cuando el
- * contenedor tiene modelos por hora (§4.40).
+ * contenedor tiene modelos por hora (§4.41).
  *
  * El orden de la serie que entregó el usuario es por TIER (el arte escala en riqueza con el
- * costo), no por la fantasía del nombre: `contenedor 0..15` son la cadena completa y
- * `contenedor16` (el de gemas) quedó para `bovedaContrarreloj` — mapeo confirmado por el
- * usuario el 2026-07-19.
+ * costo), no por la fantasía del nombre: `contenedor 0..15` son la cadena completa,
+ * `contenedor16` (gemas) fue a `bovedaContrarreloj` y `contenedor17` a `sotanoSinLuz`. Los
+ * `contenedor18/19` no mapean a nada previo: son los DOS CONTENEDORES NUEVOS de la ronda 30.B
+ * (§4.40). Mapeo confirmado por el usuario el 2026-07-19.
  *
  * @type {Record<string, string | Record<string, string>>}
  */
 export const CONTAINER_IMAGES = {
   tachoVereda: 'tachoVereda.webp',
   // Único con modelos por franja: los 5 archivos son el mismo contenedor pintado de otro color
-  // (azul / verde / amarillo / rosa / rojo). Ver §4.40 y `getTimeBand` en el engine.
+  // (azul / verde / amarillo / rosa / rojo). Ver §4.41 y `getTimeBand` en el engine.
   contenedorBarrio: {
     madrugada: 'contenedorBarrio-madrugada.webp',
     manana: 'contenedorBarrio-manana.webp',
@@ -64,17 +65,22 @@ export const CONTAINER_IMAGES = {
   archivoMultiverso: 'archivoMultiverso.webp',
   vertederoBigBang: 'vertederoBigBang.webp',
   bovedaContrarreloj: 'bovedaContrarreloj.webp',
+  sotanoSinLuz: 'sotanoSinLuz.webp',
+  // Especiales nuevos de la ronda 30.B (contenedor18/19 del lote del usuario).
+  reactorDeCuasar: 'reactorDeCuasar.webp',
+  horizonteDeSucesos: 'horizonteDeSucesos.webp',
 };
 
 /**
  * Contenedores que TODAVÍA no tienen imagen y usan el ícono SVG. El test de cobertura exige
  * que todo id de containers.json esté acá o en `CONTAINER_IMAGES`.
  *
- * `sotanoSinLuz` está pendiente porque el usuario entregó 17 imágenes para 18 contenedores
- * (2026-07-19): la serie llega hasta `contenedor16` y los dos especiales fuera de cadena se
- * reparten uno solo. Se resuelve cuando el usuario suba una imagen más.
+ * VACÍA desde la ronda 30.B: el usuario cerró el catálogo con `contenedor17` (que fue a
+ * `sotanoSinLuz`) y sumó dos contenedores nuevos con su arte. La lista se mantiene exportada a
+ * propósito: un contenedor NUEVO tiene que entrar acá o en `CONTAINER_IMAGES`, y el test de
+ * cobertura falla si no se decidió ninguna de las dos.
  */
-export const PENDING_IMAGES = ['sotanoSinLuz'];
+export const PENDING_IMAGES = [];
 
 /**
  * Franja usada cuando la que llega no existe en el mapa del contenedor (o no llega ninguna).

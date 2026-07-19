@@ -814,7 +814,38 @@ toggle activo, los pedidos quedan enteros para la venta manual — si la venta d
 avanzara, cada venta achicaría la demanda restante y liberaría "nuevo excedente" en cascada
 hasta vaciar el stock que el toggle promete reservar. La venta MANUAL nunca se filtra.
 
-### 4.40 Franjas horarias cosméticas (ronda 30)
+### 4.40 Especiales sin mecánica: Reactor de Cuásar y Horizonte de Sucesos (ronda 30.B)
+
+Pedido del usuario (2026-07-19) al entregar dos imágenes más: **20 contenedores en total**. Los
+dos nuevos entran **fuera de la cadena** (`fueraDeCadena: true`, §4.24) y son los especiales más
+caros del juego:
+
+| id | costoInicial | prestigio | categorías | resistencia / área | probTrampaBase |
+|---|---|---|---|---|---|
+| `reactorDeCuasar` | 4.2e17 | 9 | relics, future | 82 / 76 | 0.44 |
+| `horizonteDeSucesos` | 2.4e18 | 10 | art, future | 98 / 92 | 0.44 |
+
+Decisiones de diseño y por qué:
+
+- **Fuera de cadena, no tiers nuevos.** `vertederoBigBang` sigue siendo el final de la CADENA
+  porque los contenedores procedurales (§4.37) se anclan a él: meter tiers después habría
+  obligado a mover ese ancla y a revisar el tope de `n` contra el rango de float64. Un test fija
+  que el último de la cadena sigue siendo el Big Bang.
+- **Sin `mode` ni `mechanicValueMult`.** A diferencia de los dos especiales de la ronda 20, estos
+  no traen mecánica propia: ambos campos son OPCIONALES incluso fuera de cadena, así que no hubo
+  que tocar el engine — son data pura.
+- **`probTrampaBase` tope 0.44.** PLAN.md §11.2 fija que ningún contenedor supera el 44% de
+  trampa base; el primer borrador puso 0.45 en el Horizonte y el test de balance lo rechazó.
+- **Suerte recomendada calibrada, no inventada.** `fase9-balance.test.js` exige que la Suerte
+  recomendada crezca estrictamente contenedor a contenedor y quede < 1000; después de
+  `sotanoSinLuz` (930) la ventana es angosta. Se fijaron 950 y 970 escalando SOLO los `valorBase`
+  de sus pools con `agentes/scripts/calibrate-luck-ronda30.mjs` (bisección con el engine de
+  oráculo, mismo método que las rondas 10/11) — las fórmulas no se tocaron (regla dura 4).
+- **7 ítems por pool** (14 nuevos), cada uno con nombre es/en, ícono en `icons.js` y composición
+  ilustrada propia en `objectArt.js` (contrato de la ronda 29: todo ítem tiene arte). Entran
+  normalmente al INDEX, a los sets (§4.25) y al % de completitud.
+
+### 4.41 Franjas horarias cosméticas (ronda 30)
 
 Decisión del usuario (2026-07-19): el jugador quiere **ver la hora** y saber en qué momento del
 día está, y que el Contenedor de Barrio **cambie de modelo según la hora** (el usuario entregó 5

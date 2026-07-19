@@ -143,7 +143,9 @@ test.describe('Dumpster Empire — regresión ronda 14 (target del robot, sensib
     for (let i = 0; i < 10 && (await modal.isVisible().catch(() => false)); i++) {
       const text = await modal.textContent();
       if (text.includes('¡Hallazgo nuevo!')) sawFirstFind = true;
-      await page.locator('[data-action="close-celebration"]').click();
+      // Timeout corto y tolerante: si esta celebración fue reemplazada por la siguiente, se
+      // reevalúa en la vuelta del for en vez de agotar el timeout del test.
+      await page.locator('[data-action="close-celebration"]').click({ timeout: 2000 }).catch(() => {});
     }
     expect(sawFirstFind).toBe(true);
     await expect(modal).toBeHidden();
@@ -158,7 +160,9 @@ test.describe('Dumpster Empire — regresión ronda 14 (target del robot, sensib
     for (let i = 0; i < 10 && (await modal.isVisible().catch(() => false)); i++) {
       const text = await modal.textContent();
       if (text.includes('¡Hallazgo nuevo!')) sawFirstFindAgain = true;
-      await page.locator('[data-action="close-celebration"]').click();
+      // Timeout corto y tolerante: si esta celebración fue reemplazada por la siguiente, se
+      // reevalúa en la vuelta del for en vez de agotar el timeout del test.
+      await page.locator('[data-action="close-celebration"]').click({ timeout: 2000 }).catch(() => {});
     }
     expect(sawFirstFindAgain).toBe(false);
     await cerrarCelebraciones(page);

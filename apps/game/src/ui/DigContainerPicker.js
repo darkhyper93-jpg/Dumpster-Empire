@@ -103,7 +103,7 @@ export const DigContainerPicker = {
     // porque tickAutomation notifica siempre que hay uno activo (ver store.js).
     const activeEvent = store.getActiveEvent();
 
-    // Ronda 30 (§4.40): franja horaria del reloj real, solo para elegir el modelo a dibujar.
+    // Ronda 30 (§4.41): franja horaria del reloj real, solo para elegir el modelo a dibujar.
     const band = getTimeBand(new Date().getHours(), data.dayNight);
 
     const cards = unlocked.map((c) => {
