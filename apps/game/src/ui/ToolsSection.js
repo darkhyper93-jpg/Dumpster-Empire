@@ -7,6 +7,7 @@
 import { formatMoney } from '@dumpster/engine';
 import { t } from '../i18n/i18n.js';
 import { iconMarkup } from '../icons/icons.js';
+import { getObjectArtMarkup } from '../icons/objectArt.js';
 
 /**
  * Nombre traducido de una herramienta: `tools.json` no pasa por el overlay de dataI18n.js
@@ -50,7 +51,12 @@ export const ToolsSection = {
           `<button type="button" data-action="buy-tool" data-id="${tool.id}" ${canAfford ? '' : 'disabled'} title="${reason}">` +
           `${tool.costo > 0 ? t('tools.buyFor', { amount: formatMoney(tool.costo) }) : t('common.free')}</button>`;
       }
-      return `<div class="tool-row">${iconMarkup(tool.icon, { size: 20 })}<span class="tool-row-name">${toolLabel(tool.id)}</span>${actionHtml}</div>`;
+      // Ronda 29.B: el selector muestra el arte ilustrado (PLAN.md §5.5) — es la única vista
+      // donde las herramientas se lucen. `getObjectArtMarkup` namespacia los ids internos por
+      // artKey, así que los 4 SVG conviven inline; sin arte registrado cae al ícono clásico.
+      const art = getObjectArtMarkup(tool.icon, { size: 40 });
+      const iconHtml = art ?? iconMarkup(tool.icon, { size: 20 });
+      return `<div class="tool-row"><span class="tool-row-art">${iconHtml}</span><span class="tool-row-name">${toolLabel(tool.id)}</span>${actionHtml}</div>`;
     });
     container.innerHTML =
       `<section class="settings-block settings-tools">` + `<h3>${t('tools.title')}</h3>` + rows.join('') + `</section>`;

@@ -647,6 +647,22 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   decidir por cada ítem nuevo; (4) ids internos del SVG namespaciados por `uid` para poder
   inyectar composiciones inline en el mismo DOM (Vitrina de la 29.C).
 
+- **Ronda 29.B — arte tanda 1 (pools de contenedores 1-8 + herramientas)**: 59 composiciones
+  (55 ítems + 4 herramientas), ~50 bodies nuevos y el material `paper`. Decisiones: (1) helpers
+  de gradiente compartidos (`GRAD.cyl/vert/diag/orb`, luz siempre arriba-izquierda) + `steelGrad`
+  fijo para hojas/filos — el acero pulido no sale de la paleta del ítem, mismo criterio literal
+  que los MATERIALS; (2) la paleta por ítem es el color NATURAL del objeto (una banana es
+  amarilla) y la rareza aparece en acentos de details (glow teal en future, gemas violetas en
+  relics) — colorear todo el pool con el token de rareza volvía irreconocible la silueta;
+  (3) los bodies de trazos sin área de relleno (bicicleta) acotan su `clip` a los discos de
+  rueda y pintan el desgaste en el propio body (el clipPath solo une geometría de fill: un
+  material sobre el rect del cuadro flotaría sobre el fondo); (4) el selector de herramientas
+  (`ToolsSection`) pasa a mostrar el arte ilustrado a 40px vía `getObjectArtMarkup` inline (es
+  la única vista donde las herramientas se lucen — no son entries del canvas), con fallback al
+  ícono clásico de 20px; (5) dos composiciones se rehicieron tras la revisión por screenshot a
+  40px (R29.3): el diario leía como ladrillo (la plana superior pasó a dominar en claro) y el
+  zapato como piedra (botín con caña, cordones y suela clara de contraste).
+
 ---
 
 ## 11. Qué queda como postre (no tocar en V1)

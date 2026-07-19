@@ -17,6 +17,7 @@ import {
 import items from '../src/data/items.json';
 import legendaries from '../src/data/legendaries.json';
 import tools from '../src/data/tools.json';
+import containers from '../src/data/containers.json';
 
 /**
  * Sanity de buena-formación XML sin dependencias (Node no tiene DOMParser): parser de pila
@@ -154,6 +155,27 @@ describe('objectArt — sistema de objetos ilustrados (ronda 29.A, PLAN.md §5.5
     expect(clampArtScale(NaN)).toBe(1);
     expect(clampArtScale(undefined)).toBe(1);
     expect(getObjectScale('clave-inventada-que-no-existe')).toBe(1);
+  });
+
+  it('tanda 1 (ronda 29.B): todo icon id de los pools de los primeros 8 contenedores de la cadena tiene arte', () => {
+    // El corte "contenedores 1-8" es el contrato de la tanda B del roadmap (§29.B): los primeros
+    // ocho de la cadena en orden de containers.json (los fueraDeCadena son de la tanda C).
+    const tanda = containers.filter((c) => !c.fueraDeCadena).slice(0, 8);
+    expect(tanda.length).toBeGreaterThan(0);
+    for (const container of tanda) {
+      const pool = items.containers[container.id];
+      expect(pool, `el contenedor "${container.id}" no tiene pool en items.json`).toBeDefined();
+      for (const item of pool) {
+        expect(hasObjectArt(item.icon), `tanda 1: "${item.icon}" (${container.id}) sin arte ilustrado`).toBe(true);
+      }
+    }
+  });
+
+  it('tanda 1 (ronda 29.B): las herramientas de tools.json tienen arte ilustrado (se lucen en el selector)', () => {
+    expect(tools.length).toBeGreaterThan(0);
+    for (const tool of tools) {
+      expect(hasObjectArt(tool.icon), `herramienta "${tool.icon}" sin arte ilustrado`).toBe(true);
+    }
   });
 
   it('paletteFrom deriva una paleta completa y determinística de un solo color base', () => {

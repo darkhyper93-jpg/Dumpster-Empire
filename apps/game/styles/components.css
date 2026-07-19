@@ -275,6 +275,17 @@ button:hover:not(:disabled) {
   border-bottom: none;
 }
 
+/* Ronda 29.B: el selector muestra el arte ilustrado de objectArt.js (40px); el span fija la
+   caja para que el fallback de ícono 20px no desalinee la fila. */
+.tool-row-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+
 .tool-row-name {
   flex: 1;
   color: var(--fg-0);
