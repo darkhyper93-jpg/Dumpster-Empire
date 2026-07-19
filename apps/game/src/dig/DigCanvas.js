@@ -247,6 +247,9 @@ export class DigCanvas {
           const img = hasObjectArt(entry.icon) ? getObjectImage(entry.icon, { size: ART_RASTER_SIZE }) : null;
           return {
             icon: entry.icon,
+            // Ronda 30.B: los e2e necesitan distinguir "salió trampa" de "salió poco loot" sin
+            // adivinar por la cantidad de objetos (ver iniciarEscarbadoSinTrampa en helpers).
+            isTrap: Boolean(entry.isTrap),
             hasArt: Boolean(img),
             settled: Boolean(img && img.complete),
             loaded: Boolean(img && img.complete && img.naturalWidth > 0),

@@ -316,4 +316,11 @@ export default {
   // Day/night cycle (Topbar.js, Zoraida's tooltip).
   'dayNight.dayTooltip': 'Madame Zoraida: "Everything is calm by day, dear."',
   'dayNight.nightTooltip': 'Madame Zoraida: "Luck shifts at night: +{luck} Luck, but +{pct}% trap chance."',
+  // Round 30 (§4.41): names of the 5 time bands shown in the topbar clock. Purely cosmetic
+  // (they pick the container model); the real bonus is still the binary day/night above.
+  'dayNight.band.madrugada': 'Small hours',
+  'dayNight.band.manana': 'Morning',
+  'dayNight.band.tarde': 'Afternoon',
+  'dayNight.band.atardecer': 'Dusk',
+  'dayNight.band.noche': 'Night',
 };

@@ -3,7 +3,7 @@
  * El contador de dinero usa tween (PLAN.md §5.2: nunca debe saltar de golpe, 300-500ms).
  */
 
-import { formatMoney, formatNumber, isNightHour } from '@dumpster/engine';
+import { formatMoney, formatNumber, isNightHour, getTimeBand } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { tweenNumberText } from '../fx/tween.js';
 import { t } from '../i18n/i18n.js';
@@ -47,12 +47,28 @@ export const Topbar = {
       statsBtn.innerHTML = `${iconMarkup('stats')}<span class="sr-only">${t('topbar.stats')}</span>`;
     }
     if (dayNightEl && dayNightData) {
-      const hour = new Date().getHours();
+      const now = new Date();
+      const hour = now.getHours();
       const night = isNightHour(hour, dayNightData);
-      dayNightEl.innerHTML = iconMarkup(night ? 'moon-night' : 'sun-day', { size: 18 });
-      dayNightEl.title = night
-        ? t('dayNight.nightTooltip', { luck: dayNightData.nightLuckBonus, pct: Math.round(dayNightData.nightTrapProbBonus * 100) })
-        : t('dayNight.dayTooltip');
+      const band = getTimeBand(hour, dayNightData);
+      // Ronda 30: además del sol/luna, el reloj con la hora y el nombre de la franja (pedido del
+      // usuario: "quiero ver qué hora es y a qué hora se hace de día/tarde/noche").
+      const clock = `${String(hour).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const bandLabel = band ? t(`dayNight.band.${band}`) : '';
+      // Esta función corre en CADA frame del rAF (loop.js). Reescribir el innerHTML 60 veces por
+      // segundo tira a la basura el árbol del SVG y hace parpadear el texto, así que solo se
+      // toca el DOM cuando la firma cambia (una vez por minuto, o al cambiar de idioma/franja).
+      const signature = `${night}|${band}|${clock}|${bandLabel}`;
+      if (dayNightEl.dataset.clockSignature !== signature) {
+        dayNightEl.dataset.clockSignature = signature;
+        dayNightEl.innerHTML =
+          iconMarkup(night ? 'moon-night' : 'sun-day', { size: 18 }) +
+          `<span class="topbar-clock"><span class="topbar-clock-time">${clock}</span>` +
+          `<span class="topbar-clock-band">${bandLabel}</span></span>`;
+        dayNightEl.title = night
+          ? t('dayNight.nightTooltip', { luck: dayNightData.nightLuckBonus, pct: Math.round(dayNightData.nightTrapProbBonus * 100) })
+          : t('dayNight.dayTooltip');
+      }
     }
   },
 };

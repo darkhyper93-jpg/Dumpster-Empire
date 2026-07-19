@@ -17,8 +17,10 @@ import {
   proceduralContainer,
   isProceduralTierUnlocked,
   PROCEDURAL_CONTAINER_MAX_N,
+  getTimeBand,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { containerBannerMarkup, bindContainerBannerFallback } from './containerImage.js';
 import { t } from '../i18n/i18n.js';
 
 /**
@@ -59,8 +61,11 @@ function renderProceduralDigCard(state, data, allContainers) {
   const cost = getContainerCost(state, tier, data);
   const canAfford = state.money >= cost;
   const reason = canAfford ? '' : t('common.missingMoney', { amount: formatMoney(cost - state.money) });
+  // Contrato §3.5.8: el tier procedural reusa la imagen del Big Bang.
+  const banner = containerBannerMarkup('vertederoBigBang', null);
   return (
-    `<button type="button" class="dig-picker-card" data-start-dig="${tier.id}" ${canAfford ? '' : 'disabled'} title="${reason}">` +
+    `<button type="button" class="dig-picker-card${banner ? ' dig-picker-card--has-banner' : ''}" data-start-dig="${tier.id}" ${canAfford ? '' : 'disabled'} title="${reason}">` +
+    banner +
     `<span class="dig-picker-card-icon">${iconMarkup(bigBang.icon, { size: 26 })}</span>` +
     `<span class="dig-picker-card-name">${tier.name}${t('shop.proceduralSuffix', { n })}</span>` +
     `<span class="dig-picker-card-cost">${formatMoney(cost)}</span>` +
@@ -98,6 +103,9 @@ export const DigContainerPicker = {
     // porque tickAutomation notifica siempre que hay uno activo (ver store.js).
     const activeEvent = store.getActiveEvent();
 
+    // Ronda 30 (§4.41): franja horaria del reloj real, solo para elegir el modelo a dibujar.
+    const band = getTimeBand(new Date().getHours(), data.dayNight);
+
     const cards = unlocked.map((c) => {
       const cost = getContainerCost(state, c, data);
       const canAfford = state.money >= cost;
@@ -105,9 +113,11 @@ export const DigContainerPicker = {
       const reason = canAfford ? '' : t('common.missingMoney', { amount: formatMoney(cost - state.money) });
       const event = activeEvent && activeEvent.containerId === c.id ? activeEvent : null;
       const eventBanner = event ? renderEventBanner(event) : '';
+      const banner = containerBannerMarkup(c.id, band);
       return (
-        `<button type="button" class="dig-picker-card${event ? ` dig-picker-card--${event.kind}` : ''}" data-start-dig="${c.id}" ${canAfford ? '' : 'disabled'} title="${reason}">` +
+        `<button type="button" class="dig-picker-card${event ? ` dig-picker-card--${event.kind}` : ''}${banner ? ' dig-picker-card--has-banner' : ''}" data-start-dig="${c.id}" ${canAfford ? '' : 'disabled'} title="${reason}">` +
         eventBanner +
+        banner +
         `<span class="dig-picker-card-icon">${iconMarkup(c.icon, { size: 26 })}</span>` +
         `<span class="dig-picker-card-name">${c.name}</span>` +
         `<span class="dig-picker-card-cost">${label}</span>` +
@@ -119,5 +129,6 @@ export const DigContainerPicker = {
     container.innerHTML =
       `<p class="dig-picker-prompt">${t('digPicker.prompt')}</p>` +
       `<div class="dig-picker-list">${cards.join('')}${proceduralCard}</div>`;
+    bindContainerBannerFallback(container, 'dig-picker-card--has-banner');
   },
 };

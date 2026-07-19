@@ -7118,3 +7118,228 @@ sin cota superior.
 Las cuatro letras (A sistema, B tanda 1, C tanda 2 + vitrina, D e2e + auditoría) están
 completas: `PENDING_ART` vacía, 137 composiciones, DoD verde (664 unit + 89 e2e + manual a
 375px y desktop + FPS documentados). Queda el push y el PR.
+
+---
+
+## RONDA 30 — Imágenes reales de contenedores (agente único, rama `feat/imagenes-ronda30`)
+
+Sin bump de save: la ronda no agrega estado persistido (las franjas horarias se derivan del
+reloj del sistema y las imágenes salen de una allow-list estática).
+
+### Los assets NO eran lo que el roadmap suponía (leer antes que nada)
+
+§30.1 esperaba "un PNG realista por contenedor acorde a su nombre/fantasía (un tacho de vereda
+real, un volquete, una bóveda…)", ~512×512, fondo transparente, para el hueco cuadrado de ~56px
+del ícono. Lo que entregó el usuario en `reference/ui/Contenedores/` es otra cosa —y mejor:
+
+- **21 archivos, todos 1619×971 apaisados (~1.67:1), fondo oscuro OPACO, 37 MB en total.**
+- No es un objeto distinto por contenedor: es **la misma silueta de contenedor marítimo que
+  escala en riqueza con el tier** (0 oxidado → 8 violeta con brillos → 15 arcoíris cósmico →
+  16 incrustado en gemas). Por eso el mapeo se hizo **por orden de tier**, no por la fantasía
+  del nombre.
+- Los 5 `contenedor1` son **colores de pintura** (rosa/azul/rojo/amarillo/verde), no variantes
+  de iluminación.
+
+**Tres decisiones se consultaron con el usuario (2026-07-19) y las tres se aplicaron tal cual:**
+
+1. **Presentación: banner apaisado** sangrado al ancho de la tarjeta (no recorte cuadrado: el
+   centro de un contenedor de color plano es chapa lisa y se perdía la silueta).
+2. **17 imágenes para 18 contenedores** → `contenedor16` (el de gemas) va a
+   `bovedaContrarreloj`; **`sotanoSinLuz` queda en `PENDING_IMAGES`** con fallback al SVG. Falta
+   UNA imagen para cerrar el catálogo.
+3. **Franjas horarias solo cosméticas**: el barrio cambia de color con la hora y el topbar
+   muestra hora + franja, pero el día/noche JUGABLE de §4.33 queda intacto.
+
+### PLAN.md (escrito primero, como manda §3.6)
+
+El último § real de §4 era **4.39** (no 4.41 como asumía el roadmap), así que:
+
+- **§4.40 Franjas horarias cosméticas** — 5 tramos en `data/dayNight.json`
+  (madrugada 00-06 / manana 06-12 / tarde 12-17 / atardecer 17-20 / noche 20-24).
+- **§5.6 Imágenes reales de contenedor** — banner, formato/peso, allow-list, fallback, variantes.
+
+> **Para la ronda 31**: sus §4.40 y §4.41 planificados pasan a ser **§4.41 y §4.42** (el
+> contenido manda, no el número — §3.6).
+
+### Qué se implementó
+
+- **Engine** (`packages/engine/src/dayNight.js`): `getTimeBand(hour, dayNightData)`, pura como
+  sus hermanas (recibe la hora, nunca lee el reloj). Data sin franjas → `null`; hora no finita o
+  fuera de 0-23 → primera franja (regla dura 13: nunca dejar una tarjeta sin imagen). Exportada
+  en index.js.
+- **Registro** (`apps/game/src/icons/containerImages.js`): `CONTAINER_IMAGES` (mapa id → archivo,
+  o id → {franja: archivo} para el barrio), `PENDING_IMAGES`, `hasContainerImage`,
+  `containerImageSrc`. **Allow-list estricta**: la ruta jamás se construye concatenando el input.
+- **Helper de UI** (`apps/game/src/ui/containerImage.js`): markup del banner + binding del
+  fallback.
+- **Vistas**: `ShopView` (tarjetas normales, bloqueadas en escala de grises, y la procedural) y
+  `DigContainerPicker`. `Topbar`: reloj con hora local + nombre de franja.
+- **Assets**: `apps/game/assets/containers/*.webp`, 21 archivos, **964 KB**.
+
+### Dos desvíos del roadmap, con su motivo
+
+1. **`onerror` inline → `addEventListener`.** §30.2.1 pedía `onerror` en el atributo, pero la CSP
+   de index.html es `script-src 'self'` + hash, **sin `unsafe-inline`**: el handler quedaría
+   bloqueado justo cuando más se lo necesita. La CSP no se tocó (regla dura 7) y `csp.test.js`
+   sigue verde.
+2. **PNG → WebP, 768px de ancho.** 37 MB era inviable para el build de Steam (R30.1). Chromium
+   (navegador y Electron) soporta WebP nativo. **37 MB → 0.88 MB**, el más pesado 146 KB, sin
+   artefactos visibles a tamaño de tarjeta. Conversión con el Chromium de Playwright (no hay
+   sharp ni ImageMagick en el entorno); el script fue descartable, no quedó en el repo.
+
+### Dos bugs REALES encontrados y arreglados (no eran del plan)
+
+**1. Los banners duplicaban el tiempo de carga de la página.** Medido en los e2e: con ~19
+tarjetas en la Tienda y las pestañas inactivas viviendo en el DOM, el arranque disparaba ~19
+descargas de golpe. `ronda23-puesto` (robot vendedor) pasó de 28s a **57s** en 8 corridas.
+Arreglo: `loading="lazy"` + `decoding="async"`. Tras el fix, la suite e2e COMPLETA bajó de
+**3.6-3.9 min a 1.8 min** (con 9 tests más que antes).
+
+**2. Carrera latente de las celebraciones, viva desde la ronda 12.** Las celebraciones se
+encolan desde `render()` y **solo se cierran con click** (`CelebrationModal.showNext` no tiene
+timer). Si una aparece DESPUÉS de `cerrarCelebraciones` y antes del click siguiente, su backdrop
+intercepta el click y **nada la va a cerrar**: el reintento de Playwright agota el timeout y el
+spec falla por algo que no estaba probando. Se verificó que **no es un problema de esta ronda**:
+main pasaba por ser marginalmente más rápido, no por ser correcto. Arreglo:
+`clickSorteandoCelebraciones(page, selector)` en `helpers/dig.js` (cierra celebraciones y
+reintenta el click en ráfagas cortas), usado en `abrirPuesto` de `ronda23-puesto.spec.js`.
+Tras el fix: **10/10 con `--repeat-each=10 --workers=4`** (antes 2-3 fallos), 20.5s contra los
+19.0s de main.
+
+**3. El reloj desbordaba el topbar a 375px.** El topbar ya venía al límite y la píldora nueva lo
+pasó (scrollW 431 vs 375). Se verificó que con dinero de partida avanzada **main YA desbordaba**
+(420 vs 375). Arreglo en un `@media (max-width: 600px)`: reloj sin fondo/padding de píldora,
+píldoras más ajustadas, padding lateral del topbar a la mitad, y `flex-wrap: wrap` como red de
+seguridad. Resultado a 375px: **una sola línea** hasta partida avanzada ($8.50B + 340 llaves) y
+**cero scroll horizontal en todos los casos** — estrictamente mejor que main.
+
+### Verificación
+
+- **Unit (Vitest): 684/684 en 46 archivos** = baseline 664 + 20 nuevos (8 de franjas en engine,
+  12 de cobertura/allow-list de imágenes). Cero regresiones.
+- **e2e (Playwright): 98/98** = baseline 89 + 9 nuevos, **tres corridas completas seguidas en
+  verde**. Ningún spec existente cambió sus aserciones (solo `abrirPuesto` pasó a usar el helper
+  anti-carrera).
+- **Manual con capturas, 375px y 1280px**, partidas temprana/media/avanzada/extrema:
+  **cero errores de consola, cero requests fallidos**, banners cargados, reloj correcto
+  ("16:29 · TARDE"), barrio en su modelo amarillo de tarde, fallback verificado saboteando la
+  ruta con interceptación (la tarjeta vuelve al SVG y se puede escarbar igual).
+- Cero `console.log`, cero `// TODO`, cero emojis, cero colores hardcodeados en el CSS nuevo.
+
+### Pendiente / decisiones para el usuario
+
+- **Falta 1 imagen**: `sotanoSinLuz` es el único contenedor sin arte (`PENDING_IMAGES`). Hoy usa
+  su ícono SVG y no rompe nada. Cuando el usuario suba el archivo, se agrega al registro y el
+  test de cobertura pasa a exigirlo.
+- **Los 37 MB de PNG originales NO se committearon** (regla dura 1: no committear untracked
+  ajeno; y 37 MB inflan el repo para siempre). Siguen en `reference/ui/Contenedores/` como
+  fuente local. Si el usuario los quiere versionados, es una decisión suya.
+- **Derechos de uso**: se le recuerda al usuario que las imágenes van al build de Steam y tienen
+  que ser libres de uso comercial (§30.1) — la elección de los assets fue suya.
+- **R30.2 (estilo heterogéneo) no aplicó**: la serie ya es visualmente coherente (misma silueta,
+  misma iluminación, riqueza creciente por tier), así que no hizo falta ningún tratamiento
+  unificador.
+
+---
+
+## RONDA 30.B — cierre del catálogo de imágenes + DOS contenedores nuevos (misma rama `feat/imagenes-ronda30`)
+
+Pedido del usuario (2026-07-19, con la ronda 30 ya commiteada y sin PR todavía): subió
+`contenedor17` para cerrar el pendiente, y `contenedor18`/`contenedor19` para **llegar a 20
+contenedores** implementándolos como nuevos. Sin bump de save (no hay estado persistido nuevo).
+
+### Decisiones consultadas con el usuario (las tres, antes de escribir código)
+
+1. **Ubicación**: fuera de cadena (`fueraDeCadena: true`), como los especiales de la ronda 20.
+   Descartada la alternativa de sumarlos como tiers al final: `vertederoBigBang` es el ANCLA de
+   los contenedores procedurales (§4.37) y habría que mover ese ancla y revisar el tope de `n`
+   contra float64. Un test fija que el último de la cadena sigue siendo el Big Bang.
+2. **Pools**: 14 ítems nuevos con arte ilustrado propio (no reciclado), para no romper el
+   contrato de la ronda 29 ni llenar el INDEX de visuales repetidos.
+3. **Alcance de "arreglá los bugs"**: solo lo documentado en esta ronda; NADA de la ronda 31
+   (los logros de racha a36-a38, los $250k del a45 y el rebalanceo de resistencias siguen
+   intactos y pendientes para su ronda).
+
+### Contenido nuevo (PLAN.md §4.40)
+
+| id | costo | prestigio | categorías | resist./área | trampa | Suerte rec. |
+|---|---|---|---|---|---|---|
+| `reactorDeCuasar` (Reactor de Cuásar) | 4.2e17 | 9 | relics, future | 82 / 76 | 44% | 950 |
+| `horizonteDeSucesos` (Horizonte de Sucesos) | 2.4e18 | 10 | art, future | 98 / 92 | 44% | 970 |
+
+- 14 ítems (7 por pool) con nombre es/en, ícono en `icons.js` y composición ilustrada en
+  `objectArt.js`. 6 formas SVG nuevas; el resto reusa formas existentes con su `DECISIÓN:`.
+- **Ningún cambio de engine**: `mode`/`mechanicValueMult` son opcionales incluso fuera de
+  cadena, así que los dos nuevos son data pura. Se documentó en PLAN.md.
+- `PENDING_IMAGES` quedó **vacía**: los 20 contenedores tienen imagen. Assets: 24 WebP, **1.3 MB**.
+
+### Dos violaciones de balance propias, encontradas por los tests derivados
+
+1. **`probTrampaBase: 0.45`** en el Horizonte — PLAN.md §11.2 fija un techo de 44% y
+   `fase9-balance.test.js` lo rechazó. Corregido a 0.44.
+2. **Suerte recomendada fuera de la secuencia**: el test exige que crezca estrictamente
+   contenedor a contenedor y quede < 1000; después de `sotanoSinLuz` (930) la ventana es
+   angosta y mis valores a ojo daban 361 y 1143. Se calibraron a **950 y 970** escalando SOLO
+   los `valorBase` de sus pools con `agentes/scripts/calibrate-luck-ronda30.mjs` (bisección con
+   el engine de oráculo, mismo método de las rondas 10/11; verifica el target exacto y no
+   escribe nada si falla). Las fórmulas no se tocaron (regla dura 4).
+
+### Cacería de flakiness: UNO era un bug de verdad, no carga
+
+La suite e2e venía fallando ~1 test por corrida, cada vez uno distinto. Vale la pena el detalle
+porque el diagnóstico "es flakiness de carga" era **falso** en el caso más repetido:
+
+- **`iniciarEscarbadoSinTrampa` no detectaba trampas** (helpers/dig.js). Decidía "sin trampa"
+  SOLO por `positions.length >= minObjetos`, aprovechando que una trampa produce 1 objeto. Con
+  `minObjetos = 1` —lo que pasa `ronda19` sobre `tachoVereda`— **una trampa pasaba el filtro**,
+  reseteaba la racha y el spec fallaba ~10% de las veces (probTrampaBase 0.05 × 2 escarbados).
+  Se leía como flakiness pero era determinista y estaba ahí desde la ronda 19. Ahora el hook
+  `__digDebug.art()` expone `isTrap` (solo lectura, una línea en DigCanvas) y el helper lo usa.
+  Verificado: 32/32 con `--repeat-each=8 --workers=4`.
+- **Drain de celebraciones racy** (`cerrarCelebraciones`): el `while (isVisible) click()` se
+  quedaba esperando el timeout completo si el botón desaparecía o era reemplazado por el de la
+  celebración siguiente entre el `isVisible` y el `click`. Ahora el intento es acotado y
+  tolerante, y el bucle mira el OVERLAY y no el botón.
+- **Cascada de logros leída como tween** (`ronda12` test 4): el dinero sigue moviéndose después
+  del escarbado porque un logro paga, la plata nueva desbloquea el siguiente, etc. El
+  `waitForTimeout(600)` fijo capturaba un valor intermedio. Ahora espera a que el texto quede
+  quieto varias muestras seguidas.
+- **`abrirLogros` de `ronda24`**: mismo patrón que `abrirPuesto` de la 30 → usa
+  `clickSorteandoCelebraciones`.
+- **Mi propio spec**: `ShopView` re-renderiza por innerHTML en cada notify (~1/s), así que el
+  `<img>` se desprendía del DOM entre el locator y el `scrollIntoViewIfNeeded`
+  ("Element is not attached to the DOM"). Ahora el helper `esperarBannerCargado` re-resuelve el
+  locator en cada vuelta del poll y tolera el desprendimiento.
+
+### Un bug de UI que encontró una captura, no un test
+
+El rótulo de la franja se partía al medio en el topbar (**"ATARD ECER"**) cuando el ancho
+quedaba justo. `white-space: nowrap` en `.topbar-clock-band` y `.topbar-clock-time`. Verificado
+a 360/375/390px con las dos etiquetas más largas ("Atardecer" y "Madrugada") y dinero de $5.00Qi:
+una sola línea y cero scroll horizontal en todos los casos.
+
+### Verificación
+
+- **Unit: 706/706 en 47 archivos** (baseline 684 + 22: 13 del spec nuevo de contenedores, +1 por
+  partir el guard de la ronda 20 en dos, +8 que `fase9-balance` deriva solo de la data nueva).
+- **e2e: 98/98**, **cinco corridas completas seguidas en verde** tras los arreglos de arriba
+  (antes: ~1 fallo por corrida, siempre uno distinto). Los specs estresados con
+  `--repeat-each` y `--workers=4` también verdes.
+- **Manual a 375px y 1280px** con partida de prestigio 10: los 20 contenedores en la Tienda
+  (21 tarjetas con la del Puesto), los dos nuevos con su imagen CARGADA, picker con los 7
+  desbloqueados, **cero errores de consola y cero requests fallidos**, sin scroll horizontal.
+  Las metas de la tarjeta salen del engine y coinciden con la data (Suerte 970, Fuerza ×98,
+  Búsqueda ×92 en el Horizonte).
+
+### Ajuste de numeración para la ronda 31
+
+El último § real de PLAN.md §4 era **4.39**, no 4.41 como asumía el roadmap. Esta ronda tomó
+**§4.40** (contenedores nuevos) y **§4.41** (franjas horarias), más **§5.6** (imágenes).
+**La ronda 31 corre sus dos secciones a §4.42 y §4.43** (§3.6: el contenido manda, no el número).
+
+### Pendiente para el usuario
+
+- **Los PNG originales siguen SIN committear** (regla dura 1, y ya son >40 MB). Viven en
+  `reference/ui/Contenedores/`. Si los querés versionados, decilo y se hace aparte.
+- **Derechos de uso**: las imágenes van al build de Steam y tienen que ser libres de uso
+  comercial; la elección de los assets es del usuario (§30.1).

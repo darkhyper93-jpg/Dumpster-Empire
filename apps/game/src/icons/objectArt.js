@@ -3035,6 +3035,166 @@ const ART = {
     scale: 1.0,
   },
 
+  // --- reactorDeCuasar (ronda 30.B): plasma azul-violeta INCANDESCENTE. Es el contraste
+  // opuesto al del Sótano: acá todo emite luz propia, así que los detalles van en tonos más
+  // claros que el body y con opacidad alta para que "prendan" sobre la tierra #4a3526 ---
+  'shard-quasar': {
+    body: 'shard',
+    material: 'glass',
+    palette: '#6aa6ff',
+    details: [
+      '<path d="M48 22 L54 48 L48 74 L42 48 Z" fill="#d8ecff" fill-opacity="0.75"/>',
+      '<path d="M40 38 L56 44 M42 60 L58 54" stroke="#eaf4ff" stroke-width="1.6" fill="none" stroke-opacity="0.7"/>',
+    ],
+    scale: 0.95,
+  },
+  'coil-supercharged': {
+    body: 'coil',
+    material: 'metal',
+    palette: '#4f86c6',
+    details: [
+      '<path d="M30 34 q18 6 36 -2 M30 48 q18 6 36 -2 M30 62 q18 6 36 -2" stroke="#9fd8ff" stroke-width="2" fill="none" stroke-opacity="0.85"/>',
+      '<path d="M70 28 l6 -8 M70 68 l6 8" stroke="#eaf4ff" stroke-width="2.2" fill="none" stroke-opacity="0.8" stroke-linecap="round"/>',
+    ],
+    scale: 0.9,
+  },
+  'lens-gravitational': {
+    body: 'magnifier',
+    material: 'glass',
+    palette: '#7fb2e8',
+    details: [
+      '<circle cx="42" cy="40" r="13" fill="#0f1a2e" fill-opacity="0.7"/>',
+      // La lente curva la luz: los arcos concéntricos son la "distorsión" del fondo.
+      '<path d="M31 40 a11 6 0 0 0 22 0" stroke="#bfe0ff" stroke-width="1.6" fill="none" stroke-opacity="0.85"/>',
+      '<path d="M33 34 a9 4 0 0 0 18 0" stroke="#bfe0ff" stroke-width="1.2" fill="none" stroke-opacity="0.6"/>',
+    ],
+    scale: 0.9,
+  },
+  'core-collapsed': {
+    body: 'core',
+    material: 'metal',
+    palette: '#7a5fd8',
+    details: [
+      '<circle cx="48" cy="48" r="9" fill="#1a1030" fill-opacity="0.85"/>',
+      '<circle cx="48" cy="48" r="4" fill="#c9a8ff" fill-opacity="0.9"/>',
+      '<path d="M48 26 v10 M48 60 v10 M26 48 h10 M60 48 h10" stroke="#c9a8ff" stroke-width="2" fill="none" stroke-opacity="0.7" stroke-linecap="round"/>',
+    ],
+    scale: 1.0,
+  },
+  'seal-plasma': {
+    body: 'medal',
+    material: 'metal',
+    palette: '#8f6fe0',
+    details: [
+      '<circle cx="48" cy="52" r="11" fill="#2a1b4a" fill-opacity="0.75"/>',
+      '<path d="M48 44 l3 6 6 1 -4.5 4 1 6 -5.5 -3 -5.5 3 1 -6 -4.5 -4 6 -1 z" fill="#d9c2ff" fill-opacity="0.9"/>',
+    ],
+    scale: 0.85,
+  },
+  'crown-ionized': {
+    body: 'crown',
+    material: 'metal',
+    palette: '#9b7de8',
+    details: [
+      '<path d="M30 40 L36 28 L42 40 L48 26 L54 40 L60 28 L66 40" stroke="#e2d2ff" stroke-width="2" fill="none" stroke-opacity="0.9" stroke-linecap="round"/>',
+      '<g fill="#bfe0ff" fill-opacity="0.9"><circle cx="36" cy="27" r="2.2"/><circle cx="48" cy="25" r="2.6"/><circle cx="60" cy="27" r="2.2"/></g>',
+    ],
+    scale: 1.05,
+  },
+  'relic-firstlight': {
+    body: 'starburst',
+    palette: '#ffd98a',
+    details: [
+      '<circle cx="48" cy="48" r="7" fill="#fff6dc" fill-opacity="0.95"/>',
+      '<circle cx="48" cy="48" r="13" stroke="#ffe9b0" stroke-width="1.4" fill="none" stroke-opacity="0.6"/>',
+    ],
+    scale: 1.1,
+  },
+
+  // --- horizonteDeSucesos (ronda 30.B): nácar frío (blancos y lilas) con un VACÍO negro al
+  // centro. El truco de legibilidad es el inverso del resto del juego: el objeto es claro y lo
+  // que corta es el agujero, no la sombra ---
+  'frame-eventhorizon': {
+    body: 'frame',
+    material: 'metal',
+    palette: '#cfc9e4',
+    details: [
+      '<rect x="30" y="30" width="36" height="36" fill="#0a0714" fill-opacity="0.9"/>',
+      '<circle cx="48" cy="48" r="9" fill="#150d24"/>',
+      '<circle cx="48" cy="48" r="13" stroke="#e6dcff" stroke-width="1.4" fill="none" stroke-opacity="0.7"/>',
+    ],
+    scale: 1.0,
+  },
+  'mask-singularity': {
+    body: 'mask',
+    material: 'ceramic',
+    palette: '#e4dff2',
+    details: [
+      '<g fill="#0a0714" fill-opacity="0.85"><ellipse cx="41" cy="44" rx="4" ry="5"/><ellipse cx="55" cy="44" rx="4" ry="5"/></g>',
+      '<path d="M40 62 q8 6 16 0" stroke="#0a0714" stroke-width="2" fill="none" stroke-opacity="0.6"/>',
+      '<path d="M48 24 q-3 8 0 14 q3 -6 0 -14" fill="#b9a6e8" fill-opacity="0.8"/>',
+    ],
+    scale: 1.0,
+  },
+  'orb-spaghettified': {
+    body: 'orb',
+    material: 'glass',
+    palette: '#c3b3e8',
+    details: [
+      // El estiramiento por marea: la esfera se va en hilos hacia arriba y abajo.
+      '<path d="M44 22 q4 14 0 26 M52 22 q-4 14 0 26" stroke="#efe8ff" stroke-width="1.8" fill="none" stroke-opacity="0.75" stroke-linecap="round"/>',
+      '<path d="M44 74 q4 -14 0 -26 M52 74 q-4 -14 0 -26" stroke="#efe8ff" stroke-width="1.8" fill="none" stroke-opacity="0.6" stroke-linecap="round"/>',
+      '<ellipse cx="48" cy="48" rx="5" ry="9" fill="#0a0714" fill-opacity="0.7"/>',
+    ],
+    scale: 0.95,
+  },
+  'clock-frozen-fall': {
+    body: 'alarmClock',
+    material: 'metal',
+    palette: '#c8d2e6',
+    details: [
+      '<circle cx="48" cy="50" r="14" fill="#0f1424" fill-opacity="0.75"/>',
+      // Las agujas quedaron clavadas: sin sombra de movimiento, apuntando al mismo lado.
+      '<path d="M48 50 L48 40 M48 50 L56 54" stroke="#eaf0ff" stroke-width="2.4" fill="none" stroke-opacity="0.95" stroke-linecap="round"/>',
+      '<circle cx="48" cy="50" r="2" fill="#b9a6e8"/>',
+    ],
+    scale: 0.9,
+  },
+  'gyro-tidal': {
+    body: 'gyro',
+    material: 'metal',
+    palette: '#b6c4d8',
+    details: [
+      '<ellipse cx="48" cy="48" rx="22" ry="9" stroke="#e8f0ff" stroke-width="1.8" fill="none" stroke-opacity="0.8"/>',
+      '<ellipse cx="48" cy="48" rx="9" ry="22" stroke="#e8f0ff" stroke-width="1.8" fill="none" stroke-opacity="0.65"/>',
+      '<circle cx="48" cy="48" r="3.5" fill="#0a0714" fill-opacity="0.8"/>',
+    ],
+    scale: 1.0,
+  },
+  'monolith-inverted': {
+    body: 'monolith',
+    palette: '#4a4458',
+    details: [
+      // Invertido: la base es la punta. La veta clara marca de qué lado "debería" ir apoyado.
+      '<path d="M36 24 L60 24 L54 72 L42 72 Z" fill="#0a0714" fill-opacity="0.55"/>',
+      '<path d="M40 30 L56 30 M41 44 L55 44" stroke="#cfc4ea" stroke-width="1.5" fill="none" stroke-opacity="0.7"/>',
+      '<path d="M48 72 L48 80" stroke="#b9a6e8" stroke-width="2" fill="none" stroke-opacity="0.5"/>',
+    ],
+    scale: 1.1,
+  },
+  'heart-accretion': {
+    body: 'heart',
+    material: 'glass',
+    palette: '#e0a0d6',
+    details: [
+      '<circle cx="48" cy="50" r="7" fill="#0a0714" fill-opacity="0.85"/>',
+      // Disco de acreción: los anillos que caen en espiral hacia el centro.
+      '<ellipse cx="48" cy="50" rx="16" ry="5" stroke="#ffd6f4" stroke-width="1.6" fill="none" stroke-opacity="0.8"/>',
+      '<ellipse cx="48" cy="50" rx="11" ry="3.2" stroke="#ffe9fa" stroke-width="1.2" fill="none" stroke-opacity="0.6"/>',
+    ],
+    scale: 1.05,
+  },
+
   // --- LEGENDARIOS (ronda 22, arte ronda 29.C) ---
   // Uno por categoría, con body propio y halo de rareza alta (§5.2). Escala alta (1.15-1.4): son
   // el premio aspiracional y tienen que dominar el canvas apenas asoman bajo la tierra.

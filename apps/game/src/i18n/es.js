@@ -320,4 +320,11 @@ export default {
   // Ciclo día/noche (Topbar.js, tooltip de Zoraida).
   'dayNight.dayTooltip': 'Zoraida: "De día todo está tranquilo, m\'hijo."',
   'dayNight.nightTooltip': 'Zoraida: "De noche la suerte cambia: +{luck} Suerte, pero +{pct}% de trampa."',
+  // Ronda 30 (§4.41): nombres de las 5 franjas horarias del reloj del topbar. Son COSMÉTICAS
+  // (eligen el modelo de contenedor); el bonus real sigue siendo el binario día/noche de arriba.
+  'dayNight.band.madrugada': 'Madrugada',
+  'dayNight.band.manana': 'Mañana',
+  'dayNight.band.tarde': 'Tarde',
+  'dayNight.band.atardecer': 'Atardecer',
+  'dayNight.band.noche': 'Noche',
 };

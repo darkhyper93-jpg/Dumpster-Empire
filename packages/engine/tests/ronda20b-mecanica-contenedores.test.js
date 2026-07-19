@@ -30,13 +30,24 @@ describe('§4.24 contenedores con mecánica propia (ronda 20)', () => {
     expect(sotano.requiresPrestigeCount).toBe(8);
   });
 
-  it('los 16 contenedores previos a la ronda 20 no declaran mode/fueraDeCadena/mechanicValueMult', () => {
-    const previous = containers.filter((c) => !NEW_IDS.includes(c.id));
-    for (const c of previous) {
-      expect(c.mode).toBeUndefined();
-      expect(c.fueraDeCadena).toBeUndefined();
-      expect(c.mechanicValueMult).toBeUndefined();
+  // AJUSTE (ronda 30.B): antes esto era "todo lo que no sea NEW_IDS", y por lo tanto se rompía
+  // cada vez que una ronda sumaba un especial (los dos contenedores nuevos declaran
+  // `fueraDeCadena` a propósito). Se reescribe como la invariante que de verdad quiere fijar:
+  // la CADENA no lleva mecánica propia, y el conjunto de especiales es explícito.
+  it('los contenedores de la CADENA no declaran mode/fueraDeCadena/mechanicValueMult', () => {
+    const cadena = containers.filter((c) => !c.fueraDeCadena);
+    expect(cadena.length).toBeGreaterThan(0);
+    for (const c of cadena) {
+      expect(c.mode, `"${c.id}" es de la cadena y no debería declarar mode`).toBeUndefined();
+      expect(c.mechanicValueMult, `"${c.id}" es de la cadena`).toBeUndefined();
     }
+  });
+
+  it('los únicos contenedores fuera de cadena son los declarados (uno nuevo obliga a decidir)', () => {
+    const fuera = containers.filter((c) => c.fueraDeCadena).map((c) => c.id);
+    // Los de la ronda 20 traen mecánica propia; los de la 30.B son especiales "pelados"
+    // (sin mode), y por eso `mode`/`mechanicValueMult` son OPCIONALES incluso fuera de cadena.
+    expect(fuera.sort()).toEqual([...NEW_IDS, 'reactorDeCuasar', 'horizonteDeSucesos'].sort());
   });
 
   it('fueraDeCadena desbloquea SOLO por requiresPrestigeCount, sin poseer el contenedor anterior del array', () => {

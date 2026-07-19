@@ -11,7 +11,13 @@ import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import { freshState } from '../../../packages/engine/src/state.js';
 import { serializeState } from '../../../packages/engine/src/save.js';
-import { entrarAlJuego, iniciarEscarbadoSinTrampa, rascarObjeto, cerrarCelebraciones } from './helpers/dig.js';
+import {
+  entrarAlJuego,
+  iniciarEscarbadoSinTrampa,
+  rascarObjeto,
+  cerrarCelebraciones,
+  clickSorteandoCelebraciones,
+} from './helpers/dig.js';
 
 const NOON_TODAY = new Date();
 NOON_TODAY.setHours(12, 0, 0, 0);
@@ -28,8 +34,9 @@ function baseState() {
 }
 
 async function abrirLogros(page) {
-  await cerrarCelebraciones(page);
-  await page.locator('[data-tab="logros"]').click();
+  // Cerrar antes NO alcanza: una celebración encolada en el render siguiente tapa el tabbar con
+  // su backdrop y, como no tienen timer, nada la cierra sola (ver helpers/dig.js).
+  await clickSorteandoCelebraciones(page, '[data-tab="logros"]');
   await cerrarCelebraciones(page);
 }
 

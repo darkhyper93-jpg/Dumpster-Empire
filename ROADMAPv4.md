@@ -1014,7 +1014,8 @@ Commits por agente + HANDOFF (con la comparación de FPS) + push + PR link
 > contenedor** (acorde al nombre/fantasía de cada uno: un tacho de vereda real, un volquete,
 > una bóveda…); **el agente los implementa**. La ronda arranca BLOQUEADA hasta que los assets
 > estén en el repo (contrato §3.5.8) — si al empezar faltan, detenete y pedíselos al usuario
-> con la lista exacta de abajo.
+> con la lista exacta de abajo. Archivos en: reference/ui/Contenedores
+> Se me ocurrió algo que añadir además del plan, según la hora, la cual quiero que también se pueda ver osea que yo vea que hora es y a que hora se hace de día, de tarde, de noche, ... > el contenedor 1 según la hora, cambie entre sus distintos modelos, hay 5 contenedores 1, luego si, está el 0 que es el gratis, y 2-16 el resto.
 
 ## 30.1 Convención de assets (para que el usuario sepa qué buscar)
 
@@ -1063,7 +1064,192 @@ Commit "feat: ronda 30 — imágenes reales de contenedores" + HANDOFF + push + 
 
 ---
 
-# RONDA 31 — Idiomas pt/fr/de + re-release (rama `feat/i18n-release-ronda31`, 1 agente)
+# RONDA 31 — Dificultad y balance: resistencias con dientes, fix logros de racha, fix de los $250k (rama `feat/balance-ronda31`, 1 agente, sin bump de save)
+
+> Motivo (usuario, 2026-07-19): (a) las stats de Fuerza/Área dejan de importar enseguida — la
+> resistencia de los contenedores crece tan despacio (~×1.35 por tier) que unas pocas mejoras
+> baratas capean el ritmo en 1.5 y todos los contenedores se sienten iguales; el Área ni
+> siquiera tiene mecánica (su "recomendada" es solo un cartel); (b) los logros de racha
+> (a36-a38) no se auto-reclaman en la partida del usuario; (c) tras los primeros ~5 escarbados
+> del Tacho de Vereda el jugador recibe $250.000 gratis que rompen toda la curva temprana.
+> Esta ronda sube la dificultad general vía (a) y arregla (b) y (c). Sin estado persistido
+> nuevo → sin bump de save (regla dura 17 no aplica). Ahora mismo apenas toma 5-7 minutos hacer prestigio, esto es inaceptable, DEMASIADO poco, debe haber una gap mayor.
+
+## 31.0 Contexto verificado contra el repo (2026-07-19) — leer antes de tocar nada
+
+Mapa exacto (recontar líneas al ejecutar; el contenido manda):
+
+- `packages/engine/src/economy.js`: `getDigRate` = `clamp(getDigPowerMult / container.resistencia, 0.3, 1.5)`
+  (~línea 877); `getEffectiveDigTime` = `digTime / getDigRate` (~896); `getAreaMult` (~430)
+  crece con la mejora `area` (upgrades.json: `1 + 0.05/nivel`) y NUNCA se compara contra
+  `areaRecomendada`; `getRecommendedDigPower` devuelve `container.resistencia` (~999) y
+  `getRecommendedArea` devuelve `container.areaRecomendada` (~1010) — hoy son solo texto de
+  la Tienda (`ShopView.js` ~147-155), no bloquean ni modulan nada.
+- `apps/game/src/store.js` `startManualDig` (~283): pasa al canvas
+  `areaMult: getAreaMult(state, data) * getToolRadiusMult(state, data)` (~314) y
+  `digRate: getDigRate(state, container, data) * getToolRhythmMult(state, data)` (~318).
+- `apps/game/src/dig/DigCanvas.js` (~606): `radius = BASE_ERASE_RADIUS * Math.sqrt(this.areaMult) * this.digRate * this.sensitivity`.
+- **Causa raíz de los $250k**: `achievements.json` a45 «Set Completo»
+  (`setsCompletedAtLeast: 1` → `money 250000`). El pool de `tachoVereda` en `items.json`
+  tiene SOLO 6 ítems, todos `common`, y el contenedor tira 3 slots por escarbado: en ~5
+  escarbados el set se completa e `isSetComplete` (economy.js ~802) dispara a45. No es la
+  racha ni un bug de código: es una recompensa de data desproporcionada para el primer set
+  trivial del juego.
+- **Logros de racha**: a36/a37/a38 (`digStreakAtLeast` 10/25/50) evalúan `state.bestDigStreak`
+  (achievements.js ~25). La cadena estática se ve correcta: `applyContainerResult` incrementa
+  `digStreak`/`bestDigStreak` (containers.js ~392) ANTES de que `finishManualDig` llame
+  `runAchievements()` (store.js ~342). El reporte del usuario ("no se auto-reclaman") es real
+  pero la causa no está confirmada — la tarea 2 la diagnostica con tests antes de tocar nada.
+- Los tiers procedurales (`proceduralContainer`, containers.js ~102) derivan
+  `resistencia = base × 1.32^n` del `vertederoBigBang` real: heredan la tabla nueva solos.
+
+## 31.1 PLAN.md primero
+
+Recontar el último § real de PLAN.md §4 (a la fecha: §4.39, ronda 27) y escribir a
+continuación (§3.6 de este roadmap):
+
+- **§4.40 Ritmo contra resistencia, rango ampliado**: la fórmula pasa de
+  `clamp(Fuerza / resistencia, 0.3, 1.5)` a `clamp(Fuerza / resistencia, 0.25, 1.5)`
+  — quedarse corto de Fuerza ahora duele hasta ritmo 0.25 (antes 0.3). Es un cambio de
+  FÓRMULA (contrato), por eso entra por PLAN.md primero. Actualizar también §11.2.
+- **§4.41 Área efectiva por contenedor** (mecánica nueva — hasta hoy `areaRecomendada` no
+  hacía nada): `areaRate = clamp(getAreaMult / container.areaRecomendada, 0.45, 1.2)`.
+  SOLO modula el pincel del escarbado manual (mismo alcance que las herramientas, §4.23):
+  la automatización/offline no la usa. Con el Área al día el pincel queda como hoy
+  (rate ≈ 1); corto de Área se achica hasta √0.45 ≈ ×0.67; sobrado premia hasta √1.2 ≈ ×1.10.
+- **Tabla nueva de `resistencia` / `areaRecomendada`** (AJUSTE de data, la fórmula no se
+  toca): crecimiento ~×1.5 por tier en la cadena jugada a mano (tiers 1-8) y ~×1.4 después,
+  para que cada contenedor nuevo arranque pesado (ritmo ~0.4-0.6) y dominar el tier exija
+  invertir en Fuerza/Área de verdad. Actualizar la tabla de PLAN.md §4/§11.2 con:
+
+| contenedor | resistencia | areaRecomendada |
+|---|---|---|
+| tachoVereda | 1.0 | 1.0 |
+| contenedorBarrio | 1.55 | 1.45 |
+| containerIndustrial | 2.4 | 2.25 |
+| depositoAbandonado | 3.7 | 3.45 |
+| mudanzaMansion | 5.7 | 5.3 |
+| galeriaLiquidacion | 8.8 | 8.2 |
+| bovedaPerdida | 13.5 | 12.5 |
+| containerExtradimensional | 20.5 | 19 |
+| convoyFantasma | 30 | 28 |
+| criptaColeccionista | 44 | 41 |
+| estacionOrbital | 64 | 60 |
+| vertederoDivino | 92 | 86 |
+| chatarreriaTitanes | 128 | 119 |
+| naufragioTemporal | 176 | 164 |
+| bovedaContrarreloj | 205 | 191 |
+| archivoMultiverso | 240 | 224 |
+| sotanoSinLuz | 280 | 261 |
+| vertederoBigBang | 325 | 302 |
+
+  La tabla es el PUNTO DE PARTIDA: la calibración de la tarea 4 manda, y cualquier corrección
+  se hace sobre estos números de data con su `AJUSTE:` (nunca sobre las fórmulas).
+- **§11.6 (logros)**: a45 «Set Completo» baja de `money 250000` a `money 2500` (el primer set
+  es el Tacho, trivial por diseño — la recompensa vuelve al principio "dinero ≈ 10% del
+  hito", §3.4). Los $250k se mudan a un logro nuevo que sí lo vale: **a61 «Cinco Sets»**
+  (`setsCompletedAtLeast: 5` → `money 250000`) y **a62 «Coleccionista Serial»**
+  (`setsCompletedAtLeast: 10`, `hidden: true` → `keys 6`). Ids consecutivos tras el último
+  real (hoy a60; a39 sigue siendo hueco permanente, §3.4).
+
+## 31.2 Estado y save
+
+Sin bump: ningún campo persistido nuevo (areaRate y el ritmo son derivados; los logros nuevos
+entran por `achievementsUnlocked`, que ya es una lista abierta de ids). `save.js` no se toca.
+
+## 31.3 Tareas
+
+1. **Fix $250k (data)**: en `achievements.json`, a45 → `money 2500`; agregar a61/a62 al FINAL
+   con los cond/reward de §31.1. Nombres visibles nuevos → entrada real en `data-en.js`
+   (regla dura 15). Test de engine: estado con 1 set completo NO gana más que $2.500 por
+   logros de sets; con 5 sets gana a61; con 10, a62. NO tocar `isSetComplete` ni el pool del
+   Tacho (agrandar el pool rompería INDEX/arte de la ronda 29 — fuera de alcance). La tabla
+   de logros de Steam NO se regenera acá: lo hace la ronda 32 con todo junto (§3.4).
+2. **Fix logros de racha (diagnóstico dirigido, no tocar antes de reproducir)**:
+   a. Test de engine (`ronda31-racha-fix.test.js`): 10 × `rollContainerResult` +
+      `applyContainerResult` manuales sin trampa (random inyectado) + `checkAchievements`
+      tras cada uno → a36 se desbloquea exactamente en el décimo y paga $5.000 una sola vez.
+   b. Test e2e (`ronda31-balance.spec.js`): seed por `addInitScript` (regla dura 9) con
+      `digStreak: 9, bestDigStreak: 9`, un escarbado manual exitoso completo → toast de
+      logro visible (`.filter({ hasText })`, regla dura 8), la vista Logros muestra
+      «Racha de Diez» como reclamado, y `#money` refleja la recompensa (polling).
+   c. Si a y b salen VERDES de entrada, el bug del usuario no está en el camino web: probar
+      la build empaquetada (patrón ronda 18: `npm run build:win` + `--user-data-dir`
+      temporal) y el espejo Steam (`desktopBridge.setAchievement`, store.js ~253), y
+      documentar en HANDOFF la causa real encontrada. La tarea NO se cierra declarando
+      "no reproducido": se cierra con la causa identificada y cubierta por un test, o con
+      la evidencia de en qué build/estado ocurre y su fix.
+   d. Auditar de paso que TODO punto que muta `digStreak`/`bestDigStreak` (recorrer con grep)
+      quede seguido de `runAchievements()` dentro de la misma acción del store.
+3. **Engine (fórmulas nuevas)**: en `economy.js`, ampliar el clamp de `getDigRate` a
+   `[0.25, 1.5]` y agregar `getAreaRate(state, container, data)` según §4.41, con JSDoc
+   (`@param`/`@returns`) y export en `index.js`. En `store.js` `startManualDig`, reemplazar
+   `getAreaMult(state, data)` por `getAreaRate(state, container, data)` (el `×
+   getToolRadiusMult` queda igual — las herramientas siguen siendo un trade-off aparte,
+   §4.23). `DigCanvas.js` NO se toca: sigue recibiendo `areaMult`/`digRate` ya resueltos
+   (frontera engine ↔ UI intacta; el `sqrt` existente amortigua el rate, documentarlo).
+   Tests: `getAreaRate` en piso/techo/neutro; `getDigRate` en 0.25 con Fuerza 1 contra
+   resistencia alta; `getEffectiveDigTime` coherente.
+4. **Data + calibración**: aplicar la tabla de §31.1 a `containers.json` con comentario
+   `AJUSTE:` en el commit (JSON no admite comentarios). Script
+   `agentes/scripts/calibrate-resistencia-ronda31.mjs` (patrón calibrate-luck de las rondas
+   8/10/11): simula, para cada contenedor de la cadena, el nivel de Fuerza/Área comprable
+   gastando ~35% del dinero histórico al momento de poder comprarlo (con los nodos de
+   prestigio esperables para su `requiresPrestigeCount`), y verifica las bandas: ritmo al
+   desbloquear ∈ [0.35, 0.65]; ritmo con el dinero del contenedor SIGUIENTE ≥ 0.9; areaRate
+   al desbloquear ≥ 0.45 y ≥ 0.95 al dominarlo. Si una banda falla, el script imprime la
+   fila corregida y se ajusta la DATA (nunca la fórmula ni la banda). Dejar la salida final
+   en HANDOFF.
+5. **UI (visibilidad del balance)**: en `ShopView.js` y `DigContainerPicker.js`, junto a las
+   recomendadas existentes, mostrar el estado ACTUAL del jugador contra ellas leyendo SOLO
+   `getDigRate`/`getAreaRate` (cero fórmulas en UI): «Ritmo: 45%» / «Pincel: 70%», con color
+   por token (`--amber` al día, token de alerta por debajo — tokens existentes, nada
+   hardcodeado). Claves i18n nuevas en `es.js` + `en.js` (regla dura 15; el copy español
+   existente es intocable, regla 11). El hint de ritmo del escarbado activo
+   (`dig.rateHint`, UIManager ~337) ya existe y no cambia.
+6. **Tests/e2e de regresión**: `ronda31-balance.test.js` (engine) deriva de containers.json
+   que resistencia y areaRecomendada son estrictamente crecientes en la cadena y con salto
+   mínimo ×1.3 por tier (derivado de la data, cero valores hardcodeados); e2e: un save
+   seedeado rico en dinero pero con Fuerza/Área base escarba el tier 3+ con ritmo visible
+   < 100% (el hint aparece); recontar el baseline COMPLETO de e2e — la tabla nueva puede
+   hacer aparecer `dig.rateHint` en specs existentes que asumían ritmo 100% (regla dura 18:
+   lo que se rompa por dificultad nueva se declara y ajusta explícitamente, no se tapa).
+
+## 31.4 Riesgos
+
+- R31.1 **Bóveda a Contrarreloj**: pincel más chico (areaRate) + resistencia más alta contra
+  su límite DURO de tiempo puede volverla imposible. La calibración incluye un caso
+  explícito: con las stats de banda (ritmo 0.9+, areaRate 0.95+) la bóveda se completa con
+  ≥ 20% del timer de sobra. Si no, se ajusta SU fila de la tabla (es `fueraDeCadena`, no
+  arrastra a nadie).
+- R31.2 La curva temprana validada (primera mejora en 20-30s, primer prestigio 20-40 min,
+  PLAN.md §3) es intocable: `tachoVereda` queda en 1.0/1.0 a propósito y la pasada manual de
+  la Nota final de balance es OBLIGATORIA en esta ronda (es la ronda de dificultad).
+- R31.3 Quitar los $250k tempranos alarga el early-mid game real del usuario: verificar en la
+  pasada manual que el salto a `containerIndustrial`/`depositoAbandonado` sigue llegando en
+  tiempos razonables sin ese regalo; si se estira feo, compensar en data (costos o valores
+  de pool) con `AJUSTE:`, nunca devolviendo el regalo.
+- R31.4 Tests existentes con resistencias viejas hardcodeadas (ronda 10/20/26/27): recontar y
+  actualizar los fixtures citando esta ronda — el snapshot procedural (`resistencia × 1.32^n`)
+  cambia de base numérica y sus asserts absolutos deben derivarse de containers.json.
+- R31.5 El diagnóstico de la racha puede concluir que el bug vive en la build Electron: NO
+  arrastrar esta ronda a re-empaquetar release — se documenta, se arregla el código, y el
+  smoke del instalador queda para la ronda 32 (que ya lo tiene en su DoD).
+
+## 31.5 DoD
+
+```
+npm test + npm run test:e2e verdes (baselines recontados y anotados en HANDOFF)
+Salida de calibrate-resistencia-ronda31.mjs en banda, pegada en HANDOFF
+Pasada manual de juego real contra PLAN.md §3 (obligatoria): hitos tempranos intactos, dificultad nueva palpable en tiers 3+
+Manual 375px: Tienda y selector muestran ritmo/pincel actuales; bóveda contrarreloj completable
+Causa de los logros de racha identificada, testeada y documentada en HANDOFF
+Commit "feat: ronda 31 — dificultad y balance (resistencias, racha, fix 250k)" + HANDOFF + push + PR link
+```
+
+---
+
+# RONDA 32 — Idiomas pt/fr/de + re-release (rama `feat/i18n-release-ronda31`, 1 agente)
 
 1. `SUPPORTED_LANGUAGES = ['es','en','pt','fr','de']` (save.js) + diccionarios completos:
    `pt.js` / `fr.js` / `de.js` (UI — recontar las claves reales con todo v4) y
@@ -1080,9 +1266,30 @@ Commit "feat: ronda 30 — imágenes reales de contenedores" + HANDOFF + push + 
    del instalador (patrón ronda 18: `--user-data-dir` + hash del save real); **auditoría
    global final Verif&Audit.md sobre el repo COMPLETO** (como la 18.3) con veredicto
    explícito apto/no apto.
-5. DoD: `npm test` + `npm run test:e2e` verdes (recontar baselines y dejarlos en HANDOFF);
-   veredicto APTO; commit + push + PR link. **Después de mergear esta ronda, el usuario
-   ejecuta el checklist U1-U9 de ROADMAPv3 §2 y lanza.**
+5. **Higiene legal y de credenciales antes de publicar** (auditado el 2026-07-19, ronda 29.D):
+   a. **`LICENSE` tiene `<TITULAR>` sin completar** — dice literalmente
+      "Copyright (c) 2026 `<TITULAR>`. Todos los derechos reservados." Para un producto
+      comercial hay que reemplazarlo por el nombre o razón social real del titular (el mismo
+      que figure como editor en Steamworks). Es tarea del USUARIO (dato personal/fiscal), no
+      del agente: si al llegar a esta ronda sigue con el placeholder, detenerse y pedirlo.
+   b. **Secretos que NUNCA van al repo, ni siquiera privado**: la Steamworks Publisher API key
+      y las credenciales de la cuenta de build de SteamPipe. Van como secrets de GitHub Actions
+      o directamente fuera del control de versiones. En cambio el **appId y los depotId reales
+      SÍ son públicos** (no son secreto) y por eso los `TODO(usuario)` de
+      `tools/steam/app_build.vdf` y `depot_build.vdf` se completan y se committean normal.
+      Verificación de cierre de la ronda: grep de `api[_-]?key|secret|password|token|credential`
+      sobre el repo (excluyendo `node_modules` y los `tokens.css` de diseño) con resultado
+      limpio, y confirmar que `ci.yml` no filtra ningún `secrets.*` a la salida de un job.
+   c. **Visibilidad del repo**: auditado el 2026-07-19 estaba PÚBLICO (0 forks, 0 stars) y sin
+      nada sensible commiteado, pero el juego es vanilla buildless — clonarlo es tenerlo
+      jugable sin compilar. Decisión del usuario pasarlo a privado (Settings → General →
+      Danger Zone → Change repository visibility); es reversible y no cambia el remote ni los
+      clones locales. Única contra: en privado los minutos de Actions dejan de ser ilimitados
+      (2000/mes en el plan gratis; el `ci.yml` actual no se acerca).
+6. DoD: `npm test` + `npm run test:e2e` verdes (recontar baselines y dejarlos en HANDOFF);
+   veredicto APTO; **`LICENSE` con titular real y grep de secretos limpio (§32.5)**; commit +
+   push + PR link. **Después de mergear esta ronda, el usuario ejecuta el checklist U1-U9 de
+   ROADMAPv3 §2 y lanza.**
 
 ---
 

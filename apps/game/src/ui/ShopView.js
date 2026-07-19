@@ -26,8 +26,10 @@ import {
   nextProceduralTier,
   proceduralContainer,
   PROCEDURAL_CONTAINER_MAX_N,
+  getTimeBand,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
+import { containerBannerMarkup, bindContainerBannerFallback } from './containerImage.js';
 import { t } from '../i18n/i18n.js';
 
 /**
@@ -76,9 +78,14 @@ function renderProceduralCard(state, data, allContainers) {
   const bigBang = allContainers.find((c) => c.id === 'vertederoBigBang');
   if (!bigBang) return '';
   const n = nextProceduralTier(state);
+  // Contrato §3.5.8: los tiers procedurales REUSAN la imagen de vertederoBigBang — nunca se
+  // genera un asset por tier (serían infinitos).
+  const banner = containerBannerMarkup('vertederoBigBang', null);
+  const cardClass = `shop-card${banner ? ' shop-card--has-banner' : ''}`;
   if (n > PROCEDURAL_CONTAINER_MAX_N) {
     return (
-      `<article class="shop-card">` +
+      `<article class="${cardClass}">` +
+      banner +
       `<span class="shop-card-icon">${iconMarkup(bigBang.icon, { size: 28 })}</span>` +
       `<h3>${bigBang.name}</h3>` +
       `<p>${t('shop.proceduralAllOwned')}</p>` +
@@ -88,7 +95,8 @@ function renderProceduralCard(state, data, allContainers) {
   const tier = proceduralContainer(n, bigBang);
   const cost = getContainerCost(state, tier, data);
   return (
-    `<article class="shop-card">` +
+    `<article class="${cardClass}">` +
+    banner +
     `<span class="shop-card-icon">${iconMarkup(bigBang.icon, { size: 28 })}</span>` +
     `<h3>${tier.name}${t('shop.proceduralSuffix', { n })}</h3>` +
     `<p>${t('shop.cost', { label: formatMoney(cost) })}</p>` +
@@ -123,6 +131,9 @@ export const ShopView = {
     }
 
     const rarityNames = new Map(itemsData.rarities.map((r) => [r.id, r.name]));
+    // Ronda 30 (§4.41): la franja sale de la hora REAL del sistema, igual que el indicador
+    // día/noche del Topbar — es presentación pura, nunca estado persistido.
+    const band = getTimeBand(new Date().getHours(), data.dayNight);
 
     const cards = allContainers.map((c) => {
       const unlocked = isContainerUnlocked(state, c, allContainers);
@@ -132,8 +143,12 @@ export const ShopView = {
         const reason = needsPrestige
           ? t('shop.unlocksAtPrestige', { count: c.requiresPrestigeCount })
           : t('shop.lockedDefault');
+        // El banner de un contenedor bloqueado va en escala de grises (CSS): se ve QUÉ es sin
+        // regalar la sensación de tenerlo.
+        const lockedBanner = containerBannerMarkup(c.id, band, 'container-banner--locked');
         return (
-          `<article class="shop-card shop-card--locked">` +
+          `<article class="shop-card shop-card--locked${lockedBanner ? ' shop-card--has-banner' : ''}">` +
+          lockedBanner +
           `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
           `<h3>${c.name}</h3>` +
           `<p>${reason}</p>` +
@@ -166,8 +181,10 @@ export const ShopView = {
               needed: formatNumber(digsNeededForNextLevel(c, level)),
               next: level + 1,
             });
+      const banner = containerBannerMarkup(c.id, band);
       return (
-        `<article class="shop-card">` +
+        `<article class="shop-card${banner ? ' shop-card--has-banner' : ''}">` +
+        banner +
         `<span class="shop-card-icon">${iconMarkup(c.icon, { size: 28 })}</span>` +
         `<h3>${c.name}</h3>` +
         `<p>${t('shop.cost', { label: costLabel })}</p>` +
@@ -199,5 +216,6 @@ export const ShopView = {
 
     const proceduralCard = renderProceduralCard(state, data, allContainers);
     container.innerHTML = `<div class="shop-grid">${stallCard}${cards.join('')}${proceduralCard}</div>`;
+    bindContainerBannerFallback(container, 'shop-card--has-banner');
   },
 };

@@ -27,6 +27,8 @@ export default {
     vertederoBigBang: 'Big Bang Dump',
     bovedaContrarreloj: 'Vault Against the Clock',
     sotanoSinLuz: 'Lightless Basement',
+    reactorDeCuasar: 'Quasar Reactor',
+    horizonteDeSucesos: 'Event Horizon',
   },
   items: {
     tachoVereda: {
@@ -189,6 +191,24 @@ export default {
       'eye-glass-dark': 'Lens that sees in the dark',
       'key-blackened': 'Blackened key',
       'relic-unlit': 'A relic never lit',
+    },
+    reactorDeCuasar: {
+      'shard-quasar': 'Quasar shard',
+      'coil-supercharged': 'Supercharged coil',
+      'lens-gravitational': 'Gravitational lens',
+      'core-collapsed': 'Collapsed core',
+      'seal-plasma': 'Plasma seal',
+      'crown-ionized': 'Ionised crown',
+      'relic-firstlight': 'Relic of the first light',
+    },
+    horizonteDeSucesos: {
+      'frame-eventhorizon': 'Frame of the horizon',
+      'mask-singularity': 'Mask of the singularity',
+      'orb-spaghettified': 'Orb stretched to a thread',
+      'clock-frozen-fall': 'Clock in eternal freefall',
+      'gyro-tidal': 'Tidal gyroscope',
+      'monolith-inverted': 'Inverted monolith',
+      'heart-accretion': 'Accretion heart',
     },
   },
   rarities: {

@@ -75,7 +75,7 @@ export {
 
 export { clampedElapsedMs, localDayStamp } from './time.js';
 
-export { isNightHour, getDayNightModifiers } from './dayNight.js';
+export { isNightHour, getDayNightModifiers, getTimeBand } from './dayNight.js';
 
 export {
   rollCategory,
