@@ -3206,10 +3206,12 @@ const artImageCache = new Map();
 /**
  * Versión rasterizable del arte (HTMLImageElement con data-URL SVG) para dibujar en el canvas
  * de escarbado. Mismo mecanismo que `getIconImage`, con caché por `artKey|size`.
- * Presupuesto de memoria (auditoría D de la ronda 29): a 128px un bitmap decodificado pesa
- * 128×128×4 ≈ 64 KiB; el catálogo completo (~140 ítems) daría ~9 MiB SI se pidiera entero,
- * pero el pre-rasterizado de DigCanvas.start() solo pide los ítems del escarbado en curso, así
- * que el caché crece con los pools que el jugador realmente visita.
+ * Presupuesto de memoria (medido en la auditoría D de la ronda 29): a 128px un bitmap
+ * decodificado pesa 128×128×4 = 64 KiB y el catálogo son 137 entradas ⇒ TECHO de 8.56 MiB
+ * (+224 KiB de markup SVG), y solo si el jugador escarba todos los pools del juego en una misma
+ * sesión; el pre-rasterizado de DigCanvas.start() pide únicamente los ítems del escarbado en
+ * curso. El caché no puede crecer más que eso: sus claves salen de la allow-list estática `ART`
+ * (`hasObjectArt` con `Object.hasOwn`), nunca de un string del save — por eso no lleva evicción.
  * @param {string} artKey
  * @param {{ size?: number }} [opts]
  * @returns {HTMLImageElement|null} imagen cacheada, o null si el ítem no tiene arte.
