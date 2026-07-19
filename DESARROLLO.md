@@ -663,6 +663,25 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   40px (R29.3): el diario leía como ladrillo (la plana superior pasó a dominar en claro) y el
   zapato como piedra (botín con caña, cordones y suela clara de contraste).
 
+- **Ronda 29.C — arte tanda 2 (pools 9-16 + especiales de la ronda 20 + legendarios) y vitrina**:
+  78 composiciones que cierran el catálogo (`PENDING_ART` queda VACÍA). Decisiones: (1) el bloom
+  de rareza alta de los 8 legendarios (§5.2) se pinta en el `paint` del body y NO en `details`,
+  porque el overlay de details se recorta al clipPath de la silueta y un aura ahí sería invisible
+  — el `paint` no se recorta, así que el halo puede desbordar el objeto (helper `halo`, mismo
+  patrón que `GRAD`/`steelGrad`: const interno del módulo); (2) los legendarios llevan **body
+  propio no reutilizable** (`legendCan`, `legendBike`, …) con gradientes de más paradas y rim
+  light, y escala alta (1.15-1.4): son el premio aspiracional y tienen que dominar el canvas
+  apenas asoman; (3) la **Vitrina del INDEX** exhibe el arte a 96px (tamaño nativo del viewBox)
+  con `.showcase-card-art`, cuyo drop-shadow es más suave que el del ícono plano porque la pieza
+  ya trae su halo compuesto — el resto del INDEX conserva los íconos de 24px: su grilla tiene
+  decenas de ítems por contenedor y a 96px dejaría de ser una tabla consultable, mientras que la
+  vitrina son 8 piezas; (4) cinco composiciones se rehicieron tras la revisión por screenshot a
+  40px (R29.3): partitura y boceto leían como papel en blanco (indistinguibles entre sí y del
+  manifiesto de carga) → pentagrama con notas y garabato de carbonilla gruesos; el libro contable
+  era un rectángulo gris → quemadura que ocupa media tapa con borde de brasa; el eslabón de cadena
+  eran dos aros borrosos → pared de aro engrosada a 10 unidades de viewBox; y la Semilla del Vacío
+  (legendario) leía como mancha oscura sobre la tierra del canvas → paleta subida a valor medio.
+
 ---
 
 ## 11. Qué queda como postre (no tocar en V1)

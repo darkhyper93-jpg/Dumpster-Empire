@@ -178,6 +178,33 @@ describe('objectArt — sistema de objetos ilustrados (ronda 29.A, PLAN.md §5.5
     }
   });
 
+  it('tanda 2 (ronda 29.C): todo icon id de los pools de los contenedores 9-16 de la cadena y de los especiales fueraDeCadena tiene arte', () => {
+    // El corte de la tanda C del roadmap (§29.C): el resto de la cadena de containers.json
+    // (todo lo que no cubrió la tanda B) más bovedaContrarreloj/sotanoSinLuz (ronda 20).
+    const chain = containers.filter((c) => !c.fueraDeCadena).slice(8);
+    const specials = containers.filter((c) => c.fueraDeCadena);
+    const tanda = [...chain, ...specials];
+    expect(tanda.length).toBeGreaterThan(0);
+    for (const container of tanda) {
+      const pool = items.containers[container.id];
+      expect(pool, `el contenedor "${container.id}" no tiene pool en items.json`).toBeDefined();
+      for (const item of pool) {
+        expect(hasObjectArt(item.icon), `tanda 2: "${item.icon}" (${container.id}) sin arte ilustrado`).toBe(true);
+      }
+    }
+  });
+
+  it('tanda 2 (ronda 29.C): los 8 legendarios tienen arte ilustrado (el premio aspiracional del juego)', () => {
+    expect(legendaries.items.length).toBeGreaterThan(0);
+    for (const legend of legendaries.items) {
+      expect(hasObjectArt(legend.icon), `legendario "${legend.icon}" sin arte ilustrado`).toBe(true);
+    }
+  });
+
+  it('cierre de la ronda 29: PENDING_ART queda vacía (todo el catálogo está ilustrado)', () => {
+    expect(PENDING_ART, `quedan ${PENDING_ART.length} ids sin ilustrar: ${PENDING_ART.join(', ')}`).toHaveLength(0);
+  });
+
   it('paletteFrom deriva una paleta completa y determinística de un solo color base', () => {
     const p = paletteFrom('#ffb627');
     for (const slot of ['base', 'light', 'dark', 'deep', 'accent']) {

@@ -1061,6 +1061,20 @@ textarea {
   filter: grayscale(1);
 }
 
+/* Ronda 29.C: pedestal con el objeto ILUSTRADO a 96px (objectArt.js). El arte ya trae su propio
+   halo de rareza compuesto en el SVG, así que acá el bloom es más suave que el del ícono plano:
+   de lo contrario el drop-shadow ámbar se come los gradientes de la pieza. */
+.showcase-card-art {
+  display: block;
+  line-height: 0;
+  filter: drop-shadow(0 0 8px var(--amber));
+}
+
+.showcase-card-art svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Bloom de rareza alta (PLAN.md §5.2): glow de color detrás del ícono, reusado por la Vitrina
    y por la celebración de legendario — mismo criterio visual que triggerRarityGlow (fx/particles.js). */
 .showcase-card-icon,
