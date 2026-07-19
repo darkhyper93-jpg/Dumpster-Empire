@@ -6938,3 +6938,97 @@ sin cota superior.
   (data estática, jamás del save) — mismo argumento que DigCanvas.
 - Presupuesto de memoria sin cambios: el caché sigue creciendo solo con lo que se pide
   (128px por escarbado + 40px por las 4 herramientas del selector ≈ nada).
+
+## Ronda 29 — Agente C: arte tanda 2 (pools 9-16 + especiales + legendarios) + vitrina (rama `feat/arte-ronda29`, commit "feat: ronda 29.C — …")
+
+### Qué se hizo
+
+- **78 composiciones nuevas en `ART`** (objectArt.js), que CIERRAN el catálogo: los pools de los
+  contenedores 9-16 de la cadena (convoyFantasma, criptaColeccionista, estacionOrbital,
+  vertederoDivino, chatarreriaTitanes, naufragioTemporal, archivoMultiverso, vertederoBigBang),
+  los dos especiales `fueraDeCadena` de la ronda 20 (bovedaContrarreloj, sotanoSinLuz) y los
+  **8 legendarios** de la ronda 22. **`PENDING_ART` queda VACÍA** (la lista sigue exportada a
+  propósito: un ítem nuevo de una ronda futura tiene que entrar ahí o en ART, y el test de
+  cobertura falla si no se decidió ninguna de las dos).
+- **~30 bodies nuevos** con el contrato `{defs, paint, clip}` de 29.A: `lantern`, `compass`,
+  `strongbox`, `ring`, `crate`, `bell`, `goblet`, `shrine`, `heart`, `platePanel`, `wrench`,
+  `gyro`, `orb`, `reactor`, `bolt`, `coil`, `seed`, `rivet`, `chainLink`, `anvil`, `gear`,
+  `piston`, `figurehead`, `hourglass`, `anchor`, `shipWheel`, `penrose`, `key`, `starburst`,
+  `monolith`, `alarmClock`, `vaultDoor`, `gem`, `magnifier`.
+- **8 bodies propios y NO reutilizables para los legendarios** (`legendCan`, `legendBike`,
+  `legendCore`, `legendWatch`, `legendAnchor`, `legendMuse`, `legendRelic`, `legendSeed`):
+  gradientes con más paradas, rim light y escala alta (1.15-1.4).
+- **Helper `halo`** (const interno del módulo, mismo patrón que `GRAD`/`steelGrad`): el bloom de
+  rareza alta de PLAN.md §5.2 se pinta en el **`paint` del body, NUNCA en `details`** — el
+  overlay de details se recorta al clipPath de la silueta, así que un aura ahí sería invisible;
+  el `paint` no se recorta y el halo puede desbordar el objeto, que es el efecto pedido.
+- **Vitrina del INDEX** (`CollectionView.renderShowcase`): los pedestales de legendario obtenido
+  exhiben el arte ilustrado a **96px** vía `getObjectArtMarkup`, con fallback al ícono de 30px si
+  un legendario no tuviera arte. CSS nuevo `.showcase-card-art` (solo layout + un drop-shadow con
+  `var(--amber)`, cero colores nuevos): su bloom es MÁS SUAVE que el de `.showcase-card-icon`
+  porque la pieza ya trae su halo compuesto dentro del SVG y el drop-shadow fuerte se comía los
+  gradientes.
+- **Tests**: +3 en objectArt.test.js, RED primero, derivados de la data (cero conteos
+  hardcodeados): cobertura de los pools de la tanda 2 (`chain.slice(8)` + los `fueraDeCadena`),
+  cobertura de los 8 legendarios, y `PENDING_ART` vacía. La validación xmlns + buena-formación
+  XML por cada entrada de ART venía gratis del test de 29.A y cubrió las 78 composiciones nuevas.
+
+### Verificación
+
+- **Unit (Vitest): 664/664 en 44 archivos** (baseline de B 661/661 + 3 de esta tanda).
+- **e2e (Playwright): 86/86** — idéntico al baseline de las rondas 27/28/29.A/29.B, SIN tocar un
+  solo spec. Corrida limpia, sin los flakes que reportó B.
+- **Manual por matriz de screenshots** (scripts descartables en el scratchpad de esta sesión:
+  `gallery.mjs` — las 78 composiciones a 96px y 40px, compone con `composeObjectArt` en Node puro
+  sin servidor — y `matriz.mjs` — escarbado REAL con gestos de puntero por cada uno de los 10
+  contenedores de la tanda a 375×812, más la Vitrina a 375px y 1280px): los 10 contenedores usan
+  arte en TODOS los entries (cero fallbacks visibles), objetos reconocibles a medio destapar,
+  pill legible sobre arte claro y oscuro. Vitrina a 375px: dos columnas, arte de 96px con halo,
+  nombre y valor legibles; en desktop entra en el sidebar de 320px sin desbordar.
+- **Cinco composiciones NO pasaron la vara de 40px y se rehicieron ANTES de seguir** (R29.3):
+  `score-silent` y `sketch-blind` leían como papel en blanco e indistinguibles entre sí y de
+  `cargo-manifest` (→ pentagrama con notas negras gruesas / garabato de carbonilla enmarañado);
+  `ledger-burnt` era un rectángulo gris (→ quemadura que ocupa media tapa con borde de brasa y
+  chispas); `chain-titanic` eran dos aros borrosos (→ pared del aro engrosada a 10 unidades de
+  viewBox ≈ 4px a 40px); y `legend-seed` leía como mancha oscura sobre la tierra del canvas
+  (→ paleta de #33445e a #56709a: un legendario no puede desaparecer contra el sustrato).
+- Greps de cierre: cero console.log / TODO / emojis en lo nuevo; cero colores hardcodeados nuevos
+  en CSS (los del canvas siguen el patrón documentado de DigCanvas).
+
+### Decisiones (detalle en DESARROLLO.md §10)
+
+- El halo de los legendarios va en `paint`, no en `details` (el clipPath lo mataría).
+- Legendarios con body propio no reutilizable: son 8 piezas, no vale la pena generalizarlas.
+- **Vitrina a 96px, resto del INDEX a 24px**: la grilla del INDEX tiene decenas de ítems por
+  contenedor y a 96px dejaría de ser una tabla consultable; la vitrina son 8 piezas y es
+  justamente el lugar donde el arte se luce (decisión que el roadmap §29.C pedía documentar).
+- Los tiers procedurales de la ronda 26 NO llevan entrada propia: reusan el pool del Big Bang,
+  ya ilustrado en esta tanda (contrato §3.5.7) — anotado en el comentario de `ART`.
+
+### Para el Agente D (e2e + auditoría) — lo que te queda
+
+- **`window.__digDebug` sigue SIN exponer los campos de arte por entry** (si usa arte ilustrado y
+  si `naturalWidth > 0`). Ni A ni B ni yo lo tocamos para no pisar tu letra: es lo primero que
+  necesitás para el spec `ronda29-arte.spec.js`. OJO: `window.__digDebug` es un **objeto**
+  (`{positions, revealed, isComplete}`), no una función — me comí 30s de timeout asumiendo lo
+  segundo.
+- **Trampas de seeding que me costaron tres corridas** (anotalas antes de escribir el spec):
+  `ownedContainers` es un **mapa `{id: cantidad}`**, NO un array — sembrarlo como array lo
+  serializa a `{}` y el save entra "válido" pero con cero contenedores, así que el picker solo
+  muestra tachoVereda (variante del napkin №5: el seed malo pasa silencioso). `legendariesFound`
+  sí es un array de ids. Los contenedores 9-16 piden `requiresPrestigeCount` 2..9.
+- Selectores reales, por si reusás mi `matriz.mjs`: tab `[data-tab="escarbar"]` (no `"dig"`),
+  tarjeta del picker `[data-start-dig="<id>"]`, canvas `.dig-canvas-top`, host
+  `#dig-canvas-host`, abandonar `#dig-abandon-btn`.
+- Para destapar un objeto entero con gestos reales hace falta un barrido denso (filas + columnas
+  cada 4px sobre ±30 unidades internas alrededor del centro): un arrastre diagonal simple deja un
+  parche y no permite juzgar la composición.
+- Para tu auditoría de sinks: el consumidor NUEVO de objectArt es `CollectionView.renderShowcase`,
+  y el artKey que le llega es `legendary.icon` de `data.legendaries.items` (data estática) — el
+  id del save (`state.legendariesFound`) se usa SOLO como clave de un `Set` para saber si está
+  encontrado, jamás llega a `getObjectImage`/`getObjectArtMarkup`. Mismo argumento que DigCanvas
+  y ToolsSection.
+- Presupuesto de memoria: la vitrina usa `getObjectArtMarkup` (SVG inline, sin caché de
+  `HTMLImageElement`), así que no suma al caché de imágenes de 128px del canvas.
+- Rendimiento: no medí FPS del rascado (el roadmap pide la comparación antes/después en el
+  hardware del usuario, y es tu punto 2) — queda entero para vos.
