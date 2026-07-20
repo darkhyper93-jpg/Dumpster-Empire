@@ -55,6 +55,9 @@
   --touch-target: 44px;
   --container-max: 1440px;
 
+  /* --- z-index: capas fijas (ronda 32) --- */
+  --z-title: 35; /* #title-screen (position:fixed, full-viewport); por debajo de --z-toast/modal (40) */
+
   /* --- Sombras "tactile"/"squishy" del mockup (sin cambios) --- */
   --shadow-extrude: 0 6px 0 0 rgba(0, 0, 0, 0.4); /* .squishy-button */
   --shadow-extrude-pressed: 0 2px 0 0 rgba(0, 0, 0, 0.4);
@@ -101,4 +104,9 @@
   --plate-olive-dark: #1f2814;
   --plate-gold: #e0be6b;
   --plate-gold-dark: #7d5e24;
+  /* Ronda 32: degradé del texto JUGAR calcado sobre la placa horneada — muestreado del "JUGAR"
+     de referencia (reference/ui/NuevaPantallaInicio.webp: crema arriba, oro viejo abajo). */
+  --plate-text-hi: #f6edd3;
+  --plate-text-mid: #eeddb0;
+  --plate-text-lo: #c99b52;
 }

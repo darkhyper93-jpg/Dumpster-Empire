@@ -80,25 +80,30 @@ body {
   display: none;
 }
 
+/* Ronda 32: `#title-screen` pasa a `position: fixed; inset: 0` medido contra el VIEWPORT (no
+   contra `#app { max-width: 720px }`, layout.css arriba) — así el arte de fondo cubre pantalla
+   completa incluso en fullscreen/desktop ancho, sin dejar los bordes vacíos que dejaba la
+   columna de 720px (causa raíz documentada en ROADMAPv4.md §32.0). El juego (`.game-shell`)
+   sigue intacto dentro de esa columna: este cambio es exclusivo de la pantalla de inicio. */
 .title-screen {
-  flex: 1;
-  min-height: 100vh;
+  position: fixed;
+  /* Solo inset: 0, SIN width:100vw/height:100vh — 100vw incluye el ancho de la scrollbar
+     clásica, corría el arte y le comía el borde derecho del marco horneado (feedback del
+     usuario, ronda 32); un fixed con inset:0 mide exactamente el viewport visible. */
+  inset: 0;
+  z-index: var(--z-title);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);
-  position: relative;
-  /* Ronda 13: el arte de fondo se recorta al alto/ancho de la pantalla y el botón "Jugar" se
-     posiciona en unidades de contenedor (cqw/cqh) para calcar el encuadre de object-fit:cover.
-     OJO: cqw/cqh miden el content box y el <img> absoluto cubre el padding box — el padding
-     debe ser 0 acá o el factor de escala queda corto y el botón pintado asoma por debajo del
-     real (visto en la verificación). El respaldo se centra por flex + gap, no necesita padding. */
+  gap: clamp(var(--space-3), 4vh, var(--space-5));
+  /* Sin padding: cqw/cqh miden el CONTENT box del contenedor — cualquier padding acá desalinea
+     el calco de JUGAR/engranaje respecto del arte (que llena el border box). */
   padding: 0;
   background-color: var(--wood-surface);
   background-image: var(--wood-grain);
   overflow: hidden;
-  container-type: size;
+  container-type: size; /* para las unidades cqw/cqh del calco de JUGAR/engranaje, ver abajo */
 }
 
 .title-screen[hidden] {
@@ -113,7 +118,7 @@ body {
   display: none !important;
 }
 
-/* Arte de la pantalla de inicio (assets/title-bg.jpg). Estados en data-bg de #title-screen
+/* Arte de la pantalla de inicio (assets/title-bg.webp). Estados en data-bg de #title-screen
    (los setea TitleScreen.js): mientras carga (o si falla) el respaldo es la pantalla previa
    — madera + logo SVG + botón centrado por flex — así nunca hay pantalla en blanco. */
 .title-bg {
@@ -140,12 +145,18 @@ body {
   position: relative; /* por encima del arte absoluto mientras es respaldo visible */
 }
 
+.title-logo-icon svg {
+  width: clamp(40px, 8vw, 64px);
+  height: clamp(40px, 8vw, 64px);
+}
+
 /* Con el arte listo, el emblema DUMPSTER EMPIRE ya está pintado en el fondo: TitleScreen.js
    le pone `.sr-only` (components.css) al logo de respaldo — fuera de la vista pero el <h1>
    sigue para lectores de pantalla. */
 
 .title-logo-text {
   font-family: var(--font-display);
+  font-size: clamp(1.4rem, 4.5vw, 2.5rem);
   letter-spacing: -0.02em;
   text-align: center;
 }
@@ -215,38 +226,115 @@ body {
     inset 0 2px 4px rgba(0, 0, 0, 0.35);
 }
 
-/* Botón real calcado sobre el botón pintado en el arte, para que nunca se vean dos botones.
-   Números medidos por escaneo de píxeles sobre el arte original de 1614x975 (fpisp.png): rect
-   del botón pintado x 681-922 / y 589-684 (242x96, centro en 801.5,636.5; centro del arte
-   807,487.5 → offset -5.5,+149). --title-art-scale replica el factor de object-fit:cover
-   (max de ambas proporciones); todas las medidas del arte se multiplican por él. El rect
-   propio va 4px de arte más grande por lado para tapar el antialias del borde pintado. */
+/* Con el arte listo, la placa de JUGAR es la HORNEADA en el fondo (Fondorenovadoinicio.png la
+   trae vacía a propósito): el botón DOM no dibuja NINGUNA placa propia — solo aporta el texto
+   traducible t('titleScreen.play') calcado encima, con la tipografía/degradé del "JUGAR" de
+   referencia (NuevaPantallaInicio.webp: Cinzel-like, crema→oro viejo, tracking amplio).
+   Números medidos por pixel-scan + grilla sobre el arte de 1672x941 (ronda 32, segunda pasada):
+   placa vacía = rect x 568-1090 / y 607-744 (522x137; centro 829,675.5; centro del arte
+   836,470.5 → offset -7,+205). --title-art-scale replica el factor de object-fit:cover (max de
+   ambas proporciones); todas las medidas del arte se multiplican por él. */
 #title-screen[data-bg='ready'] .title-play-btn {
-  --title-art-scale: max(100cqw / 1614, 100cqh / 975);
+  --title-art-scale: max(100cqw / 1672, 100cqh / 941);
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%)
-    translate(calc(-5.5 * var(--title-art-scale)), calc(149 * var(--title-art-scale)));
-  width: calc(250 * var(--title-art-scale));
-  height: calc(104 * var(--title-art-scale));
+  /* Anclaje por left/top puros (esquina de la placa = centro del arte + offset de esquina):
+     NADA de transform: translate(-50%,-50%) — la combinación %-propio + calc(cq) en transform
+     se resolvía tarde/identidad en Chromium y el calco aparecía corrido (visto en esta ronda). */
+  left: calc(50% - 268 * var(--title-art-scale)); /* -7 (centro) - 522/2 */
+  top: calc(50% + 136.5 * var(--title-art-scale)); /* +205 (centro) - 137/2 */
+  width: calc(522 * var(--title-art-scale));
+  height: calc(137 * var(--title-art-scale));
   min-height: var(--touch-target);
   padding: 0;
-  border-radius: calc(16 * var(--title-art-scale));
-  font-size: calc(26 * var(--title-art-scale));
+  border-radius: calc(18 * var(--title-art-scale));
+  background: none;
+  border: none;
+  box-shadow: none;
+  text-shadow: none;
+  /* DECISIÓN: el "JUGAR" horneado de referencia es una sans pesada (verificado con recorte
+     ampliado, NO serif) — Plus Jakarta Sans 800 (ya autohospedada) calza los letterforms casi
+     exactos; se descartó sumar una fuente nueva (se probó Cinzel: distinta). */
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: calc(68 * var(--title-art-scale));
+  letter-spacing: 0.06em;
+  text-indent: 0.06em; /* compensa el tracking del último glifo para centrar de verdad */
+  /* Texto con degradé como el horneado: el gradiente se recorta a los glifos y el "grabado"
+     oscuro va como drop-shadow del trazo (no text-shadow: pintaría detrás del fill
+     transparente). */
+  color: transparent;
+  background-image: linear-gradient(180deg, var(--plate-text-hi) 0%, var(--plate-text-mid) 55%, var(--plate-text-lo) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 calc(2 * var(--title-art-scale)) 1px rgba(0, 0, 0, 0.55));
 }
 
-/* El squish de button:active usa `transform: translateY(4px)` a secas: acá hay que combinarlo
-   con el transform de anclaje o el botón saltaría al centro flex al presionarlo. */
+#title-screen[data-bg='ready'] .title-play-btn::before,
+#title-screen[data-bg='ready'] .title-play-btn::after {
+  display: none; /* filete y remaches CSS: solo existen en el respaldo, la placa real ya los trae */
+}
+
+#title-screen[data-bg='ready'] .title-play-btn:hover:not(:disabled),
+#title-screen[data-bg='ready'] .title-play-btn:focus-visible {
+  filter: drop-shadow(0 calc(2 * var(--title-art-scale)) 1px rgba(0, 0, 0, 0.55)) brightness(1.18);
+}
+
+#title-screen[data-bg='ready'] .title-play-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(224, 190, 107, 0.45); /* anillo de foco para teclado (el botón no tiene borde propio) */
+}
+
+/* El texto se hunde apenas (2px) sobre la placa horneada — el anclaje va por left/top, así que
+   un translateY suelto no lo desplaza del calco. */
 #title-screen[data-bg='ready'] .title-play-btn:active:not(:disabled) {
-  transform: translate(-50%, -50%)
-    translate(calc(-5.5 * var(--title-art-scale)), calc(149 * var(--title-art-scale) + 4px));
+  transform: translateY(2px);
+  box-shadow: none;
 }
 
+/* Respaldo por defecto (loading/error y proporciones donde el cover recorta la ruedita
+   horneada, ver la media query de abajo): botón circular visible, anclado abajo-derecha. */
 .title-settings-btn {
   position: absolute;
-  right: var(--space-3);
-  bottom: var(--space-3);
+  right: max(var(--space-3), env(safe-area-inset-right));
+  bottom: max(var(--space-3), env(safe-area-inset-bottom));
+}
+
+/* La ruedita YA viene horneada en Fondorenovadoinicio.png (aro dorado de Ø125 centrado en
+   1562,831 → offset +726,+360.5 del centro del arte). El botón real se calca ENCIMA, invisible
+   (sin ícono ni relleno propio) para no dibujar una segunda ruedita: solo el hitbox — EXACTO al
+   aro, sin sobresalir — y un aro sutil en hover/foco para seguir siendo descubrible.
+   SOLO aplica en proporciones donde el cover deja la ruedita horneada en pantalla:
+   con cover, su centro entra si vw/vh ≳ 1.55 (más angosto, el recorte lateral la saca del
+   encuadre) y algo tocable del aro queda sobre el fold hasta vw/vh ≈ 2.6 (en 21:9 reales,
+   ~2.33-2.39, el arco superior visible es hitbox de sobra; recién de 2.8 desaparece entera).
+   Fuera de ese rango NO hay ruedita que calcar y el botón vuelve al respaldo circular de
+   arriba — sin él, Ajustes quedaría inalcanzable en teléfono portrait. */
+@media (min-aspect-ratio: 14/9) and (max-aspect-ratio: 13/5) {
+  #title-screen[data-bg='ready'] .title-settings-btn {
+    --title-art-scale: max(100cqw / 1672, 100cqh / 941);
+    position: absolute;
+    /* Mismo anclaje left/top puro que el de JUGAR (ver nota anti-transform ahí arriba). */
+    left: calc(50% + 663.5 * var(--title-art-scale)); /* +726 (centro) - 125/2 */
+    top: calc(50% + 298 * var(--title-art-scale)); /* +360.5 (centro) - 125/2 */
+    right: auto;
+    bottom: auto;
+    width: calc(125 * var(--title-art-scale));
+    height: calc(125 * var(--title-art-scale));
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+    background: transparent;
+    border: none;
+    border-bottom: none;
+    box-shadow: none;
+    color: transparent; /* el ícono SVG usa stroke: currentColor — lo vuelve invisible */
+    border-radius: 50%;
+  }
+
+  #title-screen[data-bg='ready'] .title-settings-btn:hover:not(:disabled),
+  #title-screen[data-bg='ready'] .title-settings-btn:focus-visible {
+    background: transparent;
+    box-shadow: 0 0 0 2px rgba(224, 190, 107, 0.5);
+  }
 }
 
 #topbar {

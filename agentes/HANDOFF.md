@@ -7543,3 +7543,237 @@ canvas. Arreglado cortando el loop en cuanto `#dig-empty` se vuelve visible.
   (el jugador puede cerrar el modal y seguir, salvo que el gesto en curso se pierda), pero es una
   fricción real que no se resolvió de raíz esta ronda — candidata para la próxima pasada de
   juice/UX si el usuario la nota jugando.
+
+## Ronda 32 — Agente único: nueva pantalla de inicio full-bleed (rama `feat/inicio-ronda32`)
+
+Sin bump de save (pura presentación, regla dura §17 no aplica — cero engine, cero data, cero
+save tocados).
+
+### Bloqueo inicial y resolución
+
+Al arrancar, `reference/ui/NuevaPantallaInicio.webp` (el asset que el roadmap esperaba) traía el
+botón JUGAR y el engranaje HORNEADOS con texto en español — exactamente el caso bloqueante de
+§32.2. Se le preguntó al usuario (AskUserQuestion); eligió subir una versión limpia. El usuario
+señaló que ya existía `reference/ui/Fondorenovadoinicio.png` (ojo: nombre real sin la "n" extra
+que se le pidió buscar) — esa SÍ tiene el botón vacío (sin texto) y sin engranaje horneado, así
+que desbloqueó la ronda. Documentado acá porque el nombre del archivo puede confundir en una
+búsqueda literal.
+
+### Causa raíz (verificada, coincide con §32.0 del roadmap)
+
+`#app { max-width: 720px }` (layout.css) contenía a `#title-screen` como hijo normal del flujo,
+así que en pantallas más anchas que 720px (fullscreen, desktop) el fondo quedaba en una columna
+centrada con `--bg-0` a los costados.
+
+### Qué hice
+
+1. **CSS (`layout.css`)**: `#title-screen` pasa a `position: fixed; inset: 0; width: 100vw;
+   height: 100dvh` (fallback `100vh`) con `z-index: var(--z-title)` (token nuevo en
+   `tokens.css`, 35 — por debajo de `--z-toast`/modal, aunque en la práctica esos quedan
+   `display:none` mientras el title está activo por la regla `~` ya existente). Se ELIMINÓ por
+   completo el bloque de calco por píxeles `#title-screen[data-bg='ready'] .title-play-btn`
+   (`--title-art-scale`, `translate()` medido sobre el arte viejo `fpisp.png`) — el botón JUGAR
+   ahora es 100% layout responsive (`clamp()`), sin depender de la posición del arte. Nuevo
+   `.title-frame`: marco dorado overlay 100% CSS (doble filete + remaches, mismo lenguaje visual
+   que `.title-play-btn`), SIEMPRE flush a cualquier proporción de viewport — un marco horneado
+   en el arte se recorta en proporciones extremas (ronda 30/32 ya vieron ese problema con
+   `object-fit:cover`). Engranaje con `env(safe-area-inset-*)` para notches/gestos.
+2. **JS (`TitleScreen.js`)**: `src` del fondo pasa a `assets/title-bg.webp`; agrega
+   `<div class="title-frame">` y `<div class="title-top-scrim">` al markup. `setBgState` ya NO
+   togglea `.sr-only` en el logo — ver DECISIÓN abajo.
+3. **DECISIÓN no trivial — el emblema DOM queda SIEMPRE visible**: el roadmap (§32.1, "Emblema")
+   dejaba abierto "si el arte trae el logo horneado, se mantiene el logo DOM con `.sr-only`
+   — decidir y documentar". Se probó esa opción primero y falló en la práctica: a 375x667 el
+   "DUMPSTER EMPIRE" horneado del arte queda CORTADO a los costados por `object-fit:cover`
+   (ilegible — captura descartada de la sesión). Esto viola el principio explícito del propio
+   §32.1 ("el contenido crítico — emblema, JUGAR, engranaje — NO puede depender de la posición
+   horneada del arte"). Se optó por sacar el `.sr-only` del logo DOM (queda visible siempre, con
+   `text-shadow`/`drop-shadow` fuerte para legibilidad) y agregar `.title-top-scrim` (gradiente
+   CSS oscuro, franja superior, puramente CSS — no depende de coordenadas del arte) detrás para
+   que no compita con el emblema horneado.
+4. **Asset (`assets/title-bg.webp`, origen `reference/ui/Fondorenovadoinicio.png`)**: no había
+   `cwebp`/ImageMagick disponibles en el entorno — conversión vía Chromium headless
+   (Playwright, ya pineado) con `canvas.toBlob('image/webp', 0.9)`, script versionado
+   `agentes/scripts/convert-title-bg-ronda32.mjs` (reproducible, patrón
+   `calibrate-resistencia-ronda31.mjs`). **Segunda decisión no trivial**: aunque el .png
+   provisto por el usuario NO trae el texto "JUGAR" horneado (cumple la letra de §32.2), SÍ trae
+   la PLACA vacía del botón (marco dorado + interior oliva sin texto) — verificado en pantalla
+   que, junto al botón real (DOM, centrado por flex), se leía como "dos botones" en casi
+   cualquier proporción (capturas descartadas de la sesión, tanto a 1920x1080 como a 375x667).
+   Se retocó esa zona en el propio script de conversión: parche borroso (blur 24px, fuente = la
+   franja de arriba de la misma composición) con máscara suave (rect sólido + blur 45px, NO un
+   recorte duro — un recorte duro dejaba una caja de blur visible, descartado) + viñeta radial
+   oscura extra. El emblema horneado NO se retocó por el mismo mecanismo (un blurPatch tan
+   grande se vio como un manchón feo, descartado) — se resolvió por CSS (`.title-top-scrim`,
+   punto 3) en cambio. Peso final: **266 KB** (vs. 328 KB del `title-bg.jpg` viejo que se borró
+   — nada más lo referenciaba, grep confirmado).
+5. **e2e nuevo** (`ronda32-inicio.spec.js`, 5 tests): `#title-screen` cubre el viewport EXACTO
+   (bounding box == innerWidth×innerHeight) a 375x667 y 1920x1080 — a 1920 el ancho es 1920, NO
+   720, prueba directa de que se rompió la cota de `#app`; JUGAR clickeable entra al juego;
+   engranaje clickeable abre Ajustes (`.settings-block` visible); el arte carga
+   (`naturalWidth > 0`, `data-bg='ready'`); con la ruta saboteada (`page.route` 404) cae a
+   `data-bg='error'` y JUGAR sigue funcionando.
+
+### Verificación
+
+- **Unit (Vitest): 737/737** — sin cambios (ronda sin engine/data).
+- **e2e (Playwright): 106/106** (101 baseline de la ronda 31 + 5 nuevos). Un fallo aislado de
+  `ronda31-credito-parcial.spec.js` test 1 en la corrida completa — **preexistente y ya
+  documentado como sensible al timing del gesto** en el HANDOFF de la ronda 31 ("el gesto ancho
+  del helper puede rozar la huella de un objeto vecino"); confirmado no-regresión: verde en
+  aislado con reintentos (2/2). Los 7 e2e que el roadmap marcaba como "tocan la pantalla de
+  inicio" (`smoke`, `ronda4/14/16/23-regression`, `dig-regression`, `helpers/dig.js`) siguen
+  verdes SIN tocarse — el click a `#title-play-btn` sigue encontrando el botón igual que antes
+  (mismo id, ahora posicionado por layout en vez de calco).
+- **Matriz de screenshots** (teléfono portrait 375x667, teléfono alto 390x844, 1280x720,
+  1920x1080, 21:9 2560x1080): SIN bordes vacíos en ninguna, marco flush, JUGAR+engranaje
+  siempre dentro de zona segura y tocables, título SIEMPRE legible (antes cortado en portrait).
+  Capturas descartables de la sesión, no comiteadas (script también descartado tras verificar).
+- **Fullscreen Electron**: `setFullScreen(true)` no disparó `enter-full-screen` en este entorno
+  (sin sesión de escritorio interactiva) — se verificó el caso equivalente para el CSS
+  (`win.setSize(1920,1080)`, protocolo real `dumpster://`, patrón de `apps/desktop/main.js`
+  minimizado en un script descartable): `#title-screen` cubrió EXACTO el área de contenido de la
+  ventana (`1904x1016` == `innerWidth×innerHeight`), arte cargado (`data-bg:'ready'`), captura
+  visual limpia. No se corrió `npm run build:win` (no hay cambios de empaquetado en esta ronda);
+  la confirmación de fullscreen real del SO en la build empaquetada queda para el usuario o para
+  la ronda 33 (que ya tiene el smoke de instalador en su DoD).
+- Grep de cierre: `title-art-scale|fpisp|title-bg.jpg` sin restos en `apps/game/src`,
+  `apps/game/styles`, `apps/game/e2e`.
+
+### Qué necesita saber la ronda 33
+
+- `title-bg.webp` (266 KB) es reproducible desde `reference/ui/Fondorenovadoinicio.png` vía
+  `agentes/scripts/convert-title-bg-ronda32.mjs` si hace falta retocar la placa/logo de nuevo.
+- El emblema "DUMPSTER EMPIRE" es texto DOM hardcodeado (no `t()`) — es un nombre de marca, no se
+  traduce; no requiere entradas nuevas en `pt.js`/`fr.js`/`de.js`. `titleScreen.play`/
+  `titleScreen.settings` ya estaban en `es.js`/`en.js` desde antes, la ronda 33 solo necesita
+  sumar pt/fr/de a esas dos claves (nada nuevo de esta ronda).
+- Baseline para la 33: **737 unit / 106 e2e** (recontar igual, regla §0 heredada).
+
+### Corrección post-feedback del usuario (mismo día, antes de PR)
+
+El primer resultado de la ronda 32 (commit `08e90fc`) se alejó del pedido real: el usuario
+esperaba el diseño de `NuevaPantallaInicio.webp` **idéntico** (logo, marco y ruedita horneados
+tal cual) — `Fondorenovadoinicio.png` era solo la variante con la placa de JUGAR editable, NO
+una licencia para rediseñar el resto. Lo entregado en `08e90fc` metió: un logo/ícono DOM propio
+siempre visible (duplicaba el emblema horneado — "otro título"), un botón de ajustes circular
+genérico que no coincidía con la ruedita dorada del arte y quedaba fuera del marco, y un
+blur/vignette sobre el arte real ("censuraste el fondo"). Feedback textual: *"hiciste TODO mal
+[...] quiero que quede IDÉNTICO a NuevaPantallaInicio.webp, mismos tamaños, TODO IDÉNTICO"*.
+
+**Fix (commit `1abe179`)**: se volvió al lenguaje de calco de la ronda 19
+(`--title-art-scale`, cqw/cqh) en vez del approach "controles 100% responsive" que este agente
+había introducido:
+
+- `agentes/scripts/convert-title-bg-ronda32.mjs` reescrito: la base ahora es
+  `Fondorenovadoinicio.png` SIN NINGÚN retoque (nada de blur/vignette — eso era lo que el usuario
+  llamó "censura"), y la ruedita se recorta de `NuevaPantallaInicio.webp` (1402x789) y se pega
+  ESCALADA (factor `1672/1402`, ambas imágenes son el mismo render a distinta resolución) en la
+  posición equivalente sobre la base (1672x941) — mismo diseño exacto, sin redibujarla en CSS.
+  Truco técnico: componer ambas imágenes vía `data:` URI (no `file://`) porque Chromium tainta
+  el canvas al mezclar `drawImage` de dos orígenes `file://` distintos.
+- `layout.css`: se eliminaron `.title-frame` (marco CSS) y `.title-top-scrim` (ya no hacen
+  falta — el marco y el fondo quedan intactos, sin overlay propio). `.title-play-btn` volvió a
+  anclarse con `--title-art-scale` sobre la placa vacía real (rect medido en el arte de 1672x941:
+  x564-1122/y560-744, offset 7,181.5 del centro). `.title-settings-btn` en el estado `ready` es
+  ahora un hitbox INVISIBLE (`background/border/box-shadow: none`, `color: transparent` para que
+  el ícono SVG no se dibuje) anclado con el mismo mecanismo sobre la ruedita horneada (offset
+  743.6,381.6 del centro, ~168px de diámetro) — con un aro sutil en `:hover`/`:focus-visible`
+  para seguir siendo descubrible/accesible sin dibujar una segunda ruedita.
+- `TitleScreen.js`: el markup pierde `.title-frame`/`.title-top-scrim`; `setBgState` vuelve a
+  togglear `.sr-only` en el logo de respaldo al quedar `data-bg='ready'` (como todas las rondas
+  previas a la 32 — el logo DOM solo se ve en loading/error).
+
+**Verificado de nuevo tras el fix**: 737 unit / 106 e2e siguen verdes (incluye el test 3 del spec
+nuevo, que clickea el engranaje invisible y confirma que sigue funcional); matriz de screenshots
+regenerada a los 5 anchos del DoD — un solo botón, una sola ruedita, un solo logo, fondo intacto;
+re-verificado en Electron real (protocolo `dumpster://`, `setSize(1920,1080)`) con captura
+idéntica a la del navegador.
+
+**Efecto secundario detectado y revertido sin explicación clara**: durante la sesión,
+`reference/ui/fondopantalladeinicio.png` (un asset de la ronda 13, no tocado a propósito)
+apareció como "deleted" en `git status` antes de este commit — se restauró con
+`git checkout -- reference/ui/fondopantalladeinicio.png` ANTES de commitear (no forma parte de
+ningún commit de esta ronda). No se identificó qué comando lo borró (ningún `rm` de la sesión
+referenciaba ese path); si vuelve a pasar, reportarlo — podría ser un bug del entorno/herramienta,
+no del código de la ronda.
+
+
+---
+
+## Ronda 32 — Segunda corrección (reimplementación del calco fiel al arte) — 2026-07-20
+
+### Contexto
+
+El fix anterior (`1abe179`) siguió mal según el usuario, con 4 defectos concretos verificados:
+(1) el botón JUGAR dibujaba su placa CSS (oliva + marco dorado + remaches) ENCIMA de la placa
+horneada → "dos botones"; (2) el hitbox de la ruedita usaba Ø168 en (1579.6, 852.1) — medidas
+tomadas sobre el compositing viejo — y sobresalía del aro real; (3) el borde derecho del marco
+quedaba comido (dos causas: el webp compuesto tenía el margen derecho más angosto que el
+original, y `width: 100vw` en `.title-screen` incluye la scrollbar clásica); (4) pérdida de
+calidad: el asset era un re-encode `canvas.toBlob('image/webp', 0.9)` visiblemente posterizado.
+Además el usuario reemplazó `reference/ui/Fondorenovadoinicio.png` por una versión nueva que YA
+trae la ruedita horneada (el compositing de `convert-title-bg-ronda32.mjs` quedó obsoleto).
+
+### Qué hice
+
+1. **Asset**: `apps/game/assets/title-bg.png` = copia BYTE A BYTE de
+   `reference/ui/Fondorenovadoinicio.png` (2.27 MB, 1672x941) — cero recompresión, cero retoque
+   (DECISIÓN: la única vía sin pérdida con el tooling disponible; peso aceptable para un fondo
+   de título local/Steam). Borrados `title-bg.webp` y `agentes/scripts/convert-title-bg-ronda32.mjs`.
+2. **Medición nueva** (pixel-scan + recortes con grilla, sobre el PNG nuevo): placa vacía =
+   rect 568-1090 × 607-744 (522x137, offset -7,+205 del centro del arte); ruedita = aro Ø125
+   centrado en (1562, 831) (offset +726,+360.5). El texto de referencia "JUGAR" del webp es una
+   SANS pesada (verificado con recorte ampliado — NO serif): caps ≈ 35-40% de la altura de placa,
+   degradé crema→oro.
+3. **JUGAR (layout.css)**: en `data-bg='ready'` el botón NO pinta placa: fondo/borde/sombra
+   fuera, `::before/::after` display:none — solo el TEXTO `t('titleScreen.play')` con Plus
+   Jakarta Sans 800 a `calc(68 * escala)`, tracking 0.06em, degradé por `background-clip: text`
+   (tokens nuevos `--plate-text-hi/mid/lo`) y drop-shadow. Se probó Cinzel (descargada y luego
+   DESCARTADA/borrada: la referencia no es serif) — sin fuentes nuevas en el repo.
+4. **Anclaje anti-flaky**: el calco va por `left/top: calc(50% + offset*escala)` puros.
+   El patrón anterior `transform: translate(-50%,-50%) translate(calc(...cq...))` se resolvía
+   tarde/como identidad en Chromium (¡hasta inline!) y corría el calco — ver napkin (guardrail
+   nuevo). `.title-screen` además pierde `width:100vw/height:100vh` (100vw incluye scrollbar →
+   corte del borde derecho; queda `inset: 0`) y pierde `padding` (cqw/cqh miden el content box —
+   gotcha ya anotado en la skill verify).
+5. **Ruedita**: hitbox invisible EXACTO al aro (Ø125·escala) SOLO dentro de
+   `@media (min-aspect-ratio: 14/9) and (max-aspect-ratio: 13/5)` — el rango donde el cover deja
+   la ruedita horneada en pantalla (en 21:9 reales ~2.37 el arco superior visible sigue siendo el
+   hitbox). Fuera del rango (teléfono portrait, ultrapanorámicos extremos) NO hay ruedita que
+   calcar: vuelve el botón circular visible de respaldo abajo-derecha — sin él, Ajustes quedaba
+   INALCANZABLE a 375x667 (la ruedita cae fuera del encuadre; defecto heredado de `1abe179` que
+   su e2e no veía porque testeaba a 1280x800).
+6. **e2e** (`ronda32-inicio.spec.js`, ahora 7 tests): se agregan asserts de geometría ±2px
+   (placa y ruedita contra las medidas del arte), de "sin segunda placa" (fondo transparente,
+   sin borde/sombra/text-shadow) y del respaldo portrait; sabotaje de ruta actualizado a
+   `title-bg.png`. GOTCHA e2e: `.settings-block` NO es exclusivo de Ajustes (ToolsSection también
+   lo usa dentro de `#dig-area`, oculto en mobile) — asertar `#tab-content .settings-block`.
+
+### Verificación
+
+- **Unit 737/737** · **e2e 108/108** (106 baseline de `1abe179` + 2 netos nuevos del spec de la
+  ronda). Corridas completas, sin flakes en esta pasada.
+- **Matriz de screenshots** (375x667, 390x844, 1280x720, 1920x1080, 2560x1080): un solo botón
+  (la placa horneada + texto DOM), una sola ruedita, marco flush con el borde derecho INTACTO,
+  texto JUGAR calzando el estilo de referencia (comparado lado a lado contra el webp). En 21:9 ya
+  no aparece el botón de respaldo junto a la ruedita semi-recortada (defecto que tenía el rango
+  anterior 23/10). Capturas descartables de la sesión, no comiteadas.
+- **Electron real** (patrón napkin: `--user-data-dir` temporal verificado vía
+  `app.getPath('userData')` antes de nada): ventana 1920x1080 → `#title-screen` = 1904x1001
+  exactos (área de contenido), arte por `dumpster://app/.../title-bg.png` cargado, calco
+  alineado, captura limpia. Save real intocado.
+- Grep de cierre: `title-bg.webp|convert-title-bg-ronda32|Cinzel` sin restos en apps/ ni styles.
+
+### Qué necesita saber la ronda 33
+
+- El texto del botón sigue siendo `t('titleScreen.play')` → pt/fr/de solo agregan la clave; la
+  tipografía (Jakarta 800) ya cubre los glifos de PLAY/JOGAR/JOUER/SPIELEN.
+- Si se reemplaza el arte, recalcar: medidas y fórmulas en layout.css (bloques `data-bg='ready'`)
+  + asserts espejo en `ronda32-inicio.spec.js` (±2px).
+- Baseline para la 33: **737 unit / 108 e2e**.
+- `reference/ui/fondopantalladeinicio.png` apareció borrado en el working tree OTRA VEZ (segunda
+  vez, ver bloque anterior) — restaurado con `git checkout --` antes de commitear. Sigue sin
+  identificarse el causante; si reaparece, sospechar de una herramienta del entorno.
+- `reference/ui/Contenedores/` (arte nuevo subido por el usuario) queda SIN commitear a
+  propósito: no pertenece a esta ronda.
