@@ -80,25 +80,27 @@ body {
   display: none;
 }
 
+/* Ronda 32: `#title-screen` pasa a `position: fixed; inset: 0` medido contra el VIEWPORT (no
+   contra `#app { max-width: 720px }`, layout.css arriba) — así el arte de fondo cubre pantalla
+   completa incluso en fullscreen/desktop ancho, sin dejar los bordes vacíos que dejaba la
+   columna de 720px (causa raíz documentada en ROADMAPv4.md §32.0). El juego (`.game-shell`)
+   sigue intacto dentro de esa columna: este cambio es exclusivo de la pantalla de inicio. */
 .title-screen {
-  flex: 1;
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh; /* fallback 100vh arriba para navegadores sin soporte (mismo patrón que #app) */
+  z-index: var(--z-title);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);
-  position: relative;
-  /* Ronda 13: el arte de fondo se recorta al alto/ancho de la pantalla y el botón "Jugar" se
-     posiciona en unidades de contenedor (cqw/cqh) para calcar el encuadre de object-fit:cover.
-     OJO: cqw/cqh miden el content box y el <img> absoluto cubre el padding box — el padding
-     debe ser 0 acá o el factor de escala queda corto y el botón pintado asoma por debajo del
-     real (visto en la verificación). El respaldo se centra por flex + gap, no necesita padding. */
-  padding: 0;
+  gap: clamp(var(--space-3), 4vh, var(--space-5));
+  padding: var(--space-4);
   background-color: var(--wood-surface);
   background-image: var(--wood-grain);
   overflow: hidden;
-  container-type: size;
 }
 
 .title-screen[hidden] {
@@ -113,7 +115,7 @@ body {
   display: none !important;
 }
 
-/* Arte de la pantalla de inicio (assets/title-bg.jpg). Estados en data-bg de #title-screen
+/* Arte de la pantalla de inicio (assets/title-bg.webp). Estados en data-bg de #title-screen
    (los setea TitleScreen.js): mientras carga (o si falla) el respaldo es la pantalla previa
    — madera + logo SVG + botón centrado por flex — así nunca hay pantalla en blanco. */
 .title-bg {
@@ -131,39 +133,61 @@ body {
   opacity: 1;
 }
 
+/* Ronda 32: el arte trae un emblema "DUMPSTER EMPIRE" horneado, pero en `cover` se recorta en
+   proporciones angostas (celular en portrait, ilegible) — a diferencia de rondas previas, este
+   logo DOM queda SIEMPRE visible (TitleScreen.js ya no le pone `.sr-only` al quedar el arte
+   "ready"). `.title-top-scrim` (debajo) lo respalda para que no compita visualmente con el
+   emblema horneado detrás. */
 .title-logo {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
   color: var(--amber);
-  position: relative; /* por encima del arte absoluto mientras es respaldo visible */
+  position: relative;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
-/* Con el arte listo, el emblema DUMPSTER EMPIRE ya está pintado en el fondo: TitleScreen.js
-   le pone `.sr-only` (components.css) al logo de respaldo — fuera de la vista pero el <h1>
-   sigue para lectores de pantalla. */
+.title-logo-icon svg {
+  width: clamp(40px, 8vw, 64px);
+  height: clamp(40px, 8vw, 64px);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8));
+}
 
 .title-logo-text {
   font-family: var(--font-display);
+  font-size: clamp(1.4rem, 4.5vw, 2.5rem);
   letter-spacing: -0.02em;
   text-align: center;
+}
+
+/* Scrim detrás del emblema DOM (por encima del arte, por debajo del logo): franja superior
+   oscurecida para que el "DUMPSTER EMPIRE" horneado del arte no compita con el real. Puramente
+   CSS (no depende de coordenadas del arte, robusto a cualquier proporción de viewport). */
+.title-top-scrim {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 45%;
+  background: linear-gradient(to bottom, rgba(10, 8, 4, 0.65) 0%, rgba(10, 8, 4, 0.35) 55%, transparent 100%);
+  pointer-events: none;
 }
 
 /* Ronda 19 (reference/ui/JUGARBUTTON.png, pedido del usuario 2026-07-12): placa metálica verde
    oliva con marco dorado biselado doble (borde + filete interior) y 4 remaches. 100% CSS — el
    texto SIGUE siendo t('titleScreen.play') (vivo, cambia de idioma), por eso no puede ir como
    imagen con el texto horneado. `::before` es el filete interior; `::after` son los 4 remaches
-   (radial-gradients, no requieren 4 nodos DOM). Ambos leen `--title-art-scale` (con fallback 1
-   para el estado de respaldo, donde esa variable no existe) para escalar igual que el botón real
-   cuando está anclado sobre el arte (ver la regla `#title-screen[data-bg='ready']` más abajo). */
+   (radial-gradients, no requieren 4 nodos DOM).
+   Ronda 32: deja de calcarse sobre el botón pintado del arte viejo — ahora es un control real
+   centrado por flex, con tamaño `clamp()` para escalar de teléfono a desktop. */
 .title-play-btn {
-  font-size: 1.2rem;
-  padding: var(--space-3) var(--space-5);
-  position: relative; /* por encima del arte absoluto en modo respaldo */
+  font-size: clamp(1rem, 2.2vw, 1.5rem);
+  padding: clamp(var(--space-3), 2vh, var(--space-4)) clamp(var(--space-5), 6vw, 3rem);
+  min-height: var(--touch-target);
+  position: relative;
   background: linear-gradient(180deg, var(--plate-olive) 0%, var(--plate-olive-dark) 100%);
   color: var(--plate-gold);
   border: 3px solid var(--plate-gold-dark);
+  border-radius: var(--radius-lg);
   text-transform: uppercase;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -177,8 +201,8 @@ body {
 .title-play-btn::before {
   content: '';
   position: absolute;
-  inset: calc(6px * var(--title-art-scale, 1));
-  border: calc(2px * var(--title-art-scale, 1)) solid var(--plate-gold-dark);
+  inset: 6px;
+  border: 2px solid var(--plate-gold-dark);
   border-radius: inherit;
   pointer-events: none;
 }
@@ -186,7 +210,7 @@ body {
 .title-play-btn::after {
   content: '';
   position: absolute;
-  inset: calc(6px * var(--title-art-scale, 1));
+  inset: 6px;
   pointer-events: none;
   background-repeat: no-repeat;
   background-image:
@@ -194,12 +218,12 @@ body {
     radial-gradient(circle, var(--plate-gold-dark) 45%, transparent 48%),
     radial-gradient(circle, var(--plate-gold-dark) 45%, transparent 48%),
     radial-gradient(circle, var(--plate-gold-dark) 45%, transparent 48%);
-  background-size: calc(7px * var(--title-art-scale, 1)) calc(7px * var(--title-art-scale, 1));
+  background-size: 7px 7px;
   background-position:
-    top calc(3px * var(--title-art-scale, 1)) left calc(3px * var(--title-art-scale, 1)),
-    top calc(3px * var(--title-art-scale, 1)) right calc(3px * var(--title-art-scale, 1)),
-    bottom calc(3px * var(--title-art-scale, 1)) left calc(3px * var(--title-art-scale, 1)),
-    bottom calc(3px * var(--title-art-scale, 1)) right calc(3px * var(--title-art-scale, 1));
+    top 3px left 3px,
+    top 3px right 3px,
+    bottom 3px left 3px,
+    bottom 3px right 3px;
 }
 
 .title-play-btn:hover:not(:disabled),
@@ -215,38 +239,48 @@ body {
     inset 0 2px 4px rgba(0, 0, 0, 0.35);
 }
 
-/* Botón real calcado sobre el botón pintado en el arte, para que nunca se vean dos botones.
-   Números medidos por escaneo de píxeles sobre el arte original de 1614x975 (fpisp.png): rect
-   del botón pintado x 681-922 / y 589-684 (242x96, centro en 801.5,636.5; centro del arte
-   807,487.5 → offset -5.5,+149). --title-art-scale replica el factor de object-fit:cover
-   (max de ambas proporciones); todas las medidas del arte se multiplican por él. El rect
-   propio va 4px de arte más grande por lado para tapar el antialias del borde pintado. */
-#title-screen[data-bg='ready'] .title-play-btn {
-  --title-art-scale: max(100cqw / 1614, 100cqh / 975);
+/* Marco dorado (ronda 32): overlay CSS pegado a los bordes del viewport, independiente del
+   arte — en `object-fit: cover` un marco horneado se recorta en proporciones extremas (celular
+   angosto, ultrawide) y deja de estar "flush"; este SIEMPRE lo está porque se mide contra el
+   mismo `inset` que el fondo. Doble filete + remaches en las 4 esquinas, mismo lenguaje visual
+   que `.title-play-btn`. */
+.title-frame {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%)
-    translate(calc(-5.5 * var(--title-art-scale)), calc(149 * var(--title-art-scale)));
-  width: calc(250 * var(--title-art-scale));
-  height: calc(104 * var(--title-art-scale));
-  min-height: var(--touch-target);
-  padding: 0;
-  border-radius: calc(16 * var(--title-art-scale));
-  font-size: calc(26 * var(--title-art-scale));
+  inset: clamp(6px, 1.6vw, 18px);
+  border: 2px solid var(--plate-gold-dark);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 0 0 1px var(--plate-gold),
+    0 0 32px rgba(224, 190, 107, 0.12);
+  pointer-events: none;
 }
 
-/* El squish de button:active usa `transform: translateY(4px)` a secas: acá hay que combinarlo
-   con el transform de anclaje o el botón saltaría al centro flex al presionarlo. */
-#title-screen[data-bg='ready'] .title-play-btn:active:not(:disabled) {
-  transform: translate(-50%, -50%)
-    translate(calc(-5.5 * var(--title-art-scale)), calc(149 * var(--title-art-scale) + 4px));
+.title-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle, var(--plate-gold) 40%, transparent 44%),
+    radial-gradient(circle, var(--plate-gold) 40%, transparent 44%),
+    radial-gradient(circle, var(--plate-gold) 40%, transparent 44%),
+    radial-gradient(circle, var(--plate-gold) 40%, transparent 44%);
+  background-size: 10px 10px;
+  background-position:
+    top 0 left 0,
+    top 0 right 0,
+    bottom 0 left 0,
+    bottom 0 right 0;
 }
 
 .title-settings-btn {
   position: absolute;
-  right: var(--space-3);
-  bottom: var(--space-3);
+  right: max(var(--space-3), env(safe-area-inset-right));
+  bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  width: clamp(40px, 5vw, 56px);
+  height: clamp(40px, 5vw, 56px);
 }
 
 #topbar {
