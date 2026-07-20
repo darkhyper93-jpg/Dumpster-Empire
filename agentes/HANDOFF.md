@@ -7649,3 +7649,51 @@ centrada con `--bg-0` a los costados.
   `titleScreen.settings` ya estaban en `es.js`/`en.js` desde antes, la ronda 33 solo necesita
   sumar pt/fr/de a esas dos claves (nada nuevo de esta ronda).
 - Baseline para la 33: **737 unit / 106 e2e** (recontar igual, regla §0 heredada).
+
+### Corrección post-feedback del usuario (mismo día, antes de PR)
+
+El primer resultado de la ronda 32 (commit `08e90fc`) se alejó del pedido real: el usuario
+esperaba el diseño de `NuevaPantallaInicio.webp` **idéntico** (logo, marco y ruedita horneados
+tal cual) — `Fondorenovadoinicio.png` era solo la variante con la placa de JUGAR editable, NO
+una licencia para rediseñar el resto. Lo entregado en `08e90fc` metió: un logo/ícono DOM propio
+siempre visible (duplicaba el emblema horneado — "otro título"), un botón de ajustes circular
+genérico que no coincidía con la ruedita dorada del arte y quedaba fuera del marco, y un
+blur/vignette sobre el arte real ("censuraste el fondo"). Feedback textual: *"hiciste TODO mal
+[...] quiero que quede IDÉNTICO a NuevaPantallaInicio.webp, mismos tamaños, TODO IDÉNTICO"*.
+
+**Fix (commit `1abe179`)**: se volvió al lenguaje de calco de la ronda 19
+(`--title-art-scale`, cqw/cqh) en vez del approach "controles 100% responsive" que este agente
+había introducido:
+
+- `agentes/scripts/convert-title-bg-ronda32.mjs` reescrito: la base ahora es
+  `Fondorenovadoinicio.png` SIN NINGÚN retoque (nada de blur/vignette — eso era lo que el usuario
+  llamó "censura"), y la ruedita se recorta de `NuevaPantallaInicio.webp` (1402x789) y se pega
+  ESCALADA (factor `1672/1402`, ambas imágenes son el mismo render a distinta resolución) en la
+  posición equivalente sobre la base (1672x941) — mismo diseño exacto, sin redibujarla en CSS.
+  Truco técnico: componer ambas imágenes vía `data:` URI (no `file://`) porque Chromium tainta
+  el canvas al mezclar `drawImage` de dos orígenes `file://` distintos.
+- `layout.css`: se eliminaron `.title-frame` (marco CSS) y `.title-top-scrim` (ya no hacen
+  falta — el marco y el fondo quedan intactos, sin overlay propio). `.title-play-btn` volvió a
+  anclarse con `--title-art-scale` sobre la placa vacía real (rect medido en el arte de 1672x941:
+  x564-1122/y560-744, offset 7,181.5 del centro). `.title-settings-btn` en el estado `ready` es
+  ahora un hitbox INVISIBLE (`background/border/box-shadow: none`, `color: transparent` para que
+  el ícono SVG no se dibuje) anclado con el mismo mecanismo sobre la ruedita horneada (offset
+  743.6,381.6 del centro, ~168px de diámetro) — con un aro sutil en `:hover`/`:focus-visible`
+  para seguir siendo descubrible/accesible sin dibujar una segunda ruedita.
+- `TitleScreen.js`: el markup pierde `.title-frame`/`.title-top-scrim`; `setBgState` vuelve a
+  togglear `.sr-only` en el logo de respaldo al quedar `data-bg='ready'` (como todas las rondas
+  previas a la 32 — el logo DOM solo se ve en loading/error).
+
+**Verificado de nuevo tras el fix**: 737 unit / 106 e2e siguen verdes (incluye el test 3 del spec
+nuevo, que clickea el engranaje invisible y confirma que sigue funcional); matriz de screenshots
+regenerada a los 5 anchos del DoD — un solo botón, una sola ruedita, un solo logo, fondo intacto;
+re-verificado en Electron real (protocolo `dumpster://`, `setSize(1920,1080)`) con captura
+idéntica a la del navegador.
+
+**Efecto secundario detectado y revertido sin explicación clara**: durante la sesión,
+`reference/ui/fondopantalladeinicio.png` (un asset de la ronda 13, no tocado a propósito)
+apareció como "deleted" en `git status` antes de este commit — se restauró con
+`git checkout -- reference/ui/fondopantalladeinicio.png` ANTES de commitear (no forma parte de
+ningún commit de esta ronda). No se identificó qué comando lo borró (ningún `rm` de la sesión
+referenciaba ese path); si vuelve a pasar, reportarlo — podría ser un bug del entorno/herramienta,
+no del código de la ronda.
