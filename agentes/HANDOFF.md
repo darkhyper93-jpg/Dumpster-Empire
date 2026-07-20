@@ -7697,3 +7697,83 @@ apareció como "deleted" en `git status` antes de este commit — se restauró c
 ningún commit de esta ronda). No se identificó qué comando lo borró (ningún `rm` de la sesión
 referenciaba ese path); si vuelve a pasar, reportarlo — podría ser un bug del entorno/herramienta,
 no del código de la ronda.
+
+
+---
+
+## Ronda 32 — Segunda corrección (reimplementación del calco fiel al arte) — 2026-07-20
+
+### Contexto
+
+El fix anterior (`1abe179`) siguió mal según el usuario, con 4 defectos concretos verificados:
+(1) el botón JUGAR dibujaba su placa CSS (oliva + marco dorado + remaches) ENCIMA de la placa
+horneada → "dos botones"; (2) el hitbox de la ruedita usaba Ø168 en (1579.6, 852.1) — medidas
+tomadas sobre el compositing viejo — y sobresalía del aro real; (3) el borde derecho del marco
+quedaba comido (dos causas: el webp compuesto tenía el margen derecho más angosto que el
+original, y `width: 100vw` en `.title-screen` incluye la scrollbar clásica); (4) pérdida de
+calidad: el asset era un re-encode `canvas.toBlob('image/webp', 0.9)` visiblemente posterizado.
+Además el usuario reemplazó `reference/ui/Fondorenovadoinicio.png` por una versión nueva que YA
+trae la ruedita horneada (el compositing de `convert-title-bg-ronda32.mjs` quedó obsoleto).
+
+### Qué hice
+
+1. **Asset**: `apps/game/assets/title-bg.png` = copia BYTE A BYTE de
+   `reference/ui/Fondorenovadoinicio.png` (2.27 MB, 1672x941) — cero recompresión, cero retoque
+   (DECISIÓN: la única vía sin pérdida con el tooling disponible; peso aceptable para un fondo
+   de título local/Steam). Borrados `title-bg.webp` y `agentes/scripts/convert-title-bg-ronda32.mjs`.
+2. **Medición nueva** (pixel-scan + recortes con grilla, sobre el PNG nuevo): placa vacía =
+   rect 568-1090 × 607-744 (522x137, offset -7,+205 del centro del arte); ruedita = aro Ø125
+   centrado en (1562, 831) (offset +726,+360.5). El texto de referencia "JUGAR" del webp es una
+   SANS pesada (verificado con recorte ampliado — NO serif): caps ≈ 35-40% de la altura de placa,
+   degradé crema→oro.
+3. **JUGAR (layout.css)**: en `data-bg='ready'` el botón NO pinta placa: fondo/borde/sombra
+   fuera, `::before/::after` display:none — solo el TEXTO `t('titleScreen.play')` con Plus
+   Jakarta Sans 800 a `calc(68 * escala)`, tracking 0.06em, degradé por `background-clip: text`
+   (tokens nuevos `--plate-text-hi/mid/lo`) y drop-shadow. Se probó Cinzel (descargada y luego
+   DESCARTADA/borrada: la referencia no es serif) — sin fuentes nuevas en el repo.
+4. **Anclaje anti-flaky**: el calco va por `left/top: calc(50% + offset*escala)` puros.
+   El patrón anterior `transform: translate(-50%,-50%) translate(calc(...cq...))` se resolvía
+   tarde/como identidad en Chromium (¡hasta inline!) y corría el calco — ver napkin (guardrail
+   nuevo). `.title-screen` además pierde `width:100vw/height:100vh` (100vw incluye scrollbar →
+   corte del borde derecho; queda `inset: 0`) y pierde `padding` (cqw/cqh miden el content box —
+   gotcha ya anotado en la skill verify).
+5. **Ruedita**: hitbox invisible EXACTO al aro (Ø125·escala) SOLO dentro de
+   `@media (min-aspect-ratio: 14/9) and (max-aspect-ratio: 13/5)` — el rango donde el cover deja
+   la ruedita horneada en pantalla (en 21:9 reales ~2.37 el arco superior visible sigue siendo el
+   hitbox). Fuera del rango (teléfono portrait, ultrapanorámicos extremos) NO hay ruedita que
+   calcar: vuelve el botón circular visible de respaldo abajo-derecha — sin él, Ajustes quedaba
+   INALCANZABLE a 375x667 (la ruedita cae fuera del encuadre; defecto heredado de `1abe179` que
+   su e2e no veía porque testeaba a 1280x800).
+6. **e2e** (`ronda32-inicio.spec.js`, ahora 7 tests): se agregan asserts de geometría ±2px
+   (placa y ruedita contra las medidas del arte), de "sin segunda placa" (fondo transparente,
+   sin borde/sombra/text-shadow) y del respaldo portrait; sabotaje de ruta actualizado a
+   `title-bg.png`. GOTCHA e2e: `.settings-block` NO es exclusivo de Ajustes (ToolsSection también
+   lo usa dentro de `#dig-area`, oculto en mobile) — asertar `#tab-content .settings-block`.
+
+### Verificación
+
+- **Unit 737/737** · **e2e 108/108** (106 baseline de `1abe179` + 2 netos nuevos del spec de la
+  ronda). Corridas completas, sin flakes en esta pasada.
+- **Matriz de screenshots** (375x667, 390x844, 1280x720, 1920x1080, 2560x1080): un solo botón
+  (la placa horneada + texto DOM), una sola ruedita, marco flush con el borde derecho INTACTO,
+  texto JUGAR calzando el estilo de referencia (comparado lado a lado contra el webp). En 21:9 ya
+  no aparece el botón de respaldo junto a la ruedita semi-recortada (defecto que tenía el rango
+  anterior 23/10). Capturas descartables de la sesión, no comiteadas.
+- **Electron real** (patrón napkin: `--user-data-dir` temporal verificado vía
+  `app.getPath('userData')` antes de nada): ventana 1920x1080 → `#title-screen` = 1904x1001
+  exactos (área de contenido), arte por `dumpster://app/.../title-bg.png` cargado, calco
+  alineado, captura limpia. Save real intocado.
+- Grep de cierre: `title-bg.webp|convert-title-bg-ronda32|Cinzel` sin restos en apps/ ni styles.
+
+### Qué necesita saber la ronda 33
+
+- El texto del botón sigue siendo `t('titleScreen.play')` → pt/fr/de solo agregan la clave; la
+  tipografía (Jakarta 800) ya cubre los glifos de PLAY/JOGAR/JOUER/SPIELEN.
+- Si se reemplaza el arte, recalcar: medidas y fórmulas en layout.css (bloques `data-bg='ready'`)
+  + asserts espejo en `ronda32-inicio.spec.js` (±2px).
+- Baseline para la 33: **737 unit / 108 e2e**.
+- `reference/ui/fondopantalladeinicio.png` apareció borrado en el working tree OTRA VEZ (segunda
+  vez, ver bloque anterior) — restaurado con `git checkout --` antes de commitear. Sigue sin
+  identificarse el causante; si reaparece, sospechar de una herramienta del entorno.
+- `reference/ui/Contenedores/` (arte nuevo subido por el usuario) queda SIN commitear a
+  propósito: no pertenece a esta ronda.

@@ -1,10 +1,10 @@
 /**
  * Pantalla de inicio (ROADMAPv4.md ronda 32): fondo full-bleed a pantalla completa
- * (assets/title-bg.webp, origen reference/ui/Fondorenovadoinicio.png + la ruedita horneada de
- * reference/ui/NuevaPantallaInicio.webp, ver agentes/scripts/convert-title-bg-ronda32.mjs) con
- * el botón JUGAR y el engranaje real (DOM) CALCADOS píxel a píxel sobre el arte — mismo patrón
- * de la ronda 19/anteriores (`--title-art-scale`, layout.css), pedido explícito del usuario:
- * "TODO IDÉNTICO" a `NuevaPantallaInicio.webp` (logo, marco y ruedita horneados, ídem diseño).
+ * (assets/title-bg.png = reference/ui/Fondorenovadoinicio.png TAL CUAL, sin recomprimir ni
+ * retocar — el arte ya trae logo, marco, placa JUGAR vacía y ruedita horneados) con el texto
+ * JUGAR (traducible) y el hitbox del engranaje CALCADOS píxel a píxel sobre el arte — mismo
+ * patrón de la ronda 19 (`--title-art-scale`, layout.css), pedido explícito del usuario:
+ * "TODO IDÉNTICO" a `NuevaPantallaInicio.webp`, que es el mismo render CON el texto horneado.
  * `#title-screen` es `position: fixed; inset: 0` (layout.css) así que cubre el viewport completo
  * incluso en fullscreen ancho, sin los bordes vacíos que dejaba la columna de 720px de `#app`
  * (eso sí es nuevo de esta ronda — el resto vuelve al lenguaje visual de siempre). No lee estado
@@ -28,7 +28,7 @@ export const TitleScreen = {
   mount(root, { onPlay, onSettings }) {
     root.dataset.bg = 'loading';
     root.innerHTML =
-      `<img class="title-bg" src="assets/title-bg.webp" alt="" aria-hidden="true" />` +
+      `<img class="title-bg" src="assets/title-bg.png" alt="" aria-hidden="true" />` +
       `<div class="title-logo">` +
       `<span class="title-logo-icon">${iconMarkup('dumpster', { size: 64 })}</span>` +
       `<h1 class="title-logo-text">DUMPSTER EMPIRE</h1>` +

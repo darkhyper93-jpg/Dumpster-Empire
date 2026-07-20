@@ -104,4 +104,9 @@
   --plate-olive-dark: #1f2814;
   --plate-gold: #e0be6b;
   --plate-gold-dark: #7d5e24;
+  /* Ronda 32: degradé del texto JUGAR calcado sobre la placa horneada — muestreado del "JUGAR"
+     de referencia (reference/ui/NuevaPantallaInicio.webp: crema arriba, oro viejo abajo). */
+  --plate-text-hi: #f6edd3;
+  --plate-text-mid: #eeddb0;
+  --plate-text-lo: #c99b52;
 }
