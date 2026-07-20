@@ -639,8 +639,32 @@ button:hover:not(:disabled) {
   padding: 0 var(--space-1);
 }
 
+/* Badge de ritmo/pincel en el picker (PLAN.md §4.42, ronda 31). */
+.dig-picker-card-rate {
+  font-size: 0.7rem;
+  color: var(--fg-1);
+}
+
+.dig-picker-card-rate--low {
+  color: var(--danger);
+}
+
 .shop-card-luck--reached {
   color: var(--amber);
+}
+
+/* Ritmo/pincel actuales del jugador contra ESTE contenedor (PLAN.md §4.42, ronda 31). */
+.shop-card-rate {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.shop-card-rate--ok {
+  color: var(--amber);
+}
+
+.shop-card-rate--low {
+  color: var(--danger);
 }
 
 .achievement-card-reward {

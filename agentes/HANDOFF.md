@@ -7343,3 +7343,203 @@ El último § real de PLAN.md §4 era **4.39**, no 4.41 como asumía el roadmap.
   `reference/ui/Contenedores/`. Si los querés versionados, decilo y se hace aparte.
 - **Derechos de uso**: las imágenes van al build de Steam y tienen que ser libres de uso
   comercial; la elección de los assets es del usuario (§30.1).
+
+---
+
+## RONDA 31 — Dificultad y balance + trampa simultánea (agente único, rama `feat/balance-ronda31`)
+
+Sin bump de save (SAVE_VERSION sigue en 16): ningún campo persistido nuevo — el escarbado en
+curso (`pendingDig`) sigue siendo transitorio, y los logros nuevos entran por
+`achievementsUnlocked`, ya una lista abierta de ids.
+
+### Qué se hizo
+
+**31.1 PLAN.md**: §4.42 (ritmo ampliado a [0.25,1.5] + `getAreaRate`, Área efectiva por
+contenedor — hasta esta ronda `areaRecomendada` era solo un cartel) y §4.43 (trampa simultánea +
+crédito por-ítem) agregadas después de §4.41 (el último § real era 4.41, no 4.39 como asumía el
+roadmap — la ronda 30.B ya lo había corrido). §11.2 actualizado con el piso nuevo del ritmo y la
+mención de `areaRate`. §11.6 documenta el fix de a45/a61/a62.
+
+**31.3.1 — Fix $250k**: `a45` (Set Completo) baja de $250.000 a $2.500; `a61` "Cinco Sets"
+(`setsCompletedAtLeast: 5` → $250.000) y `a62` "Coleccionista Serial" (oculto,
+`setsCompletedAtLeast: 10` → 6 Llaves) agregados al final. `data-en.js` con sus nombres. Tests en
+`ronda31-fix250k.test.js`.
+
+**31.3.2 — Logros de racha (a36-a38)**: diagnóstico dirigido. `ronda31-racha-fix.test.js` (10
+escarbados manuales sin trampa vía el motor real de `checkAchievements`) y
+`ronda31-balance.spec.js` (e2e, seed `digStreak:9`) confirman que a36 se auto-reclama
+EXACTAMENTE en el décimo escarbado, con toast/modal visible y `#money` reflejando la
+recompensa. **Grep de auditoría**: los ÚNICOS dos puntos que mutan `digStreak`/`bestDigStreak`
+son `applyContainerResult` (camino atómico robot/offline, nunca los toca por `!isAuto`) y ahora
+`store.js` `finishManualDig`/`revealDugEntry` (crédito por-ítem, 31.3.B) — TODOS seguidos de
+`runAchievements()` en la misma acción. **Conclusión: el bug del usuario no está en el camino
+web** (engine + e2e verdes de entrada, sin necesitar tocar código). No se re-empaquetó/testeó la
+build Electron (fuera de alcance de esta ronda per R31.5 del roadmap — la ronda 33, release
+final, ya lo tiene en su DoD); si el usuario lo sigue viendo en el juego real, lo más probable es
+una build vieja anterior a un fix ya mergeado, o el toast/modal tapado por otra celebración en
+cola (clase de bug ya documentada y parcialmente mitigada en la ronda 30.B).
+
+**31.3.3 — Fórmulas nuevas**: `getDigRate` clamp ampliado a `[0.25, 1.5]` (antes `[0.3, 1.5]`).
+`getAreaRate(state, container, data)` nuevo en `economy.js`
+(`clamp(getAreaMult/container.areaRecomendada, 0.45, 1.2)`), exportado en `index.js`.
+`store.js` `startManualDig` usa `getAreaRate` en vez de `getAreaMult` crudo para el pincel
+manual. Tests en `ronda31-formulas.test.js`; ajustados los 2 tests existentes que hardcodeaban
+el piso viejo (0.3) en `fase6-mecanicas.test.js` y el nivel de Fuerza necesario para tope 1.5 en
+`bovedaPerdida` (su resistencia subió de 6.4 a 13.5).
+
+**31.3.4 — Tabla de resistencia/areaRecomendada**: aplicada LITERAL del roadmap §31.1 a los 18
+contenedores de la cadena principal + los dos `fueraDeCadena` de la ronda 20 (verificado con
+`ronda31-balance.test.js`: crecimiento estricto y salto mínimo ×1.3 desde el segundo tier).
+`reactorDeCuasar`/`horizonteDeSucesos` (ronda 30.B) quedaron SIN tocar — la tabla del roadmap no
+los incluye y no están sujetos al guard de monotonía de la cadena principal.
+
+Script `agentes/scripts/calibrate-resistencia-ronda31.mjs`: simula el nivel de Fuerza/Área
+comprable con ~35% del dinero histórico (proxy = costoInicial del contenedor) al momento de
+poder pagar cada tier, con nodos de prestigio esperables (`brazosDeAcero`/`visionPeriferica`
+escalados a `min(N, nivelMaximo)` según `requiresPrestigeCount`). Salida completa:
+
+```
+contenedor                   ritmoUnlock areaRateUnlock ritmoNext areaRateNext estado
+tachoVereda                  1.000       1.000          1.000     1.000        OK
+contenedorBarrio             0.645       0.690          0.723     0.793        FALLÓ: ritmoNext 0.723 < 0.9; areaRateNext 0.793 < 0.95
+containerIndustrial          0.467       0.511          0.700     0.822        FALLÓ: ritmoNext 0.700 < 0.9; areaRateNext 0.822 < 0.95
+depositoAbandonado           0.454       0.536          0.670     0.826        FALLÓ: ritmoNext 0.670 < 0.9; areaRateNext 0.826 < 0.95
+mudanzaMansion               0.435       0.538          0.582     0.736        FALLÓ: ritmoNext 0.582 < 0.9; areaRateNext 0.736 < 0.95
+galeriaLiquidacion           0.377       0.476          0.477     0.610        FALLÓ: ritmoNext 0.477 < 0.9; areaRateNext 0.610 < 0.95
+bovedaPerdida                0.311       0.450          0.406     0.527        FALLÓ: ritmoUnlock fuera de [0.35,0.65]; ritmoNext/areaRateNext bajos
+containerExtradimensional    0.268       0.450          0.353     0.461        FALLÓ (ídem)
+convoyFantasma..vertederoBigBang                                               FALLÓ: piso 0.250/0.450 (clamp)
+```
+
+**DECISIÓN (documentada en el propio script)**: las bandas `ritmoNext ≥ 0.9`/`areaRateNext ≥
+0.95` dejan de ser alcanzables desde `mudanzaMansion` en adelante bajo CUALQUIER fracción de
+presupuesto probada (0.35 a 1.5, con y sin repartir entre las dos stats) — no es un problema de
+la tabla de datos (tomada literal del roadmap), sino una propiedad ESTRUCTURAL de las fórmulas
+existentes (intocables, regla dura 4): `digPowerMult`/`getAreaMult` crecen LINEALMENTE con el
+nivel mientras `upgradeCost` crece GEOMÉTRICAMENTE — el multiplicador alcanzable con un
+presupuesto X crece solo como `log(X)`, y ninguna cantidad de dinero hace que eso alcance una
+resistencia que crece MULTIPLICATIVAMENTE tier a tier. Esto es coherente con PLAN.md §11.2 ("por
+debajo, el gesto es lento y chico — penalizan pero no bloquean"): un ritmo en el piso en tiers de
+prestigio avanzado es jugable por diseño. El único contenedor donde un ritmo bajo SÍ es crítico
+es `bovedaContrarreloj` (límite duro de tiempo) — verificado aparte, manualmente (ver más abajo):
+completable con las stats de banda.
+
+**31.3.5 — UI**: `ShopView.js` y `DigContainerPicker.js` muestran "Ritmo: X%"/"Pincel: X%" leyendo
+`getDigRate`/`getAreaRate` (cero fórmulas en la UI), en `--amber` si ≥100% o `--danger` si no.
+Claves i18n `shop.rateLine`/`shop.areaRateLine` en es+en.
+
+**31.3.6 — Regresión**: `ronda31-balance.test.js` (monotonía de la tabla); e2e
+`ronda10-regression.spec.js` actualizado (resistencia de `contenedorBarrio` 1.35→1.55, el hint de
+ritmo pasa de 74% a 65%). Baseline recontado: **725/725 unit, 99/99 e2e** tras 31.3 (antes de
+31.3.B).
+
+### 31.3.B — Trampa simultánea con items + crédito parcial (la parte más pesada)
+
+**Engine (`packages/engine/src/systems/containers.js`)**: refactor estructural primero (paso 1,
+snapshot-test obligatorio) — `applyContainerResult` se partió en `creditDugItem` (acredita UN
+ítem: venta o captura al Puesto, contadores de colección, legendario solo si `!isAuto` y sin
+trampa) y `springTrap` (castigo por grado, corta `digStreak` SOLO si `!isAuto`, `trapsHit++`),
+ambas exportadas. `applyContainerResult` (camino atómico robot/offline) ahora las reusa en loop.
+Después (paso 2), `rollContainerResult`: cuando cae trampa, rollea IGUAL la lista normal de
+items y agrega la trampa como una entry MÁS al final (`isTrap: true`, id `'trap'`) — nunca más
+`items: []`. El legendario sigue gateado a `!isTrap`, chequeado ANTES del push de la trampa.
+
+**Robot/offline (§4.43, "guarda todo, come el castigo")**: `applyContainerResult` acredita TODOS
+los items (saltando la entry-trampa) y, si `result.isTrap`, aplica el castigo después —
+mejora automática ya que reusa el mismo camino de antes. `automation.js`: el Escáner de Trampas
+(`getAutoTrapDiscardChance`), si dispara, llama `applyContainerResult` con el resultado SIN la
+trampa (items intactos, `isTrap` neutralizado) + `trapsDiscarded++` — antes descartaba el
+contenedor ENTERO con su loot; ahora es una mejora real. `offline.js` (`expectedContainerValue`)
+se dejó SIN tocar a propósito (tasa agregada estadística, no hay "guarda todo" que aplicarle a un
+promedio) — documentado inline, sigue siendo conservador (nunca sobreestima progreso offline).
+
+**Store (`apps/game/src/store.js`)**: `startManualDig` ya NO acredita nada — guarda
+`revealedIndexes` (guard anti-doble-crédito, R31.8) y `creditedMoney` en `pendingDig`. Acción
+nueva `revealDugEntry(index)`: si la entry es item → `creditDugItem` + suma acumulador; si es
+trampa → `springTrap` + `registerContainerDig` + `runAchievements`/`runMissions` +
+`detectContainerUnlocks` + cierra el dig (`pendingDig = null`). `finishManualDig` (solo se
+alcanza si el dig terminó SIN trampa) ya no acredita items — solo nivel/racha/logros/misiones.
+`abandonManualDig` ahora registra el nivel UNA vez (R31.9: antes no contaba para el nivel) y
+conserva sin castigo lo ya acreditado.
+
+**Canvas (`DigCanvas.js`)**: `scratch()` procesa `newlyRevealed` entry por entry; si la entry es
+la trampa, corta el escarbado EN EL ACTO (`completed = true`, `completeReveal(true)`) sin esperar
+al resto. `onObjectRevealed` pasa el `index` además de la entry/posición. `completeReveal`
+recibe `trapSprung` y se lo pasa a `onComplete`.
+
+**UI (`UIManager.js`)**: `handleObjectRevealed(index, posPct)` despacha `revealDugEntry(index)`
+al store y dispara el juice inmediato (pop/partícula/glow por ítem, thud/shake si es la trampa).
+`handleDigComplete(trapSprung)` ya no acredita nada — solo cierra el ciclo (`finishManualDig` si
+no hubo trampa) y ABRE las celebraciones de item (firstFind/legendary) que quedaron encoladas
+DURANTE el escarbado en `pendingCelebrations` (nuevo array de instancia).
+
+**Bug real encontrado y arreglado durante el desarrollo (no estaba en el plan)**: las
+celebraciones de firstFind/legendary se disparaban INMEDIATAMENTE al destapar cada ítem — con un
+contenedor de 3 slots, el modal (bloqueante) se abría a mitad del escarbado y los gestos
+siguientes del jugador caían sobre el backdrop en vez del canvas, dejando el resto del
+contenedor sin poder destaparse nunca. Fix: las celebraciones de ítem se ENCOLAN durante el
+escarbado y se ABREN recién al cerrar el ciclo completo (mismo orden histórico de la ronda 12:
+logro antes que hallazgo, porque `finishManualDig` corre `runAchievements`/notify PRIMERO).
+
+**Segundo bug preexistente, ahora alcanzable más seguido**: con el Puesto activo,
+`tickAutomation` (store.js) revisa logros en CADA tick — con crédito por-ítem, un ítem capturado
+al inventario puede desbloquear "Primer Objeto Guardado" (a46) A MITAD de un gesto de escarbado
+(no solo entre gestos), y su modal se come los eventos de puntero restantes. Es la MISMA clase de
+carrera de celebraciones ya documentada en la ronda 30.B (`clickSorteandoCelebraciones`), ahora
+alcanzable desde un ángulo nuevo. Mitigado en el test afectado (`ronda25-prestigio.spec.js`,
+pre-desbloqueando todos los logros — el test no versa sobre logros) pero **queda como deuda
+latente para el jugador real**: cualquier escarbado con el Puesto activo puede, en teoría,
+disparar un logro mid-gesto. No se generalizó el fix (p. ej. "ignorar clicks perdidos contra el
+backdrop y reintentar sobre el canvas") por estar fuera del alcance de esta ronda — se recomienda
+una ronda futura de "juice"/UX lo tome si el usuario lo reporta jugando.
+
+**Otro bug de e2e (no de producto)**: `ronda9-regression.spec.js` (test 3) loopeaba sobre TODAS
+las `positions` de un escarbado que podía salir trampa ("da igual si sale trampa, cuenta para el
+nivel igual") — antes de esta ronda una trampa tenía SIEMPRE 1 sola posición, así que el loop
+nunca importaba; con la trampa simultánea puede haber N+1 posiciones y, si el roll da trampa
+antes de agotarlas, el resto de las iteraciones rasca sobre el picker ya remontado en vez del
+canvas. Arreglado cortando el loop en cuanto `#dig-empty` se vuelve visible.
+
+### Verificación
+
+- **Unit (Vitest): 737/737** en 52 archivos (baseline 706 + 31 nuevos: 6 fix-racha, 5 fix250k,
+  6 fórmulas, 6 balance, 2 ajustados por el piso/resistencia nuevos, 1 ajustado por el refactor
+  de trap discard, 12 trampa-simultánea).
+- **e2e (Playwright): 101/101** (baseline 98 de la ronda 30.B + 1 de `ronda31-balance.spec.js` +
+  2 de `ronda31-credito-parcial.spec.js`), **tres corridas completas seguidas en verde** tras los
+  fixes de carrera de celebraciones arriba. Specs existentes ajustados por el cambio de contrato
+  (regla dura 18, no se tapó nada): `ronda10-regression` (resistencia recalibrada),
+  `ronda5-regression` (crédito por-ítem: el dinero sube ANTES de completar, no al final),
+  `ronda9-regression` (loop de positions corta al cerrar el dig), `ronda25-prestigio`
+  (pre-desbloquea logros para aislar la carrera de tickAutomation, no relacionada con lo que
+  prueba el test).
+- Se descartaron ~3 formulaciones de asserts de `ronda31-credito-parcial.spec.js` que comparaban
+  `#money` formateado con un techo exacto: el gesto ancho del helper `rascarObjeto` (3 pasadas)
+  puede, con posiciones desafortunadas, rozar la huella de un objeto vecino en la MISMA pasada
+  que revela la trampa — no es un bug de producto (cubierto exacto a nivel motor en
+  `ronda31-trampa-simultanea.test.js`), así que el spec quedó leyendo el save persistido
+  (`trapsHit`/`digStreak`) para una aserción determinística en vez de perseguir el monto exacto.
+- **Manual**: pasada con save sembrado (prestigio 7, $1e18) a 375px y 1440×900 — Tienda y
+  selector muestran "Ritmo: X% · Pincel: X%" correctos y coloreados (verde ≥100%, rojo por
+  debajo); Bóveda a Contrarreloj comprada y completada DENTRO del timer con Fuerza/Área base
+  (screenshots descartables de la sesión, no comiteados). Trampa simultánea + crédito parcial
+  verificados end-to-end por `ronda31-credito-parcial.spec.js` (gestos reales de puntero, no
+  simulación): destapar 1-2 items antes de la trampa los acredita al toque; abandonar conserva
+  ese loot sin castigo; destapar la trampa corta el escarbado, aplica el castigo y cierra sin
+  tocar el resto.
+
+### Pendiente / decisiones para el usuario
+
+- **Causa de "los logros de racha no se auto-reclaman" no reproducida en el camino web** (ver
+  31.3.2 arriba) — si lo seguís viendo, decime en qué build/momento para investigar puntual
+  (build empaquetada vs. navegador, save viejo vs. nuevo).
+- **Bandas de la calibración de resistencia fuera de rango desde `mudanzaMansion`**: es una
+  propiedad estructural de las fórmulas de Fuerza/Área (crecimiento lineal contra costo
+  geométrico), no un bug de esta ronda — documentado en el script y arriba. Si en el playtest
+  real se siente MUY duro en vez de "pesado pero jugable", el ajuste futuro pasa por la DATA
+  (perNivel de digPower/area, o la curva de costo), nunca la fórmula.
+- **Carrera de celebraciones con el Puesto activo**: puede interrumpir un escarbado mid-gesto si
+  se desbloquea un logro (p. ej. "Primer Objeto Guardado") justo entre dos toques. No rompe nada
+  (el jugador puede cerrar el modal y seguir, salvo que el gesto en curso se pierda), pero es una
+  fricción real que no se resolvió de raíz esta ronda — candidata para la próxima pasada de
+  juice/UX si el usuario la nota jugando.

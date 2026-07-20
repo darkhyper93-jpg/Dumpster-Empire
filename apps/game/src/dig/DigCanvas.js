@@ -79,8 +79,8 @@ export class DigCanvas {
    * @param {HTMLElement} host
    * @param {{
    *   onProgress: (frac: number) => void,
-   *   onComplete: () => void,
-   *   onObjectRevealed?: (entry: {name: string, categoria?: string, isTrap: boolean}, posPct: {xPct: number, yPct: number}) => void,
+   *   onComplete: (trapSprung: boolean) => void,
+   *   onObjectRevealed?: (entry: {name: string, categoria?: string, isTrap: boolean}, posPct: {xPct: number, yPct: number}, index: number) => void,
    * }} callbacks
    * @param {Array<{id:string, colorToken:string}>} [rarities] - para colorear ítems/íconos por rareza (§2.5).
    * @param {{hintProb: number}} [trapsData] - `data/traps.json` (ronda 20, PLAN.md §4.24). Sin
@@ -212,15 +212,20 @@ export class DigCanvas {
         ? rollTrapHintGrade(digResult.trapGrade, this.trapsData.hintProb)
         : null;
 
-    this.entries = digResult.isTrap
-      ? [{ icon: 'artifact', name: t('dig.trapEntryName'), colorHex: this.resolveCssColor('--trap'), isTrap: true }]
-      : digResult.items.map((item) => ({
-          icon: item.icon,
-          name: item.name,
-          categoria: item.categoria,
-          colorHex: this.resolveCssColor(this.rarityColorToken(item.categoria)),
-          isTrap: false,
-        }));
+    // §4.42 (ronda 31): la trampa ya NO reemplaza la lista de items — el engine la agrega como
+    // una entry MÁS (isTrap: true) dentro de `digResult.items` (N items + 1 trampa). El canvas
+    // solo mapea cada entry a su presentación; no decide nada de economía.
+    this.entries = digResult.items.map((item) =>
+      item.isTrap
+        ? { icon: 'artifact', name: t('dig.trapEntryName'), colorHex: this.resolveCssColor('--trap'), isTrap: true }
+        : {
+            icon: item.icon,
+            name: item.name,
+            categoria: item.categoria,
+            colorHex: this.resolveCssColor(this.rarityColorToken(item.categoria)),
+            isTrap: false,
+          }
+    );
     // DECISIÓN (ronda 5): posiciones aleatorias por escarbado — encontrar cada objeto es parte
     // del esfuerzo del gesto manual (aprobado en el plan de ronda 5). El RNG es de presentación:
     // el LOOT ya fue decidido por el engine, acá solo se decide dónde queda enterrado.
@@ -536,13 +541,22 @@ export class DigCanvas {
     if (newlyRevealed.length === 0) return;
 
     const positions = getPositions(this.model);
+    // §4.42 (ronda 31): destapar la entry-trampa SALTA y CORTA el escarbado en el acto — los
+    // objetos aún no revelados en ESTE mismo trazo (si el pincel alcanzó a varios a la vez)
+    // se pierden con ella, así que no seguimos procesando `newlyRevealed` tras encontrarla.
     for (const index of newlyRevealed) {
+      const entry = this.entries[index];
       this.revealEntry(index, positions[index]);
+      if (entry.isTrap) {
+        this.completed = true;
+        this.completeReveal(true);
+        return;
+      }
     }
     this.callbacks.onProgress(getProgress(this.model));
     if (isComplete(this.model)) {
       this.completed = true;
-      this.completeReveal();
+      this.completeReveal(false);
     }
   }
 
@@ -584,10 +598,14 @@ export class DigCanvas {
     const entry = this.entries[index];
     this.paintBottomEntries();
     if (this.callbacks.onObjectRevealed) {
-      this.callbacks.onObjectRevealed(entry, {
-        xPct: (pos.x / CANVAS_WIDTH) * 100,
-        yPct: (pos.y / CANVAS_HEIGHT) * 100,
-      });
+      this.callbacks.onObjectRevealed(
+        entry,
+        {
+          xPct: (pos.x / CANVAS_WIDTH) * 100,
+          yPct: (pos.y / CANVAS_HEIGHT) * 100,
+        },
+        index
+      );
     }
   }
 
@@ -650,17 +668,24 @@ export class DigCanvas {
     return Math.min(radius, OBJECT_RADIUS * ERASE_RADIUS_MAX_VS_OBJECT);
   }
 
-  /** Todos los objetos revelados: limpia la capa de suciedad ENTERA (sin parches a medias),
-   *  llena la barra y deja REVEAL_HOLD_MS de "momento de revelado" — el jugador ve cada objeto
-   *  con su nombre — antes de avisar al dueño (que despacha finishManualDig y desmonta). */
-  completeReveal() {
+  /**
+   * Fin del escarbado: limpia la capa de suciedad ENTERA (sin parches a medias), llena la barra
+   * y deja REVEAL_HOLD_MS de "momento de revelado" — el jugador ve el último objeto con su
+   * nombre — antes de avisar al dueño. Dos caminos (§4.42, ronda 31):
+   *   - `trapSprung: true` — se destapó la trampa; el dueño ya recibió el crédito de esa entry
+   *     (y de las anteriores) por `onObjectRevealed`/`revealDugEntry` — acá solo cierra la UI.
+   *   - `trapSprung: false` — se destaparon TODOS los objetos sin trampa; el dueño despacha
+   *     `finishManualDig` (nivel/racha, sin acreditar nada más: ya se acreditó por-ítem).
+   * @param {boolean} trapSprung
+   */
+  completeReveal(trapSprung) {
     stopScratchSound();
     this.ctxTop.globalCompositeOperation = 'source-over';
     this.ctxTop.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     this.callbacks.onProgress(1);
     this._revealTimer = setTimeout(() => {
       this._revealTimer = null;
-      this.callbacks.onComplete();
+      this.callbacks.onComplete(trapSprung);
     }, REVEAL_HOLD_MS);
   }
 

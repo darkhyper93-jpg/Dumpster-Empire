@@ -281,6 +281,8 @@ export default {
     a58: 'Fifth Echo',
     a59: 'Fleet Boss',
     a60: 'Automatic Judgment',
+    a61: 'Five Sets',
+    a62: 'Serial Collector',
   },
   automations: {
     guantes: { name: 'Gloves', desc: '+20% permanent Dig Power.' },

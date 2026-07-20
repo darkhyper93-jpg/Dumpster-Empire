@@ -9,7 +9,7 @@ import {
   DIG_SENSITIVITY_MIN,
   DIG_SENSITIVITY_MAX,
   SUPPORTED_LANGUAGES,
-  getAreaMult,
+  getAreaRate,
   getDigRate,
   getEffectiveTrapProbability,
   serializeState,
@@ -19,7 +19,8 @@ import {
   isContainerUnlocked,
   buyContainer as engineBuyContainer,
   rollContainerResult,
-  applyContainerResult,
+  creditDugItem,
+  springTrap,
   getContainerLevel,
   getLevelValueMult,
   buyUpgrade as engineBuyUpgrade,
@@ -309,9 +310,18 @@ export function createStore(ctx) {
       pendingDig = {
         container,
         result: digResult,
+        // AJUSTE (ronda 31, PLAN.md §4.42/§4.43): crédito por-ítem — ya NO se acredita nada acá.
+        // Cada entry (item o trampa) se resuelve en `revealDugEntry` en el momento en que el
+        // jugador la destapa; `revealedIndexes` es el guard de "ya acreditado" (§4.42: el
+        // repintado por focus/visibilitychange del canvas NO debe re-acreditar, R31.8).
+        revealedIndexes: new Set(),
+        creditedMoney: 0,
         // PLAN.md §4.23 (ronda 20): la herramienta equipada SOLO modifica el pincel manual
         // (radio/ritmo) — nunca getLuck ni itemSaleValue (contrato del engine, ver economy.js).
-        areaMult: getAreaMult(state, data) * getToolRadiusMult(state, data),
+        // AJUSTE (ronda 31, PLAN.md §4.42): el pincel manual usa areaRate (Área contra la
+        // areaRecomendada del contenedor) en vez del getAreaMult crudo — hasta esta ronda el
+        // Área no tenía ninguna mecánica real, solo un cartel en la Tienda.
+        areaMult: getAreaRate(state, container, data) * getToolRadiusMult(state, data),
         // AJUSTE (agentes/rework-escarbado-y-landing-prompt.md): el ritmo de escarbado (Resistencia
         // del contenedor vs. Fuerza del jugador, ya calculado por el engine para automatización/
         // offline) también viaja al canvas manual — la resistencia achica el pincel del gesto.
@@ -331,12 +341,60 @@ export function createStore(ctx) {
       return { ok: true };
     },
 
+    /**
+     * §4.42 (ronda 31) — acredita UNA entry (item o trampa) en el momento en que el jugador la
+     * destapa. El canvas (DigCanvas.onObjectRevealed) despacha esto por cada objeto revelado;
+     * NUNCA calcula economía, solo avisa el índice. Guard de índice ya acreditado (R31.8): el
+     * repintado de DigCanvas por `focus`/`visibilitychange` NUNCA vuelve a llamar acá porque no
+     * dispara `onObjectRevealed` — pero el guard queda igual, a prueba de un doble-click del
+     * dueño (defensa en profundidad, mismo criterio que `startManualDig` con `pendingDig`).
+     * @param {number} index - índice de la entry en `pendingDig.result.items`.
+     * @returns {{ ok: true, item?: Object, moneyDelta?: number, trapSprung?: boolean } | { ok: false, error: string }}
+     */
+    revealDugEntry(index) {
+      if (!pendingDig) return { ok: false, error: 'No hay escarbado en curso.' };
+      if (pendingDig.revealedIndexes.has(index)) return { ok: false, error: 'Entry ya acreditada.' };
+      const entry = pendingDig.result.items[index];
+      if (!entry) return { ok: false, error: 'Entry desconocida.' };
+      pendingDig.revealedIndexes.add(index);
+      const { container, result } = pendingDig;
+
+      if (entry.isTrap) {
+        // §4.42: saltar la trampa CORTA el escarbado — los items aún no destapados se pierden
+        // (ya no están en pendingDig al ponerlo en null), los ya destapados quedan acreditados
+        // (creditDugItem ya los aplicó a state.money/inventory arriba, en llamadas previas).
+        const { trapPenalty } = springTrap(state, container, result, data, false);
+        registerContainerDig(state, container);
+        pendingDig = null;
+        runAchievements();
+        runMissions();
+        detectContainerUnlocks();
+        persist();
+        notify();
+        return { ok: true, trapSprung: true, trapPenalty };
+      }
+
+      const { moneyDelta } = creditDugItem(state, container, entry, false, data);
+      pendingDig.creditedMoney += moneyDelta;
+      persist();
+      notify();
+      return { ok: true, item: entry, moneyDelta };
+    },
+
+    /**
+     * Se alcanza SOLO si el escarbado se completó SIN destapar la trampa (todas las entries ya
+     * fueron acreditadas una por una vía `revealDugEntry`). Ya NO acredita items — solo cierra
+     * el ciclo: nivel del contenedor, +1 de racha (§4.20), logros/misiones y el toast de level-up.
+     */
     finishManualDig() {
       if (!pendingDig) return { ok: false, error: 'No hay escarbado en curso.' };
-      const { container, result } = pendingDig;
+      const { container } = pendingDig;
       const levelBefore = getContainerLevel(state, container.id);
-      applyContainerResult(state, container, result, false, data);
+      registerContainerDig(state, container);
       const levelAfter = getContainerLevel(state, container.id);
+      // PLAN.md §4.20 (ronda 19): +1 de racha por escarbado manual exitoso (sin trampa).
+      state.digStreak++;
+      state.bestDigStreak = Math.max(state.bestDigStreak, state.digStreak);
       if (state.tutorialStep === 0) state.tutorialStep = 1;
       pendingDig = null;
       runAchievements();
@@ -359,9 +417,19 @@ export function createStore(ctx) {
       };
     },
 
+    /**
+     * §4.42 (ronda 31, R31.9): abandonar deja de ser gratis-sin-consecuencia. Los items ya
+     * destapados (vía revealDugEntry) quedan acreditados — DECISIÓN: es una salida SIN
+     * penalización que conserva el loot parcial (lo que pidió el usuario). No dispara la trampa,
+     * no hay castigo, y la racha queda como está (ni +1 ni 0: el dig no se completó limpio, pero
+     * tampoco cortó por trampa). El contenedor SÍ registra el intento para su nivel (ya se
+     * compró y se consumió) — antes de esta ronda no lo hacía.
+     */
     abandonManualDig() {
       if (!pendingDig) return { ok: false, error: 'No hay escarbado en curso.' };
+      registerContainerDig(state, pendingDig.container);
       pendingDig = null;
+      persist();
       notify();
       return { ok: true };
     },

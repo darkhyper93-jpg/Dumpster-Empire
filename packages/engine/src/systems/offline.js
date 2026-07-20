@@ -59,6 +59,16 @@ function averageItemValue(state, container, categoria, itemsData, data, luck) {
  * @returns {number}
  */
 export function expectedContainerValue(state, container, itemsData, data) {
+  // DECISIÓN (ronda 31, PLAN.md §4.43): la trampa simultánea hace que un dig trampeado del robot
+  // TAMBIÉN entregue loot online ("guarda todo, come el castigo"). Este estimador NO se ajustó
+  // para reflejarlo: es una tasa AGREGADA (valor esperado por segundo), no una simulación de
+  // digs individuales — no hay "conservar items, pagar castigo" que aplicar a un promedio. Se
+  // mantiene conservador a propósito (mismo criterio ya documentado para getMechanicValueMult en
+  // R26.3: subestima antes que sobreestimar el progreso offline) — sigue multiplicando por
+  // `(1 - trapProb)` como si el loot trampeado se perdiera. Ajustarlo con precisión exigiría
+  // modelar también el descuento del Escáner de Trampas (getAutoTrapDiscardChance) sin duplicar
+  // el castigo que ya resta getTrapPenalty en otros formulas (fase9-balance.test.js). Dejado
+  // fuera de alcance de esta ronda; el offline sigue pagando MENOS que el online real, nunca más.
   const luck = getLuck(state, data);
   const trapProb = getEffectiveTrapProbability(state, container, true, data);
   const levelShift = getLevelRarityShift(state, container);

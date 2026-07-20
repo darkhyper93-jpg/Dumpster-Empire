@@ -124,6 +124,28 @@ export async function iniciarEscarbadoSinTrampa(page, containerId, minObjetos = 
 }
 
 /**
+ * Arranca un escarbado garantizando que SÍ haya salido trampa (ronda 31, PLAN.md §4.42): desde
+ * la trampa simultánea, un dig trampeado TAMBIÉN trae la lista normal de items — los specs de
+ * crédito parcial necesitan esa co-ocurrencia. `containerId` conviene con un `probTrampaBase`
+ * mayor al de tachoVereda (0.05) para que el retry converja rápido — depositoAbandonado (0.20)
+ * es buen default; el llamador debe haber sembrado el save con ese contenedor comprado/pagable.
+ */
+export async function iniciarEscarbadoConTrampa(page, containerId, minObjetosNoTrampa = 1) {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const canvas = await iniciarEscarbado(page, containerId);
+    const positions = await getDigPositions(page);
+    const art = await page.evaluate(() => window.__digDebug.art());
+    const trapIndex = art.findIndex((entry) => entry.isTrap);
+    if (trapIndex !== -1 && positions.length - 1 >= minObjetosNoTrampa) {
+      return { canvas, positions, trapIndex };
+    }
+    await page.locator('#dig-abandon-btn').click();
+    await expect(page.locator('#dig-empty')).toBeVisible();
+  }
+  throw new Error(`No salió un escarbado CON trampa de ${containerId} en 30 intentos.`);
+}
+
+/**
  * Rasca encima de un objeto con un gesto real: tres pasadas horizontales que cubren su
  * huella completa (radio 28 + pincel base 20), en coordenadas de página escaladas al
  * tamaño CSS actual del canvas.

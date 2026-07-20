@@ -30,9 +30,12 @@ import { PROCEDURAL_CONTAINER_MAX_N, proceduralContainerId } from '../procedural
  * @property {boolean} isTrap
  * @property {'leve' | 'normal' | 'grave'} [trapGrade] - solo si isTrap y data.traps existía en
  *   el momento del roll (PLAN.md §4.21, ronda 20). Ausente = tratar como "normal" (compat).
- * @property {Array<{ id: string, icon: string, name: string, categoria: string, value: number, baseValue: number, isFirstRareFind: boolean, isLegendary?: boolean }>} items
+ * @property {Array<{ id: string, icon: string, name: string, categoria: string, value: number, baseValue: number, isFirstRareFind: boolean, isLegendary?: boolean, isTrap?: boolean }>} items
  *   `baseValue` (ronda 23, PLAN.md §4.27): el mismo cálculo que `value` pero con fluctuación de
  *   mercado 1 — es lo que persiste el Puesto de Chatarra al capturar un ítem (ver applyContainerResult).
+ *   `isTrap` (ronda 31, PLAN.md §4.42): SOLO presente en la entry-trampa cuando `isTrap` (arriba)
+ *   es true — la trampa simultánea agrega esta entry a la lista normal de ítems en vez de
+ *   devolver `items: []` (contrato viejo, hasta la ronda 30).
  * @property {number} moneyDelta
  * @property {boolean} [usedEvent] - true si el roll se benefició de un evento de contenedor
  *   activo (§4.32, ronda 24). Ausente en el camino de trampa (nunca aplica ahí).
@@ -157,6 +160,10 @@ export function buyContainer(state, container, data) {
 
 /**
  * Tira el resultado de escarbar un contenedor: trampa o lista de ítems con su valor final.
+ * §4.42 (ronda 31): la trampa deja de ser EXCLUYENTE con el loot — cuando cae, se rollea IGUAL la
+ * lista normal de ítems del contenedor y la trampa se agrega como una entry ADICIONAL marcada
+ * `isTrap: true` (N ítems + 1 trampa). El legendario sigue gateado a `!isTrap` (nunca aparece en
+ * un dig trampeado, contrato §3.5.3/feel "la trampa no trae premio mayor").
  * @param {import('../state.js').GameState} state
  * @param {Object} container
  * @param {boolean} isAuto
@@ -180,17 +187,14 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
   const eventTrapBonus = event && event.containerId === container.id ? event.trapProbBonus : 0;
 
   const trapProb = Math.min(1, getEffectiveTrapProbability(state, container, isAuto, data, hour) + eventTrapBonus);
-  if (rollIsTrap(trapProb, random)) {
-    // PLAN.md §4.21 (ronda 20): el grado es un roll SEGUNDO e independiente, nunca afecta la
-    // probabilidad de trampa de arriba. `data.traps` es opcional a propósito (mismo patrón que
-    // `data.streak` en getLuck, ronda 19): los llamadores previos a esta ronda no lo pasan, y
-    // sin él no se consume un random() extra — el comportamiento y la secuencia de RNG de los
-    // ~300 tests previos a la ronda 20 quedan bit a bit idénticos.
-    if (data.traps) {
-      return { isTrap: true, trapGrade: rollTrapGrade(data.traps.gradosProb, random), items: [], moneyDelta: 0 };
-    }
-    return { isTrap: true, items: [], moneyDelta: 0 };
-  }
+  const isTrap = rollIsTrap(trapProb, random);
+  // PLAN.md §4.21 (ronda 20): el grado es un roll SEGUNDO e independiente, nunca afecta la
+  // probabilidad de trampa de arriba. `data.traps` es opcional a propósito (mismo patrón que
+  // `data.streak` en getLuck, ronda 19): los llamadores previos a esta ronda no lo pasan, y sin
+  // él no se consume un random() extra — el comportamiento y la secuencia de RNG de los tests
+  // previos a la ronda 20 quedan bit a bit idénticos. El roll del grado se consume ACÁ (antes de
+  // rollear los ítems) para no reordenar la secuencia de RNG existente.
+  const trapGrade = isTrap && data.traps ? rollTrapGrade(data.traps.gradosProb, random) : undefined;
 
   const luck = getLuck(state, data, hour);
   const depthValueMult = getDepthValueMult(state, data);
@@ -248,10 +252,10 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
   }
 
   // PLAN.md §4.26 (ronda 22): roll de legendario, SOLO escarbado manual y SOLO si no cayó
-  // trampa (ya se retornó arriba en ese caso). El roll de legendaryChance siempre se consume
-  // desde `random` cuando corresponde intentarlo (secuencia de RNG estable), pero la sustitución
-  // del slot 1 solo ocurre si hay un legendario elegible (categoría coincide y no se posee aún).
-  if (!isAuto && data.legendaries && rollLegendary(data.legendaries.legendaryChance, random)) {
+  // trampa. El roll de legendaryChance siempre se consume desde `random` cuando corresponde
+  // intentarlo (secuencia de RNG estable), pero la sustitución del slot 1 solo ocurre si hay un
+  // legendario elegible (categoría coincide y no se posee aún).
+  if (!isTrap && !isAuto && data.legendaries && rollLegendary(data.legendaries.legendaryChance, random)) {
     const slot1 = items[0];
     const candidate = data.legendaries.items.find(
       (l) => l.categoria === slot1.categoria && !state.legendariesFound.includes(l.id)
@@ -283,6 +287,23 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
     }
   }
 
+  if (isTrap) {
+    // §4.42 (ronda 31): la trampa entra como una entry MÁS de `items` (no reemplaza ninguna) —
+    // N ítems del pool + 1 trampa. Se agrega al FINAL de la lista para no correr los índices de
+    // los ítems ya rolleados (el canvas/store direcciona por índice, ver DigCanvas.js/store.js).
+    items.push({
+      id: 'trap',
+      icon: 'artifact',
+      name: '',
+      categoria: '',
+      value: 0,
+      baseValue: 0,
+      isFirstRareFind: false,
+      isTrap: true,
+    });
+    return { isTrap: true, trapGrade, items, moneyDelta: 0 };
+  }
+
   const moneyDelta = items.reduce((sum, item) => sum + item.value, 0);
   // §4.32 (ronda 24): "evento aprovechado" — este escarbado se resolvió con éxito (no trampa)
   // mientras un evento de contenedor estaba activo sobre ESTE contenedor.
@@ -290,49 +311,45 @@ export function rollContainerResult(state, container, isAuto, itemsData, data, r
 }
 
 /**
- * Aplica un DigResult ya calculado al estado: dinero, contadores de ítems, fragmentos, trampas.
+ * §4.42 (ronda 31) — acredita UN ítem ya rolleado: venta instantánea o captura al Puesto de
+ * Chatarra (según umbral/capacidad/filtros del robot, ronda 23/27), contadores de colección
+ * (`itemsFoundCount`/`itemsFoundByCategory`/`itemsFoundByItem`) y fragmentos de categoría. Pieza
+ * pura extraída de `applyContainerResult` (refactor estructural, 31.3.B) — el escarbado manual
+ * con crédito por-ítem la llama una vez por objeto destapado (store.js `revealDugEntry`); el
+ * camino atómico del robot/offline la llama en loop dentro de `applyContainerResult`. NUNCA toca
+ * racha, nivel de contenedor ni trampa — eso es `springTrap`/`registerContainerDig`.
  * @param {import('../state.js').GameState} state
  * @param {Object} container
- * @param {DigResult} result
+ * @param {{ id: string, icon: string, name: string, categoria: string, value: number, baseValue: number, isLegendary?: boolean }} item
  * @param {boolean} isAuto
  * @param {import('../economy.js').EngineData} data
- * @param {import('../state.js').RobotFilters | null} [filters] - filtros del robot que procesó
- *   este contenedor (ronda 27, PLAN.md §4.39). Solo los pasa automationTick/offline (isAuto);
- *   el escarbado manual NUNCA se filtra. Prioridad por ítem: reserva > descarte > captura
- *   global > venta. `null`/omitido = comportamiento idéntico al pre-flota.
- * @returns {{ moneyDelta: number, trapPenalty: number }}
+ * @param {import('../state.js').RobotFilters | null} [robotFilters] - filtros del robot que
+ *   procesó este contenedor (ronda 27, PLAN.md §4.39). Solo los pasa automationTick/offline
+ *   (isAuto); el escarbado manual NUNCA se filtra. Prioridad por ítem: reserva > descarte >
+ *   captura global > venta. `null`/omitido = comportamiento idéntico al pre-flota.
+ * @returns {{ moneyDelta: number, captured: boolean }}
  */
-export function applyContainerResult(state, container, result, isAuto, data, filters = null) {
-  // PLAN.md §11.3: cada escarbado (trampa o no) cuenta para el nivel propio del contenedor.
-  registerContainerDig(state, container);
-
-  if (result.isTrap) {
-    // PLAN.md §4.21 (ronda 20): el grado modula el castigo base de §11.2/§4.6 — leve no castiga
-    // (solo se pierde el contenedor), normal es el castigo de siempre, grave lo duplica
-    // (gravePenaltyMult de data/traps.json). Sin trapGrade (compat con llamadores previos a la
-    // ronda 20) se comporta exactamente como "normal".
-    const basePenalty = getTrapPenalty(state, container, data);
-    let penalty;
-    if (result.trapGrade === 'leve') {
-      penalty = 0;
-    } else if (result.trapGrade === 'grave') {
-      penalty = basePenalty * (data.traps?.gravePenaltyMult ?? 2);
-      state.gravesHit++;
-    } else {
-      penalty = basePenalty;
-    }
-    penalty = Math.min(state.money, penalty);
-    state.money -= penalty;
-    state.trapsHit++;
-    // PLAN.md §4.20 (ronda 19): la racha es SOLO de escarbado manual — el robot ni la sube ni
-    // la corta (contrato §3.5.1: los grados de trampa de la ronda 20 también la cortan).
-    if (!isAuto) state.digStreak = 0;
-    return { moneyDelta: 0, trapPenalty: penalty };
+export function creditDugItem(state, container, item, isAuto, data, robotFilters = null) {
+  // PLAN.md §4.26 (ronda 22, contrato §3.5.3): los legendarios están FUERA de los pools
+  // normales — nunca entran a itemsFoundByItem/itemsFoundCount/itemsFoundByCategory (la
+  // vitrina, `legendariesFound`, es su única persistencia, sin duplicados) NI al inventario
+  // del Puesto: se venden SIEMPRE instantáneo.
+  if (item.isLegendary) {
+    if (!state.legendariesFound.includes(item.id)) state.legendariesFound.push(item.id);
+    const gained = addMoney(state, item.value);
+    return { moneyDelta: gained, captured: false };
   }
-  // §4.32 (ronda 24): contador de "evento aprovechado" para el logro correspondiente.
-  if (result.usedEvent) state.eventsUsedCount++;
-  let total = 0;
+  state.itemsFoundCount++;
+  state.itemsFoundByCategory[item.categoria] = (state.itemsFoundByCategory[item.categoria] || 0) + 1;
+  // PLAN.md §11.5: el INDEX necesita el contador por ítem específico, no solo por categoría.
+  // Ronda 16: la clave es el id estable del ítem (no el nombre) para que la colección
+  // sobreviva a la traducción — ver PLAN.md §16.
+  const byContainer = state.itemsFoundByItem[container.id] || (state.itemsFoundByItem[container.id] = {});
+  byContainer[item.id] = (byContainer[item.id] || 0) + 1;
   const fragmentCategories = ['antiques', 'art', 'relics', 'future'];
+  if (fragmentCategories.includes(item.categoria)) {
+    state.categoryFragments += 1 * getFragmentMult(state, data);
+  }
   // PLAN.md §2.9 (ronda 23): captura del Puesto de Chatarra. `data.stall` opcional (patrón
   // data.streak/data.traps/data.tools): sin él, o sin puesto comprado, o en pausa
   // (keepThreshold 0), el camino es EXACTAMENTE el de siempre (R23.2, snapshot idéntico).
@@ -340,51 +357,114 @@ export function applyContainerResult(state, container, result, isAuto, data, fil
   // PLAN.md §4.39 (ronda 27): la reserva por categoría ignora el umbral global (keepThreshold)
   // y funciona aunque el puesto esté "en pausa" — pero sigue exigiendo puesto comprado y lugar.
   const activeFilters =
-    isAuto && filters && (filters.descartarBajoValor > 0 || filters.reservarCategorias.length > 0) ? filters : null;
+    isAuto && robotFilters && (robotFilters.descartarBajoValor > 0 || robotFilters.reservarCategorias.length > 0)
+      ? robotFilters
+      : null;
   const reserveEnabled = Boolean(activeFilters) && Boolean(data.stall) && state.stallLevel >= 1;
   const capacity = captureEnabled || reserveEnabled ? getStallCapacity(state, data) : 0;
-  if (activeFilters) state.filteredProcessedCount++;
-  for (const item of result.items) {
-    // PLAN.md §4.26 (ronda 22, contrato §3.5.3): los legendarios están FUERA de los pools
-    // normales — nunca entran a itemsFoundByItem/itemsFoundCount/itemsFoundByCategory (la
-    // vitrina, `legendariesFound`, es su única persistencia, sin duplicados) NI al inventario
-    // del Puesto: se venden SIEMPRE instantáneo.
-    if (item.isLegendary) {
-      if (!state.legendariesFound.includes(item.id)) state.legendariesFound.push(item.id);
-      total += item.value;
-      continue;
-    }
-    state.itemsFoundCount++;
-    state.itemsFoundByCategory[item.categoria] = (state.itemsFoundByCategory[item.categoria] || 0) + 1;
-    // PLAN.md §11.5: el INDEX necesita el contador por ítem específico, no solo por categoría.
-    // Ronda 16: la clave es el id estable del ítem (no el nombre) para que la colección
-    // sobreviva a la traducción — ver PLAN.md §16.
-    const byContainer = state.itemsFoundByItem[container.id] || (state.itemsFoundByItem[container.id] = {});
-    byContainer[item.id] = (byContainer[item.id] || 0) + 1;
-    if (fragmentCategories.includes(item.categoria)) {
-      state.categoryFragments += 1 * getFragmentMult(state, data);
-    }
-    // §4.39 (ronda 27), prioridad literal: (1) reserva por categoría del robot, (2) descarte por
-    // valor del robot, (3) captura global del Puesto, (4) venta instantánea. El descarte NO llega
-    // a `total` ($0) pero los contadores de colección de arriba ya contaron el hallazgo.
-    const reserveEligible =
-      reserveEnabled && activeFilters.reservarCategorias.includes(item.categoria) && state.inventory.length < capacity;
-    if (reserveEligible) {
-      state.inventory.push({ itemId: item.id, containerId: container.id, categoria: item.categoria, baseValue: item.baseValue });
-      continue;
-    }
-    if (activeFilters && activeFilters.descartarBajoValor > 0 && item.value < activeFilters.descartarBajoValor) {
-      continue;
-    }
-    const captureEligible = captureEnabled && item.value >= state.keepThreshold && state.inventory.length < capacity;
-    if (captureEligible) {
-      state.inventory.push({ itemId: item.id, containerId: container.id, categoria: item.categoria, baseValue: item.baseValue });
-    } else {
-      total += item.value;
-    }
+  // §4.39 (ronda 27), prioridad literal: (1) reserva por categoría del robot, (2) descarte por
+  // valor del robot, (3) captura global del Puesto, (4) venta instantánea. El descarte no gana
+  // dinero, pero los contadores de colección de arriba ya contaron el hallazgo.
+  const reserveEligible =
+    reserveEnabled && activeFilters.reservarCategorias.includes(item.categoria) && state.inventory.length < capacity;
+  if (reserveEligible) {
+    state.inventory.push({ itemId: item.id, containerId: container.id, categoria: item.categoria, baseValue: item.baseValue });
+    return { moneyDelta: 0, captured: true };
+  }
+  if (activeFilters && activeFilters.descartarBajoValor > 0 && item.value < activeFilters.descartarBajoValor) {
+    return { moneyDelta: 0, captured: false };
+  }
+  const captureEligible = captureEnabled && item.value >= state.keepThreshold && state.inventory.length < capacity;
+  if (captureEligible) {
+    state.inventory.push({ itemId: item.id, containerId: container.id, categoria: item.categoria, baseValue: item.baseValue });
+    return { moneyDelta: 0, captured: true };
   }
   // §27.5.1 (Y1, ronda 27): toda ganancia entra por addMoney (clamp anti-Infinity).
-  addMoney(state, total);
+  const gained = addMoney(state, item.value);
+  return { moneyDelta: gained, captured: false };
+}
+
+/**
+ * §4.42 (ronda 31) — resuelve la trampa: castigo de dinero según su grado (§4.21), corta la
+ * racha de escarbado MANUAL a 0 (contrato §3.5.1 — el robot ni la sube ni la corta, por eso
+ * recibe `isAuto`) y cuenta el golpe. Pieza pura extraída de `applyContainerResult`. NUNCA toca
+ * ítems ni nivel de contenedor — eso es `creditDugItem`/`registerContainerDig`.
+ * @param {import('../state.js').GameState} state
+ * @param {Object} container
+ * @param {DigResult} result
+ * @param {import('../economy.js').EngineData} data
+ * @param {boolean} [isAuto] - default false: el único llamador manual (store.js, 31.3.B) no
+ *   pasa isAuto porque nunca lo es; `applyContainerResult` (robot/offline) SIEMPRE lo pasa.
+ * @returns {{ trapPenalty: number }}
+ */
+export function springTrap(state, container, result, data, isAuto = false) {
+  // PLAN.md §4.21 (ronda 20): el grado modula el castigo base de §11.2/§4.6 — leve no castiga
+  // (solo se pierde el contenedor), normal es el castigo de siempre, grave lo duplica
+  // (gravePenaltyMult de data/traps.json). Sin trapGrade (compat con llamadores previos a la
+  // ronda 20) se comporta exactamente como "normal".
+  const basePenalty = getTrapPenalty(state, container, data);
+  let penalty;
+  if (result.trapGrade === 'leve') {
+    penalty = 0;
+  } else if (result.trapGrade === 'grave') {
+    penalty = basePenalty * (data.traps?.gravePenaltyMult ?? 2);
+    state.gravesHit++;
+  } else {
+    penalty = basePenalty;
+  }
+  penalty = Math.min(state.money, penalty);
+  state.money -= penalty;
+  state.trapsHit++;
+  // PLAN.md §4.20 (ronda 19): la racha es SOLO de escarbado manual — el robot ni la sube ni la
+  // corta (contrato §3.5.1: los grados de trampa de la ronda 20 también la cortan).
+  if (!isAuto) state.digStreak = 0;
+  return { trapPenalty: penalty };
+}
+
+/**
+ * Aplica un DigResult ya calculado al estado: dinero, contadores de ítems, fragmentos, trampas.
+ * Camino ATÓMICO (robot/offline): procesa TODOS los ítems de una — el escarbado manual con
+ * crédito por-ítem (31.3.B) NO pasa por acá; llama directo a `creditDugItem`/`springTrap` por
+ * cada objeto destapado (ver store.js `revealDugEntry`).
+ * §4.43 (ronda 31) — "guarda todo, come el castigo": desde la trampa simultánea, un
+ * `result.isTrap` puede traer items no vacíos. Se acreditan TODOS los ítems (incluida la entry
+ * de trampa, que no hace nada especial acá — `creditDugItem` la trataría como un ítem normal si
+ * llegara, pero el loop de abajo la salta explícitamente) antes de aplicar el castigo de la
+ * trampa: el robot no pierde el loot que encontró, solo paga el castigo.
+ * @param {import('../state.js').GameState} state
+ * @param {Object} container
+ * @param {DigResult} result
+ * @param {boolean} isAuto
+ * @param {import('../economy.js').EngineData} data
+ * @param {import('../state.js').RobotFilters | null} [filters] - ver `creditDugItem`.
+ * @returns {{ moneyDelta: number, trapPenalty: number }}
+ */
+export function applyContainerResult(state, container, result, isAuto, data, filters = null) {
+  // PLAN.md §11.3: cada escarbado (trampa o no) cuenta para el nivel propio del contenedor.
+  registerContainerDig(state, container);
+
+  // §4.32 (ronda 24): contador de "evento aprovechado" para el logro correspondiente. Nunca
+  // aplica en un dig trampeado (rollContainerResult no marca usedEvent ahí).
+  if (result.usedEvent) state.eventsUsedCount++;
+
+  const activeFilters =
+    isAuto && filters && (filters.descartarBajoValor > 0 || filters.reservarCategorias.length > 0) ? filters : null;
+  if (activeFilters) state.filteredProcessedCount++;
+
+  let total = 0;
+  for (const item of result.items) {
+    // §4.43: la entry-trampa no es un ítem — no tiene valor, no captura, no cuenta para
+    // colección. `springTrap` (abajo) es quien la resuelve.
+    if (item.isTrap) continue;
+    const { moneyDelta } = creditDugItem(state, container, item, isAuto, data, filters);
+    total += moneyDelta;
+  }
+
+  if (result.isTrap) {
+    const { trapPenalty } = springTrap(state, container, result, data, isAuto);
+    return { moneyDelta: total, trapPenalty };
+  }
+
   if (isAuto) {
     state.autoProcessedCount++;
   } else {

@@ -42,7 +42,7 @@
   { "id": "a42", "name": "Primer Legendario", "icon": "legend-relic", "cond": { "type": "legendariesFoundAtLeast", "value": 1 }, "reward": { "type": "money", "amount": 500000 } },
   { "id": "a43", "name": "Cuatro Leyendas", "icon": "legend-relic", "cond": { "type": "legendariesFoundAtLeast", "value": 4 }, "reward": { "type": "keys", "amount": 5 } },
   { "id": "a44", "name": "Vitrina Completa", "icon": "legend-relic", "hidden": true, "cond": { "type": "legendariesFoundAtLeast", "value": 8 }, "reward": { "type": "keys", "amount": 15 } },
-  { "id": "a45", "name": "Set Completo", "icon": "archive-box", "cond": { "type": "setsCompletedAtLeast", "value": 1 }, "reward": { "type": "money", "amount": 250000 } },
+  { "id": "a45", "name": "Set Completo", "icon": "archive-box", "cond": { "type": "setsCompletedAtLeast", "value": 1 }, "reward": { "type": "money", "amount": 2500 } },
   { "id": "a46", "name": "Primer Objeto Guardado", "icon": "shelf-inventory", "cond": { "type": "stallInventoryAtLeast", "value": 1 }, "reward": { "type": "money", "amount": 3000 } },
   { "id": "a47", "name": "Comerciante de Confianza", "icon": "order-sign", "cond": { "type": "ordersFulfilledAtLeast", "value": 25 }, "reward": { "type": "keys", "amount": 5 } },
   { "id": "a48", "name": "Puesto de Primera", "icon": "stall-chatarra", "cond": { "type": "stallLevelAtLeast", "value": 5 }, "reward": { "type": "keys", "amount": 6 } },
@@ -57,5 +57,7 @@
   { "id": "a57", "name": "Nómade Galáctico", "icon": "galaxy-move", "hidden": true, "cond": { "type": "galaxyMoveCountAtLeast", "value": 3 }, "reward": { "type": "keys", "amount": 20 } },
   { "id": "a58", "name": "Eco de Quinta", "icon": "echo-bigbang", "cond": { "type": "containerOwnedAtLeast", "containerId": "bigbangPlus5", "value": 1 }, "reward": { "type": "money", "amount": 5000000 } },
   { "id": "a59", "name": "Patrón de Flota", "icon": "robot-hangar", "cond": { "type": "fleetSizeAtLeast", "value": 3 }, "reward": { "type": "money", "amount": 10000000 } },
-  { "id": "a60", "name": "Criterio Automático", "icon": "filter-funnel", "hidden": true, "cond": { "type": "filteredProcessedCountAtLeast", "value": 10000 }, "reward": { "type": "keys", "amount": 20 } }
+  { "id": "a60", "name": "Criterio Automático", "icon": "filter-funnel", "hidden": true, "cond": { "type": "filteredProcessedCountAtLeast", "value": 10000 }, "reward": { "type": "keys", "amount": 20 } },
+  { "id": "a61", "name": "Cinco Sets", "icon": "archive-box", "cond": { "type": "setsCompletedAtLeast", "value": 5 }, "reward": { "type": "money", "amount": 250000 } },
+  { "id": "a62", "name": "Coleccionista Serial", "icon": "archive-box", "hidden": true, "cond": { "type": "setsCompletedAtLeast", "value": 10 }, "reward": { "type": "keys", "amount": 6 } }
 ]

@@ -225,6 +225,11 @@ export default {
   'shop.luckLine': 'Recommended Luck: {rec} {status}',
   'shop.digPowerLine': 'Recommended Dig Power: ×{rec} {status}',
   'shop.areaLine': 'Recommended Search Area: ×{rec} {status}',
+  // Round 31 (PLAN.md §4.42): CURRENT pace/brush against this container's real resistance/area —
+  // unlike luckLine/digPowerLine/areaLine (fixed targets, neutral player), this shows the effect
+  // already applied with the player's actual stats.
+  'shop.rateLine': 'Pace: {pct}%',
+  'shop.areaRateLine': 'Brush: {pct}%',
   // Ronda 23.C: Junk Stall purchase card (PLAN.md §2.9/§4.27) in the Shop tab.
   'shop.stallCard': 'Junk Stall',
   'shop.stallDesc': 'Save the objects worth keeping and sell them to Doña Rita when the price is high.',

@@ -130,10 +130,13 @@ test.describe('Dumpster Empire — regresión ronda 5 (revelado por-objeto)', ()
       expect(await fill.evaluate((el) => el.style.width)).toBe(expected);
     }
     // Más que el hold de revelado (650ms): si el completado dependiera del % de área ya
-    // habría cerrado. Tiene que seguir activo y sin cobrar.
+    // habría cerrado. Tiene que seguir activo.
     await page.waitForTimeout(900);
     await expect(page.locator('#dig-active')).toBeVisible();
-    expect(await page.locator('#money').textContent()).toEqual(moneyBefore);
+    // AJUSTE (ronda 31, PLAN.md §4.42): crédito por-ítem — cada objeto ya destapado se acredita
+    // AL MOMENTO, no recién al completar todo el contenedor (antes `#money` se quedaba en
+    // `moneyBefore` hasta el final). Con `total - 1` objetos ya acreditados, el dinero SUBIÓ.
+    await expect(page.locator('#money')).not.toHaveText(moneyBefore, { timeout: 5000 });
 
     // El último objeto completa: barra al 100%, momento de revelado y vuelta al picker.
     await rascarObjeto(page, box, positions[total - 1]);

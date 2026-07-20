@@ -20,10 +20,13 @@ const data = { upgrades, automations, prestigeTree };
 const round10Containers = containers.slice(0, 8);
 
 describe('Ronda 10 — dificultad exponencial (PLAN.md §11.2)', () => {
+  // AJUSTE (ronda 31, PLAN.md §4.42): tabla de resistencia/areaRecomendada recalibrada a
+  // ~×1.5 por tier (antes ~×1.35) — ver ronda31-balance.test.js para el guard genérico contra
+  // containers.json completo.
   it('la Fuerza recomendada es la resistencia del contenedor y crece exponencialmente', () => {
     const state = freshState();
     const rec = round10Containers.map((c) => getRecommendedDigPower(state, c));
-    expect(rec).toEqual([1.0, 1.35, 1.85, 2.5, 3.4, 4.7, 6.4, 8.7]);
+    expect(rec).toEqual([1.0, 1.55, 2.4, 3.7, 5.7, 8.8, 13.5, 20.5]);
     for (let i = 2; i < rec.length; i++) {
       const growthPrev = rec[i - 1] / rec[i - 2];
       const growth = rec[i] / rec[i - 1];
@@ -35,7 +38,7 @@ describe('Ronda 10 — dificultad exponencial (PLAN.md §11.2)', () => {
   it('la Búsqueda recomendada sale de la constante de datos areaRecomendada', () => {
     const state = freshState();
     const rec = round10Containers.map((c) => getRecommendedArea(state, c));
-    expect(rec).toEqual([1, 1.35, 1.8, 2.45, 3.3, 4.5, 6.1, 8.2]);
+    expect(rec).toEqual([1, 1.45, 2.25, 3.45, 5.3, 8.2, 12.5, 19]);
   });
 
   it('las metas de Suerte de la ronda 10 son exponenciales (~×1.6 por tier)', () => {

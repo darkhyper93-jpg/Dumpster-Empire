@@ -1,4 +1,13 @@
-# ROADMAPv4.md — Rondas 21-31: limpieza, Puesto de Chatarra, NPCs, estética y lategame infinito
+# ROADMAPv4.md — Rondas 21-33: limpieza, Puesto de Chatarra, NPCs, estética, lategame infinito, dificultad y pantalla de inicio
+
+> **Actualizado el 2026-07-19 (durante la ronda 31), por decisión del usuario.** Sobre el plan
+> vigente se agregan DOS cosas y se corre la numeración del cierre: (1) a la **ronda 31** se le
+> suma la mecánica de **trampa simultánea con items + crédito parcial** (manual y robot) — ver
+> §4.42/§4.43 y el bloque `31.3.B`, sin perder nada de su alcance de balance previo; (2) se crea la
+> **ronda 32 — Nueva pantalla de inicio** (full-bleed, arregla los bordes vacíos en pantalla
+> completa); (3) el **release final** (idiomas pt/fr/de + re-auditoría) pasa de ser el cierre
+> inmediato a la **ronda 33** (antes se lo mencionaba como "ronda 32" dentro de la 31 — esas
+> referencias se corrigieron). El resto del documento es intocado.
 
 > **Rediseñado el 2026-07-14 (post-ronda 20), por decisión del usuario.** Cambios contra la
 > versión anterior de este documento: (1) la **Energía y el espionaje** (ronda 20) se REMUEVEN
@@ -9,11 +18,11 @@
 > aprobado ítem por ítem por el usuario el 2026-07-14 y se conserva ÍNTEGRO, solo renumerado
 > (rondas y versiones de save corren un lugar).
 >
-> **Para el agente ejecutor.** Este plan cubre ONCE rondas (21-31) que se ejecutan EN ORDEN,
+> **Para el agente ejecutor.** Este plan cubre TRECE rondas (21-33) que se ejecutan EN ORDEN,
 > cada una en su propia rama con su propio PR (el usuario mergea entre rondas). NO empieces una
 > ronda sin que la anterior esté mergeada en main. Todo el contenido de este roadmap sale
 > **antes del lanzamiento en Steam** (decisión del usuario, 2026-07-11): el orden es por
-> dependencia técnica y el release final es la ronda 31.
+> dependencia técnica y el release final es la ronda 33.
 >
 > El plan es autocontenido en diseño (fórmulas y valores exactos), pero menos prescriptivo en
 > código que ROADMAPv3: donde no hay snippet, seguí los patrones existentes que se citan por
@@ -120,8 +129,11 @@ Nuevas de v4:
 | **Rediseño estético: retoque profundo de la paleta (tokens)** | usuario (2026-07-14) | **28** | — |
 | **Objetos ilustrados reales en el canvas de escarbado (no íconos)** | usuario (2026-07-12) | **29** | — |
 | **Imágenes reales de contenedores (assets del usuario)** | usuario (2026-07-14) | **30** | — |
-| Idiomas pt/fr/de | postre ROADMAPv3 §7 | **31** | — |
-| Re-auditoría global + release final | proceso | 31 | — |
+| **Dificultad y balance: resistencias con dientes, fix logros de racha, fix de los $250k** | usuario (2026-07-19) | **31** | — |
+| **Trampa simultánea con items + crédito parcial (manual y robot)** | usuario (2026-07-19) | **31** | — |
+| **Nueva pantalla de inicio full-bleed (arregla los bordes vacíos en fullscreen)** | usuario (2026-07-19) | **32** | — |
+| Idiomas pt/fr/de | postre ROADMAPv3 §7 | **33** | — |
+| Re-auditoría global + release final | proceso | 33 | — |
 
 Filas ELIMINADAS del alcance el 2026-07-14 (desaprobadas por el usuario): «Temas/skins por
 tokens CSS, desbloqueables», «Puerta al DLC cosmético (PLAN.md §8)» y «Leaderboards de Steam»
@@ -172,8 +184,9 @@ eventos) pasa por acá. Nada de `Date.now()` crudo restado a un campo de save.
 Cada ronda agrega los suyos AL FINAL de `achievements.json` (ids consecutivos `a42`, `a43`, …
 — recontá el último real al ejecutar, no asumas). OJO: **`a39` es un hueco PERMANENTE** (logro
 de espionaje removido en la ronda 21) — no lo reuses jamás. Recompensas siguen el principio de
-la ronda 15: dinero ≈ 10% del hito, llaves para hitos duros. La ronda 31 regenera la tabla de
-RELEASE.md con `node tools/steam/achievements-table.mjs` (el usuario re-registra en Steamworks).
+la ronda 15: dinero ≈ 10% del hito, llaves para hitos duros. La ronda 33 (release final) regenera
+la tabla de RELEASE.md con `node tools/steam/achievements-table.mjs` (el usuario re-registra en
+Steamworks); las rondas 31 y 32 solo agregan logros a la lista abierta, NO regeneran esa tabla.
 
 ### 3.5 Contratos entre rondas (análisis de dependencias 2026-07-12, renumerado 2026-07-14 — respetarlos a rajatabla)
 
@@ -1064,7 +1077,7 @@ Commit "feat: ronda 30 — imágenes reales de contenedores" + HANDOFF + push + 
 
 ---
 
-# RONDA 31 — Dificultad y balance: resistencias con dientes, fix logros de racha, fix de los $250k (rama `feat/balance-ronda31`, 1 agente, sin bump de save)
+# RONDA 31 — Dificultad y balance: resistencias con dientes, fix logros de racha, fix de los $250k, trampa simultánea + crédito parcial (rama `feat/balance-ronda31`, 1 agente, sin bump de save)
 
 > Motivo (usuario, 2026-07-19): (a) las stats de Fuerza/Área dejan de importar enseguida — la
 > resistencia de los contenedores crece tan despacio (~×1.35 por tier) que unas pocas mejoras
@@ -1074,6 +1087,18 @@ Commit "feat: ronda 30 — imágenes reales de contenedores" + HANDOFF + push + 
 > del Tacho de Vereda el jugador recibe $250.000 gratis que rompen toda la curva temprana.
 > Esta ronda sube la dificultad general vía (a) y arregla (b) y (c). Sin estado persistido
 > nuevo → sin bump de save (regla dura 17 no aplica). Ahora mismo apenas toma 5-7 minutos hacer prestigio, esto es inaceptable, DEMASIADO poco, debe haber una gap mayor.
+>
+> **AÑADIDO el 2026-07-19 (usuario): (d) trampa simultánea con items + crédito parcial.** Hoy la
+> trampa es EXCLUYENTE con el loot: `rollContainerResult` (systems/containers.js ~183-190)
+> devuelve, cuando cae trampa, `items: []` — o hay trampa o hay items, nunca los dos. El usuario
+> quiere que la **trampa pueda salir junto a otros items** (más riesgo, más tensión) y que el
+> **loot ya destapado NUNCA se pierda**: si el jugador destapa 1/2/… items y después abandona (o
+> salta la trampa), se queda con el valor de esos items. Y **lo mismo para el robot**. Esto NO
+> agrega estado persistido nuevo (el escarbado en curso es transitorio, no se guarda) → **sigue
+> sin bump de save**. Es la parte más pesada de la ronda: toca el corazón de la economía
+> (`applyContainerResult`) y el ciclo de vida del escarbado manual, así que va en su propio bloque
+> `31.3.B` con su propio set de tests. Diseño exacto (decidido con el usuario, 2026-07-19) en
+> §4.42/§4.43 y en `31.3.B`; el resto de la ronda (balance) queda intacto.
 
 ## 31.0 Contexto verificado contra el repo (2026-07-19) — leer antes de tocar nada
 
@@ -1152,6 +1177,63 @@ continuación (§3.6 de este roadmap):
   (`setsCompletedAtLeast: 10`, `hidden: true` → `keys 6`). Ids consecutivos tras el último
   real (hoy a60; a39 sigue siendo hueco permanente, §3.4).
 
+Y las dos secciones de la trampa simultánea (bloque `31.3.B`), a continuación de §4.41:
+
+- **§4.42 Trampa simultánea con items + crédito por-ítem (escarbado manual)**. Cambio de contrato,
+  por eso entra por PLAN.md primero.
+  - Hoy `rollContainerResult` (systems/containers.js ~183-190), al caer trampa, devuelve
+    `items: []` (trampa EXCLUYENTE del loot). Nuevo: al caer trampa se rollea IGUAL la lista
+    normal de items del contenedor y la trampa queda como **un objeto ADICIONAL entre ellos**
+    (N items + 1 trampa = N+1 objetos a destapar). El resultado marca cuál entry es la trampa
+    (flag `isTrap` por entry). El **legendario (ronda 22) sigue gateado a escarbado sin trampa**
+    (no se rollea en un dig trampeado): se conserva el contrato §3.5.3 y el feel "la trampa no
+    trae premio mayor".
+  - **Crédito por-ítem**: en vez de aplicar todo el resultado de una al completar, cada item se
+    acredita EN EL MOMENTO en que el jugador lo destapa. Se parte la economía en piezas puras:
+    - `creditDugItem(state, container, item, isAuto, data, robotFilters?)` → acredita UN item
+      (venta instantánea o captura al Puesto según umbral/capacidad de la ronda 23; contadores
+      `itemsFoundByItem`/`itemsFoundByCategory`/`itemsFoundCount`; legendario SOLO en manual sin
+      trampa). Devuelve el `moneyDelta` de ESE item. NO toca racha, nivel ni trampa.
+    - `springTrap(state, container, result, data)` → castigo de dinero (`trapPenaltyMult` /
+      `gravePenaltyMult`, §4.21), corta la racha a 0 (`digStreak = 0`, contrato §3.5.1),
+      `trapsHit++`. Devuelve `trapPenalty`.
+    - `registerContainerDig(state, container)` (ya existe) → nivel del contenedor (§11.3), UNA
+      vez por escarbado.
+  - **Al destapar la trampa (decisión del usuario 2026-07-19: "salta y corta el dig")**: se
+    dispara `springTrap` (castigo + corta racha), el juice de trampa (shake+flash, §5.2) y el
+    escarbado **termina en el acto** — los items AÚN NO destapados se PIERDEN, los ya destapados
+    quedan acreditados. No hay +1 de racha (el dig no se completó limpio).
+  - **Al abandonar** (botón Abandonar, sin haber destapado la trampa): los items ya destapados
+    quedan acreditados; NO se dispara la trampa, NO hay castigo y la **racha queda como está**
+    (ni +1 ni 0). `DECISIÓN:` documentar que abandonar es una salida sin penalización que
+    conserva el loot parcial (es justo lo que pidió el usuario).
+  - **Determinismo**: el crédito por-ítem se dispara SOLO desde `newlyRevealed` del modelo
+    (digRevealModel.applyStroke), con guard por índice ya revelado → cada objeto se acredita
+    EXACTAMENTE una vez; el repintado por `focus`/`visibilitychange` NO re-acredita (napkin: el
+    canvas solo PINTA lo que dice el modelo).
+- **§4.43 Robot y offline: "guarda todo, come el castigo" + Escáner que descarta solo la
+  trampa**. El robot procesa el contenedor de forma ATÓMICA (no destapa de a poco), así que
+  "lo mismo" que el jugador se traduce así (decisión del usuario 2026-07-19):
+  - `result.isTrap` y `random() < getAutoTrapDiscardChance(state, data)` (Escáner de Trampas —
+    nodo `escanerTrampas`, 3 niveles × +34%, cap 1.0): el robot **conserva TODOS los items
+    no-trampa y descarta SOLO la trampa** (sin castigo, sin cortar racha), `trapsDiscarded++`,
+    `registerContainerDig`, sigue con el siguiente contenedor. Es una **MEJORA** sobre hoy, donde
+    el Escáner descarta el contenedor ENTERO y pierde los items con él (automation.js ~251-255).
+  - `result.isTrap` y el Escáner NO dispara (o no lo tiene): **"guarda todo, come el castigo"** —
+    acredita TODOS los items no-trampa Y aplica `springTrap` (castigo). El robot no pierde el
+    loot que encontró; solo paga el castigo de la trampa.
+  - `!result.isTrap`: igual que hoy.
+  - **Reuso de piezas**: `applyContainerResult` (camino atómico de robot y offline) pasa a
+    acreditar los items SIEMPRE (loop de `creditDugItem`, respetando los `robotFilters` de la
+    ronda 27) y, si `isTrap`, ADEMÁS aplica `springTrap`. El camino del Escáner llama a
+    `applyContainerResult` con el resultado "sin la trampa" (mismos items, `isTrap` neutralizado)
+    + `trapsDiscarded++`. Así manual (crédito por-ítem, corta el dig) y robot (atómico, guarda
+    todo) comparten las MISMAS piezas puras sin duplicar economía.
+  - **Offline** (`applyOfflineProgress`, systems/offline.js): el auto-dig offline sigue el mismo
+    criterio que el robot online (guarda todo / Escáner descarta solo la trampa) con venta
+    instantánea (sin timing, ronda 23); verificar que el orden vendedor-offline / loot-offline
+    (R23.3) no se rompe.
+
 ## 31.2 Estado y save
 
 Sin bump: ningún campo persistido nuevo (areaRate y el ritmo son derivados; los logros nuevos
@@ -1164,7 +1246,7 @@ entran por `achievementsUnlocked`, que ya es una lista abierta de ids). `save.js
    (regla dura 15). Test de engine: estado con 1 set completo NO gana más que $2.500 por
    logros de sets; con 5 sets gana a61; con 10, a62. NO tocar `isSetComplete` ni el pool del
    Tacho (agrandar el pool rompería INDEX/arte de la ronda 29 — fuera de alcance). La tabla
-   de logros de Steam NO se regenera acá: lo hace la ronda 32 con todo junto (§3.4).
+   de logros de Steam NO se regenera acá: lo hace la ronda 33 (release final) con todo junto (§3.4).
 2. **Fix logros de racha (diagnóstico dirigido, no tocar antes de reproducir)**:
    a. Test de engine (`ronda31-racha-fix.test.js`): 10 × `rollContainerResult` +
       `applyContainerResult` manuales sin trampa (random inyectado) + `checkAchievements`
@@ -1215,6 +1297,104 @@ entran por `achievementsUnlocked`, que ya es una lista abierta de ids). `save.js
    hacer aparecer `dig.rateHint` en specs existentes que asumían ritmo 100% (regla dura 18:
    lo que se rompa por dificultad nueva se declara y ajusta explícitamente, no se tapa).
 
+## 31.3.B — Trampa simultánea con items y crédito parcial (manual + robot)
+
+> La parte más pesada de la ronda. Toca el corazón de la economía (`applyContainerResult`) y el
+> ciclo de vida del escarbado manual. Diseño en §4.42/§4.43. Regla de oro: NADA de economía en la
+> UI/canvas — el canvas solo avisa "se destapó el objeto i"; el store despacha al engine y el
+> engine acredita. Cero conteos ni valores hardcodeados: todo sale de la data y del estado.
+> Hacé esto DESPUÉS de las tareas 1-6 de 31.3 y sobre esas fórmulas ya mergeadas en la rama.
+
+### Orden de implementación (respetá el orden de CLAUDE.md: data → engine → tests → UI → juice)
+
+1. **Engine — partir la economía en piezas puras (sin cambiar comportamiento todavía)**. En
+   `packages/engine/src/systems/containers.js`, refactorizá `applyContainerResult` extrayendo
+   tres funciones puras exportadas (JSDoc `@param`/`@returns` completo; export en `index.js`):
+   - `creditDugItem(state, container, item, isAuto, data, robotFilters = null)` — acredita UN
+     item: venta instantánea (suma con el `addMoney` clampeado de la ronda 27, Y1) o captura al
+     Puesto (umbral/capacidad, ronda 23) según corresponda; contadores `itemsFoundByItem`,
+     `itemsFoundByCategory`, `itemsFoundCount`; legendario (ronda 22) SOLO si `!isAuto` y el dig
+     no es trampa. Devuelve `{ moneyDelta, captured: boolean }`. NO toca racha, nivel ni trampa.
+   - `springTrap(state, container, result, data)` — castigo de dinero (`trapPenaltyMult` /
+     `gravePenaltyMult` según `result.trapGrade`, §4.21), `state.digStreak = 0` (contrato
+     §3.5.1), `state.trapsHit++`. Devuelve `{ trapPenalty }`. (`bestDigStreak` NO se toca.)
+   - `registerContainerDig` ya existe (nivel, §11.3).
+   Reescribí `applyContainerResult` para que USE estas piezas y dé EXACTAMENTE el mismo resultado
+   que hoy en el camino sin-trampa (snapshot-test obligatorio, R31.6). Este paso 1 es puramente
+   estructural: los tests existentes de `applyContainerResult` deben quedar verdes SIN tocarse.
+2. **Engine — trampa simultánea en el roll** (§4.42). En `rollContainerResult`, cuando
+   `rollIsTrap(...)` es true, en vez de `items: []` rolleá la lista normal de items del
+   contenedor (mismo camino que el éxito) y devolvé `{ isTrap: true, trapGrade, items: [...],
+   moneyDelta, ... }`; marcá con un flag `isTrap` la entry-trampa (o devolvé `trapItem` aparte —
+   elegí lo que menos ensucie el consumidor del canvas y documentalo). El **legendario sigue
+   gateado a `!isTrap`** (no se rollea en dig trampeado). El `random` sigue inyectable y el
+   consumo de RNG debe quedar DETERMINÍSTICO (los tests siembran `random`).
+3. **Engine — camino atómico del robot/offline** (§4.43). `applyContainerResult` pasa a:
+   (a) acreditar TODOS los items con `creditDugItem` (respetando `robotFilters`); (b) si
+   `result.isTrap`, además `springTrap`. En `systems/automation.js` (~251-258), el bloque del
+   Escáner cambia: si `result.isTrap && random() < getAutoTrapDiscardChance(state, data)` →
+   llamar `applyContainerResult` con el resultado **sin la trampa** (mismos items, `isTrap`
+   neutralizado) y `state.trapsDiscarded++` (conserva los items, descarta solo la trampa); si no
+   dispara → `applyContainerResult` con el resultado COMPLETO (items + castigo). `registerContainerDig`
+   se sigue llamando una vez. Replicá el mismo criterio en `systems/offline.js` (auto-dig
+   offline) y verificá el orden vendedor/loot (R23.3).
+4. **Store — ciclo de vida del escarbado manual** (`apps/game/src/store.js`, ~283-367). El
+   escarbado deja de aplicar todo al final:
+   - `startManualDig`: como hoy, pero NO acredita nada y NO registra el nivel; guarda en
+     `pendingDig` las entries (items + cuál es la trampa) y un acumulador `creditedMoney = 0`.
+   - Nueva acción `revealDugEntry(index)` (la despacha el canvas al destapar el objeto `index`,
+     con guard de "ya acreditado"): si la entry es item → `creditDugItem(...)`, suma a
+     `creditedMoney`, devuelve el dato para el juice de hallazgo; si es la trampa → `springTrap(...)`,
+     `registerContainerDig`, `pendingDig = null`, `runAchievements()`/`runMissions()`,
+     `detectContainerUnlocks()`, persist/notify, y devuelve `{ trapSprung: true, ... }` para el
+     juice de trampa y para que la UI cierre el escarbado (los items no destapados se pierden).
+   - `finishManualDig` (solo se alcanza si el dig se completó SIN trampa): `registerContainerDig`,
+     **+1 de racha** (`digStreak++`, `bestDigStreak = max(...)`, §4.20), achievements/misiones,
+     level-up toast. Ya NO acredita items (se acreditaron al destaparse).
+   - `abandonManualDig`: los items ya destapados quedan acreditados; `registerContainerDig` UNA
+     vez; racha intacta; sin castigo. `DECISIÓN:` comentario inline explicando que abandonar
+     conserva el loot parcial y no dispara la trampa.
+5. **UI/canvas — avisar por-reveal, sin economía** (`apps/game/src/dig/DigCanvas.js`). Hoy el
+   canvas junta todo y llama `onComplete` al destapar TODO. Nuevo: en `scratch` (~534-546), por
+   cada índice de `newlyRevealed`, invocar un callback nuevo `onRevealEntry(index, entry)` que el
+   dueño (UIManager/store) mapea a `revealDugEntry`. El canvas NO sabe de dinero: solo sabe que la
+   entry `index` es item o trampa (ya lo tiene en `this.entries[index].isTrap`) para elegir el
+   juice. Si la entry destapada es la trampa → juice de trampa (shake+flash, §5.2) y frenar el
+   escarbado (marcar `completed`, no seguir destapando); si es item → juice de hallazgo
+   (pop+partícula+sonido, §5.2). `onComplete` (completado total sin trampa) sigue existiendo para
+   `finishManualDig`. El modelo de revelado (`digRevealModel`) NO se toca — la trampa es una entry
+   más, con su objeto y su huella (R29.1/R31.7).
+6. **Juice** (PLAN.md §5.2): hallazgo por-ítem al destaparse cada uno (ya existe el patrón — que
+   se dispare por reveal, no al final); trampa con shake+flash al saltarla; el conteo tweened del
+   dinero suma por-ítem. Sin sonidos nuevos si no hacen falta.
+
+### Tests RED de 31.3.B (Node/Vitest salvo el e2e)
+
+- `ronda31-trampa-simultanea.test.js` (engine):
+  - snapshot: `applyContainerResult` sin trampa da EXACTAMENTE lo mismo antes/después del
+    refactor del paso 1 (deriva el esperado de la data, no lo hardcodees).
+  - `rollContainerResult` con `random` que fuerza trampa devuelve `isTrap: true` **y** una lista
+    de items no vacía con la entry-trampa marcada; el legendario NO aparece en un dig trampeado.
+  - `creditDugItem` acredita un item (dinero o captura al Puesto según umbral/capacidad) y NO
+    toca racha/nivel/trampa; `springTrap` pone `digStreak` en 0, `trapsHit++` y aplica el castigo
+    correcto por grado (leve/normal/grave).
+  - **Robot "guarda todo, come el castigo"**: `applyContainerResult(isAuto)` con trampa acredita
+    los items Y aplica el castigo; el total de dinero es `Σ items − castigo` (cubrir el signo).
+  - **Escáner descarta solo la trampa**: con `getAutoTrapDiscardChance` = 1 (nodo `escanerTrampas`
+    nivel 3 seed), un contenedor trampeado deja los items acreditados, `trapsDiscarded++`, SIN
+    castigo ni corte de racha. Con chance 0, cae al "guarda todo, come el castigo".
+  - offline: el auto-dig offline con trampa sigue el mismo criterio que el robot online (mismo
+    test con el path de `applyOfflineProgress`), sin romper el orden R23.3.
+- `ronda31-credito-parcial.spec.js` (e2e, seeds por `addInitScript`, regla dura 9): sembrar un
+  contenedor con un resultado de trampa+items forzado (RNG del store inyectado como en specs
+  previos, o helper de `iniciarEscarbadoSinTrampa`/con-trampa de la ronda 30.B); destapar 2 items
+  (gestos reales sobre `window.__digDebug.positions`) → `#money` sube por esos 2 (polling);
+  **abandonar** → el dinero de esos 2 QUEDA y no hay castigo; en otro run, destapar la trampa →
+  toast/estado de trampa, `#money` refleja lo destapado antes menos el castigo, y el escarbado se
+  cierra sin destapar el resto. Recontá el baseline e2e completo (regla dura 18).
+- Ajustar los e2e de dig existentes que asuman "trampa ⇒ 0 items" (ronda 20/30): con la
+  co-ocurrencia un dig trampeado ahora TAMBIÉN trae items — declarar y actualizar, no tapar.
+
 ## 31.4 Riesgos
 
 - R31.1 **Bóveda a Contrarreloj**: pincel más chico (areaRate) + resistencia más alta contra
@@ -1234,7 +1414,26 @@ entran por `achievementsUnlocked`, que ya es una lista abierta de ids). `save.js
   cambia de base numérica y sus asserts absolutos deben derivarse de containers.json.
 - R31.5 El diagnóstico de la racha puede concluir que el bug vive en la build Electron: NO
   arrastrar esta ronda a re-empaquetar release — se documenta, se arregla el código, y el
-  smoke del instalador queda para la ronda 32 (que ya lo tiene en su DoD).
+  smoke del instalador queda para la ronda 33 (release final, que ya lo tiene en su DoD).
+- R31.6 **El refactor de `applyContainerResult` es cirugía a corazón abierto de la economía**
+  (containers.js:363; lo consumen robot, offline, stall, misiones, logros). El paso 1 de
+  31.3.B es SOLO estructural: el snapshot-test "sin-trampa idéntico antes/después" va PRIMERO y
+  todos los tests existentes de `applyContainerResult` deben pasar sin tocarse. Si un test
+  existente se cae por el refactor, el refactor está mal — no se ajusta el test.
+- R31.7 **La trampa simultánea sube el loot esperado** (antes un dig trampeado daba 0 items;
+  ahora trae la lista normal + castigo). Esto AFLOJA la dificultad que sube el resto de la
+  ronda: la calibración de la tarea 4 (31.3, `calibrate-resistencia-ronda31.mjs`) debe
+  re-correrse CON este cambio activo y, si el ritmo del primer prestigio se acorta de nuevo,
+  se ajustan constantes de data (`trapPenaltyMult`, valores de pool o costos) con `AJUSTE:` —
+  nunca las fórmulas ni el diseño de la trampa. Documentar la corrida final en HANDOFF.
+- R31.8 **Crédito por-ítem = riesgo de doble crédito o crédito fantasma.** El único disparador
+  es `newlyRevealed` del modelo, con guard por índice ya acreditado; el repintado por
+  `focus`/`visibilitychange` NO re-acredita. Cubrir con un test que repinte y verifique que el
+  dinero no se duplica (patrón napkin: el canvas solo pinta, el estado vive en JS).
+- R31.9 **Abandonar deja de ser gratis-sin-consecuencia**: hoy `abandonManualDig` no registra
+  el nivel; con el crédito parcial pasa a registrar el dig UNA vez (el contenedor se compró y
+  se consumió). Verificar que ningún e2e existente asuma "abandonar no cuenta para el nivel"
+  (recontar baseline, regla dura 18) y documentar el cambio de contrato.
 
 ## 31.5 DoD
 
@@ -1244,12 +1443,170 @@ Salida de calibrate-resistencia-ronda31.mjs en banda, pegada en HANDOFF
 Pasada manual de juego real contra PLAN.md §3 (obligatoria): hitos tempranos intactos, dificultad nueva palpable en tiers 3+
 Manual 375px: Tienda y selector muestran ritmo/pincel actuales; bóveda contrarreloj completable
 Causa de los logros de racha identificada, testeada y documentada en HANDOFF
-Commit "feat: ronda 31 — dificultad y balance (resistencias, racha, fix 250k)" + HANDOFF + push + PR link
+Trampa simultánea (§4.42/§4.43, bloque 31.3.B): manual acredita por-ítem, salta+corta al destapar la trampa, abandonar conserva el loot parcial; robot "guarda todo, come el castigo" y el Escáner descarta solo la trampa; offline consistente. Tests de 31.3.B verdes.
+Manual 375px del escarbado: destapar items acredita al toque, abandonar con 1-2 items conserva su valor, saltar la trampa castiga y cierra el dig
+Commit "feat: ronda 31 — dificultad y balance (resistencias, racha, fix 250k, trampa simultánea + crédito parcial)" + HANDOFF + push + PR link
 ```
 
 ---
 
-# RONDA 32 — Idiomas pt/fr/de + re-release (rama `feat/i18n-release-ronda31`, 1 agente)
+# RONDA 32 — Nueva pantalla de inicio full-bleed (rama `feat/inicio-ronda32`, 1 agente, sin bump de save)
+
+> Pedido del usuario (2026-07-19): reemplazar la pantalla de inicio actual por la de
+> `reference/ui/NuevaPantallaInicio.webp` (emblema DUMPSTER EMPIRE arriba, botón JUGAR grande al
+> centro, engranaje de Ajustes abajo a la derecha, marco dorado ornamentado y fondo de un
+> contenedor-patio al atardecer). Requisito duro: **debe verse claramente en teléfono Y ajustarse
+> a la ventana y a la resolución en PC**. Hoy, "en ventana se ve PERFECTO pero en pantalla completa
+> quedan bordes vacíos". Ronda 100% de presentación: **cero engine, cero data de balance, cero
+> save** (regla dura 17 no aplica). Corre después de la 31 (sobre la paleta y el arte definitivos
+> de las rondas 28-30).
+
+## 32.0 Causa raíz verificada contra el repo (2026-07-19) — leer antes de tocar nada
+
+Mapa exacto (recontar líneas al ejecutar; el contenido manda):
+
+- **Por qué quedan bordes vacíos en pantalla completa**: `apps/game/styles/layout.css` tiene
+  `#app { max-width: 720px; margin: 0 auto; }` (~43-50). `#title-screen` es hijo directo de `#app`
+  (`apps/game/index.html` ~46: `<div id="title-screen" class="title-screen" hidden></div>`), así
+  que en una pantalla ancha/fullscreen la pantalla de inicio es una columna de 720px centrada con
+  el fondo del body (`--bg-0`) a los costados. En una ventana ≤720px llena justo → "se ve
+  perfecto". **Esa cota de 720px es la causa; no es el `object-fit` del arte.**
+- **Cómo está armada hoy** (`apps/game/src/ui/TitleScreen.js` + `layout.css` ~83-242): un
+  `<img class="title-bg" src="assets/title-bg.jpg">` con `object-fit: cover` y, encima, un botón
+  JUGAR **calcado por píxeles** sobre el botón PINTADO en el arte (bloque
+  `#title-screen[data-bg='ready'] .title-play-btn`, ~224-237: `--title-art-scale`,
+  `translate(...)`, offsets medidos sobre `fpisp.png` de 1614×975). Ese calco es frágil: solo
+  cuadra cerca de la proporción del arte original y es el segundo problema a eliminar.
+- Estados de fondo (`data-bg` en `#title-screen`): `loading` (respaldo madera + logo SVG + botón
+  centrado por flex), `ready` (arte visible; el logo de respaldo pasa a `.sr-only`), `error`
+  (respaldo definitivo, el juego sigue jugable). El botón real y el engranaje ya existen como DOM:
+  `#title-play-btn` (`.title-play-btn`) y `#title-settings-btn` (`.icon-btn-circle`), cableados a
+  `onPlay`/`onSettings`. Las claves i18n `titleScreen.play` y `titleScreen.settings` existen en
+  `es.js` y `en.js` (no romper, regla dura 11/15).
+- La CSP de `index.html` ya permite imágenes locales (`'self'`) — los `.webp` de contenedores
+  cargan hoy: **la CSP NO se toca** (regla dura 7) y `apps/game/tests/csp.test.js` sigue verde.
+
+## 32.1 Diseño (el approach robusto: full-viewport + controles reales responsive)
+
+La idea es dejar de calcar píxeles y hacer que el arte sea un **fondo de cobertura** con los
+controles como **DOM real posicionado por layout** (se re-acomodan solos a cualquier resolución):
+
+1. **Romper la cota de 720px SOLO para la pantalla de inicio**: `#title-screen` pasa a
+   `position: fixed; inset: 0; width: 100vw; height: 100dvh` (con fallback `100vh`) y un `z-index`
+   por token, alto pero por debajo de toasts/modales. `fixed` se mide contra el viewport, así que
+   escapa del `#app { max-width: 720px }` sin tocar la columna de 720px del juego (que sigue
+   mobile-first e intacta). Al apretar JUGAR el `#title-screen` se oculta (`[hidden]`) y el juego
+   aparece como hoy.
+2. **Fondo full-bleed**: el `<img class="title-bg">` (el `.webp` nuevo) con `object-fit: cover;
+   object-position: center` a `100% × 100%` del `#title-screen` fijo → llena el viewport en
+   cualquier proporción, recorta con gracia, **nunca deja bordes vacíos**. En portrait de teléfono
+   recorta los costados; en fullscreen ancho recorta arriba/abajo. Por eso los controles NO
+   dependen de la posición del arte (punto 3).
+3. **Controles reales, responsive, sin calco de píxeles**:
+   - Layout: `flex` en columna, centrado. Emblema arriba, JUGAR al centro; engranaje anclado
+     abajo a la derecha (`position: absolute; right/bottom` con `env(safe-area-inset-*)` para
+     notches).
+   - JUGAR: reusar `.title-play-btn` (placa metálica viva, texto `t('titleScreen.play')` — sigue
+     traducible). Tamaño con `clamp()` (teléfono ↔ desktop). **Eliminar** el bloque
+     `#title-screen[data-bg='ready'] .title-play-btn { --title-art-scale … translate … }` y sus
+     comentarios de medición: el botón ya no se ancla al arte.
+   - Engranaje: reusar `#title-settings-btn` (`.icon-btn-circle`), tamaño con `clamp()`, anclado
+     abajo-derecha con safe-area.
+   - Emblema: `reference/ui/logo.png` como `<img class="title-logo-img">` (o el SVG actual)
+     escalado con `clamp()`/`max-width` y centrado. Si el arte de fondo ya trae el logo horneado,
+     se mantiene el logo DOM con `.sr-only` para accesibilidad (como hoy) — decidir y documentar.
+   - Marco dorado: overlay CSS pegado a los bordes del viewport (`border-image` con un asset de
+     esquina, o 4 esquinas absolutas) para que quede SIEMPRE flush a cualquier proporción. (Si el
+     marco viene horneado en el arte, con `cover` se recorta en proporciones extremas y deja de
+     estar flush — por eso el overlay CSS es más robusto; recomendado.)
+4. **`TitleScreen.js`**: conserva los estados `loading`/`ready`/`error` (respaldo → nunca pantalla
+   en blanco), pero el estado `ready` YA NO reposiciona el botón: solo hace fade-in del arte. El
+   respaldo `loading`/`error` reusa el mismo layout responsive (fondo sólido por token + emblema +
+   JUGAR centrado), así que se ve bien aunque el `.webp` no cargue.
+
+## 32.2 Assets (convención + dependencia, patrón ronda 30)
+
+- Archivo nuevo: `apps/game/assets/title-bg.webp` (derivado de `reference/ui/NuevaPantallaInicio.webp`).
+  Se puede dejar `title-bg.jpg` como fallback o reemplazarlo — documentar la decisión.
+- **El fondo provisto NO debe traer horneados el botón JUGAR ni el engranaje**: esos son DOM real,
+  vivos (JUGAR es texto traducible; el engranaje es interactivo). El **logo** y el **marco dorado**
+  SÍ pueden venir horneados (son decorativos), aunque el marco queda más robusto como overlay CSS.
+  El `NuevaPantallaInicio.webp` actual trae JUGAR y engranaje horneados → **la ronda arranca
+  BLOQUEADA** hasta que el usuario suba una versión de fondo limpia (escena + logo + marco, sin
+  JUGAR ni engranaje) a `reference/ui/`, o confirme explícitamente la variante de compromiso de
+  abajo. Si al empezar falta, detenete y pedísela con esta descripción exacta.
+- **Variante de compromiso (NO recomendada, solo si el usuario la pide)**: usar el `.webp`
+  completo tal cual como cover y poner el JUGAR real TRANSPARENTE (hitbox sin texto) sobre la zona
+  del botón horneado. Reintroduce dependencia de posición y hornea "JUGAR" en español (rompe el
+  pt/fr/de de la ronda 33). Se documenta como deuda de i18n si se elige.
+- Peso/derechos: optimizar el `.webp` (anotar el peso final en HANDOFF, patrón R30.1); imágenes
+  libres de uso comercial (van al build de Steam) — responsabilidad del usuario, dejar constancia.
+
+## 32.3 Tareas
+
+1. **CSS (`layout.css`)**: `#title-screen` a `position: fixed; inset: 0; 100vw/100dvh` con
+   `z-index` por token nuevo (`--z-title`, en `tokens.css`, debajo de `--z-toast`/`--z-modal`);
+   `.title-bg` cover a pantalla completa; layout flex de emblema/JUGAR/engranaje con `clamp()` y
+   `env(safe-area-inset-*)`; overlay del marco dorado. **Borrar** el bloque de calco
+   `#title-screen[data-bg='ready'] .title-play-btn` y sus `:active` asociados. Cero colores/medidas
+   sueltas fuera de tokens salvo las de layout puro (regla dura 6).
+2. **Markup/JS (`TitleScreen.js`)**: apuntar `title-bg` al `.webp` nuevo; agregar el `<img>` del
+   emblema (o mantener el SVG) y el overlay del marco; simplificar `setBgState` (el `ready` ya no
+   ancla el botón). Handlers `onPlay`/`onSettings` intactos. Sin `console.log`.
+3. **i18n**: `titleScreen.play`/`titleScreen.settings` ya existen; si agregás algún `aria-label`
+   nuevo, va en `es.js` Y `en.js` (regla dura 15). El copy español existente es intocable (11).
+4. **Verificación de responsive**: probar 375×667 (teléfono portrait), teléfono alto (p. ej.
+   390×844), 1280×720, 1920×1080 y 21:9 (2560×1080): el arte cubre TODO el viewport (cero bordes
+   vacíos), el marco queda flush, y JUGAR + engranaje quedan dentro de la zona segura y son
+   tocables. Matriz de screenshots al HANDOFF.
+
+## 32.4 Tests / e2e
+
+- `ronda32-inicio.spec.js` (nuevo): a 375×667 y a 1920×1080, `#title-screen` cubre el viewport
+  completo — assert de que su bounding box == `window.innerWidth × innerHeight` (en 1920 el ancho
+  del title es 1920, NO 720: esto prueba que se rompió la cota de `#app`). JUGAR visible y
+  clickeable → transiciona al juego (`.game-shell` visible, `#title-screen` `[hidden]`);
+  engranaje visible y clickeable → abre Ajustes. El `<img>` del arte carga (`naturalWidth > 0`) o
+  se ve el respaldo; sabotear la ruta del arte (route-interception, patrón napkin/ronda 18) →
+  cae al respaldo y JUGAR SIGUE funcionando.
+- **e2e existentes que tocan la pantalla de inicio** (hoy referencian `titleScreen`:
+  `smoke.spec.js`, `ronda4-regression.spec.js`, `ronda14-regression.spec.js`, `ronda16-i18n.spec.js`,
+  `ronda23-puesto.spec.js`, `dig-regression.spec.js` y `e2e/helpers/dig.js`): recontar el baseline
+  completo y actualizar los que dependan del markup/posición viejos del botón (regla dura 18: lo
+  que se rompa por el rediseño se declara y se ajusta, no se saltea). El helper que aprieta JUGAR
+  para entrar al juego debe seguir encontrando `#title-play-btn`.
+- `apps/game/tests/csp.test.js` verde sin tocar la CSP (los assets son `'self'`).
+
+## 32.5 Riesgos
+
+- R32.1 `position: fixed; inset: 0` en `#title-screen` debe seguir tapando toasts/tutorial/modales
+  mientras está activo (ya hay reglas `#title-screen:not([hidden]) ~ …` en layout.css ~110-114):
+  verificar el `z-index` y que al ocultarse (`[hidden]`) no quede capturando toques sobre el juego.
+- R32.2 `object-fit: cover` recorta en proporciones extremas: el contenido crítico (emblema,
+  JUGAR, engranaje) NO puede depender de la posición horneada del arte — por eso son DOM real en
+  la "zona segura" central/inferior. Verificar en portrait alto y en 21:9.
+- R32.3 Notches/safe-areas: el engranaje abajo-derecha usa `env(safe-area-inset-*)` para no quedar
+  bajo la barra de gestos en teléfono/Steam Deck.
+- R32.4 `100vh` vs `100dvh` en móvil (barra de direcciones): usar `100dvh` con fallback `100vh`.
+- R32.5 Eliminar el calco puede romper los 7 e2e que tocan la pantalla de inicio: recontar y
+  actualizar en la MISMA ronda (no desactivar specs).
+- R32.6 Fullscreen en Electron: verificar en la build empaquetada (patrón ronda 18,
+  `--user-data-dir` temporal) que el arte cubre sin bordes y el juego arranca al apretar JUGAR.
+- R32.7 Peso del `.webp`: optimizar y anotar el peso final en HANDOFF (R30.1).
+
+## 32.6 DoD
+
+```
+npm test + npm run test:e2e verdes (baseline recontado y anotado en HANDOFF)
+Matriz de screenshots (teléfono portrait, teléfono alto, 1280, 1920, 21:9) SIN bordes vacíos, marco flush, controles tocables — pegada en HANDOFF
+Manual: JUGAR entra al juego, engranaje abre Ajustes, respaldo se ve bien si el arte no carga
+Fullscreen Electron verificado (sin bordes vacíos)
+Commit "feat: ronda 32 — nueva pantalla de inicio full-bleed" + HANDOFF + push + PR link
+```
+
+---
+
+# RONDA 33 — Idiomas pt/fr/de + re-release (rama `feat/i18n-release-ronda33`, 1 agente)
 
 1. `SUPPORTED_LANGUAGES = ['es','en','pt','fr','de']` (save.js) + diccionarios completos:
    `pt.js` / `fr.js` / `de.js` (UI — recontar las claves reales con todo v4) y
@@ -1287,7 +1644,7 @@ Commit "feat: ronda 31 — dificultad y balance (resistencias, racha, fix 250k)"
       clones locales. Única contra: en privado los minutos de Actions dejan de ser ilimitados
       (2000/mes en el plan gratis; el `ci.yml` actual no se acerca).
 6. DoD: `npm test` + `npm run test:e2e` verdes (recontar baselines y dejarlos en HANDOFF);
-   veredicto APTO; **`LICENSE` con titular real y grep de secretos limpio (§32.5)**; commit +
+   veredicto APTO; **`LICENSE` con titular real y grep de secretos limpio (§33.5)**; commit +
    push + PR link. **Después de mergear esta ronda, el usuario ejecuta el checklist U1-U9 de
    ROADMAPv3 §2 y lanza.**
 
