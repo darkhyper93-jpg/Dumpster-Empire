@@ -874,6 +874,57 @@ mock global). Devuelve la franja cuyo tramo contiene la hora; con data sin franj
 `null`, y con una hora no finita o fuera de 0-23 cae en la primera franja (regla dura 13: lo que
 pasa el `typeof` pero rompería la UI no puede dejar una tarjeta sin imagen).
 
+### 4.42 Ritmo contra resistencia, rango ampliado + Área efectiva por contenedor (ronda 31)
+
+Decisión del usuario (2026-07-19): las stats de Fuerza/Área dejaban de importar enseguida — la
+resistencia crecía tan despacio (~×1.35 por tier) que unas pocas mejoras baratas capeaban el
+ritmo en 1.5 y todos los contenedores se sentían iguales; el Área ni siquiera tenía mecánica (su
+"recomendada" era solo un cartel, §11.2 previo).
+
+- **Ritmo, piso más bajo:** `ritmo = clamp(Fuerza / resistencia, 0.25, 1.5)` (antes 0.3). Quedarse
+  corto de Fuerza ahora duele hasta ritmo 0.25. El techo (+50% sobre-Fuerza) no cambia.
+- **Área efectiva por contenedor (mecánica NUEVA — hasta la ronda 30 `areaRecomendada` no hacía
+  nada):** `areaRate = clamp(getAreaMult / container.areaRecomendada, 0.45, 1.2)`. Modula SOLO el
+  pincel del escarbado manual (mismo alcance que las herramientas, §4.23): la automatización/offline
+  no la usa. Con el Área al día el pincel queda como hoy (rate ≈ 1); corto de Área se achica hasta
+  √0.45 ≈ ×0.67; sobrado premia hasta √1.2 ≈ ×1.10.
+- **Tabla de `resistencia`/`areaRecomendada` recalibrada** (AJUSTE de data, la fórmula no se toca):
+  crecimiento ~×1.5 por tier en la cadena jugada a mano (tiers 1-8) y ~×1.4 después, para que cada
+  contenedor nuevo arranque pesado (ritmo ~0.4-0.6) y dominar el tier exija invertir en Fuerza/Área
+  de verdad. Valores exactos en `data/containers.json` (`AJUSTE:` inline en el commit — JSON no
+  admite comentarios); calibrados con `agentes/scripts/calibrate-resistencia-ronda31.mjs` contra las
+  bandas: ritmo al desbloquear ∈ [0.35, 0.65], ritmo con el dinero del contenedor siguiente ≥ 0.9,
+  areaRate al desbloquear ≥ 0.45 y ≥ 0.95 al dominarlo.
+
+### 4.43 Trampa simultánea con items + crédito por-ítem (ronda 31)
+
+Decisión del usuario (2026-07-19): hasta la ronda 30 la trampa era EXCLUYENTE con el loot
+(`rollContainerResult` devolvía `items: []` al caer trampa). Ahora la trampa puede salir JUNTO a
+otros ítems (más riesgo, más tensión) y el loot ya destapado NUNCA se pierde.
+
+- **Roll:** al caer trampa se rollea IGUAL la lista normal de ítems del contenedor y la trampa
+  queda como un objeto ADICIONAL entre ellos (N ítems + 1 trampa = N+1 objetos a destapar), con
+  flag `isTrap` en su entry. El **legendario (§4.26) sigue gateado a escarbado sin trampa** (no se
+  rollea en un dig trampeado): se conserva el feel "la trampa no trae premio mayor".
+- **Crédito por-ítem (escarbado manual):** cada ítem se acredita EN EL MOMENTO en que el jugador lo
+  destapa, no al completar todo el contenedor. Piezas puras: `creditDugItem(...)` acredita UN ítem
+  (venta instantánea o captura al Puesto según §4.27, contadores de colección, legendario solo en
+  manual sin trampa) sin tocar racha/nivel/trampa; `springTrap(...)` aplica el castigo de dinero
+  (§4.21) y corta la racha a 0; `registerContainerDig` sube el nivel del contenedor, una vez por
+  escarbado.
+- **Al destapar la trampa:** salta y CORTA el escarbado — los ítems aún no destapados se pierden,
+  los ya destapados quedan acreditados. No hay +1 de racha (el dig no se completó limpio).
+- **Al abandonar** (sin destapar la trampa): los ítems ya destapados quedan acreditados, NO se
+  dispara la trampa, NO hay castigo y la racha queda como está (ni +1 ni 0) — una salida sin
+  penalización que conserva el loot parcial.
+- **Robot y offline — "guarda todo, come el castigo":** procesan el contenedor de forma ATÓMICA (no
+  destapan de a poco). Si cae trampa y el Escáner de Trampas (nodo `escanerTrampas`) no dispara, el
+  robot acredita TODOS los ítems no-trampa Y aplica el castigo de la trampa (no pierde el loot, solo
+  paga). Si el Escáner SÍ dispara, conserva todos los ítems y descarta SOLO la trampa (sin castigo,
+  sin cortar racha) — una MEJORA sobre el comportamiento previo a esta ronda, donde el Escáner
+  descartaba el contenedor entero y perdía los ítems con él. El offline replica el mismo criterio
+  que el robot online, con venta instantánea (sin timing, §4.27).
+
 ---
 
 ## 5. UI / UX
@@ -1245,11 +1296,13 @@ Trabajá de forma continua hasta entregar el proyecto completo y auditado contra
 - **Resistencia por contenedor (extiende §2.3 Fuerza):** cada contenedor tiene una **resistencia**;
   escarbarlo requiere una **Fuerza mínima** para hacerlo a ritmo normal — con menos Fuerza se puede
   igual, pero es mucho más lento. A mejor contenedor, más resistencia. El ritmo del engine es
-  `ritmo = clamp(Fuerza / resistencia, 0.3, 1.5)` (ronda 7: si tu Fuerza supera la resistencia
-  escarbás MÁS grande que lo normal, hasta +50%; si no llega, mucho más chico). En el gesto, el
-  radio del pincel es `radioBase × √multÁrea × ritmo`, con tope duro de **1.5× el radio del
-  objeto**: el Área crece con raíz (no lineal — a nivel alto trivializaba todo contenedor por
-  igual) y ningún build convierte el escarbado en un toque único.
+  `ritmo = clamp(Fuerza / resistencia, 0.25, 1.5)` (ronda 7: si tu Fuerza supera la resistencia
+  escarbás MÁS grande que lo normal, hasta +50%; si no llega, mucho más chico; ronda 31: el piso
+  bajó de 0.3 a 0.25, §4.42). En el gesto, el radio del pincel es `radioBase × √multÁrea × ritmo`,
+  con tope duro de **1.5× el radio del objeto**: el Área crece con raíz (no lineal — a nivel alto
+  trivializaba todo contenedor por igual) y ningún build convierte el escarbado en un toque único.
+  Desde la ronda 31 (§4.42), el Área además modula el pincel vía `areaRate` contra la
+  `areaRecomendada` del contenedor — antes esa constante era solo un cartel informativo.
 - **Trampas más caras (extiende §4.6):** el castigo de trampa debe **sacar más plata** y escalar con
   el tier del contenedor, para que el riesgo importe de verdad. El monto es fijo por tier; la
   Suerte solo reduce la probabilidad (ver §4.6, ronda 7).
@@ -1304,6 +1357,11 @@ Trabajá de forma continua hasta entregar el proyecto completo y auditado contra
 - **Dinero** para el resto — una cantidad **buena pero no rota** (no regalar dinero que vuelva OP al
   jugador). Los montos se calibran en el pase de balance.
 - Cada logro declara su recompensa en `data/achievements.json` (tipo + cantidad), verificable en engine.
+- **Ronda 31, fix del regalo temprano:** `a45` ("Set Completo", el set trivial del Tacho de
+  Vereda) pagaba $250.000 — desproporcionado para el primer hito del juego, rompía la curva
+  temprana. Baja a $2.500 (dinero ≈ 10% del hito, principio de arriba). Los $250.000 se mudan a
+  `a61` ("Cinco Sets", `setsCompletedAtLeast: 5`) y se agrega `a62` ("Coleccionista Serial",
+  oculto, `setsCompletedAtLeast: 10` → 6 Llaves).
 
 ### 11.7 Árbol de prestigio real y simétrico (reemplaza el layout plano actual, extiende §2.8)
 

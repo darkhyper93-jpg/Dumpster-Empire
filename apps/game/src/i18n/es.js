@@ -227,6 +227,11 @@ export default {
   'shop.luckLine': 'Suerte recomendada: {rec} {status}',
   'shop.digPowerLine': 'Fuerza recomendada: ×{rec} {status}',
   'shop.areaLine': 'Búsqueda recomendada: ×{rec} {status}',
+  // Ronda 31 (PLAN.md §4.42): ritmo/pincel ACTUALES contra la resistencia/areaRecomendada real
+  // de este contenedor — a diferencia de luckLine/digPowerLine/areaLine (metas fijas, jugador
+  // neutro), esto muestra el efecto YA aplicado con las stats del jugador.
+  'shop.rateLine': 'Ritmo: {pct}%',
+  'shop.areaRateLine': 'Pincel: {pct}%',
   // Ronda 23.C: tarjeta de compra del Puesto de Chatarra (PLAN.md §2.9/§4.27) en la Tienda.
   'shop.stallCard': 'Puesto de Chatarra',
   'shop.stallDesc': 'Guardá los objetos que valgan la pena y vendéselos a Doña Rita cuando la cotización esté alta.',

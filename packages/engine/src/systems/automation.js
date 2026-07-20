@@ -12,7 +12,6 @@ import {
   getEffectiveDigTime,
   getAutoSpeedMult,
   getAutoTrapDiscardChance,
-  registerContainerDig,
   activeChallengeModifier,
 } from '../economy.js';
 import {
@@ -248,12 +247,18 @@ export function automationTick(state, dtSeconds, allContainers, itemsData, data,
       const container = resolveAutoContainer(slot.containerId, allContainers);
       if (container) {
         const result = rollContainerResult(state, container, true, itemsData, data, random, event, hour);
-        // Ronda 15 (PLAN.md §4.7): el Escáner de Trampas descarta el contenedor trampeado — sin
-        // castigo ni loot; el contenedor ya pagado se pierde y el escarbado cuenta para su nivel.
+        // §4.43 (ronda 31): desde la trampa simultánea, un `result.isTrap` trae items no vacíos
+        // (§4.42). El Escáner de Trampas (PLAN.md §4.7, ronda 15) ahora es una MEJORA sobre
+        // "guarda todo, come el castigo": si dispara, conserva TODOS los items y descarta SOLO
+        // la entry-trampa (sin castigo, sin cortar racha — el robot no tiene racha manual de
+        // todos modos). Antes de esta ronda descartaba el contenedor ENTERO junto con su loot.
         if (result.isTrap && random() < getAutoTrapDiscardChance(state, data)) {
-          registerContainerDig(state, container);
+          const withoutTrap = { ...result, isTrap: false, items: result.items.filter((item) => !item.isTrap) };
+          applyContainerResult(state, container, withoutTrap, true, data, robotFiltersFor(state, slot.robotIndex));
           state.trapsDiscarded++;
         } else {
+          // §4.43: sin Escáner (o sin disparar), "guarda todo, come el castigo" — el camino
+          // atómico de applyContainerResult acredita los items no-trampa Y aplica el castigo.
           applyContainerResult(state, container, result, true, data, robotFiltersFor(state, slot.robotIndex));
         }
       }

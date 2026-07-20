@@ -18,6 +18,8 @@ import {
   getRecommendedArea,
   getDigPowerMult,
   getAreaMult,
+  getDigRate,
+  getAreaRate,
   getContainerLevel,
   getLevelValueMult,
   digsNeededForNextLevel,
@@ -170,6 +172,13 @@ export const ShopView = {
       const recArea = getRecommendedArea(state, c);
       const curArea = getAreaMult(state, data);
       const areaReached = curArea >= recArea;
+      // PLAN.md §4.42 (ronda 31): ritmo/pincel YA aplicados con las stats actuales del jugador
+      // contra la resistencia/areaRecomendada real de ESTE contenedor (cero fórmulas en la UI:
+      // ambos getters vienen resueltos del engine).
+      const ritmo = getDigRate(state, c, data);
+      const areaRate = getAreaRate(state, c, data);
+      const ritmoAlDia = ritmo >= 1;
+      const areaRateAlDia = areaRate >= 1;
       // PLAN.md §11.3: nivel del contenedor y su bonus — leídos del engine, nunca recalculados.
       const level = getContainerLevel(state, c.id);
       const levelBonusPct = Math.round((getLevelValueMult(state, c) - 1) * 100);
@@ -209,6 +218,12 @@ export const ShopView = {
           rec: recArea,
           status: areaReached ? t('shop.reached') : t('shop.haveMult', { cur: curArea.toFixed(2) }),
         })}` +
+        `</p>` +
+        `<p class="shop-card-rate ${ritmoAlDia ? 'shop-card-rate--ok' : 'shop-card-rate--low'}">` +
+        `${t('shop.rateLine', { pct: Math.round(ritmo * 100) })}` +
+        `</p>` +
+        `<p class="shop-card-rate ${areaRateAlDia ? 'shop-card-rate--ok' : 'shop-card-rate--low'}">` +
+        `${t('shop.areaRateLine', { pct: Math.round(areaRate * 100) })}` +
         `</p>` +
         `</article>`
       );

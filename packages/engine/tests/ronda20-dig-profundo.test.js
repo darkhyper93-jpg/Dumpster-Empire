@@ -63,11 +63,14 @@ describe('§4.21 grados de trampa', () => {
       return () => seq[Math.min(i++, seq.length - 1)];
     })();
     const trapContainer = { ...barrio, probTrampaBase: 1 };
-    const withoutTraps = rollContainerResult(state, trapContainer, false, { containers: {}, rarities: [] }, dataBase, () => 0.5);
+    // AJUSTE (ronda 31, PLAN.md §4.42): la trampa deja de ser excluyente con el loot — el roll
+    // ahora TAMBIÉN tira la lista normal de ítems (entry-trampa aparte), así que necesita
+    // itemsData real (antes, con `items: []` en el camino de trampa, un stub vacío alcanzaba).
+    const withoutTraps = rollContainerResult(state, trapContainer, false, itemsData, dataBase, () => 0.5);
     expect(withoutTraps.isTrap).toBe(true);
     expect(withoutTraps.trapGrade).toBeUndefined();
 
-    const withTraps = rollContainerResult(state, trapContainer, false, { containers: {}, rarities: [] }, dataConTraps, random);
+    const withTraps = rollContainerResult(state, trapContainer, false, itemsData, dataConTraps, random);
     expect(withTraps.isTrap).toBe(true);
     expect(withTraps.trapGrade).toBe('leve');
   });

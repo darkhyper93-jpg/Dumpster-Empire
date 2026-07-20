@@ -60,9 +60,10 @@ test.describe('Dumpster Empire — regresión ronda 10 (dificultad exponencial)'
     await expect(tacho).toContainText('Búsqueda recomendada: ×1');
     await expect(tacho.locator('.shop-card-luck--reached')).toHaveCount(3);
 
+    // AJUSTE (ronda 31, PLAN.md §4.42): resistencia de contenedorBarrio recalibrada de 1.35 a 1.55.
     const barrio = cards.filter({ hasText: 'Barrio' });
-    await expect(barrio).toContainText('Fuerza recomendada: ×1.35');
-    await expect(barrio).not.toContainText('Fuerza recomendada: ×1.35 (alcanzada)');
+    await expect(barrio).toContainText('Fuerza recomendada: ×1.55');
+    await expect(barrio).not.toContainText('Fuerza recomendada: ×1.55 (alcanzada)');
   });
 
   test('2: metas de Suerte nuevas visibles en la Tienda', async ({ page }) => {
@@ -86,10 +87,11 @@ test.describe('Dumpster Empire — regresión ronda 10 (dificultad exponencial)'
     await page.locator('#dig-abandon-btn').click();
     await expect(page.locator('#dig-empty')).toBeVisible();
 
-    // Fuerza base vs resistencia 1.35 del barrio: ritmo 1/1.35 ≈ 74%, con hint.
+    // AJUSTE (ronda 31, PLAN.md §4.42): resistencia de contenedorBarrio recalibrada a 1.55.
+    // Fuerza base vs resistencia 1.55 del barrio: ritmo 1/1.55 ≈ 65%, con hint.
     await seed(page, fuerzaBaseConBarrioSave());
     await entrarAlJuego(page);
     await iniciarEscarbado(page, 'contenedorBarrio');
-    await expect(page.locator('#dig-trap-hint')).toContainText('Ritmo de escarbado: 74%');
+    await expect(page.locator('#dig-trap-hint')).toContainText('Ritmo de escarbado: 65%');
   });
 });

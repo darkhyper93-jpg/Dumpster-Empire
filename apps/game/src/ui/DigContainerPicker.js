@@ -18,6 +18,8 @@ import {
   isProceduralTierUnlocked,
   PROCEDURAL_CONTAINER_MAX_N,
   getTimeBand,
+  getDigRate,
+  getAreaRate,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
 import { containerBannerMarkup, bindContainerBannerFallback } from './containerImage.js';
@@ -38,6 +40,26 @@ function renderEventBanner(event) {
   return (
     `<span class="dig-picker-card-event dig-picker-card-event--${event.kind}">` +
     `${iconMarkup(event.kind === 'golden' ? 'event-golden' : 'event-fire', { size: 16 })} ${label} · ${t('event.timeLeft', { seconds: secondsLeft })}` +
+    `</span>`
+  );
+}
+
+/**
+ * Badge compacto de ritmo/pincel (PLAN.md §4.42, ronda 31) — mismos getters que ShopView, cero
+ * fórmulas acá. `--low` en rojo (`--danger`) cuando cualquiera de los dos queda por debajo de 1
+ * (el jugador todavía no domina este contenedor).
+ * @param {import('@dumpster/engine').GameState} state
+ * @param {Object} container
+ * @param {import('@dumpster/engine').EngineData} data
+ * @returns {string}
+ */
+function renderRateBadge(state, container, data) {
+  const ritmo = getDigRate(state, container, data);
+  const areaRate = getAreaRate(state, container, data);
+  const low = ritmo < 1 || areaRate < 1;
+  return (
+    `<span class="dig-picker-card-rate${low ? ' dig-picker-card-rate--low' : ''}">` +
+    `${t('shop.rateLine', { pct: Math.round(ritmo * 100) })} · ${t('shop.areaRateLine', { pct: Math.round(areaRate * 100) })}` +
     `</span>`
   );
 }
@@ -70,6 +92,7 @@ function renderProceduralDigCard(state, data, allContainers) {
     `<span class="dig-picker-card-name">${tier.name}${t('shop.proceduralSuffix', { n })}</span>` +
     `<span class="dig-picker-card-cost">${formatMoney(cost)}</span>` +
     `<span class="dig-picker-card-level">${t('digPicker.level', { level: getContainerLevel(state, tier.id) })}</span>` +
+    renderRateBadge(state, tier, data) +
     `</button>`
   );
 }
@@ -122,6 +145,7 @@ export const DigContainerPicker = {
         `<span class="dig-picker-card-name">${c.name}</span>` +
         `<span class="dig-picker-card-cost">${label}</span>` +
         `<span class="dig-picker-card-level">${t('digPicker.level', { level: getContainerLevel(state, c.id) })}</span>` +
+        renderRateBadge(state, c, data) +
         `</button>`
       );
     });

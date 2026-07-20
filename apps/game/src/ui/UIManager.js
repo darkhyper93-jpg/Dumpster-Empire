@@ -55,6 +55,9 @@ export class UIManager {
     // PLAN.md §11.8/§11.9: la pantalla de escarbado es la home — ya no está pegada a la Tienda.
     this.activeTab = 'escarbar';
     this.mountedDig = null;
+    // §4.42 (ronda 31): celebraciones de items (firstFind/legendary) encoladas durante un
+    // escarbado en curso — se abren recién al cerrar el ciclo (ver handleDigComplete).
+    this.pendingCelebrations = [];
 
     this.shellEl = root.querySelector('.game-shell');
     this.topbarEl = root.querySelector('#topbar');
@@ -86,8 +89,8 @@ export class UIManager {
       this.digCanvasHost,
       {
         onProgress: (frac) => this.updateDigProgress(frac),
-        onComplete: () => this.handleDigComplete(),
-        onObjectRevealed: (entry, posPct) => this.playObjectRevealFeedback(entry, posPct),
+        onComplete: (trapSprung) => this.handleDigComplete(trapSprung),
+        onObjectRevealed: (entry, posPct, index) => this.handleObjectRevealed(index, posPct),
       },
       store.ctx.itemsData.rarities,
       store.ctx.data.traps
@@ -132,7 +135,12 @@ export class UIManager {
     }
 
     this.digAbandonBtn.textContent = t('dig.abandon');
-    this.digAbandonBtn.addEventListener('click', () => this.store.actions.abandonManualDig());
+    this.digAbandonBtn.addEventListener('click', () => {
+      // §4.42 (ronda 31): abandonar conserva el loot ya destapado — cualquier firstFind/legendary
+      // ya encolado por handleObjectRevealed se abre igual, aunque el resto del contenedor se pierda.
+      this.store.actions.abandonManualDig();
+      this.flushPendingCelebrations();
+    });
 
     // Ronda 20 (PLAN.md §4.24, Sótano Sin Luz): máscara puramente visual que sigue el puntero
     // sobre la tarjeta de escarbado — nunca decide nada del modelo de revelado (napkin), solo
@@ -142,77 +150,108 @@ export class UIManager {
     // (mismo patrón que ShopView/QuickUpgrades: delegación bindeada una sola vez por vista).
   }
 
-  /** Captura el resultado antes de que `finishManualDig` lo descarte, para disparar el juice. */
-  handleDigComplete() {
-    const pending = this.store.getPendingDig();
-    const result = pending ? pending.result : null;
+  /**
+   * §4.42 (ronda 31) — cierre del escarbado, avisado por DigCanvas tras el REVEAL_HOLD_MS. El
+   * crédito por-ítem ya corrió entero en `handleObjectRevealed` (incluida la trampa, si salió):
+   * acá solo queda cerrar el ciclo y recién ACÁ se abren las celebraciones acumuladas — si se
+   * abrieran por-ítem (al destaparse cada uno) el modal, que es BLOQUEANTE, taparía el canvas y
+   * cortaría el gesto de seguir destapando el resto del contenedor (bug real encontrado en el
+   * desarrollo de esta ronda: un firstFind en el primer objeto abría el modal a mitad de un
+   * escarbado de 3, y los gestos siguientes caían sobre el backdrop en vez del canvas).
+   * @param {boolean} trapSprung - true si el escarbado terminó por destapar la trampa (el
+   *   castigo y el corte de racha ya se aplicaron en `revealDugEntry`, vía `handleObjectRevealed`).
+   */
+  handleDigComplete(trapSprung) {
+    if (trapSprung) {
+      // El crédito de trampa (y su propio runAchievements/runMissions) ya corrió en
+      // revealDugEntry (store), vía handleObjectRevealed — sus celebraciones de logro ya están
+      // encoladas ANTES que estas. Acá solo falta abrir las de item (firstFind/legendary) y
+      // volver al picker (#dig-empty), que ya pasó sola porque pendingDig es null.
+      this.flushPendingCelebrations();
+      return;
+    }
+    // Orden histórico (ronda 12): logro antes que hallazgo — finishManualDig corre
+    // runAchievements/notify PRIMERO (encola las celebraciones de logro), recién DESPUÉS se
+    // abren las de item acumuladas durante el escarbado.
     const res = this.store.actions.finishManualDig();
-    if (result) this.playDigFeedback(result);
+    this.flushPendingCelebrations();
     if (res && res.ok && res.levelUp) {
       this.toast.push(
         t('uiManager.levelUp', { name: res.levelUp.containerName, level: res.levelUp.level, pct: res.levelUp.bonusPct })
       );
     }
-    if (result && !result.isTrap) {
-      // D3/D7 (ronda 14): solo el escarbado manual celebra, y solo la 1ra vez que se encuentra
-      // ESE ítem de la categoría más rara — el robot nunca dispara este modal.
-      for (const item of result.items.filter((i) => i.isFirstRareFind)) {
-        CelebrationModal.push(this.celebrationModalEl, { type: 'firstFind', item });
-      }
-      // PLAN.md §4.26 (ronda 22): celebración especial de legendario, con su propia partícula
-      // dorada y sonido (juice obligatorio, CLAUDE.md §5.2) — nunca junto al firstFind del mismo
-      // ítem (el legendario reemplazó el slot 1 antes de llegar acá, así que es mutuamente
-      // excluyente con isFirstRareFind por construcción del engine).
-      for (const item of result.items.filter((i) => i.isLegendary)) {
-        CelebrationModal.push(this.celebrationModalEl, { type: 'legendary', item });
-      }
-    }
   }
 
   /**
-   * Juice por-objeto (ronda 5): pop de sonido + destello sobre la posición del objeto recién
-   * destapado. La trampa no tiene pop propio — su feedback (thud + shake) llega al completarse
-   * el escarbado vía playDigFeedback, como siempre.
-   * @param {{name:string, categoria?:string, isTrap:boolean}} entry
+   * §4.42 (ronda 31) — el canvas avisa por CADA objeto destapado (item o trampa); acá se
+   * despacha el crédito real al store (`revealDugEntry`) y se dispara el juice inmediato
+   * (sonido/partícula/glow, PLAN.md §5.2: "por-ítem al destaparse"). Las celebraciones en MODAL
+   * (firstFind/legendary) se ENCOLAN acá pero se abren recién en `handleDigComplete` — son
+   * bloqueantes y abrirlas a mitad de un escarbado de varios objetos taparía el canvas (ver
+   * comentario de handleDigComplete). REGLA DE ORO (roadmap §31.3.B): nada de economía se decide
+   * en el canvas — el canvas solo avisó "se destapó el índice `index`"; el store acredita y
+   * devuelve qué pasó.
+   * @param {number} index
+   * @param {{xPct: number, yPct: number}} posPct
+   */
+  handleObjectRevealed(index, posPct) {
+    const res = this.store.actions.revealDugEntry(index);
+    if (!res.ok) return;
+    if (res.trapSprung) {
+      this.playTrapFeedback();
+      return;
+    }
+    this.playObjectRevealFeedback(res.item, posPct);
+    // D3/D7 (ronda 14): solo el escarbado manual celebra, y solo la 1ra vez que se encuentra
+    // ESE ítem de la categoría más rara — el robot nunca dispara este modal.
+    if (res.item.isFirstRareFind) {
+      this.pendingCelebrations.push({ type: 'firstFind', item: res.item });
+    }
+    // PLAN.md §4.26 (ronda 22): celebración especial de legendario, con su propia partícula
+    // dorada y sonido (juice obligatorio, CLAUDE.md §5.2) — nunca junto al firstFind del mismo
+    // ítem (el legendario reemplazó el slot 1 antes de llegar acá, así que es mutuamente
+    // excluyente con isFirstRareFind por construcción del engine).
+    if (res.item.isLegendary) {
+      this.pendingCelebrations.push({ type: 'legendary', item: res.item });
+    }
+  }
+
+  /** Abre las celebraciones de items encoladas durante el escarbado en curso (ver arriba). */
+  flushPendingCelebrations() {
+    for (const celebration of this.pendingCelebrations) {
+      CelebrationModal.push(this.celebrationModalEl, celebration);
+    }
+    this.pendingCelebrations = [];
+  }
+
+  /**
+   * Juice por-objeto (ronda 5, extendido en la 31 con el glow + vibración que antes solo se
+   * disparaban UNA vez al completar todo el contenedor — PLAN.md §5.2 pide el hallazgo por-ítem
+   * al destaparse cada uno, no al final): pop de sonido + destello + aura de rareza sobre la
+   * posición del objeto recién destapado.
+   * @param {{name:string, categoria?:string}} entry
    * @param {{xPct:number, yPct:number}} posPct
    */
   playObjectRevealFeedback(entry, posPct) {
-    if (entry.isTrap) return;
     const { itemsData } = this.store.ctx;
     const rarityIndex = Math.max(0, itemsData.rarities.findIndex((r) => r.id === entry.categoria));
     const colorToken = rarityIndex > 0 ? itemsData.rarities[rarityIndex].colorToken : '--amber';
     playFindPop(rarityIndex);
     spawnFindPop(this.digCanvasHost, colorToken, rarityIndex, posPct);
-  }
-
-  /** @param {import('@dumpster/engine').DigResult} result */
-  playDigFeedback(result) {
-    const { itemsData } = this.store.ctx;
-    const vibrationOn = this.store.getState().vibrationOn;
-    if (result.isTrap) {
-      playTrapThud();
-      triggerTrapShake(this.root);
-      // PLAN.md §5.4 (ronda 19): vibración táctil en trampa. `navigator.vibrate` no existe en
-      // Electron/desktop ni en algunos navegadores — optional chaining lo vuelve no-op silencioso.
-      if (vibrationOn) globalThis.navigator?.vibrate?.(80);
-      return;
-    }
-    let bestRarityIndex = 0;
-    let bestColorToken = '--amber';
-    for (const item of result.items) {
-      const rarityIndex = itemsData.rarities.findIndex((r) => r.id === item.categoria);
-      if (rarityIndex > bestRarityIndex) {
-        bestRarityIndex = rarityIndex;
-        bestColorToken = itemsData.rarities[rarityIndex].colorToken;
-      }
-    }
-    playFindPop(bestRarityIndex);
-    spawnFindPop(this.digActiveEl, bestColorToken, bestRarityIndex);
-    triggerRarityGlow(this.digRarityGlowEl, bestColorToken, 0.3 + bestRarityIndex * 0.1);
+    triggerRarityGlow(this.digRarityGlowEl, colorToken, 0.3 + rarityIndex * 0.1);
     // Vibración corta en hallazgo de la categoría más rara del contenedor (PLAN.md §5.4).
-    if (vibrationOn && bestRarityIndex === itemsData.rarities.length - 1) {
+    if (this.store.getState().vibrationOn && rarityIndex === itemsData.rarities.length - 1) {
       globalThis.navigator?.vibrate?.(30);
     }
+  }
+
+  /** Juice de trampa (thud + shake + vibración) — disparado al destaparla (§4.42, ronda 31). */
+  playTrapFeedback() {
+    playTrapThud();
+    triggerTrapShake(this.root);
+    // PLAN.md §5.4 (ronda 19): vibración táctil en trampa. `navigator.vibrate` no existe en
+    // Electron/desktop ni en algunos navegadores — optional chaining lo vuelve no-op silencioso.
+    if (this.store.getState().vibrationOn) globalThis.navigator?.vibrate?.(80);
   }
 
   updateDigProgress(fraction) {

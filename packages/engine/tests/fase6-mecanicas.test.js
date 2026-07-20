@@ -114,18 +114,19 @@ describe('PLAN.md §11.2 — resistencia / Fuerza mínima', () => {
 
   it('con Fuerza sobrada, el ritmo llega al tope 1.5 y el tiempo efectivo baja hasta digTime/1.5 (ronda 7)', () => {
     const state = freshState();
-    // AJUSTE (ronda 10): la resistencia de bovedaPerdida subió a 6.4; el nivel necesita superar
-    // 1.5×6.4 = 9.6 de mult (antes 200 alcanzaba con la resistencia vieja de 3.3).
-    state.upgradeLevels.digPower = 220; // fuerza muy alta, cubre cualquier resistencia definida
+    // AJUSTE (ronda 31): la resistencia de bovedaPerdida subió a 13.5 (tabla recalibrada,
+    // PLAN.md §4.42); el nivel necesita superar 1.5×13.5 = 20.25 de mult (mult = 1 + nivel×0.04).
+    state.upgradeLevels.digPower = 1000; // fuerza muy alta, cubre cualquier resistencia definida
     const hardContainer = containers.find((c) => c.id === 'bovedaPerdida');
     expect(getDigRate(state, hardContainer, data)).toBe(1.5);
     expect(getEffectiveDigTime(state, hardContainer, data)).toBeCloseTo(hardContainer.digTime / 1.5, 10);
   });
 
-  it('el ritmo nunca baja de un piso de 30% (ronda 7)', () => {
+  // AJUSTE (ronda 31, PLAN.md §4.42): piso bajado de 0.3 a 0.25 — quedarse corto de Fuerza duele más.
+  it('el ritmo nunca baja de un piso de 25% (ronda 31, antes 30% en la ronda 7)', () => {
     const state = freshState();
     const extremeContainer = { ...containers.find((c) => c.id === 'containerExtradimensional'), resistencia: 10000 };
-    expect(getDigRate(state, extremeContainer, data)).toBe(0.3);
+    expect(getDigRate(state, extremeContainer, data)).toBe(0.25);
   });
 });
 

@@ -882,7 +882,34 @@ export function getDigRate(state, container, data, isAuto = false) {
   // premia hasta +50% y quedarse corto castiga hasta 0.3 — la Fuerza contra la resistencia
   // de CADA contenedor se siente en el gesto (radio del pincel) y en la automatización
   // (getEffectiveDigTime).
-  return Math.min(1.5, Math.max(0.3, digPowerMult / container.resistencia));
+  // AJUSTE (ronda 31, PLAN.md §4.42): piso bajado de 0.3 a 0.25 — quedarse corto de Fuerza
+  // ahora duele más (usuario: la resistencia crecía tan despacio que unas pocas mejoras baratas
+  // capeaban el ritmo en 1.5 y todos los contenedores se sentían iguales).
+  return Math.min(1.5, Math.max(0.25, digPowerMult / container.resistencia));
+}
+
+// AJUSTE (ronda 31, PLAN.md §4.42): banda de areaRate — nunca tan angosta que el Área deje de
+// importar (0.45 de piso, igual de duro que el 0.3 histórico del ritmo pero algo más indulgente
+// porque el Área SOLO afecta el pincel manual, no el tiempo de resolución) ni tan ancha que
+// domine el juego (techo 1.2, más bajo que el 1.5 del ritmo: es un bonus secundario).
+const AREA_RATE_FLOOR = 0.45;
+const AREA_RATE_CEIL = 1.2;
+
+/**
+ * §4.42 (ronda 31) — Área efectiva por contenedor: hasta esta ronda `areaRecomendada` era solo
+ * un cartel informativo (getRecommendedArea) sin efecto real. Ahora modula el pincel del
+ * escarbado MANUAL (mismo alcance que las herramientas, §4.23): la automatización/offline no la
+ * usa — no tienen pincel.
+ * areaRate = clamp(getAreaMult / container.areaRecomendada, 0.45, 1.2)
+ * @param {GameState} state
+ * @param {Object} container
+ * @param {EngineData} data
+ * @returns {number}
+ */
+export function getAreaRate(state, container, data) {
+  const areaMult = getAreaMult(state, data);
+  const recomendada = container.areaRecomendada || 1;
+  return Math.min(AREA_RATE_CEIL, Math.max(AREA_RATE_FLOOR, areaMult / recomendada));
 }
 
 /**

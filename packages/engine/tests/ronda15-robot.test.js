@@ -149,7 +149,12 @@ describe('getAutoTrapDiscardChance — nodo de prestigio Escaner de Trampas', ()
 });
 
 describe('Descarte de trampas end-to-end (automationTick)', () => {
-  it('con el nodo a nivel 3, un slot que completa en trampa se descarta: sin castigo ni loot', () => {
+  // AJUSTE (ronda 31, PLAN.md §4.43): la trampa simultánea hace que un dig trampeado TAMBIÉN
+  // rollee sus items — el Escáner de Trampas pasó de "descarta el contenedor entero (sin
+  // castigo NI loot)" a "conserva TODOS los items y descarta SOLO la trampa (sin castigo)". El
+  // dinero ahora SÍ sube (el item se acredita) y `autoProcessedCount` sube porque el contenedor
+  // se procesó con éxito (antes se perdía entero, así que no contaba como procesado).
+  it('con el nodo a nivel 3, un slot que completa en trampa conserva el loot y descarta solo la trampa', () => {
     const state = stateWithRobot();
     state.prestigeTreeLevels.escanerTrampas = 3;
     state.money = 1000;
@@ -157,9 +162,9 @@ describe('Descarte de trampas end-to-end (automationTick)', () => {
 
     automationTick(state, 1, [stubContainer], itemsDataStub, data, () => 0.5);
 
-    expect(state.money).toBe(1000);
+    expect(state.money).toBeGreaterThan(1000);
     expect(state.trapsDiscarded).toBe(1);
-    expect(state.autoProcessedCount).toBe(0);
+    expect(state.autoProcessedCount).toBe(1);
     expect(state.trapsHit).toBe(0);
   });
 

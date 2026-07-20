@@ -72,7 +72,15 @@ test.describe('Dumpster Empire — regresión ronda 9 (niveles visibles y automa
     const box = await canvas.boundingBox();
     if (!box) throw new Error('No se pudo medir el canvas de escarbado.');
     const positions = await getDigPositions(page);
-    for (const pos of positions) await rascarObjeto(page, box, pos);
+    // AJUSTE (ronda 31, PLAN.md §4.42): con la trampa simultánea, un dig trampeado también trae
+    // sus `slots` items MÁS la entry-trampa — destaparla CORTA el escarbado en el acto (el resto
+    // de `positions` queda sin destapar y el canvas se desmonta). Si el roll dio trampa antes de
+    // agotar `positions`, seguir rascando pegaría sobre el picker ya vuelto a montar (#dig-empty)
+    // en vez del canvas — se corta el loop apenas el escarbado deja de estar activo.
+    for (const pos of positions) {
+      if (await page.locator('#dig-empty').isVisible()) break;
+      await rascarObjeto(page, box, pos);
+    }
     await expect(page.locator('#dig-empty')).toBeVisible({ timeout: 5000 });
     // Filtrado: el primer escarbado también dispara toasts de logros (hasta 3 a la vez), y un
     // locator sin filtrar viola el strict mode de Playwright.
