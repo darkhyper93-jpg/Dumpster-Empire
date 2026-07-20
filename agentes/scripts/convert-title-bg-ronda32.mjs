@@ -1,105 +1,88 @@
-// Ronda 32: convierte reference/ui/Fondorenovadoinicio.png (fondo provisto por el usuario) a
-// apps/game/assets/title-bg.webp usando Chromium headless (Playwright ya está pineado en el
-// repo) porque no hay cwebp/ImageMagick disponibles en este entorno.
+// Ronda 32: genera apps/game/assets/title-bg.webp IDÉNTICO a reference/ui/NuevaPantallaInicio.webp
+// (mismo logo horneado, mismo marco, MISMA ruedita horneada) pero con la placa del botón JUGAR
+// vacía (reference/ui/Fondorenovadoinicio.png, mismo render/composición a mayor resolución) para
+// que el texto sea 100% DOM/traducible en vez de horneado en español.
 //
-// DECISIÓN (documentada también en TitleScreen.js/layout.css): el .png provisto trae horneados
-// el EMBLEMA "DUMPSTER EMPIRE" y la PLACA vacía del botón (marco dorado sin texto) — no el texto
-// "JUGAR" ni el engranaje, así que técnicamente cumple el requisito mínimo de la ronda 32
-// (§32.2), pero ambos elementos horneados rompen el approach "controles reales, sin depender de
-// la posición del arte" (§32.1 intro): en `object-fit:cover` un elemento horneado se recorta o
-// queda descentrado respecto al control DOM real en proporciones distintas a la del arte
-// original — verificado en la práctica: a 375x667 el emblema horneado queda cortado a los
-// costados (ilegible), y a 1920x1080 la placa vacía del botón queda visible junto al botón real
-// como si hubiera "dos botones". Se retocan AMBAS zonas fuera del canvas antes de exportar
-// (parche borroso con máscara suave, sin recorte duro) y el emblema pasa a ser 100% DOM
-// (`.title-logo`, ya NO se oculta con `.sr-only` al quedar el arte "ready" — layout.css/
-// TitleScreen.js), consistente con JUGAR y el engranaje.
+// Se usa Chromium headless (Playwright, ya pineado en el repo) porque no hay cwebp/ImageMagick
+// disponibles en este entorno.
+//
+// Pipeline: (1) base = Fondorenovadoinicio.png tal cual, SIN retoques — nada de blur/vignette;
+// (2) la ruedita se recorta de NuevaPantallaInicio.webp (que sí la trae horneada) y se pega
+// escalada en la posición equivalente de la base — ambas imágenes son el MISMO render a distinta
+// resolución (1402x789 vs 1672x941, misma proporción 16:9), así que un solo factor de escala
+// (S = 1672/1402) alinea cualquier coordenada de una a la otra.
 import { chromium } from '@playwright/test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import fs from 'node:fs';
 
-const srcPath = path.resolve('reference/ui/Fondorenovadoinicio.png');
+const basePath = path.resolve('reference/ui/Fondorenovadoinicio.png');
+const gearSrcPath = path.resolve('reference/ui/NuevaPantallaInicio.webp');
 const outPath = path.resolve('apps/game/assets/title-bg.webp');
 
 const browser = await chromium.launch();
 const page = await browser.newPage();
-await page.goto(pathToFileURL(srcPath).href);
-const dims = await page.evaluate(() => {
-  const img = document.querySelector('img');
-  return { w: img.naturalWidth, h: img.naturalHeight };
+
+async function loadImage(p) {
+  await page.goto(pathToFileURL(p).href);
+  return page.evaluate(() => {
+    const img = document.querySelector('img');
+    return { w: img.naturalWidth, h: img.naturalHeight, src: img.src };
+  });
+}
+
+const base = await loadImage(basePath);
+console.log('base', base);
+
+// Ambas imágenes como data: URI (evita que Chromium las trate como orígenes file:// distintos y
+// "tainte" el canvas al mezclar drawImage de dos orígenes — con data: no hay fetch cross-origin).
+const baseDataUri = `data:image/png;base64,${fs.readFileSync(basePath).toString('base64')}`;
+const gearDataUri = `data:image/webp;base64,${fs.readFileSync(gearSrcPath).toString('base64')}`;
+
+const tmpHtml = path.resolve('agentes/scripts/.tmp-composite-ronda32.html');
+fs.writeFileSync(tmpHtml, `<img id="base" src="${baseDataUri}" /><img id="gear" src="${gearDataUri}" />`);
+await page.goto(pathToFileURL(tmpHtml).href);
+await page.waitForFunction(() => {
+  const a = document.querySelector('#base');
+  const b = document.querySelector('#gear');
+  return a.complete && a.naturalWidth > 0 && b.complete && b.naturalWidth > 0;
 });
-console.log('dims', dims);
-await page.setViewportSize({ width: dims.w, height: dims.h });
 
 const webpBuffer = await page.evaluate(async () => {
-  const img = document.querySelector('img');
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
+  const baseImg = document.querySelector('#base');
+  const gearImg = document.querySelector('#gear');
+  const w = baseImg.naturalWidth;
+  const h = baseImg.naturalHeight;
 
-  const main = document.createElement('canvas');
-  main.width = w;
-  main.height = h;
-  const ctx = main.getContext('2d');
-  ctx.drawImage(img, 0, 0);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(baseImg, 0, 0);
 
-  /** Difumina `rect` tomando como fuente una franja vertical de `srcY` (mismo tamaño), con
-   * máscara suave (blur fuerte sobre un rect sólido) para que no quede un borde recto visible. */
-  function blurPatch(rect, srcY) {
-    const overscan = 70;
-    const patch = document.createElement('canvas');
-    patch.width = w;
-    patch.height = h;
-    const patchCtx = patch.getContext('2d');
-    patchCtx.filter = 'blur(24px)';
-    patchCtx.drawImage(
-      main,
-      rect.x - overscan,
-      Math.max(0, srcY),
-      rect.w + overscan * 2,
-      rect.h + overscan * 2,
-      rect.x - overscan,
-      rect.y - overscan,
-      rect.w + overscan * 2,
-      rect.h + overscan * 2
-    );
-    patchCtx.globalCompositeOperation = 'destination-in';
-    patchCtx.filter = 'blur(45px)';
-    patchCtx.fillStyle = 'rgba(255,255,255,1)';
-    patchCtx.fillRect(rect.x - 10, rect.y - 10, rect.w + 20, rect.h + 20);
-    patchCtx.filter = 'none';
-    ctx.drawImage(patch, 0, 0);
-  }
+  // Escala entre NuevaPantallaInicio.webp (1402x789, origen de la ruedita horneada) y la base
+  // (1672x941): mismo render, misma proporción — un solo factor alinea coordenadas.
+  const scale = w / gearImg.naturalWidth;
 
-  function vignette(rect) {
-    const cx = rect.x + rect.w / 2;
-    const cy = rect.y + rect.h / 2;
-    const radius = Math.hypot(rect.w, rect.h) * 0.55;
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-    grad.addColorStop(0, 'rgba(10,8,4,0.38)');
-    grad.addColorStop(1, 'rgba(10,8,4,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-  }
+  // Rect de la ruedita en el espacio de NuevaPantallaInicio.webp (medido por escaneo de píxeles
+  // dorados + verificación visual por crop, agentes/scripts/gear-crop3.png durante el desarrollo).
+  const gearSrc = { x: 1253, y: 647, w: 143, h: 135 };
+  const gearDest = {
+    x: gearSrc.x * scale,
+    y: gearSrc.y * scale,
+    w: gearSrc.w * scale,
+    h: gearSrc.h * scale,
+  };
+  ctx.drawImage(gearImg, gearSrc.x, gearSrc.y, gearSrc.w, gearSrc.h, gearDest.x, gearDest.y, gearDest.w, gearDest.h);
 
-  // Placa vacía del botón (rect + margen generoso: cubre también los remaches/rombos que
-  // sobresalen arriba y abajo del marco). Fuente: franja de arriba (cielo/skyline, más continuo
-  // verticalmente en esa composición que lo que hay debajo).
-  const platePlate = { x: 460, y: 500, w: 760, h: 330 };
-  blurPatch(platePlate, platePlate.y - platePlate.h - 20);
-  vignette(platePlate);
-
-  // El emblema "DUMPSTER EMPIRE" horneado NO se retoca acá (un blurPatch tan grande se vio como
-  // un manchón — descartado): se atenúa con un scrim CSS en layout.css (`.title-top-scrim`,
-  // independiente de la proporción del viewport) y el emblema real pasa a ser 100% DOM, siempre
-  // visible (TitleScreen.js ya no le pone `.sr-only` al quedar el arte "ready").
-
-  const blob = await new Promise((resolve) => main.toBlob(resolve, 'image/webp', 0.9));
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.92));
   const arrayBuffer = await blob.arrayBuffer();
-  return Array.from(new Uint8Array(arrayBuffer));
+  return { bytes: Array.from(new Uint8Array(arrayBuffer)), gearDest };
 });
 
-fs.writeFileSync(outPath, Buffer.from(webpBuffer));
+fs.writeFileSync(outPath, Buffer.from(webpBuffer.bytes));
+console.log('gearDest (para calibrar el anclaje CSS del engranaje real)', webpBuffer.gearDest);
 console.log('wrote', outPath, fs.statSync(outPath).size, 'bytes');
+fs.unlinkSync(tmpHtml);
 
 await browser.close();
