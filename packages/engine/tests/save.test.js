@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { freshState, SAVE_VERSION } from '../src/state.js';
-import { serializeState, deserializeState, exportSave, importSave, validateSave } from '../src/save.js';
+import {
+  serializeState,
+  deserializeState,
+  exportSave,
+  importSave,
+  validateSave,
+  SUPPORTED_LANGUAGES,
+} from '../src/save.js';
 import containers from '../../../apps/game/src/data/containers.json';
 
 describe('save.js — ida y vuelta sin pérdida', () => {
@@ -304,5 +311,18 @@ describe('save v4 -> v5 migra sin perder partidas viejas (ronda 14)', () => {
     expect(result.state.robots[0].targetContainerId).toBe(containers[0].id);
     expect(result.state.digSensitivity).toBe(0.7);
     expect(result.state.language).toBe('en');
+  });
+
+  // Ronda 33: el allow-list pasó de es/en a es/en/pt/fr/de. El test se DERIVA de la constante
+  // (no hardcodea 5) para que sumar un idioma quede cubierto solo.
+  it('acepta y persiste todos los idiomas de SUPPORTED_LANGUAGES (ronda 33)', () => {
+    expect(SUPPORTED_LANGUAGES.length).toBeGreaterThan(1);
+    for (const lang of SUPPORTED_LANGUAGES) {
+      const state = freshState();
+      state.language = lang;
+      const result = importSave(exportSave(state));
+      expect(result.ok, `el idioma ${lang} debería ser válido`).toBe(true);
+      expect(result.state.language).toBe(lang);
+    }
   });
 });

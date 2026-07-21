@@ -37,7 +37,12 @@ export const QuickUpgrades = {
     const html = QUICK_UPGRADE_IDS.map((id) => {
       const upgrade = data.upgrades.find((u) => u.id === id);
       if (!upgrade) return '';
-      const level = state.upgradeLevels[id] || 0;
+      // AUDITORÍA (ronda 33, global final): `|| 0` NO coacciona a número — solo reemplaza falsy,
+      // así que un string no vacío sobreviviría hasta el `innerHTML` de abajo vía `t()` (que no
+      // escapa). Hoy `upgradeLevels` está cubierto por `isFiniteNumberMap` en save.js, así que
+      // esto es defensa en profundidad, no un agujero abierto — pero es la forma canónica
+      // (napkin: "state-derived values interpolated into innerHTML via `|| 0`").
+      const level = Number(state.upgradeLevels[id]) || 0;
       const cost = nextUpgradeCost(state, upgrade);
       const canAfford = state.money >= cost;
       const missing = canAfford ? '' : t('common.missingMoney', { amount: formatMoney(cost - state.money) });

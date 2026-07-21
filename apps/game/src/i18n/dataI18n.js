@@ -11,6 +11,17 @@
  */
 
 import dataEn from './data-en.js';
+import dataPt from './data-pt.js';
+import dataFr from './data-fr.js';
+import dataDe from './data-de.js';
+
+/**
+ * Overlays de data por idioma. El español NO tiene entrada: la data real (`data/*.json`) YA está
+ * en español y es la fuente de verdad — 'es' restaura el baseline. Exportado (ronda 33) para que
+ * los tests de paridad lo deriven de `SUPPORTED_LANGUAGES` en vez de importar cada archivo.
+ * @type {Object<string, Object<string, any>>}
+ */
+export const DATA_DICTIONARIES = { en: dataEn, pt: dataPt, fr: dataFr, de: dataDe };
 
 /**
  * @typedef {Object} LoadedData - los 6 JSON que carga main.js (ver DATA_FILES)
@@ -65,71 +76,60 @@ export function initDataLocalization(loaded) {
 }
 
 /**
- * Pisa in-place los campos de display de `loaded` con el idioma pedido: 'en' usa data-en.js
- * (con fallback al baseline español si a la traducción le falta una clave — nunca un hueco
- * en pantalla), 'es' restaura el baseline. Idempotente: aplicar el mismo idioma dos veces
- * deja la data igual.
+ * Pisa in-place los campos de display de `loaded` con el idioma pedido: cualquier idioma con
+ * overlay (`DATA_DICTIONARIES`: en/pt/fr/de) usa su archivo `data-<lang>.js` con fallback al
+ * baseline español si a la traducción le falta una clave — nunca un hueco en pantalla —, y 'es'
+ * (o cualquier valor sin overlay) restaura el baseline. Idempotente: aplicar el mismo idioma dos
+ * veces deja la data igual.
  * @param {LoadedData} loaded - el MISMO objeto que se pasó a initDataLocalization
- * @param {string} lang - 'es' | 'en' (cualquier otro valor cae al baseline español)
+ * @param {string} lang - un valor de SUPPORTED_LANGUAGES; cualquier otro cae al baseline español
  */
 export function applyDataLanguage(loaded, lang) {
   if (!baseline) {
     throw new Error('applyDataLanguage sin initDataLocalization previo (orden de boot roto, ver R-16.3)');
   }
-  const useEn = lang === 'en';
+  // `Object.hasOwn` y no `DATA_DICTIONARIES[lang]` pelado: `lang` viene del save y un valor como
+  // 'constructor' resolvería contra el prototipo (misma clase de bug que la migración v6→v7).
+  const overlay = Object.hasOwn(DATA_DICTIONARIES, lang) ? DATA_DICTIONARIES[lang] : undefined;
+
   /**
-   * @param {Object<string, string>|undefined} enMap
+   * Un valor traducido de un mapa plano `id → string`, o el baseline español si no está.
+   * @param {Object<string, string>|undefined} map
    * @param {Object<string, string>} baseMap
    * @param {string} id
    * @returns {string}
    */
-  const pick = (enMap, baseMap, id) =>
-    useEn && enMap && typeof enMap[id] === 'string' ? enMap[id] : baseMap[id];
+  const pick = (map, baseMap, id) =>
+    map && typeof map[id] === 'string' ? map[id] : baseMap[id];
 
-  for (const c of loaded.containers) c.name = pick(dataEn.containers, baseline.containers, c.id);
+  /**
+   * Copia los campos de una entrada `{name, desc}` / `{name, rol}` con fallback campo por campo.
+   * @param {{id: string}} entry - el objeto de data que se pisa in-place
+   * @param {Object<string, string>|undefined} translated - la entrada traducida, si existe
+   * @param {Object<string, string>} base - la entrada del baseline español
+   * @param {string[]} fields
+   */
+  const applyFields = (entry, translated, base, fields) => {
+    for (const field of fields) {
+      entry[field] = translated && typeof translated[field] === 'string' ? translated[field] : base[field];
+    }
+  };
+
+  for (const c of loaded.containers) c.name = pick(overlay?.containers, baseline.containers, c.id);
   for (const [containerId, pool] of Object.entries(loaded.items.containers)) {
     for (const item of pool) {
-      item.name = pick(dataEn.items[containerId], baseline.items[containerId], item.id);
+      item.name = pick(overlay?.items[containerId], baseline.items[containerId], item.id);
     }
   }
-  for (const r of loaded.items.rarities) r.name = pick(dataEn.rarities, baseline.rarities, r.id);
-  for (const a of loaded.achievements) a.name = pick(dataEn.achievements, baseline.achievements, a.id);
-  for (const a of loaded.automations) {
-    const en = useEn ? dataEn.automations[a.id] : undefined;
-    const base = baseline.automations[a.id];
-    a.name = en && typeof en.name === 'string' ? en.name : base.name;
-    a.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
-  }
-  for (const n of loaded.prestigeTree) {
-    const en = useEn ? dataEn.prestigeTree[n.id] : undefined;
-    const base = baseline.prestigeTree[n.id];
-    n.name = en && typeof en.name === 'string' ? en.name : base.name;
-    n.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
-  }
-  for (const u of loaded.upgrades) u.label = pick(dataEn.upgrades, baseline.upgrades, u.id);
-  for (const l of loaded.legendaries.items) l.name = pick(dataEn.legendaries, baseline.legendaries, l.id);
-  for (const n of loaded.npcs) {
-    const en = useEn ? dataEn.npcs[n.id] : undefined;
-    const base = baseline.npcs[n.id];
-    n.name = en && typeof en.name === 'string' ? en.name : base.name;
-    n.rol = en && typeof en.rol === 'string' ? en.rol : base.rol;
-  }
-  for (const s of loaded.specializations || []) {
-    const en = useEn ? dataEn.specializations[s.id] : undefined;
-    const base = baseline.specializations[s.id];
-    s.name = en && typeof en.name === 'string' ? en.name : base.name;
-    s.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
-  }
-  for (const c of loaded.challenges || []) {
-    const en = useEn ? dataEn.challenges[c.id] : undefined;
-    const base = baseline.challenges[c.id];
-    c.name = en && typeof en.name === 'string' ? en.name : base.name;
-    c.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
-  }
-  for (const n of loaded.deedsTree || []) {
-    const en = useEn ? dataEn.deedsTree[n.id] : undefined;
-    const base = baseline.deedsTree[n.id];
-    n.name = en && typeof en.name === 'string' ? en.name : base.name;
-    n.desc = en && typeof en.desc === 'string' ? en.desc : base.desc;
-  }
+  for (const r of loaded.items.rarities) r.name = pick(overlay?.rarities, baseline.rarities, r.id);
+  for (const a of loaded.achievements) a.name = pick(overlay?.achievements, baseline.achievements, a.id);
+  for (const u of loaded.upgrades) u.label = pick(overlay?.upgrades, baseline.upgrades, u.id);
+  for (const l of loaded.legendaries.items) l.name = pick(overlay?.legendaries, baseline.legendaries, l.id);
+
+  for (const a of loaded.automations) applyFields(a, overlay?.automations[a.id], baseline.automations[a.id], ['name', 'desc']);
+  for (const n of loaded.prestigeTree) applyFields(n, overlay?.prestigeTree[n.id], baseline.prestigeTree[n.id], ['name', 'desc']);
+  for (const n of loaded.npcs) applyFields(n, overlay?.npcs[n.id], baseline.npcs[n.id], ['name', 'rol']);
+  for (const s of loaded.specializations || []) applyFields(s, overlay?.specializations[s.id], baseline.specializations[s.id], ['name', 'desc']);
+  for (const c of loaded.challenges || []) applyFields(c, overlay?.challenges[c.id], baseline.challenges[c.id], ['name', 'desc']);
+  for (const n of loaded.deedsTree || []) applyFields(n, overlay?.deedsTree[n.id], baseline.deedsTree[n.id], ['name', 'desc']);
 }
