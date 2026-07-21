@@ -7929,3 +7929,69 @@ idiomas.
   ninguna de las dos).
 - `reference/ui/fondopantalladeinicio.png` **no** volvió a aparecer borrado en esta sesión (el
   fantasma de las dos rondas anteriores).
+
+
+---
+
+## Fix post-ronda 33 — borde marrón bajo el panel de herramientas (rama `fix/borde-marron-tools`) — 2026-07-21
+
+### Reporte
+
+El usuario, jugando después de mergear la ronda 33: *"abajo de la parte azul, o sea lo de
+herramientas de escarbado y eso, sobresale un borde marrón"*.
+
+### Causa raíz
+
+`.settings-block` (`styles/components.css`) trae `margin-bottom: var(--space-3)` (16px) para
+separar los bloques **apilados** de la vista Ajustes. `ToolsSection.js:62` reusa esa misma clase
+(`<section class="settings-block settings-tools">`) dentro de `#dig-area`, donde el bloque es el
+**último/único** hijo: ese margen no separa de nada y solo destapa 16px de `--wood-surface` (la
+mesada de madera) por debajo del panel. En desktop se nota especialmente porque ahí `#dig-area`
+va con `padding: 0` (layout.css, media query de escritorio), así que el panel queda flush arriba
+y a los lados y marrón **solo abajo** — la asimetría es lo que se lee como "borde que sobresale".
+
+Es otra cara del gotcha ya anotado en el HANDOFF de la ronda 32: **`.settings-block` NO es
+exclusivo de Ajustes**.
+
+Medido antes de tocar nada (getBoundingClientRect sobre `#dig-area` y sus hijos visibles):
+
+| Dónde | Hueco arriba | Hueco abajo |
+|---|---|---|
+| Desktop 1280, bajo herramientas | 0px | **16px** |
+| Mobile 375, bajo herramientas | 16px (padding) | **32px** |
+| Ajustes (pie de `#tab-content`) | 16px (padding) | **32px** |
+
+Los tres son el MISMO margen huérfano.
+
+### Fix
+
+```css
+.settings-block:last-child { margin-bottom: 0; }
+```
+
+Una regla, arregla los tres casos, y **no toca la separación ENTRE bloques** (verificado por
+captura de Ajustes a 375px: siguen espaciados igual). Se eligió `:last-child` y no un
+`.settings-tools { margin-bottom: 0 }` acotado al área de escarbado porque el margen sobrante al
+pie es el mismo defecto en Ajustes, no un caso especial del panel de herramientas.
+
+### Verificación
+
+- **`apps/game/e2e/fix-borde-tools.spec.js` (3 tests, nuevo)**: mide GEOMETRÍA, no píxeles — el
+  hueco de abajo tiene que ser `<=` el de arriba, en desktop, mobile y Ajustes. **En rojo antes
+  del cambio** (con los 16/32px de la tabla, y el mensaje de error los imprime), verde después.
+- **Unit 807/807** (sin cambios: el fix es CSS puro).
+- **e2e 117 totales**: **116 passed + 1 flaky** con `CI=1`. El flaky fue
+  `ronda14-regression.spec.js:134` ("modal de ¡Hallazgo nuevo!"), que pasó en el reintento.
+- Capturas manuales a 1280 y 375: el panel de herramientas cierra flush con `#dig-area`, sin
+  franja de madera; Ajustes sin hueco muerto al pie.
+
+### Ojo para quien siga
+
+- **`ronda14-regression.spec.js` ya flakea por segunda vez** (en la ronda 33 fue su test 1, acá su
+  test 3). Es el spec más pesado de la suite (~14s el test 3). Según la regla que dejé en el
+  napkin, si vuelve a aparecer hay que **arreglar el assert** (darle auto-retry o fijar el momento
+  de observación), no seguir tapándolo con `retries: 1`.
+- **Correr el e2e con el puerto 5185 libre**: con `CI=1` el config NO reusa servidor
+  (`reuseExistingServer: !process.env.CI`), así que un `npx serve` colgado de una sesión de
+  capturas hace fallar la corrida entera con "port already used" y **exit code 0** — parece que
+  pasó y no corrió nada. Matar el proceso del puerto antes.
