@@ -236,6 +236,16 @@ button:hover:not(:disabled) {
   margin-bottom: var(--space-3);
 }
 
+/* El margen de arriba separa bloques APILADOS (vista Ajustes); en el último no separa de nada y
+   se convierte en hueco muerto. Se notaba sobre todo en `#dig-tools-section`, que reusa esta
+   clase dentro de `#dig-area` (`.settings-block` NO es exclusivo de Ajustes — ver HANDOFF ronda
+   32): ahí el bloque es el único hijo, y en desktop `#dig-area` va con `padding: 0`, así que el
+   panel quedaba flush arriba y a los lados pero destapaba 16px de `--wood-surface` abajo. Esa
+   asimetría es el "borde marrón que sobresale" que reportó el usuario. */
+.settings-block:last-child {
+  margin-bottom: 0;
+}
+
 .settings-credits h3,
 .settings-stats h3 {
   margin: 0;
