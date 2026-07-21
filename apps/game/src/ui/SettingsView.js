@@ -10,8 +10,23 @@
  * la UI) y se sumó el slider de sensibilidad de escarbado, calcado del de volumen.
  */
 
-import { DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX } from '@dumpster/engine';
+import { DIG_SENSITIVITY_MIN, DIG_SENSITIVITY_MAX, SUPPORTED_LANGUAGES } from '@dumpster/engine';
 import { t } from '../i18n/i18n.js';
+
+/**
+ * Endónimos: cada idioma se nombra a sí mismo (así el jugador perdido en un idioma que no lee
+ * encuentra el suyo). Ronda 33: el selector se DERIVA de `SUPPORTED_LANGUAGES`, así que sumar un
+ * idioma al allow-list del engine lo hace aparecer acá solo. Un idioma sin endónimo cae a su
+ * código en mayúsculas: nunca una opción vacía en el select.
+ * @type {Object<string, string>}
+ */
+const LANGUAGE_ENDONYMS = {
+  es: 'Español',
+  en: 'English',
+  pt: 'Português',
+  fr: 'Français',
+  de: 'Deutsch',
+};
 
 const local = {
   resetArmed: false,
@@ -96,8 +111,12 @@ export const SettingsView = {
       `<section class="settings-block">` +
       `<label class="settings-volume-label" for="language-select">${t('settings.language')}</label>` +
       `<select id="language-select" data-action="set-language">` +
-      `<option value="es"${state.language === 'es' ? ' selected' : ''}>Español</option>` +
-      `<option value="en"${state.language === 'en' ? ' selected' : ''}>English</option>` +
+      SUPPORTED_LANGUAGES.map(
+        (lang) =>
+          `<option value="${lang}"${state.language === lang ? ' selected' : ''}>${
+            LANGUAGE_ENDONYMS[lang] || lang.toUpperCase()
+          }</option>`
+      ).join('') +
       `</select>` +
       `</section>` +
       `<section class="settings-block">` +

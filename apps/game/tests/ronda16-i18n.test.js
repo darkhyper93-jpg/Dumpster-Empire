@@ -4,14 +4,19 @@
  * paridad de ids entre data-en.js y la data real (en ambas direcciones, para detectar huecos
  * y sobras), y el overlay in-place de dataI18n.js (aplicar, fallback, restaurar, idempotencia,
  * orden de boot roto).
+ *
+ * Ronda 33: la paridad se DERIVA de `SUPPORTED_LANGUAGES` (es/en/pt/fr/de) en vez de mirar
+ * es.js/en.js a mano — agregar un idioma nuevo al allow-list hace fallar estos tests hasta que
+ * su diccionario de UI y su overlay de data estén completos. Nada de conteos hardcodeados.
  */
 
 import { describe, it, expect } from 'vitest';
-import { resolveInitialLanguage } from '../src/i18n/i18n.js';
+import { SUPPORTED_LANGUAGES } from '@dumpster/engine';
+import { resolveInitialLanguage, DICTIONARIES } from '../src/i18n/i18n.js';
 import es from '../src/i18n/es.js';
 import en from '../src/i18n/en.js';
 import dataEn from '../src/i18n/data-en.js';
-import { initDataLocalization, applyDataLanguage } from '../src/i18n/dataI18n.js';
+import { initDataLocalization, applyDataLanguage, DATA_DICTIONARIES } from '../src/i18n/dataI18n.js';
 import containersData from '../src/data/containers.json';
 import itemsData from '../src/data/items.json';
 import upgradesData from '../src/data/upgrades.json';
@@ -20,6 +25,9 @@ import prestigeTreeData from '../src/data/prestigeTree.json';
 import achievementsData from '../src/data/achievements.json';
 import legendariesData from '../src/data/legendaries.json';
 import npcsData from '../src/data/npcs.json';
+import specializationsData from '../src/data/specializations.json';
+import challengesData from '../src/data/challenges.json';
+import deedsTreeData from '../src/data/deedsTree.json';
 
 // El throw por orden de boot roto va PRIMERO: dataI18n guarda el baseline en estado de módulo
 // y cualquier initDataLocalization posterior lo dejaría seteado para el resto del archivo.
@@ -36,88 +44,171 @@ describe('resolveInitialLanguage (R-16.8: pura, navigator por parámetro)', () =
     expect(resolveInitialLanguage('ES-mx')).toBe('es');
   });
 
+  // Ronda 33: pt/fr/de entran al allow-list y por lo tanto al mapeo de locale del navegador.
+  it('pt-*, fr-* y de-* resuelven su propio idioma (ronda 33)', () => {
+    expect(resolveInitialLanguage('pt')).toBe('pt');
+    expect(resolveInitialLanguage('pt-BR')).toBe('pt');
+    expect(resolveInitialLanguage('PT-pt')).toBe('pt');
+    expect(resolveInitialLanguage('fr')).toBe('fr');
+    expect(resolveInitialLanguage('fr-CA')).toBe('fr');
+    expect(resolveInitialLanguage('de')).toBe('de');
+    expect(resolveInitialLanguage('de-AT')).toBe('de');
+    expect(resolveInitialLanguage('DE-ch')).toBe('de');
+  });
+
   it('cualquier otro locale (o basura) resuelve inglés', () => {
     expect(resolveInitialLanguage('en-US')).toBe('en');
-    expect(resolveInitialLanguage('pt-BR')).toBe('en');
+    expect(resolveInitialLanguage('it-IT')).toBe('en');
+    expect(resolveInitialLanguage('ja')).toBe('en');
     expect(resolveInitialLanguage(undefined)).toBe('en');
     expect(resolveInitialLanguage(null)).toBe('en');
     expect(resolveInitialLanguage('')).toBe('en');
     // "estonio" empieza con 'es' como substring pero NO es es-*: 'et' no debe confundirse;
     // y un valor no-string nunca debe romper el boot.
     expect(resolveInitialLanguage(42)).toBe('en');
+    expect(resolveInitialLanguage('et-EE')).toBe('en');
+    // 'des-XX' no existe como locale, pero verifica que el match sea por PREFIJO de subtag y no
+    // por substring suelto (un `includes('de')` daría alemán acá).
+    expect(resolveInitialLanguage('nl-NL')).toBe('en');
+  });
+
+  it('todo idioma que resuelve está dentro de SUPPORTED_LANGUAGES', () => {
+    for (const lang of [...SUPPORTED_LANGUAGES, 'it-IT', 'zzz', '', undefined]) {
+      expect(SUPPORTED_LANGUAGES).toContain(resolveInitialLanguage(lang));
+    }
   });
 });
 
-describe('paridad es.js ↔ en.js (dinámica, sin conteos hardcodeados)', () => {
-  it('mismas claves en ambos diccionarios', () => {
-    const esKeys = Object.keys(es).sort();
-    const enKeys = Object.keys(en).sort();
-    expect(esKeys).toEqual(enKeys);
+describe('paridad de diccionarios de UI (derivada de SUPPORTED_LANGUAGES, ronda 33)', () => {
+  const esKeys = Object.keys(es).sort();
+  /** @param {string} value @returns {string[]} nombres de los `{param}` del template, ordenados */
+  const paramsOf = (value) => [...String(value).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+
+  it('hay un diccionario por cada idioma soportado, y ninguno de sobra', () => {
+    expect(Object.keys(DICTIONARIES).sort()).toEqual([...SUPPORTED_LANGUAGES].sort());
     expect(esKeys.length).toBeGreaterThan(0);
   });
 
-  it('cada clave usa exactamente los mismos {params} en ambos idiomas', () => {
-    const paramsOf = (value) => [...String(value).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
-    for (const key of Object.keys(es)) {
-      expect(paramsOf(en[key]), `params de "${key}" difieren entre es.js y en.js`).toEqual(paramsOf(es[key]));
-    }
-  });
+  for (const lang of SUPPORTED_LANGUAGES) {
+    it(`${lang}: mismas claves que es.js`, () => {
+      expect(Object.keys(DICTIONARIES[lang]).sort()).toEqual(esKeys);
+    });
+
+    // Dos reglas distintas, por un motivo concreto:
+    //  (a) un param que NO está en es.js se renderiza crudo en pantalla ("{foo}") → prohibido siempre;
+    //  (b) faltar un param pierde información → prohibido, SALVO `plural`, que es el sufijo de
+    //      pluralización "" | "s" que arma la UI: alemán ("Stadtschlüssel", "Roboter") y francés
+    //      ("bras") tienen plurales invariables donde pegar una "s" sería una falta de ortografía.
+    const PLURAL_SUFFIX_PARAM = 'plural';
+    it(`${lang}: no introduce {params} que es.js no tenga`, () => {
+      for (const key of esKeys) {
+        const extra = paramsOf(DICTIONARIES[lang][key]).filter((p) => !paramsOf(es[key]).includes(p));
+        expect(extra, `${lang}.js["${key}"] usa params inexistentes (saldrían crudos en pantalla)`).toEqual([]);
+      }
+    });
+
+    it(`${lang}: no pierde ningún {param} de es.js (salvo el sufijo de plural)`, () => {
+      for (const key of esKeys) {
+        const missing = paramsOf(es[key])
+          .filter((p) => p !== PLURAL_SUFFIX_PARAM)
+          .filter((p) => !paramsOf(DICTIONARIES[lang][key]).includes(p));
+        expect(missing, `${lang}.js["${key}"] pierde params de es.js`).toEqual([]);
+      }
+    });
+
+    it(`${lang}: ningún valor vacío ni no-string`, () => {
+      for (const key of esKeys) {
+        const value = DICTIONARIES[lang][key];
+        expect(typeof value, `${lang}.js["${key}"] no es string`).toBe('string');
+        expect(value.trim().length, `${lang}.js["${key}"] está vacío`).toBeGreaterThan(0);
+      }
+    });
+  }
+
+  // Regla §1.15: los idiomas nuevos entran con traducción REAL, no con el español copiado. Se
+  // mide como proporción para tolerar los pocos calcos legítimos (nombres propios de NPC,
+  // "Chispa", siglas). AJUSTE: umbral 0.5 — el peor caso real es el portugués (lengua hermana),
+  // que igual queda muy por debajo; un diccionario copiado del español daría ~1.0.
+  const MAX_IDENTICAL_TO_ES_RATIO = 0.5;
+  for (const lang of SUPPORTED_LANGUAGES.filter((l) => l !== 'es')) {
+    it(`${lang}: es una traducción real, no una copia del español`, () => {
+      const identical = esKeys.filter((key) => DICTIONARIES[lang][key] === es[key]).length;
+      expect(identical / esKeys.length).toBeLessThan(MAX_IDENTICAL_TO_ES_RATIO);
+    });
+  }
 });
 
-describe('paridad data-en.js ↔ data real (ambas direcciones)', () => {
+describe('paridad de overlays de data ↔ data real (ambas direcciones, todos los idiomas)', () => {
   const idsOf = (arr) => arr.map((x) => x.id).sort();
   const keysOf = (obj) => Object.keys(obj).sort();
 
-  it('containers: mismos ids', () => {
-    expect(keysOf(dataEn.containers)).toEqual(idsOf(containersData));
+  /** Idiomas con overlay de data: todos menos el español, que ES la data real (fuente de verdad). */
+  const overlayLangs = SUPPORTED_LANGUAGES.filter((lang) => lang !== 'es');
+
+  /**
+   * Colecciones planas `id → string` y colecciones con `{name, desc}` (o `{name, rol}`),
+   * derivadas de la data real. Agregar una colección nueva acá la cubre en TODOS los idiomas.
+   */
+  const flatCollections = [
+    ['containers', idsOf(containersData)],
+    ['rarities', idsOf(itemsData.rarities)],
+    ['achievements', idsOf(achievementsData)],
+    ['upgrades', idsOf(upgradesData)],
+    ['legendaries', idsOf(legendariesData.items)],
+  ];
+  const richCollections = [
+    ['automations', idsOf(automationsData), ['name', 'desc']],
+    ['prestigeTree', idsOf(prestigeTreeData), ['name', 'desc']],
+    ['npcs', idsOf(npcsData), ['name', 'rol']],
+    ['specializations', idsOf(specializationsData), ['name', 'desc']],
+    ['challenges', idsOf(challengesData), ['name', 'desc']],
+    ['deedsTree', idsOf(deedsTreeData), ['name', 'desc']],
+  ];
+
+  it('hay un overlay de data por cada idioma con overlay, y ninguno de sobra', () => {
+    expect(keysOf(DATA_DICTIONARIES)).toEqual([...overlayLangs].sort());
   });
 
-  it('items: mismos contenedores y mismos ids de ítem por pool', () => {
-    expect(keysOf(dataEn.items)).toEqual(keysOf(itemsData.containers));
-    for (const [containerId, pool] of Object.entries(itemsData.containers)) {
-      expect(keysOf(dataEn.items[containerId]), `pool de ${containerId}`).toEqual(idsOf(pool));
+  for (const lang of overlayLangs) {
+    for (const [collection, expectedIds] of flatCollections) {
+      it(`${lang}/${collection}: mismos ids y todo valor string no vacío`, () => {
+        const map = DATA_DICTIONARIES[lang][collection];
+        expect(keysOf(map)).toEqual(expectedIds);
+        for (const [id, value] of Object.entries(map)) {
+          expect(typeof value, `${lang}.${collection}.${id}`).toBe('string');
+          expect(value.trim().length, `${lang}.${collection}.${id} vacío`).toBeGreaterThan(0);
+        }
+      });
     }
-  });
 
-  it('rarities: mismos ids', () => {
-    expect(keysOf(dataEn.rarities)).toEqual(idsOf(itemsData.rarities));
-  });
+    it(`${lang}/items: mismos contenedores y mismos ids de ítem por pool`, () => {
+      const map = DATA_DICTIONARIES[lang].items;
+      expect(keysOf(map)).toEqual(keysOf(itemsData.containers));
+      for (const [containerId, pool] of Object.entries(itemsData.containers)) {
+        expect(keysOf(map[containerId]), `${lang}: pool de ${containerId}`).toEqual(idsOf(pool));
+        for (const [id, value] of Object.entries(map[containerId])) {
+          expect(typeof value, `${lang}.items.${containerId}.${id}`).toBe('string');
+          expect(value.trim().length, `${lang}.items.${containerId}.${id} vacío`).toBeGreaterThan(0);
+        }
+      }
+    });
 
-  it('achievements: mismos ids', () => {
-    expect(keysOf(dataEn.achievements)).toEqual(idsOf(achievementsData));
-  });
-
-  it('automations: mismos ids, cada entrada con name y desc string', () => {
-    expect(keysOf(dataEn.automations)).toEqual(idsOf(automationsData));
-    for (const [id, entry] of Object.entries(dataEn.automations)) {
-      expect(typeof entry.name, `automations.${id}.name`).toBe('string');
-      expect(typeof entry.desc, `automations.${id}.desc`).toBe('string');
+    for (const [collection, expectedIds, fields] of richCollections) {
+      it(`${lang}/${collection}: mismos ids, cada entrada con ${fields.join(' y ')} string`, () => {
+        const map = DATA_DICTIONARIES[lang][collection];
+        expect(keysOf(map)).toEqual(expectedIds);
+        for (const [id, entry] of Object.entries(map)) {
+          for (const field of fields) {
+            expect(typeof entry[field], `${lang}.${collection}.${id}.${field}`).toBe('string');
+            expect(
+              entry[field].trim().length,
+              `${lang}.${collection}.${id}.${field} vacío`
+            ).toBeGreaterThan(0);
+          }
+        }
+      });
     }
-  });
-
-  it('prestigeTree: mismos ids, cada entrada con name y desc string', () => {
-    expect(keysOf(dataEn.prestigeTree)).toEqual(idsOf(prestigeTreeData));
-    for (const [id, entry] of Object.entries(dataEn.prestigeTree)) {
-      expect(typeof entry.name, `prestigeTree.${id}.name`).toBe('string');
-      expect(typeof entry.desc, `prestigeTree.${id}.desc`).toBe('string');
-    }
-  });
-
-  it('upgrades: mismos ids', () => {
-    expect(keysOf(dataEn.upgrades)).toEqual(idsOf(upgradesData));
-  });
-
-  it('legendaries: mismos ids (ronda 22)', () => {
-    expect(keysOf(dataEn.legendaries)).toEqual(idsOf(legendariesData.items));
-  });
-
-  it('npcs: mismos ids, cada entrada con name y rol string (ronda 23.C)', () => {
-    expect(keysOf(dataEn.npcs)).toEqual(idsOf(npcsData));
-    for (const [id, entry] of Object.entries(dataEn.npcs)) {
-      expect(typeof entry.name, `npcs.${id}.name`).toBe('string');
-      expect(typeof entry.rol, `npcs.${id}.rol`).toBe('string');
-    }
-  });
+  }
 });
 
 describe('dataI18n — overlay in-place con fallback y restauración', () => {
@@ -171,6 +262,26 @@ describe('dataI18n — overlay in-place con fallback y restauración', () => {
       { id: 'fantasmaXYZ', name: 'NPC Fantasma', rol: 'Rol fantasma.' },
     ],
   });
+
+  // Ronda 33: el ida y vuelta se prueba para TODOS los idiomas con overlay, no solo inglés.
+  for (const lang of SUPPORTED_LANGUAGES.filter((l) => l !== 'es')) {
+    it(`aplica '${lang}' por id y vuelve al baseline español sin pérdida`, () => {
+      const loaded = makeLoaded();
+      const snapshot = JSON.parse(JSON.stringify(loaded));
+      initDataLocalization(loaded);
+      applyDataLanguage(loaded, lang);
+      const overlay = DATA_DICTIONARIES[lang];
+      expect(loaded.containers[0].name).toBe(overlay.containers.tachoVereda);
+      expect(loaded.achievements[0].name).toBe(overlay.achievements.a1);
+      expect(loaded.automations[0].desc).toBe(overlay.automations.guantes.desc);
+      expect(loaded.npcs[0].rol).toBe(overlay.npcs.rita.rol);
+      // Los ids fantasma siempre caen al baseline español: nunca `undefined` en pantalla.
+      expect(loaded.containers[1].name).toBe('Contenedor Fantasma');
+      expect(loaded.npcs[1].rol).toBe('Rol fantasma.');
+      applyDataLanguage(loaded, 'es');
+      expect(loaded).toEqual(snapshot);
+    });
+  }
 
   it("aplica 'en' por id, con fallback al baseline para ids que no están en data-en.js", () => {
     const loaded = makeLoaded();

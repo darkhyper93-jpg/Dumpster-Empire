@@ -15,8 +15,13 @@ import {
 import { MISSION_TYPES, MISSION_DIFFICULTIES } from './systems/missions.js';
 import { isProceduralContainerId } from './procedural.js';
 
-/** Idiomas soportados por el módulo i18n (apps/game/src/i18n). Fuente de verdad del allow-list. */
-export const SUPPORTED_LANGUAGES = ['es', 'en'];
+/**
+ * Idiomas soportados por el módulo i18n (apps/game/src/i18n). Fuente de verdad del allow-list:
+ * de acá derivan la validación del save, el selector de Ajustes, `resolveInitialLanguage` y los
+ * tests de paridad de diccionarios (ronda 33 sumó pt/fr/de al par es/en de la ronda 16).
+ * Agregar un idioma acá SIN su diccionario de UI y su overlay de data rompe los tests a propósito.
+ */
+export const SUPPORTED_LANGUAGES = ['es', 'en', 'pt', 'fr', 'de'];
 
 /** Mapas planos `id -> number` (freshState() los arranca en `{}` o con valores numéricos). */
 const NUMERIC_MAP_FIELDS = [

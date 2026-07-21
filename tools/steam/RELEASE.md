@@ -117,10 +117,15 @@ ejecutable (`process.resourcesPath`).
 ## 6. Logros: registrarlos en el panel (U4)
 
 En *Steamworks → Stats & Achievements → Achievements*, creá **un logro por fila** de la
-tabla. El **API Name debe ser exactamente el id** (`a1`…`a35`): es lo que el juego manda por
+tabla. El **API Name debe ser exactamente el id** (`a1`…`a62`): es lo que el juego manda por
 `client.achievement.activate(id)` — un API Name distinto = logro que nunca se desbloquea.
 El nombre/descripción visibles en Steam los escribís vos (la tabla da la condición y la
-recompensa in-game como referencia; acordate de cargar también los textos en inglés).
+recompensa in-game como referencia; acordate de cargar también los textos en los otros cuatro
+idiomas soportados, ver §11).
+
+> **`a39` NO existe y no se registra**: es un hueco PERMANENTE (era el logro de espionaje, que
+> se removió del juego en la ronda 21). La tabla va de `a1` a `a62` salteándolo — son 61 logros,
+> no 62. No reutilices ese id nunca.
 
 Para regenerar la tabla cuando cambie `achievements.json` (desde la raíz del repo):
 
@@ -128,7 +133,7 @@ Para regenerar la tabla cuando cambie `achievements.json` (desde la raíz del re
 node tools/steam/achievements-table.mjs
 ```
 
-Total: 35 logros (API Name = id del engine, en orden de data)
+Total: 61 logros (API Name = id del engine, en orden de data)
 
 | API Name | Nombre | Condición | Recompensa |
 |---|---|---|---|
@@ -167,6 +172,32 @@ Total: 35 logros (API Name = id del engine, en orden de data)
 | `a33` | Ejército de Robots | Que el robot procese 2.000 contenedores | $10.000.000 |
 | `a34` | Ojo Biónico | Que el robot descarte 50 contenedores con trampa | 5 Llaves de Ciudad |
 | `a35` | Basura Primordial | Poseer 1 × Vertedero del Big Bang | 10 Llaves de Ciudad |
+| `a36` | Racha de Diez | Llegar a una racha de 10 escarbados sin trampa | $5.000 |
+| `a37` | Racha Perfecta | Llegar a una racha de 25 escarbados sin trampa | $50.000 |
+| `a38` | Racha Legendaria | Llegar a una racha de 50 escarbados sin trampa | 3 Llaves de Ciudad |
+| `a40` | Nueve Vidas | Caer en 10 trampas graves | 4 Llaves de Ciudad |
+| `a41` | Arsenal Completo | Comprar todas las herramientas de escarbado | $2.000.000 |
+| `a42` | Primer Legendario | Encontrar 1 objeto legendario | $500.000 |
+| `a43` | Cuatro Leyendas | Encontrar 4 objetos legendarios | 5 Llaves de Ciudad |
+| `a44` | Vitrina Completa | Encontrar 8 objetos legendarios | 15 Llaves de Ciudad |
+| `a45` | Set Completo | Completar 1 set de colección | $2.500 |
+| `a46` | Primer Objeto Guardado | Guardar 1 objeto en el Puesto de Chatarra | $3.000 |
+| `a47` | Comerciante de Confianza | Cumplir 25 pedidos de Salomón | 5 Llaves de Ciudad |
+| `a48` | Puesto de Primera | Subir el Puesto de Chatarra a nivel 5 | 6 Llaves de Ciudad |
+| `a49` | Cumplidor | Completar 10 misiónes diarias | $5.000 |
+| `a50` | Chispa Está Orgulloso | Completar 50 misiónes diarias | 4 Llaves de Ciudad |
+| `a51` | En el Momento Justo | Aprovechar 1 evento de contenedor (dorado o en llamas) | $2.000 |
+| `a52` | Primer Desafío | Completar 1 desafío de prestigio | $5.000 |
+| `a53` | Maestro de Desafíos | Completar 4 desafíos de prestigio | 8 Llaves de Ciudad |
+| `a54` | Apuesta Infinita | Llevar a nivel 10 alguno de: Codicia Eterna, Pala Eterna, Imán de Suerte | 6 Llaves de Ciudad |
+| `a55` | Especialista | Usar 5 especializaciones distintas al prestigiar | $10.000 |
+| `a56` | Primera Mudanza | Hacer 1 Mudanza de Galaxia | 10 Llaves de Ciudad |
+| `a57` | Nómade Galáctico | Hacer 3 Mudanzas de Galaxia | 20 Llaves de Ciudad |
+| `a58` | Eco de Quinta | Poseer 1 × Vertedero del Big Bang (Eco 5) | $5.000.000 |
+| `a59` | Patrón de Flota | Tener una flota de 3 robots | $10.000.000 |
+| `a60` | Criterio Automático | Que los filtros de la flota descarten 10.000 contenedores | 20 Llaves de Ciudad |
+| `a61` | Cinco Sets | Completar 5 sets de colección | $250.000 |
+| `a62` | Coleccionista Serial | Completar 10 sets de colección | 6 Llaves de Ciudad |
 
 ---
 
@@ -223,6 +254,27 @@ branch beta):
 ## 10. Página de tienda y review (U7)
 
 Fuera del alcance del repo, pero para no olvidar: cápsulas (header 920×430, cápsula chica
-462×174, etc.), 5+ screenshots 1920×1080, tráiler, descripción ES+EN, precio, y el proceso
-*Review* de Valve (~2-5 días hábiles). El juego debe estar marcado como *Playable on Steam
-Deck* recién después de pasar el checklist de la sección 9.
+462×174, etc.), 5+ screenshots 1920×1080, tráiler, descripción en los 5 idiomas soportados
+(ver §11), precio, y el proceso *Review* de Valve (~2-5 días hábiles). El juego debe estar
+marcado como *Playable on Steam Deck* recién después de pasar el checklist de la sección 9.
+
+---
+
+## 11. Idiomas soportados (para la ficha de la tienda)
+
+Desde la ronda 33 el juego shippea con **cinco idiomas completos** (UI + toda la data visible:
+contenedores, ítems, logros, máquinas, nodos, NPCs, misiones). En *Steamworks → Store Presence
+→ Supported Languages* marcá **Interface** y **Subtitles** (el juego no tiene voces) para:
+
+| Idioma | Código de Steam | Fuente en el repo |
+|---|---|---|
+| Español (LatAm) | `spanish` / `latam` | `apps/game/src/data/*.json` (fuente de verdad) + `i18n/es.js` |
+| Inglés | `english` | `i18n/en.js` + `i18n/data-en.js` |
+| Portugués (Brasil) | `brazilian` | `i18n/pt.js` + `i18n/data-pt.js` |
+| Francés | `french` | `i18n/fr.js` + `i18n/data-fr.js` |
+| Alemán | `german` | `i18n/de.js` + `i18n/data-de.js` |
+
+El allow-list real es `SUPPORTED_LANGUAGES` (`packages/engine/src/save.js`): si esa constante
+cambia, esta tabla y la ficha de la tienda cambian con ella. El juego detecta el idioma del
+sistema en la primera partida (por subtag primario: `pt-BR` → portugués) y el jugador lo puede
+cambiar en cualquier momento desde *Ajustes → Idioma*.
