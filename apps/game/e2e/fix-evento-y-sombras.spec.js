@@ -76,7 +76,9 @@ test.describe('fix: evento de contenedor y extrusión de las tarjetas', () => {
     const medir = () =>
       page.evaluate(() => {
         const el = document.querySelector('.dig-picker-card--golden');
-        const primera = document.querySelector('.dig-picker-card');
+        // Una tarjeta SIN evento: con `.dig-picker-card` pelado el `querySelector` devolvía la
+        // dorada misma (es la primera del picker) y la comparación de abajo era un verde vacío.
+        const primera = document.querySelector('.dig-picker-card:not(.dig-picker-card--golden)');
         return {
           alto: Math.round(el.getBoundingClientRect().height),
           altoHermana: Math.round(primera.getBoundingClientRect().height),
@@ -124,18 +126,25 @@ test.describe('fix: evento de contenedor y extrusión de las tarjetas', () => {
     const seeded = baseState();
     // Con auto-escarbado comprado aparecen también `.fleet-section` y las tarjetas de robot.
     seeded.automationOwned = { robotBasico: true };
+    // Con el Puesto comprado esa pestaña muestra tarjetas de verdad (bloqueado es un panel sin
+    // ninguna) — así el barrido cubre las 6 pestañas con contenido real.
+    seeded.stallLevel = 1;
+    seeded.marketFluctuation = 1;
+    seeded.marketFluctuationAt = Date.now();
     await seed(page, seeded);
     await entrarAlJuego(page);
 
     for (const tab of ['automatizacion', 'tienda', 'logros', 'prestigio', 'puesto', 'index']) {
       await page.locator(`[data-tab="${tab}"]`).click();
       await page.waitForTimeout(300);
-      const pisadas = await page.evaluate((extrusion) => {
+      const { malas: pisadas, revisadas } = await page.evaluate((extrusion) => {
         const host = document.querySelector('#tab-content');
         const conExtrusion = (el) => getComputedStyle(el).boxShadow.includes(`${extrusion}px`);
         const malas = [];
+        let revisadas = 0;
         for (const el of host.querySelectorAll('*')) {
           if (!conExtrusion(el)) continue;
+          revisadas += 1;
           const siguiente = el.nextElementSibling;
           if (!siguiente) continue;
           const a = el.getBoundingClientRect();
@@ -146,8 +155,11 @@ test.describe('fix: evento de contenedor y extrusión de las tarjetas', () => {
           const hueco = b.top - a.bottom;
           if (hueco < extrusion) malas.push({ el: el.className, hueco: Math.round(hueco * 10) / 10 });
         }
-        return malas;
+        return { malas, revisadas };
       }, EXTRUSION);
+      // Si la vista no llegó a renderizar, el barrido no encuentra nada y el `toEqual([])` sería
+      // un verde vacío: cada pestaña tiene que haber revisado al menos una tarjeta con extrusión.
+      expect(revisadas, `${tab}: no se revisó ninguna tarjeta con extrusión`).toBeGreaterThan(0);
       expect(pisadas, `${tab}: ${JSON.stringify(pisadas)}`).toEqual([]);
     }
   });

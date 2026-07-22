@@ -65,10 +65,26 @@ test.describe('fix: las listas scrolleables conservan su posición y usan la bar
     expect(desborde, 'la lista de herramientas no desborda: el test no probaría nada').toBeGreaterThan(0);
 
     // Gesto real de rueda sobre la lista (no `el.scrollTop = ...`): es lo que hace el jugador.
+    // Chromium ANIMA el scroll de rueda, así que leer `scrollTop` justo después del gesto puede
+    // dar 0 — lo destapó CI en Linux, donde la animación tarda más que en la máquina local. Se
+    // espera a que la posición se ASIENTE (dos lecturas iguales), no a que sea > 0: si se tomara
+    // el primer valor no nulo, la animación seguiría corriendo y el `toBe` de abajo compararía
+    // contra un valor intermedio (napkin: todo valor que se asienta va con `expect.poll`).
     await lista.hover();
     await page.mouse.wheel(0, 600);
+    let anterior = -1;
+    await expect
+      .poll(
+        async () => {
+          const actual = await lista.evaluate((el) => el.scrollTop);
+          const estable = actual > 0 && actual === anterior;
+          anterior = actual;
+          return estable;
+        },
+        { timeout: 10000, message: 'la rueda nunca scrolleó la lista' }
+      )
+      .toBe(true);
     const trasElGesto = await lista.evaluate((el) => el.scrollTop);
-    expect(trasElGesto).toBeGreaterThan(0);
 
     // Con el bug, el render del tick siguiente (1s) recreaba la lista y la devolvía a 0.
     await page.waitForTimeout(1500);
