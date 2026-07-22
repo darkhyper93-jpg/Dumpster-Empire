@@ -67,12 +67,19 @@ export const CollectionView = {
         ? `<p class="index-set-badge">${t('collection.setCompleteBadge', { pct: Math.round(setBonusPercent * 100) })}</p>`
         : '';
 
+    // FIX (2026-07-22, auditoría del fix de scroll de herramientas): la tira de pestañas mide
+    // ~4900px con todos los contenedores y nace DENTRO de este `innerHTML`, así que cada render la
+    // destruía y la recreaba con `scrollLeft = 0` — hasta tocar una pestaña de la propia tira te
+    // devolvía al principio y dejaba la elegida fuera de pantalla. Se conserva la posición a
+    // través de la reescritura (misma solución que ToolsSection, ver su comentario).
+    const tabsScrollLeft = container.querySelector('.index-container-tabs')?.scrollLeft ?? 0;
     container.innerHTML =
       `<p class="index-completion-global">${t('collection.completionGlobal', { pct: Math.round(globalPct * 100) })}</p>` +
       `<div class="index-container-tabs">${tabs}</div>` +
       setBadge +
       `<div class="index-grid" id="index-grid"></div>` +
       renderShowcase(state, data, itemsData);
+    if (tabsScrollLeft > 0) container.querySelector('.index-container-tabs').scrollLeft = tabsScrollLeft;
 
     const grid = container.querySelector('#index-grid');
     const pool = itemsData.containers[selected.id] || [];

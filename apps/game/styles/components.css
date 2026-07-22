@@ -1463,29 +1463,52 @@ textarea {
 
 /* Scrollbar "The Workshop": angosta, con thumb sobre track transparente, coherente con el
    panel. Electron es Chromium: ::-webkit-scrollbar es el camino principal; scrollbar-width/
-   scrollbar-color quedan como fallback estándar (Firefox). */
+   scrollbar-color quedan como fallback estándar (Firefox).
+
+   FIX (2026-07-22, reporte del usuario): la lista de herramientas de escarbado
+   (`.settings-tools-list`) y las dos tiras horizontales (pestañas del INDEX, árboles de
+   prestigio/Escrituras en desktop) eran los únicos scrollers que quedaban afuera y mostraban la
+   barra gris del sistema encima del panel. Se suman al mismo grupo: una sola barra en todo el
+   juego. `height` además de `width` porque tres de estos scrollean en horizontal. */
 #tab-content,
 #quick-upgrades,
-#tabbar {
+#tabbar,
+.settings-tools-list,
+.index-container-tabs,
+.prestige-tree,
+.deeds-tree {
   scrollbar-width: thin;
   scrollbar-color: var(--bg-surface-highest) transparent;
 }
 
 #tab-content::-webkit-scrollbar,
 #quick-upgrades::-webkit-scrollbar,
-#tabbar::-webkit-scrollbar {
+#tabbar::-webkit-scrollbar,
+.settings-tools-list::-webkit-scrollbar,
+.index-container-tabs::-webkit-scrollbar,
+.prestige-tree::-webkit-scrollbar,
+.deeds-tree::-webkit-scrollbar {
   width: 10px;
+  height: 10px;
 }
 
 #tab-content::-webkit-scrollbar-track,
 #quick-upgrades::-webkit-scrollbar-track,
-#tabbar::-webkit-scrollbar-track {
+#tabbar::-webkit-scrollbar-track,
+.settings-tools-list::-webkit-scrollbar-track,
+.index-container-tabs::-webkit-scrollbar-track,
+.prestige-tree::-webkit-scrollbar-track,
+.deeds-tree::-webkit-scrollbar-track {
   background: transparent;
 }
 
 #tab-content::-webkit-scrollbar-thumb,
 #quick-upgrades::-webkit-scrollbar-thumb,
-#tabbar::-webkit-scrollbar-thumb {
+#tabbar::-webkit-scrollbar-thumb,
+.settings-tools-list::-webkit-scrollbar-thumb,
+.index-container-tabs::-webkit-scrollbar-thumb,
+.prestige-tree::-webkit-scrollbar-thumb,
+.deeds-tree::-webkit-scrollbar-thumb {
   background: var(--bg-surface-highest);
   border-radius: var(--radius-md);
 }
