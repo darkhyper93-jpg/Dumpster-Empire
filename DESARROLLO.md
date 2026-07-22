@@ -721,6 +721,13 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   `excavator-singularity` (la última pieza de la escalera, no la cuarta). Recalibrar la curva de
   recompensas de logros contra el lategame es una ronda de balance propia, fuera del alcance de
   ésta: queda anotado como pendiente para el usuario.
+  **RESUELTO (auditoría de release 3, 2026-07-22, aprobado por el usuario)**: el guardrail de
+  §11.6 pasa a dos clases — la temprana conserva los techos absolutos ($10M por logro / $50M la
+  suma) y la **lategame** (condición con puerta de dinero implícita ≥ $10B derivable de la data)
+  paga ≈10% de su puerta, con banda dura 1%-12% por test. `a41` $2M → $1,1T, `a58` $5M → $7,5e22
+  (~10% del costo de `bigbangPlus5`), `a59` $10M → $1B (10% de la puerta de la Mudanza). La suma
+  de la clase temprana baja a $27,46M — el margen del juego para logros tempranos futuros sube
+  de ~$5,5M a ~$22,5M. Detalle completo en PLAN.md §11.6.
 - **Ronda "features" (2026-07-22) — la venta del Puesto gana un lote sin ganar una economía**:
   `sellAllInventory` NO tiene fórmula propia; itera `sellInventoryItemAt` desde el índice 0
   exactamente como si el jugador tocara "Vender" N veces, así los pedidos de Salomón (§4.28) se

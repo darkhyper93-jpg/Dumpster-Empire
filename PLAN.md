@@ -1362,6 +1362,26 @@ Trabajá de forma continua hasta entregar el proyecto completo y auditado contra
   temprana. Baja a $2.500 (dinero ≈ 10% del hito, principio de arriba). Los $250.000 se mudan a
   `a61` ("Cinco Sets", `setsCompletedAtLeast: 5`) y se agrega `a62` ("Coleccionista Serial",
   oculto, `setsCompletedAtLeast: 10` → 6 Llaves).
+- **Ronda de balance de logros lategame (2026-07-22):** los guardrails de §11.6 comparaban TODA
+  recompensa de dinero contra el umbral del PRIMER prestigio ($1B), lo que dejaba a los logros
+  del lategame con recompensas simbólicas (`a41` "Arsenal Completo" pagaba $2M por un hito de
+  ~$11 billones de gasto en herramientas). La invariante real del guardrail es que **una
+  recompensa no debe financiar la puerta de progresión que la precede**; se formaliza en dos
+  clases:
+  - **Clase temprana** (la condición NO implica haber ganado ≥ $10B — 10× el umbral de
+    Prestigio): siguen los techos absolutos — cada recompensa ≤ 1% del umbral de Prestigio
+    ($10M) y la suma de la clase ≤ 5% ($50M).
+  - **Clase lategame** (la condición implica, derivable de la data, una **puerta de dinero
+    mínima** G ≥ $10B — p. ej. `allToolsOwned` implica haber gastado la suma de `tools.json`;
+    `containerOwnedAtLeast` implica el costo del contenedor; una flota > 1 robot implica ≥ 1
+    Mudanza = 10 prestigios = $10B ganados): recompensa ≈ 10% de G (banda dura en el test:
+    1%–12%). Al cobrarla, el jugador ya ganó ≥ 10× ese monto — no distorsiona nada.
+  - Montos resultantes: `a41` $2M → **$1,1T** (~10% de la suma de tools.json, $11,05T);
+    `a58` "Eco de Quinta" $5M → **$75.000Sx = 7,5e22** (~10% del costo de `bigbangPlus5`,
+    `1e18 × 15^5`); `a59` "Patrón de Flota" $10M → **$1B** (10% de la puerta de la Mudanza).
+    Los logros que ya pagaban Llaves no cambian (las Llaves no se inflan con el lategame).
+    Un save que ya los tenía desbloqueados no cobra retroactivo (el engine paga una sola vez,
+    al desbloquear).
 
 ### 11.7 Árbol de prestigio real y simétrico (reemplaza el layout plano actual, extiende §2.8)
 
