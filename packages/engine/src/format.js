@@ -28,6 +28,16 @@ const SUFFIXES = [
   ['K', 1e3],
 ];
 
+// AJUSTE (auditoría de release): techo de PRESENTACIÓN. `addMoney`/`addKeys` clampean a
+// `Number.MAX_VALUE` (~1.8e308) para no desbordar a Infinity —que `JSON.stringify` serializa como
+// `null` y brickearía el save—, pero formatear ESE valor daba `(1.8e308 / 1e48).toFixed(2)`: un
+// string de ~261 dígitos seguido de "QiDc", ilegible y capaz de reventar el layout del topbar.
+// Por encima de 1000×QiDc (el último sufijo de la tabla) se muestra el tope con "+". El máximo
+// alcanzable JUGANDO es ~2.5e47 (tier procedural 25, ver procedural.js), así que ningún valor
+// legítimo llega acá: solo un save manipulado o el propio clamp anti-Infinity.
+const DISPLAY_CEILING = 1e51;
+const DISPLAY_CEILING_LABEL = '999.99QiDc+';
+
 /**
  * Formatea un número grande con sufijo K/M/B/T/Qa/Qi/Sx/Sp/Oc/No/Dc/UDc/DDc/TDc/QaDc/QiDc.
  * @param {number} n
@@ -36,6 +46,7 @@ const SUFFIXES = [
  */
 export function formatNumber(n, decimals = 2) {
   const value = Math.floor(n);
+  if (value >= DISPLAY_CEILING) return DISPLAY_CEILING_LABEL;
   if (value < 1000) return String(value);
   for (const [suffix, threshold] of SUFFIXES) {
     if (value >= threshold) return (value / threshold).toFixed(decimals) + suffix;

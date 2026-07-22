@@ -104,8 +104,12 @@ export const DigContainerPicker = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
-    if (!container.dataset.boundClick) {
-      container.dataset.boundClick = 'true';
+    // Marca de bind con nombre de VISTA (napkin #3): una marca genérica `boundClick` sobre un
+    // host compartido le roba el listener a la próxima vista que use la misma. Acá el host
+    // (`#dig-empty`) es propio, pero el nombre genérico es exactamente el que ya causó el bug de
+    // los tabs del Índice — se cierra la puerta antes de que otra vista reuse el contenedor.
+    if (!container.dataset.boundClickPicker) {
+      container.dataset.boundClickPicker = 'true';
       container.addEventListener('click', (evt) => {
         const btn = evt.target.closest('[data-start-dig]');
         if (!btn || btn.disabled) return;

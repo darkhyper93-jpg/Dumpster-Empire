@@ -193,6 +193,12 @@ export default {
   'settings.resetButton': 'Zerar o jogo',
   // Round 19: haptic vibration toggle, same pattern as settings.sound.
   'settings.vibration': 'Vibração: {state}',
+  // AJUSTE (auditoria de release): aviso de guardado ilegible. Antes, un save que no pasaba la
+  // validacion se reemplazaba por una partida nueva en SILENCIO (CLAUDE.md exige un mensaje
+  // claro); ahora se archiva una copia intacta y el jugador se entera de las dos cosas.
+  'save.rejectedToast': 'Não foi possível ler o teu jogo salvo. Uma cópia intacta foi arquivada e um novo jogo começou.',
+  'save.rejectedTitle': 'Jogo salvo ilegível',
+  'save.rejectedDetail': 'O save anterior não passou na validação e um novo jogo foi iniciado. A cópia original ficou arquivada intacta neste dispositivo: não foi sobrescrita.',
 
   // Round 20 (PLAN.md §4.23): dig tool selector, same pattern as AutomationView.
   'tools.title': 'Ferramentas de escavação',

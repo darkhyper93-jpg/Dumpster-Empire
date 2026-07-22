@@ -981,7 +981,15 @@ export function getTrapPenalty(state, container, data) {
 
 function averageItemValueForContainer(state, container, categoria, itemsData, data, luck, depthValueMult) {
   const rarity = itemsData.rarities.find((r) => r.id === categoria);
-  const pool = itemsData.containers[container.id].filter((item) => item.categoria === categoria);
+  // AJUSTE (auditoría de release): único punto del engine que indexaba el pool SIN el
+  // `poolContainerId || id` + `|| []` que usan todos los demás (systems/containers.js,
+  // systems/offline.js, getStallThresholdPresets). Un tier procedural —que no tiene entrada
+  // propia en items.json— daba `undefined.filter` (TypeError); un pool vacío daba `0/0 = NaN`
+  // propagado a toda la recomendación. Se alinea con el resto y se corta en seco.
+  const pool = (itemsData.containers[container.poolContainerId || container.id] || []).filter(
+    (item) => item.categoria === categoria
+  );
+  if (!pool.length) return 0;
   const avgBase = pool.reduce((sum, item) => sum + item.valorBase, 0) / pool.length;
   return (
     itemSaleValue({
@@ -1016,6 +1024,35 @@ function expectedNetValueAtLuck(state, container, itemsData, data, luck) {
 }
 
 /**
+ * Cache de `getRecommendedLuck`, por `itemsData`.
+ *
+ * AJUSTE (auditoría de release): la recomendación es una meta FIJA por contenedor —desde la
+ * ronda 7 se evalúa contra `freshState()`, así que `state` se ignora por diseño y `data` solo se
+ * consulta a nivel 0 de todo nodo (aporte neutro): el resultado depende ÚNICAMENTE de
+ * `container` + `itemsData`. Sin cache, `ShopView` la recalculaba para los ~20 contenedores en
+ * CADA render, y el tick de automatización re-renderiza la pestaña una vez por segundo: 73 ms
+ * medidos por render, una long task de ~60 ms por segundo en Chromium (peor en Steam Deck).
+ *
+ * `WeakMap` por `itemsData` y no un `Map` global: cada suite de tests importa su propio objeto de
+ * data, así que un balance distinto nunca ve una entrada ajena (y la data se libera con el objeto).
+ * @type {WeakMap<Object, Map<string, number>>}
+ */
+const recommendedLuckCache = new WeakMap();
+
+/**
+ * @param {Object} itemsData
+ * @returns {Map<string, number>}
+ */
+function recommendedLuckCacheFor(itemsData) {
+  let cache = recommendedLuckCache.get(itemsData);
+  if (!cache) {
+    cache = new Map();
+    recommendedLuckCache.set(itemsData, cache);
+  }
+  return cache;
+}
+
+/**
  * Nivel de Suerte recomendado: el mínimo entero a partir del cual comprar y escarbar este
  * contenedor tiene valor esperado positivo (ganancia esperada >= costo + pérdida esperada de trampa).
  *
@@ -1030,15 +1067,23 @@ function expectedNetValueAtLuck(state, container, itemsData, data, luck) {
  * @returns {number}
  */
 export function getRecommendedLuck(state, container, itemsData, data) {
+  const cache = recommendedLuckCacheFor(itemsData);
+  const cached = cache.get(container.id);
+  if (cached !== undefined) return cached;
   // AJUSTE (ronda 15): tope de búsqueda 1500 (antes 800) — los 4 contenedores nuevos de
   // prestigio 6-9 (chatarreriaTitanes..vertederoBigBang) recomiendan hasta ~950, continuando
   // la misma progresión de ~15% por tier que ya venía de la ronda 10/11.
   const MAX_LUCK_SEARCH = 1500;
   const neutral = freshState();
+  let result = MAX_LUCK_SEARCH;
   for (let luck = 0; luck <= MAX_LUCK_SEARCH; luck++) {
-    if (expectedNetValueAtLuck(neutral, container, itemsData, data, luck) >= 0) return luck;
+    if (expectedNetValueAtLuck(neutral, container, itemsData, data, luck) >= 0) {
+      result = luck;
+      break;
+    }
   }
-  return MAX_LUCK_SEARCH;
+  cache.set(container.id, result);
+  return result;
 }
 
 /**

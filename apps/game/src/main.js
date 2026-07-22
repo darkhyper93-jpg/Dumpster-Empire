@@ -168,6 +168,12 @@ async function boot() {
   const enterGame = () => {
     titleScreen.hidden = true;
     gameShell.hidden = false;
+    // AJUSTE (auditoría de release): render explícito al entrar. Sin él, en una partida sin nada
+    // que automatizar el tick del store no notifica (early-return de tickAutomation) y no hay
+    // ningún render entre el boot y la primera acción del jugador — el aviso de "guardado
+    // ilegible", que espera a que el shell sea visible para no toastear detrás de la pantalla de
+    // inicio, no llegaba nunca. Es lo mismo que ya hacía la entrada por el engranaje (onSettings).
+    ui.render(store.getState());
   };
   TitleScreen.mount(titleScreen, {
     onPlay: enterGame,

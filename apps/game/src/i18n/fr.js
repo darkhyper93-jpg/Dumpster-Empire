@@ -192,6 +192,12 @@ export default {
   'settings.resetButton': 'Réinitialiser la partie',
   // Round 19: haptic vibration toggle, same pattern as settings.sound.
   'settings.vibration': 'Vibration : {state}',
+  // AJUSTE (auditoria de release): aviso de guardado ilegible. Antes, un save que no pasaba la
+  // validacion se reemplazaba por una partida nueva en SILENCIO (CLAUDE.md exige un mensaje
+  // claro); ahora se archiva una copia intacta y el jugador se entera de las dos cosas.
+  'save.rejectedToast': 'Impossible de lire ta partie sauvegardée. Une copie intacte a été archivée et une nouvelle partie a commencé.',
+  'save.rejectedTitle': 'Sauvegarde illisible',
+  'save.rejectedDetail': 'La sauvegarde précédente n\'a pas passé la validation et une nouvelle partie a démarré. La copie originale est archivée intacte sur cet appareil : elle n\'a pas été écrasée.',
 
   // Round 20 (PLAN.md §4.23): dig tool selector, same pattern as AutomationView.
   'tools.title': 'Outils de fouille',

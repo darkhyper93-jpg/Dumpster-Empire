@@ -34,10 +34,10 @@ import {
   doPrestige as engineDoPrestige,
   doGalaxyMove as engineDoGalaxyMove,
   buyDeedsNode as engineBuyDeedsNode,
-  proceduralContainer,
+  resolveContainerById,
+  ownedCategories as engineOwnedCategories,
   isProceduralTierUnlocked,
   nextProceduralTier,
-  proceduralTierN,
   checkAchievements,
   applyOfflineProgress,
   buyTool as engineBuyTool,
@@ -59,6 +59,14 @@ import {
 } from '@dumpster/engine';
 
 export const SAVE_KEY = 'dumpsterEmpireSave';
+// AJUSTE (auditoría de release): copia del ÚLTIMO guardado rechazado. Hasta acá, un save que no
+// pasaba la validación se reemplazaba por una partida nueva en silencio y el primer `persist()`
+// (autoguardado a los 15s) lo pisaba: la partida quedaba irrecuperable, sin un solo mensaje. Eso
+// viola CLAUDE.md ("rechazar con un mensaje claro y NUNCA corromper la partida en curso") y era
+// el amplificador que convertía cualquier bug de validación en pérdida total — como el de
+// `params.categoria` del prototipo que esta misma auditoría encontró. Archivar es barato: una
+// clave aparte que solo se escribe al rechazar, más el aviso que la UI muestra.
+export const SAVE_BACKUP_KEY = 'dumpsterEmpireSave.rejected';
 // AJUSTE: no calculamos offline por debajo de este piso para no mostrar un modal por
 // recargas de página instantáneas (F5) donde no pasó tiempo real relevante.
 const OFFLINE_MIN_SECONDS = 5;
@@ -99,21 +107,22 @@ export function createStore(ctx) {
   const containerIds = new Set(allContainers.map((c) => c.id));
 
   // Ronda 26.C (PLAN.md §4.37/§4.39): los tiers procedurales NUNCA están en `allContainers`
-  // (contrato §3.5.6) — se reconstruyen en runtime a partir de `vertederoBigBang` + `n`. Único
-  // punto del store que resuelve un id de contenedor a su objeto real, así startManualDig no
-  // duplica la lógica de detección.
-  const bigBangContainer = allContainers.find((c) => c.id === 'vertederoBigBang');
+  // (contrato §3.5.6) — se reconstruyen en runtime a partir de `vertederoBigBang` + `n`.
+  // AJUSTE (auditoría de release): la RESOLUCIÓN del id vive ahora en el engine
+  // (`resolveContainerById`), que era la misma lógica escrita en tres lugares de la UI; acá queda
+  // solo lo que el store agrega: si ese contenedor está desbloqueado para ESTE estado.
   /**
    * @param {string} containerId
    * @returns {{ container: Object, unlocked: boolean } | null} `null` si el id no existe (ni
    *   real ni procedural válido).
    */
   function resolveDigContainer(containerId) {
-    const real = allContainers.find((c) => c.id === containerId);
-    if (real) return { container: real, unlocked: isContainerUnlocked(state, real, allContainers) };
-    const n = proceduralTierN(containerId);
-    if (n === null || !bigBangContainer) return null;
-    return { container: proceduralContainer(n, bigBangContainer), unlocked: isProceduralTierUnlocked(state, n, data) };
+    const container = resolveContainerById(containerId, allContainers);
+    if (!container) return null;
+    const unlocked = container.isProcedural
+      ? isProceduralTierUnlocked(state, container.proceduralN, data)
+      : isContainerUnlocked(state, container, allContainers);
+    return { container, unlocked };
   }
 
   // Ronda 22 (PLAN.md §4.26): ids de legendarios que existen en la data actual — un save.js
@@ -146,6 +155,9 @@ export function createStore(ctx) {
     itemNameToId[containerId] = Object.fromEntries(pool.map((it) => [it.name, it.id]));
   }
 
+  // Declarado ANTES de `loadState()`: es `let` (TDZ), y loadState lo asigna al rechazar un save.
+  /** @type {string | null} motivo del rechazo del guardado al bootear; lo consume la UI una vez. */
+  let loadError = null;
   let state = loadState();
   sanitizeLegendariesFound();
   sanitizeSpecializationAndChallenge();
@@ -205,15 +217,10 @@ export function createStore(ctx) {
 
   // Ronda 23.C (PLAN.md §4.28): categorías de los contenedores que el jugador POSEE (nunca las
   // que existen en la data pero todavía no compró) — rotateStallOrders nunca pide lo inalcanzable.
-  function ownedCategories() {
-    const set = new Set();
-    for (const c of allContainers) {
-      if ((state.ownedContainers[c.id] || 0) >= 1) {
-        for (const categoria of c.categorias) set.add(categoria);
-      }
-    }
-    return [...set];
-  }
+  // AJUSTE (auditoría de release): era una copia literal del `ownedCategories` de
+  // systems/missions.js. Se consume el del engine: una sola implementación de la regla, y el
+  // store deja de tener lógica de negocio propia (frontera engine↔UI de CLAUDE.md).
+  const ownedCategories = () => engineOwnedCategories(state, allContainers);
 
   const listeners = new Set();
 
@@ -221,7 +228,18 @@ export function createStore(ctx) {
     const raw = ctx.initialSaveText !== undefined ? ctx.initialSaveText : localStorage.getItem(SAVE_KEY);
     if (!raw) return freshState();
     const result = deserializeState(raw, containerIds, itemNameToId, data.prestigeTree);
-    return result.ok ? result.state : freshState();
+    if (result.ok) return result.state;
+    // AJUSTE (auditoría de release): el save rechazado se ARCHIVA antes de que el primer persist()
+    // lo pise, y el motivo viaja a la UI (consumeLoadError) para que el jugador vea un aviso en
+    // vez de encontrarse una partida nueva sin explicación. No se intenta "reparar" nada: la
+    // partida en curso arranca limpia, que es el comportamiento seguro de siempre.
+    try {
+      localStorage.setItem(SAVE_BACKUP_KEY, raw);
+    } catch {
+      // Sin espacio para la copia: el aviso igual se muestra (es lo único accionable desde acá).
+    }
+    loadError = result.error;
+    return freshState();
   }
 
   // Estado del debounce de escritorio (ver DESKTOP_SAVE_DEBOUNCE_MS). `pendingDesktopText` guarda
@@ -834,6 +852,25 @@ export function createStore(ctx) {
     // Lo llaman el cierre (onBeforeQuit) y visibilitychange, para que Steam Cloud/archivo queden
     // frescos al salir aunque el timer del debounce no haya disparado todavía.
     flushDesktopSave,
+    /**
+     * AJUSTE (auditoría de release): motivo por el que el guardado se rechazó al bootear, una
+     * sola vez (mismo patrón consume-queue que el resto). `null` en el caso normal. La copia
+     * intacta del save rechazado queda en `SAVE_BACKUP_KEY`.
+     * @returns {string | null}
+     */
+    consumeLoadError() {
+      const error = loadError;
+      loadError = null;
+      return error;
+    },
+    /** ¿Hay una copia archivada de un guardado rechazado? (lo muestra Ajustes). */
+    hasRejectedSaveBackup() {
+      try {
+        return localStorage.getItem(SAVE_BACKUP_KEY) !== null;
+      } catch {
+        return false;
+      }
+    },
     consumeOfflineSummary() {
       const summary = offlineSummary;
       offlineSummary = null;

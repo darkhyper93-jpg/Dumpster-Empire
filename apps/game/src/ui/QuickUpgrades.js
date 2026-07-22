@@ -19,8 +19,9 @@ export const QuickUpgrades = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
-    if (!container.dataset.boundClick) {
-      container.dataset.boundClick = 'true';
+    // Marca de bind con nombre de vista (napkin #3), ver DigContainerPicker.
+    if (!container.dataset.boundClickQuick) {
+      container.dataset.boundClickQuick = 'true';
       container.addEventListener('click', (evt) => {
         const btn = evt.target.closest('[data-upgrade]');
         if (!btn || btn.disabled) return;

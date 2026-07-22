@@ -309,6 +309,28 @@ export class DigCanvas {
   }
 
   /**
+   * Paleta del canvas resuelta desde los tokens CSS (AJUSTE, auditoría de release: acá vivían
+   * cuatro hex sueltos, contra la regla de tokens centralizados de CLAUDE.md — la API 2D no
+   * entiende `var()`, así que hay que resolverlos a mano).
+   *
+   * Se resuelve UNA vez y se cachea en la instancia: `getComputedStyle` fuerza un recálculo de
+   * estilo, y estas rutinas pintan por objeto y por repintado completo (focus/visibilitychange).
+   * Los tokens son estáticos, así que no hay nada que invalidar.
+   * @returns {{ dirt: string, substrate: string, label: string, ink: string }}
+   */
+  palette() {
+    if (!this._palette) {
+      this._palette = {
+        dirt: this.resolveCssColor('--dig-dirt'),
+        substrate: this.resolveCssColor('--dig-substrate'),
+        label: this.resolveCssColor('--dig-label'),
+        ink: this.resolveCssColor('--dig-ink'),
+      };
+    }
+    return this._palette;
+  }
+
+  /**
    * Pinta la capa de abajo y deja armado el repintado por carga tardía de imágenes.
    * Es el ÚNICO lugar que registra listeners de carga (ver trackPendingImages).
    */
@@ -332,7 +354,7 @@ export class DigCanvas {
   paintBottomEntries() {
     const ctx = this.ctxBottom;
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    ctx.fillStyle = '#2c261a';
+    ctx.fillStyle = this.palette().dirt;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     const positions = getPositions(this.model);
@@ -349,7 +371,7 @@ export class DigCanvas {
    */
   imagesFor(entry) {
     return {
-      iconImg: getIconImage(entry.icon, { size: 64, color: '#161310' }),
+      iconImg: getIconImage(entry.icon, { size: 64, color: this.palette().ink }),
       artImg: hasObjectArt(entry.icon) ? getObjectImage(entry.icon, { size: ART_RASTER_SIZE }) : null,
     };
   }
@@ -407,7 +429,7 @@ export class DigCanvas {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '13px sans-serif';
-    ctx.fillStyle = '#f4ede1';
+    ctx.fillStyle = this.palette().label;
     ctx.fillText(entry.name, pos.x, pos.y + LABEL_OFFSET_Y, LABEL_MAX_WIDTH);
   }
 
@@ -428,6 +450,8 @@ export class DigCanvas {
     // Sombra de apoyo: el objeto está apoyado en la tierra, no flotando.
     ctx.save();
     ctx.globalAlpha = 0.3;
+    // Negro puro a 30% de alpha: es una primitiva de sombreado, no un color de la paleta —
+    // por eso no sale de un token (a diferencia de los cuatro de `palette()`).
     ctx.fillStyle = '#000000';
     ctx.beginPath();
     ctx.ellipse(pos.x, pos.y + half * 0.72, half * 0.92, half * 0.26, 0, 0, Math.PI * 2);
@@ -445,7 +469,7 @@ export class DigCanvas {
     // sustrato — fuera de la silueta del arte es invisible sobre el fondo.
     ctx.save();
     ctx.globalAlpha = 0.85;
-    ctx.fillStyle = '#2c261a';
+    ctx.fillStyle = this.palette().dirt;
     ctx.beginPath();
     ctx.ellipse(pos.x, pos.y + half * 0.98, half * 1.2, half * 0.34, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -453,7 +477,7 @@ export class DigCanvas {
 
     // Etiqueta con pill semitransparente (legibilidad sobre arte claro u oscuro). Misma
     // posición y color de texto que el render clásico: el e2e de ronda 5 mide píxeles claros
-    // (#f4ede1) en la franja de la etiqueta y debe seguir midiendo lo mismo.
+    // (--dig-label) en la franja de la etiqueta y debe seguir midiendo lo mismo.
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '13px sans-serif';
@@ -461,12 +485,12 @@ export class DigCanvas {
     const pillWidth = textWidth + LABEL_PILL_PAD_X * 2;
     ctx.save();
     ctx.globalAlpha = 0.72;
-    ctx.fillStyle = '#161310';
+    ctx.fillStyle = this.palette().ink;
     ctx.beginPath();
     ctx.roundRect(pos.x - pillWidth / 2, pos.y + LABEL_OFFSET_Y - LABEL_PILL_HEIGHT / 2, pillWidth, LABEL_PILL_HEIGHT, LABEL_PILL_HEIGHT / 2);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = '#f4ede1';
+    ctx.fillStyle = this.palette().label;
     ctx.fillText(entry.name, pos.x, pos.y + LABEL_OFFSET_Y, LABEL_MAX_WIDTH);
   }
 
@@ -474,7 +498,7 @@ export class DigCanvas {
     const ctx = this.ctxTop;
     ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    ctx.fillStyle = '#4a3526';
+    ctx.fillStyle = this.palette().substrate;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.fillStyle = ctx.createPattern(this.getDirtTexture(), 'repeat');
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -489,7 +513,7 @@ export class DigCanvas {
    */
   drawTrapHint(ctx) {
     if (!this.trapHintGrade) return;
-    const iconImg = getIconImage(`hint-${this.trapHintGrade}`, { size: 64, color: '#f4ede1' });
+    const iconImg = getIconImage(`hint-${this.trapHintGrade}`, { size: 64, color: this.palette().label });
     const draw = () => {
       ctx.save();
       ctx.globalAlpha = 0.35;

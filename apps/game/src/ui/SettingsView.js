@@ -41,6 +41,23 @@ function armReset() {
   }, 5000);
 }
 
+/**
+ * Aviso permanente de "el guardado anterior no se pudo leer" (auditoría de release). El texto
+ * sale entero de `t()`; nunca se interpola el mensaje de error técnico del engine, que puede
+ * contener valores del save y terminaría crudo en un sink de `innerHTML`.
+ * @param {ReturnType<import('../store.js').createStore>} store
+ * @returns {string} '' si no hay ninguna copia archivada (el caso normal)
+ */
+function renderRejectedSaveBlock(store) {
+  if (!store.hasRejectedSaveBackup()) return '';
+  return (
+    `<section class="settings-block settings-save-warning">` +
+    `<h3>${t('save.rejectedTitle')}</h3>` +
+    `<p>${t('save.rejectedDetail')}</p>` +
+    `</section>`
+  );
+}
+
 export const SettingsView = {
   /**
    * @param {HTMLElement} container
@@ -123,7 +140,12 @@ export const SettingsView = {
       `<button type="button" data-action="reset-game">${
         local.resetArmed ? t('settings.resetConfirm') : t('settings.resetButton')
       }</button>` +
-      `</section>`;
+      `</section>` +
+      // AJUSTE (auditoría de release): estado de ERROR persistente. El toast del arranque dura
+      // 3.5s; si el jugador estaba mirando para otro lado, este bloque le explica por qué su
+      // partida "desapareció" y que la copia original sigue intacta. Solo aparece cuando hay una
+      // copia archivada de verdad — en el caso normal la sección no existe.
+      renderRejectedSaveBlock(store);
   },
 };
 

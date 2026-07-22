@@ -323,6 +323,21 @@ export class UIManager {
     this.renderTabContent(state);
     this.tutorial.render(state);
 
+    // AJUSTE (auditoría de release): si el guardado se rechazó al bootear, el jugador tiene que
+    // ENTERARSE (CLAUDE.md: "rechazar con un mensaje claro"). Antes arrancaba una partida nueva en
+    // silencio y el primer autoguardado pisaba el save original.
+    //
+    // El aviso se RETIENE hasta que la pantalla de inicio se cierra: `layout.css` oculta
+    // `#toast-container` mientras `#title-screen` está visible (para no ensuciar el arte de la
+    // landing), así que empujar el toast en el primer render lo mandaba a un contenedor invisible
+    // y expiraba solo antes de que el jugador entrara — el mensaje más importante del juego, mudo.
+    // Lo cazó el propio e2e de esta ronda.
+    if (this.pendingLoadError === undefined) this.pendingLoadError = this.store.consumeLoadError();
+    if (this.pendingLoadError && !this.shellEl.hidden) {
+      this.toast.push(t('save.rejectedToast'));
+      this.pendingLoadError = null;
+    }
+
     const offline = this.store.consumeOfflineSummary();
     // §27.5.3 (ronda 27): también se abre cuando SOLO facturó el robot vendedor (ganancia de
     // flota 0) — el store ya filtra el caso todo-cero, pero este gate duplicado lo tapaba.

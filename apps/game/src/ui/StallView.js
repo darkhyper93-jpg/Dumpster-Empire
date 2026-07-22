@@ -24,8 +24,25 @@ import { MissionsSection } from './MissionsSection.js';
  * `selectedContainerId` de CollectionView). */
 let lastSaleComment = '';
 
+/**
+ * Definición de data del ítem de una entrada del inventario del Puesto.
+ *
+ * AUDITORÍA (release, napkin #7): `entry.containerId` es un string LIBRE del save (isValidInventory
+ * solo exige `typeof === 'string'`). Con `itemsData.containers[entry.containerId]` pelado, un
+ * `'constructor'`/`'__proto__'`/`'toString'` resolvía contra `Object.prototype` y devolvía algo
+ * truthy SIN `.find` — el `|| []` nunca actuaba y la vista tiraba `TypeError` en cada render:
+ * pestaña Puesto en blanco, permanente e irrecuperable (PoC en Chromium). `Object.hasOwn` + el
+ * chequeo de array cierran las dos puertas; un id desconocido cae al nombre oculto seguro, como
+ * ya hacía el resto de la vista.
+ * @param {{ containers: Object<string, Array<Object>> }} itemsData
+ * @param {{ containerId: string, itemId: string }} entry
+ * @returns {Object|null}
+ */
 function findItemDef(itemsData, entry) {
-  const pool = itemsData.containers[entry.containerId] || [];
+  const pool = Object.hasOwn(itemsData.containers, entry.containerId)
+    ? itemsData.containers[entry.containerId]
+    : null;
+  if (!Array.isArray(pool)) return null;
   return pool.find((i) => i.id === entry.itemId) || null;
 }
 

@@ -23,6 +23,24 @@ export const MISSION_TYPES = [
 export const MISSION_DIFFICULTIES = ['easy', 'medium', 'hard'];
 
 /**
+ * Lee un mapa `id -> number` del estado cuya CLAVE viene del save (input externo).
+ *
+ * AJUSTE (auditoría de release, napkin #7): `mapa[claveDelSave]` pelado resuelve contra el
+ * PROTOTIPO. Con `params.categoria: 'constructor'` (o `__proto__`/`toString`/`valueOf`), el
+ * lookup devolvía la función `Object` —truthy, así que el `|| 0` no salvaba nada— y
+ * `updateMissionsProgress` la restaba: `progress` quedaba en NaN, `JSON.stringify` lo persistía
+ * como `null` y el SIGUIENTE arranque rechazaba el save entero (wipe silencioso, PoC ejecutado).
+ * `Object.hasOwn` + `Number(...)` cierran las dos puertas: clave heredada y valor no numérico.
+ * @param {Object<string, number>} map
+ * @param {unknown} key
+ * @returns {number}
+ */
+function counterFromMap(map, key) {
+  if (typeof key !== 'string' || !Object.hasOwn(map, key)) return 0;
+  return Number(map[key]) || 0;
+}
+
+/**
  * Valor actual del contador "existente" que respalda el progreso de una misión (todo tipo salvo
  * `streakReach`, que se trata aparte en `updateMissionsProgress`).
  * @param {import('../state.js').GameState} state
@@ -33,7 +51,7 @@ export const MISSION_DIFFICULTIES = ['easy', 'medium', 'hard'];
 function counterValue(state, mission, allContainers) {
   switch (mission.type) {
     case 'findCategoryCount':
-      return state.itemsFoundByCategory[mission.params.categoria] || 0;
+      return counterFromMap(state.itemsFoundByCategory, mission.params.categoria);
     case 'digContainerCount': {
       const container = allContainers.find((c) => c.id === mission.params.containerId);
       return container ? getTotalContainerDigs(state, container) : 0;
@@ -67,11 +85,26 @@ export function updateMissionsProgress(state, allContainers) {
     }
     const current = counterValue(state, mission, allContainers);
     const delta = Math.max(0, current - mission.snapshot);
-    mission.progress = Math.min(mission.target, delta);
+    // AJUSTE (auditoría de release, napkin #8): cinturón sobre el tirante. `counterFromMap` ya
+    // impide el NaN en origen, pero `progress` es un campo PERSISTIDO cuya validación exige
+    // `Number.isFinite`: ningún contador nuevo debe poder brickear el save por esta vía.
+    mission.progress = Number.isFinite(delta) ? Math.min(mission.target, delta) : 0;
   }
 }
 
-function ownedCategories(state, allContainers) {
+/**
+ * Categorías de los contenedores que el jugador POSEE (nunca las que existen en la data pero
+ * todavía no compró): `rotateStallOrders` nunca pide lo inalcanzable y `rollThreeMissions` nunca
+ * rollea una misión imposible.
+ *
+ * AJUSTE (auditoría de release): exportada. `apps/game/src/store.js` tenía una copia literal de
+ * esta función para alimentar a `rotateStallOrders` — dos implementaciones de la misma regla de
+ * negocio, y la de la UI además violaba la frontera engine↔UI de CLAUDE.md.
+ * @param {import('../state.js').GameState} state
+ * @param {Array<Object>} allContainers
+ * @returns {string[]}
+ */
+export function ownedCategories(state, allContainers) {
   const set = new Set();
   for (const c of allContainers) {
     if ((state.ownedContainers[c.id] || 0) >= 1) {
