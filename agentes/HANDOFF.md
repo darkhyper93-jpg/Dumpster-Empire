@@ -8524,3 +8524,80 @@ vista reescribe.** Es una clase de bug, no un caso: la auditoría encontró un s
 3. Subir `version` en los DOS `package.json` (hoy `0.0.0`) antes del build de release.
 4. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
 5. NUEVO: decidir si se abre una ronda para el 🟡 del layout a 375px con barras clásicas.
+
+---
+
+## Fix "fixbar" (segunda tanda) — evento de contenedor, extrusión de tarjetas y menú aplastado (misma rama `fix/scroll-herramientas`) — 2026-07-22
+
+### Pedido del usuario (sobre el PR ya abierto, todavía sin mergear)
+
+Tres cosas, con la instrucción explícita "si afecta cualquier cosa o se ve feo, arreglalo":
+(a) qué era lo del tabbar de Escarbar que reportó la auditoría anterior (él ve todo bien);
+(b) en Automatización el cuadrado de Guantes queda superpuesto y tapa el borde inferior de
+"Ampliar capacidad"; (c) con un evento (contenedor dorado) el contenedor queda tapado y "se mueve
+para arriba y abajo horrible constantemente".
+
+### Causas raíz (las tres medidas antes de tocar nada)
+
+1. **Evento**: `renderEventBanner` inserta la cinta como PRIMER hijo en flujo de
+   `.dig-picker-card`, pero la imagen del contenedor (ronda 30) sale hacia arriba con márgenes
+   negativos porque asume ser ella la primera (`--has-banner > .container-banner`): le comía 4px
+   y le tapaba el renglón del countdown. Y el salto vertical no era una animación: el texto
+   cambia una vez por segundo y **los dígitos de Plus Jakarta Sans no son de ancho fijo**, así
+   que la cinta cruzaba el límite de wrap y pasaba de 2 a 3 líneas según el dígito (75s y 73s →
+   3 líneas; 74s y 71s → 2). Medido: alto de tarjeta oscilando **223.7 ↔ 210.7** cada segundo,
+   arrastrando toda la fila.
+2. **Extrusión**: `--shadow-tactile: 0 8px 0` no es una sombra difusa, es el borde inferior
+   sólido de la tarjeta. Dos secciones apiladas sin margen dejan que la de abajo lo pise. Hueco
+   medido **0px** en `.automation-status → .automation-grid` (lo que reportó el usuario) y en
+   `.prestige-summary → .prestige-tree` (mismo defecto, nadie lo había visto).
+3. **Tabbar**: con scrollbars CLÁSICAS (navegador real y Electron; el headless usa overlay de
+   0px y por eso ningún e2e lo ve) a 375x667 el shell terminaba 20px fuera del viewport y el
+   flex repartía el recorte entre todos los hijos: el tabbar quedaba en **12px** de alto. En
+   412x915 y en desktop no pasa — por eso el usuario no lo ve.
+
+### Qué se hizo
+
+- `.dig-picker-card-event` pasa a **cinta superpuesta** (`position:absolute` sobre la imagen,
+  esquinas superiores redondeadas, `z-index:2`) + `font-variant-numeric: tabular-nums`. La
+  tarjeta con evento mide ahora **exactamente lo mismo** que sus hermanas: no se mueve nada ni
+  cuando empieza ni cuando termina el evento. `.dig-picker-card` gana `position: relative`.
+- `.automation-status` y `.prestige-summary` entran al `margin-bottom: var(--space-3)` que ya
+  tenía `.settings-block` (16px ≥ los 8px de extrusión, el mismo hueco que dentro de una grilla).
+- 🔵 De paso: `.quick-upgrade-effect` era `<span>` sin `display:block`, así que en el botón
+  "Ampliar capacidad" (un `<button>` común, no el flex `.quick-upgrade-btn`) el efecto quedaba
+  pegado al monto: "$500+1 Capacidad por nivel". Ahora cae a su propia línea.
+- `#tabbar { flex-shrink: 0 }` (el menú es lo último que puede ceder; `#quick-upgrades` ya
+  scrollea por dentro con `overflow-y:auto` + `min-height:0` y absorbe el recorte) + lista de
+  herramientas de 240px→150px SOLO en ventanas de ≤700px de alto (`@media (max-height: 700px)`).
+  A 375x667 headed: documento **667 contra 667** de ventana (antes 687) y tabbar en **68px**
+  (antes 12). En 412x915 y desktop no cambia nada.
+- `apps/game/e2e/fix-evento-y-sombras.spec.js` (nuevo, 2 tests). El del evento fuerza el disparo
+  con `Math.random = () => 0` (sin tocar data de balance), comprueba por hit-test que nada se
+  dibuja encima de la cinta, mide el alto en vivo mientras corre el countdown **y** barre los 75
+  valores del contador escribiendo el texto a mano (cubre en un segundo lo que tardaría 75). El
+  de la extrusión no comprueba un caso sino la INVARIANTE en las 6 pestañas: ninguna tarjeta con
+  extrusión puede tener al hermano de abajo dentro de sus 8px.
+
+### Verificación
+
+- TDD real: los 2 tests en ROJO primero (alto 224/211 y `[{automation-status, hueco:0}]`), y
+  re-verificados en rojo **revirtiendo el CSS con `git stash`** (prueba de sabotaje).
+- **Unit 867/867** (esto es CSS y layout: no toca engine) · **e2e 134/134 con `CI=1`**
+  (baseline 128 → +4 del scroll → +2 de esta tanda), corrida limpia; una corrida intermedia tuvo
+  1 flaky en `auditoria-release2` (el test de long tasks, sensible a la carga de 3 workers) que
+  pasó 3/3 aislado y verde en la corrida siguiente — flakiness conocida, ajena al diff.
+- Manual headed a 375x667, 412x915 y 1280x800 con capturas: cinta del evento entera y quieta
+  sobre la imagen, borde inferior de "Ampliar capacidad" visible con la tarjeta de Guantes
+  respirando 16px, efecto por nivel en su renglón, menú completo sin scroll de página.
+- Sin `console.log`, sin TODO, sin emojis, sin colores hardcodeados (todo `var(--…)`).
+
+### Nota para la próxima ronda
+
+**El evento de contenedor no tenía NI UN test** (ni unit ni e2e) antes de esta tanda: por eso el
+defecto visual shippeó. Lo que hay ahora cubre la geometría de la cinta, no la mecánica del
+evento (multiplicador, expiración, cooldown) — eso sigue sin cobertura de e2e.
+
+Y sigue abierto, con su medición, el punto de que **el Chromium headless usa scrollbars overlay
+de 0px**: ningún test de la suite puede ver un defecto de barras o el lugar que ocupan. Toda
+verificación de layout/scrollbars tiene que hacerse con `chromium.launch({ headless: false })`.
