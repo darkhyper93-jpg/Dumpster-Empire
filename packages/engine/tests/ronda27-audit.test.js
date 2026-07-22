@@ -1,13 +1,18 @@
 /**
  * Ronda 27 — tareas delegadas de auditoría (ROADMAPv4 §27.5).
  *
- * §27.5.1 (Y1, 🟡): `money`/`totalMoneyEarned` sin clamp anti-Infinity. Un save HOSTIL pero
- * VÁLIDO (deedsTreeLevels con niveles finitos astronómicos pasa validateSave: cada valor es un
- * número finito) infla getSellMult y cualquier ganancia repetida desborda `money` a Infinity;
- * JSON.stringify(Infinity) -> null y el PRÓXIMO boot rechaza el save entero (wipe de la
- * partida — misma clase de brick que motivó los guards de galaxyMoveDeedsPreview/doGalaxyMove
+ * §27.5.1 (Y1, 🟡): `money`/`totalMoneyEarned` sin clamp anti-Infinity. Una ganancia que desborda
+ * a Infinity se serializa `null` (JSON.stringify) y el PRÓXIMO boot rechaza el save entero (wipe
+ * de la partida — misma clase de brick que motivó los guards de galaxyMoveDeedsPreview/doGalaxyMove
  * en la 26.D). Fix: helper `addMoney(state, x)` en economy.js aplicado en los 5 puntos de
  * ganancia (containers/stall/achievements/missions/offline).
+ *
+ * AJUSTE (auditoría de release): la ronda 27 usaba un `deedsTreeLevels` finito-gigante como "save
+ * hostil pero válido" para inflar los multiplicadores. Esa auditoría agregó la CAPA 3 (niveles de
+ * árbol = enteros acotados), así que ese save ahora se rechaza en la puerta — es la PRIMERA
+ * defensa. El clamp de addMoney sigue siendo la SEGUNDA (defensa en profundidad) para un vector
+ * que sí pasa la validación: un `baseValue` astronómico en el inventario (isValidInventory solo
+ * exige finito > 0). Los tests de abajo se actualizaron a esa realidad sin perder cobertura.
  *
  * §27.5.8: la liquidación del inventario en doGalaxyMove (stallSoldCount += inventory.length)
  * NO debe contar como progreso de una misión `sellAtStallCount` activa (no es una venta real
@@ -103,14 +108,12 @@ describe('§27.5.1 (Y1) — addMoney: clamp anti-Infinity de money/totalMoneyEar
 });
 
 describe('§27.5.1 (Y1) — el save hostil pero válido no puede brickear la partida', () => {
-  function hostileState() {
+  it('capa 3 (auditoría de release): un deedsTreeLevels finito-gigante ya se rechaza en validateSave', () => {
+    // Antes de la auditoría de release esto pasaba validateSave (niveles solo "número finito") y el
+    // clamp de addMoney era la única defensa. Ahora la capa 3 lo rechaza en la puerta.
     const state = freshState();
     state.deedsTreeLevels = { ventajaGalactica: 1e305 };
-    return state;
-  }
-
-  it('PREMISA: el save hostil pasa validateSave (niveles finitos — el clamp es la única defensa)', () => {
-    expect(validateSave(hostileState()).valid).toBe(true);
+    expect(validateSave(state).valid).toBe(false);
   });
 
   it('applyContainerResult repetido con valores enormes deja money finito y el save serializable', () => {
@@ -124,10 +127,13 @@ describe('§27.5.1 (Y1) — el save hostil pero válido no puede brickear la par
     expect(roundTrip.ok).toBe(true);
   });
 
-  it('sellInventoryItem con el multiplicador hostil de Escrituras deja money finito', () => {
-    const state = hostileState();
+  it('sellInventoryItem con un baseValue hostil pero válido deja money finito y el save serializable', () => {
+    // Vector válido que aún ejercita el clamp de addMoney: un baseValue astronómico (pasa
+    // isValidInventory: finito > 0) × fluctuación alta desborda el precio, pero addMoney lo
+    // clampea a MAX_VALUE en vez de escribir Infinity.
+    const state = freshState();
     state.stallLevel = 1;
-    state.inventory = [{ itemId: 'i1', containerId: 'tachoVereda', categoria: 'common', baseValue: 1e9 }];
+    state.inventory = [{ itemId: 'i1', containerId: 'tachoVereda', categoria: 'common', baseValue: 1e308 }];
     const result = sellInventoryItem(state, 0, dataConStall, 1000, () => 0.5);
     expect(result.ok).toBe(true);
     expect(Number.isFinite(state.money)).toBe(true);

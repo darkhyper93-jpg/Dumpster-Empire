@@ -348,7 +348,10 @@ export function creditDugItem(state, container, item, isAuto, data, robotFilters
   byContainer[item.id] = (byContainer[item.id] || 0) + 1;
   const fragmentCategories = ['antiques', 'art', 'relics', 'future'];
   if (fragmentCategories.includes(item.categoria)) {
-    state.categoryFragments += 1 * getFragmentMult(state, data);
+    // AJUSTE (auditoría de release, napkin #8): clamp a MAX_VALUE — `getFragmentMult` depende de
+    // niveles de árbol (input externo) y una acumulación repetida sin tope desborda a Infinity,
+    // que `JSON.stringify` serializa `null` y hace rechazar el save entero al próximo boot.
+    state.categoryFragments = Math.min(Number.MAX_VALUE, state.categoryFragments + getFragmentMult(state, data));
   }
   // PLAN.md §2.9 (ronda 23): captura del Puesto de Chatarra. `data.stall` opcional (patrón
   // data.streak/data.traps/data.tools): sin él, o sin puesto comprado, o en pausa

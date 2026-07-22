@@ -9,6 +9,8 @@ import {
   DIG_SENSITIVITY_MAX,
   INVENTORY_MAX_SAFETY,
   ROBOTS_MAX_SAFETY,
+  TREE_LEVEL_MAX_SAFETY,
+  ARRAY_MAX_SAFETY,
   defaultRobotConfig,
   freshState,
 } from './state.js';
@@ -54,6 +56,19 @@ const STRING_ARRAY_FIELDS = [
 function isFiniteNumberMap(obj) {
   if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return false;
   return Object.values(obj).every((v) => Number.isFinite(v));
+}
+
+/**
+ * Valida que todo valor propio de `obj` sea un entero en [0, max]. Más estricto que
+ * isFiniteNumberMap: los niveles de árbol (prestigeTreeLevels/deedsTreeLevels) no pueden ser
+ * fraccionarios, negativos ni finito-gigantes (auditoría de release, napkin #8).
+ * @param {unknown} obj
+ * @param {number} max
+ * @returns {boolean}
+ */
+function isBoundedIntegerMap(obj, max) {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return false;
+  return Object.values(obj).every((v) => Number.isInteger(v) && v >= 0 && v <= max);
 }
 
 /**
@@ -162,7 +177,10 @@ function isValidInventory(arr) {
  * @returns {boolean}
  */
 function isValidStallOrders(arr) {
-  if (!Array.isArray(arr)) return false;
+  // AJUSTE (auditoría de release): cota de seguridad (ARRAY_MAX_SAFETY) — el diseño real son 2
+  // pedidos activos; sin esta, un save manipulado con cientos de miles hacía a StallView renderizar
+  // esa cantidad de tarjetas. Mismo criterio que INVENTORY_MAX_SAFETY / ROBOTS_MAX_SAFETY.
+  if (!Array.isArray(arr) || arr.length > ARRAY_MAX_SAFETY) return false;
   return arr.every(
     (order) =>
       isPlainObject(order) &&
@@ -231,8 +249,25 @@ function validateDeepContent(migrated) {
     }
   }
   for (const field of STRING_ARRAY_FIELDS) {
-    if (!Array.isArray(migrated[field]) || !migrated[field].every((v) => typeof v === 'string')) {
+    // AJUSTE (auditoría de release): además de "array de strings", cota de seguridad genérica
+    // (ARRAY_MAX_SAFETY) para que un save manipulado no traiga cientos de miles de ids.
+    if (
+      !Array.isArray(migrated[field]) ||
+      migrated[field].length > ARRAY_MAX_SAFETY ||
+      !migrated[field].every((v) => typeof v === 'string')
+    ) {
       return `Contenido inválido en ${field}: debe ser un array de strings.`;
+    }
+  }
+  // AJUSTE (auditoría de release, napkin #8): los niveles de árbol NO son solo "número finito"
+  // (loop de NUMERIC_MAP_FIELDS de arriba) sino enteros en un rango de seguridad. Un nivel
+  // finito-gigante colgaba migrateTo14 (bucle de backfill) e inflaba getFleetSize a millones
+  // (OOM en ensureFleet) — dos bricks de ARRANQUE. Los demás mapas numéricos quedan en finitud:
+  // containerLevels ya se clampea al leerse (getContainerLevel), y upgradeLevels es ilimitado por
+  // diseño, así que no llevan cota superior acá.
+  for (const field of ['prestigeTreeLevels', 'deedsTreeLevels']) {
+    if (!isBoundedIntegerMap(migrated[field], TREE_LEVEL_MAX_SAFETY)) {
+      return `Contenido inválido en ${field}: los niveles deben ser enteros entre 0 y ${TREE_LEVEL_MAX_SAFETY}.`;
     }
   }
   if (!isValidItemsFoundByItem(migrated.itemsFoundByItem)) {
@@ -668,7 +703,12 @@ function migrateTo14(migrated, ctx) {
   if (Array.isArray(prestigeTreeData)) {
     for (const [nodeId, level] of Object.entries(levels)) {
       const node = prestigeTreeData.find((n) => n.id === nodeId);
-      if (!node || !Number.isFinite(level)) continue;
+      // AJUSTE (auditoría de release, napkin #7 + #8): este paso corre ANTES de validateDeepContent,
+      // así que no puede confiar en el RANGO de `level`. Sin la cota, un nivel finito-gigante
+      // (1e9) colgaba el bucle para SIEMPRE en el arranque (PoC). Un nivel fuera del techo de
+      // seguridad se saltea acá (el save se rechaza igual, después, en la capa de niveles de árbol)
+      // — no se "lava" ni se itera. Los saves v13 legítimos traen niveles enteros chicos.
+      if (!node || !Number.isInteger(level) || level < 0 || level > TREE_LEVEL_MAX_SAFETY) continue;
       for (let lvl = 0; lvl < level; lvl++) {
         investedCost += Math.ceil(node.costoBase * Math.pow(node.factorCrecimiento, lvl));
       }

@@ -10,6 +10,8 @@ const { readCloudSave, writeCloudSave } = require('./steam.js');
 // AUDITORÍA (ronda 18): extraído a su módulo (testeable sin Electron) y endurecido con
 // Number.isFinite — un `lastSavedAt: 1e999` (Infinity vía JSON.parse) ganaba la reconciliación.
 const { extractTimestamp } = require('./saveTimestamp.js');
+// AUDITORÍA (release): escritura atómica (tmp + rename), también su módulo testeable sin Electron.
+const { writeFileAtomic } = require('./atomicWrite.js');
 
 const SAVE_FILENAME = 'save.json';
 
@@ -26,13 +28,9 @@ function readLocalFile() {
 }
 
 function writeLocalFile(text) {
-  try {
-    fs.mkdirSync(path.dirname(savePath()), { recursive: true });
-    fs.writeFileSync(savePath(), text, 'utf-8');
-    return true;
-  } catch {
-    return false;
-  }
+  // AUDITORÍA (release): atómico (tmp + rename) — un corte a mitad de escritura ya no puede dejar
+  // el save real truncado (antes era `writeFileSync` directo sobre `save.json`).
+  return writeFileAtomic(savePath(), text);
 }
 
 /**
