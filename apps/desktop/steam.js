@@ -43,8 +43,8 @@ function isSteamReady() {
 /**
  * Dispara un logro de Steam espejando el id del logro del engine (`achievements.json`).
  * Requiere que el usuario haya dado de alta, en el panel de Steamworks, una API Name de logro
- * idéntica al `id` del engine (a1..a35) — tabla completa en tools/steam/RELEASE.md §6,
- * regenerable con `node tools/steam/achievements-table.mjs`.
+ * idéntica al `id` del engine (a1..a62, 61 logros — a39 es un hueco permanente) — tabla
+ * completa en tools/steam/RELEASE.md §6, regenerable con `node tools/steam/achievements-table.mjs`.
  * @param {string} achievementId
  * @returns {boolean} true si se pudo activar (o ya estaba activado).
  */

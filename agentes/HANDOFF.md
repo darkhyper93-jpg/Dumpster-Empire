@@ -8337,3 +8337,93 @@ logros contra el lategame es una ronda de balance propia, pendiente para el usua
 3. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
 4. NUEVO: decidir si se hace una ronda de balance para la curva de recompensas de logros (ver
    el arrastre de `a41` arriba).
+
+
+---
+
+## Auditoría de release 3 + balance de logros lategame — rama `audit/release-hardening-3` — 2026-07-22
+
+### Reporte
+
+Tercera pasada adversarial completa (`Verif&Audit.md`) sobre `main` con el PR #37 ya mergeado
+(`657bb29`), más dos pedidos directos del usuario a mitad de ronda: (a) gap-check del checklist
+de release más allá de los 3 pendientes conocidos, y (b) **ronda de balance de recompensas de
+logros contra el lategame** (el pendiente que dejó anotado la ronda "features" en DESARROLLO.md
+§10), con libertad para tocar los guardrails. Baseline verde de arranque: **unit 864/864**.
+
+### Auditoría: sin hallazgos 🔴 ni 🟡 nuevos
+
+El barrido cubrió el diff completo del #37 línea por línea y el repo global con los greps de
+las clases de bug conocidas (napkin): indexación `mapa[claveDelSave]` (todas las direcciones
+son data→save con valor coaccionado, o mapas `Object.create(null)`), sinks de `innerHTML`
+(los nuevos del #37 interpolan solo data estática, `t()` con números del engine y
+`formatMoney`), acumulaciones de recursos (todas por `addMoney`/`addKeys`; el `moneyDelta`
+del lote es solo retorno de presentación y `formatNumber(Infinity)` cae al techo
+`999.99QiDc+`), terminación de `sellAllInventory` (el `splice(0,1)` está garantizado en cada
+vuelta `ok`), falsos verdes en los e2e nuevos (los `toHaveCount(0)` son sobre estados
+permanentes post-acción, no elementos auto-expirables), `npm audit` 0 vulnerabilidades (con y
+sin dev), cero `console.log`/`TODO`/emojis nuevos. 🔵 menores encontrados y aplicados: el
+comentario de `steam.js` decía "a1..a35" (son 61 logros, a1..a62 con hueco a39) y
+`formatNumber(NaN)` imprimiría "NaN" (defensa teórica, no alcanzable desde el engine — se
+documenta acá y no se toca: agregar un guard sin camino real que lo ejercite es código muerto).
+
+### Gap-check de release (pedido del usuario): UN faltante nuevo
+
+- **`version: 0.0.0` en `package.json` raíz Y `apps/desktop/package.json`** — el instalador
+  sale como "Dumpster Empire Setup 0.0.0.exe" y el historial de builds de Steamworks queda sin
+  versión útil. Nadie lo tenía listado. Se agregó como paso explícito en RELEASE.md §3; la
+  elección del número (¿1.0.0?) es del usuario.
+- Verificado OK: LICENSE ya tiene titular real (U6 hecho), ícono 1254px presente, scripts de
+  build presentes, tabla de logros regenerable con 61 filas, RELEASE.md §11 lista los 5
+  idiomas, electron-builder.yml consistente. Los `TODO(usuario)` de los `.vdf` son los
+  placeholders de U2/U3, intencionales.
+
+### Ronda de balance: guardrail de dos clases + a41/a58/a59
+
+El guardrail viejo comparaba TODA recompensa de dinero contra el PRIMER umbral de Prestigio
+($1B), dejando el lategame en recompensas simbólicas (a41: $2M por un hito de ~$11T). La
+invariante real es **"una recompensa no debe financiar la puerta de progresión que la
+precede"**; se formalizó en `fase9-balance.test.js` con `impliedMoneyGate()` derivada SOLO de
+la data:
+
+- **Clase temprana** (sin puerta implícita ≥ $10B): techos absolutos intactos ($10M por logro,
+  $50M la suma). La suma baja de $44,46M a **$27,46M** — el margen para logros tempranos
+  futuros sube de ~$5,5M a ~$22,5M.
+- **Clase lategame** (puerta implícita derivable ≥ $10B): recompensa ≈10% de su puerta, banda
+  dura **1%–12%** por test (el piso del 1% ES el bug que motivó la ronda: una recompensa
+  simbólica castiga el esfuerzo igual que una rota lo regala). Un test fija la clasificación
+  exacta (`['a41','a58','a59']`) para que un cambio de clase por edición de data sea visible.
+- Montos (≈10% de cada puerta, redondeados a un número legible en pantalla):
+  `a41` $2M → **$1,1T** (puerta: suma de tools.json, $11,05T) · `a58` $5M → **$7,5e22 =
+  $75.00Sx** (puerta: costo de `bigbangPlus5`, `1e18 × 15^5`) · `a59` $10M → **$1B** (puerta
+  de la Mudanza: 10 prestigios × $1B). Los logros de Llaves no cambian (las Llaves no se
+  inflan con el lategame; su guardrail del 15% del árbol sigue igual, 234/238).
+- Sin bump de `SAVE_VERSION` (los montos son data, no esquema); un save con esos logros ya
+  desbloqueados no cobra retroactivo (el engine paga una sola vez, al desbloquear).
+- PLAN.md §11.6 y DESARROLLO.md §10 actualizados ANTES de la data (regla §1.12); la tabla de
+  Steamworks en RELEASE.md §6 regenerada (solo cambian las 3 filas). **OJO Steamworks**: la
+  tabla es referencia de recompensas in-game; los textos de logros del panel no cambian.
+
+### Verificación
+
+- TDD real: los tests nuevos de la banda y los targets exactos se corrieron en ROJO (2 tests
+  fallando contra la data vieja) antes de tocar `achievements.json` — ese ROJO es a la vez la
+  prueba de sabotaje del guardrail (napkin #2).
+- **Unit 867/867** (baseline 864 → +3 netos en `fase9-balance.test.js`) · **e2e 128/128 con
+  `CI=1`**, sin flakes (puerto 5185 verificado libre antes, napkin #9), línea `128 passed` vista.
+- Manual en Chromium contra `npx serve` (skill `verify`), a 375px y 1440px: la vista Logros
+  muestra $1.10T / $75.00Sx / $1.00B sin notación científica ni desborde de tarjeta (capturas);
+  y jugando de verdad (comprar las 8 herramientas con dinero sembrado) el desbloqueo de a41
+  paga EXACTO: el save persiste `money: 1.100.000.001.000` ($1.000 sobrantes + $1,1T — leído
+  del save, no del header tweened, napkin #10). Cero errores de página.
+
+### Pendientes del usuario antes de lanzar (actualizado)
+
+1. `STEAM_APP_ID` real en `apps/desktop/steam.js` (hoy 480) y `appId`/`depotId` en los `.vdf`.
+   **Único bloqueante duro.**
+2. Alta de los 61 logros en Steamworks (`tools/steam/RELEASE.md` §6) + textos en 5 idiomas.
+   La tabla de referencia cambió en las recompensas de a41/a58/a59 (esta ronda) y el ícono de
+   a41 + copy de `shop.rateLine`/`tools.*` (ronda "features").
+3. **NUEVO**: subir `version` en los DOS `package.json` (hoy `0.0.0`) antes del build de
+   release — RELEASE.md §3 lo explica.
+4. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.

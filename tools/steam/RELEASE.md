@@ -76,8 +76,10 @@ npm run build:linux    → dist/linux-unpacked/         (carpeta que sube el dep
 Notas:
 
 - **A Steam se sube la carpeta `*-unpacked`**, nunca el instalador: Steam es el instalador.
-- La versión del nombre del instalador sale de `apps/desktop/package.json` (`version`); si
-  querés versionar los builds, subí ese número antes de buildear.
+- **Antes del build de release, subí la versión**: `apps/desktop/package.json` y el
+  `package.json` de la raíz siguen en `0.0.0` (auditoría de release 3, 2026-07-22) — el
+  instalador sale como "Setup 0.0.0.exe" y el historial de builds de Steamworks queda sin
+  versión útil. Decidí el número (p. ej. `1.0.0`) y cambialo en LOS DOS package.json.
 - `npm run build:linux` desde Windows puede necesitar Docker o directamente correrse en una
   máquina Linux/WSL (electron-builder lo avisa si falta algo).
 - El ícono sale de `apps/desktop/build/icon.png` (electron-builder genera `.ico`/`.icns` solo).
@@ -176,7 +178,7 @@ Total: 61 logros (API Name = id del engine, en orden de data)
 | `a37` | Racha Perfecta | Llegar a una racha de 25 escarbados sin trampa | $50.000 |
 | `a38` | Racha Legendaria | Llegar a una racha de 50 escarbados sin trampa | 3 Llaves de Ciudad |
 | `a40` | Nueve Vidas | Caer en 10 trampas graves | 4 Llaves de Ciudad |
-| `a41` | Arsenal Completo | Comprar todas las herramientas de escarbado | $2.000.000 |
+| `a41` | Arsenal Completo | Comprar todas las herramientas de escarbado | $1.100.000.000.000 |
 | `a42` | Primer Legendario | Encontrar 1 objeto legendario | $500.000 |
 | `a43` | Cuatro Leyendas | Encontrar 4 objetos legendarios | 5 Llaves de Ciudad |
 | `a44` | Vitrina Completa | Encontrar 8 objetos legendarios | 15 Llaves de Ciudad |
@@ -193,8 +195,8 @@ Total: 61 logros (API Name = id del engine, en orden de data)
 | `a55` | Especialista | Usar 5 especializaciones distintas al prestigiar | $10.000 |
 | `a56` | Primera Mudanza | Hacer 1 Mudanza de Galaxia | 10 Llaves de Ciudad |
 | `a57` | Nómade Galáctico | Hacer 3 Mudanzas de Galaxia | 20 Llaves de Ciudad |
-| `a58` | Eco de Quinta | Poseer 1 × Vertedero del Big Bang (Eco 5) | $5.000.000 |
-| `a59` | Patrón de Flota | Tener una flota de 3 robots | $10.000.000 |
+| `a58` | Eco de Quinta | Poseer 1 × Vertedero del Big Bang (Eco 5) | $75.000.000.000.000.000.000.000 |
+| `a59` | Patrón de Flota | Tener una flota de 3 robots | $1.000.000.000 |
 | `a60` | Criterio Automático | Que los filtros de la flota descarten 10.000 contenedores | 20 Llaves de Ciudad |
 | `a61` | Cinco Sets | Completar 5 sets de colección | $250.000 |
 | `a62` | Coleccionista Serial | Completar 10 sets de colección | 6 Llaves de Ciudad |
