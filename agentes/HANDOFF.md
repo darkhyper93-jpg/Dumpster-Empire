@@ -8222,3 +8222,118 @@ pierde: si se dibujara una segunda placa, el valor nunca asienta y el poll falla
    **Es el único bloqueante duro del release.**
 2. Alta de los 61 logros en Steamworks (`tools/steam/RELEASE.md` §6) + textos en los 5 idiomas.
 3. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
+
+
+---
+
+## Ronda "features" (pedidos sueltos del usuario) — rama `feat/ventas-herramientas-features` — 2026-07-22
+
+Agente único. Arranca de `main` con ROADMAPv4 completo hasta la ronda 33 + las DOS auditorías de
+release mergeadas (verificado: `8738d26`). No es una ronda del roadmap: son 5 pedidos directos del
+usuario. Baseline de arranque: **unit 841, e2e 122**.
+
+### Lo que pidió el usuario y qué se hizo
+
+**1. Vender todo el inventario del Puesto en un clic, conservando la venta individual.**
+`sellAllInventory(state, data, now, random)` en `systems/stall.js`, exportada por el index del
+engine, con su acción en `store.js` y su botón en `StallView`. **No tiene fórmula propia**: itera
+`sellInventoryItemAt` desde el índice 0 exactamente como si el jugador tocara "Vender" N veces, así
+los pedidos de Salomón (§4.28) se cumplen, se retiran y cobran su mult con el mismo orden que la
+venta manual. Test de contrato explícito: el lote paga lo mismo, al centavo, que vender uno por uno.
+DECISIÓN: la fluctuación de mercado se refresca **una sola vez** para todo el lote (es el precio que
+el jugador ve al apretar; una tirada por ítem promediaría la fluctuación hasta volverla
+irrelevante). El botón no se dibuja con el inventario vacío — sería un deshabilitado permanente sin
+información.
+
+**2. "¿Por qué el Tacho de Vereda tiene vitrina de legendarios si no tiene ninguno?"**
+Diagnóstico: la Vitrina **es global** desde la ronda 22, pero `renderShowcase` se dibuja DEBAJO de
+la grilla del contenedor seleccionado, así que se lee como si fuera de ese contenedor. Y de paso la
+premisa era falsa: el Tacho SÍ puede soltar uno (`legendary-first-can` es `common`, y el roll de
+`containers.js` dispara cuando la rareza del ítem hallado coincide). Fix elegido por el usuario:
+subtítulo `collection.showcaseGlobalHint` que dice que abarca todo el juego + línea
+`collection.showcaseFrom` en CADA pedestal con su rareza, teñida con el `colorToken` de esa rareza.
+No se filtra por contenedor (perdería el salón de trofeos y el conteo total).
+
+**3. Borrar el texto "Botón gris = ..." de Automatización, en TODOS los idiomas.**
+`automation.hint` eliminada de `AutomationView` y de los 5 diccionarios. La clase
+`.automation-explainer-hint` no tenía CSS propio ni la asertaba ningún test. El estado
+deshabilitado ya se explica solo: cada botón lleva su `title` con "Te faltan {amount}".
+
+**4. Cuatro herramientas nuevas a 500M / 50B / 1T / 10T.**
+`exoesqueletoChatarrero` (Exoesqueleto de Chatarrero), `taladroNucleo` (Taladro de Núcleo),
+`barredoraGravitatoria` (Barredora Gravitatoria), `excavadoraSingular` (Excavadora Singular). Nombres
+elegidos por el usuario entre dos opciones: siguen el arco del juego (chatarrería → cosmos) y son
+mejora ESTRICTA de radio y ritmo sobre `guanteHidraulico` — a esos precios el jugador ya no elige un
+estilo de pincel, compra potencia; las 3 primeras conservan el trade-off para el early game. Cada
+una con ícono en `icons.js`, arte ilustrado en `objectArt.js` (reusan los BODIES `hand`/`piston`/
+`orb`/`reactor` con paleta que se enfría de acero a violeta) y nombre traducido real en los 5
+idiomas. Los tests de `icons.test.js`/`objectArt.test.js` ya exigían ambas cosas y pasan sin tocarse.
+
+**5. "¿Qué son Pace/Brush y por qué esas palabras?"** — Respondido y arreglado.
+`Ritmo/Pace` = `getDigRate` = `clamp(Fuerza / container.resistencia, 0.25, 1.5)`: qué tan rápido se
+resuelve ESE contenedor (100% normal, 25% = 4× más lento, 150% = 1,5× más rápido). Afecta manual Y
+automatización. `Pincel/Brush` = `getAreaRate` = `clamp(Área / container.areaRecomendada, 0.45,
+1.2)`: modula el radio del pincel del escarbado MANUAL, nada más. El usuario tenía razón en que las
+palabras no cerraban: nombraban la herramienta, no el efecto. Pasan a **Velocidad/Alcance**
+(Speed/Reach, Velocidade/Alcance, Vitesse/Portée, Tempo/Reichweite) + `shop.rateLineTitle` y
+`shop.areaRateLineTitle` como `title` que explican contra qué se compara el %. En alemán "Tempo" se
+conserva: ya nombra el efecto y el compuesto largo rompe la tarjeta a 375px (criterio de la 33).
+**Excepción consciente a la regla §1.11** ("el copy español es intocable"): la pidió el usuario.
+
+### Dos defectos encontrados verificando a mano, arreglados en la misma rama
+
+1. **Las 8 filas de herramientas devolvieron el SCROLL DE PÁGINA en desktop.** En >=1024px
+   `#dig-area` queda visible en TODAS las pestañas y es `flex-shrink: 0` (layout.css), así que el
+   alto de la lista empujaba el documento entero fuera del viewport: `document.scrollHeight` 954 vs
+   801 de viewport. Lo cazó `dig-regression.spec.js` ("la página no scrollea") en steam-deck-1280x800
+   y desktop-1440 — mobile-375 pasaba porque ahí `#dig-area` se oculta fuera de Escarbar. Fix: las
+   filas van en un `.settings-tools-list` con `max-height: 240px` + `overflow-y: auto` (≈4 filas de
+   57px, medido en Chromium: conserva la huella exacta que la sección tenía con 4 herramientas). El
+   `<h3>` queda fijo afuera de la caja scrolleable.
+2. **El resumen de la venta en lote aparecía un render tarde.** `lastSaleComment` es estado de
+   presentación y se asigna DESPUÉS de despachar la acción, que ya re-renderizó vía `notify()`. En la
+   venta individual pasaba desapercibido (la tarjeta desaparecía igual), pero en el lote el resumen
+   "vendiste N por $X" es el ÚNICO acuse de recibo del jugador y podía no verse nunca. Reproducido a
+   mano a 1440px (a 375px sí aparecía, por un re-render posterior del tick). Fix: `redraw()` explícito
+   tras fijar el comentario, en las dos ventas (mismo patrón de auto-render que ya usa
+   `CollectionView` con sus tabs).
+
+### Arrastre sobre `a41` ("Arsenal Completo") — leer antes de tocar balance
+
+El logro pide `allToolsOwned`, así que su hito saltó de ~$5,3M a **~$11,55T** de gasto total. La
+convención §3.4 ("dinero ≈ 10% del hito") pediría ~$1,15T, pero los DOS guardrails de
+`fase9-balance.test.js` (PLAN.md §11.6) están saturados: cada logro de dinero topea en el 1% del
+umbral de Prestigio ($10M) y la SUMA de todos en el 5% ($50M), de la que ya se usan $44,46M —
+**quedan ~$5,5M de margen en todo el juego**. La vía de las Llaves tampoco alcanza (el guardrail del
+árbol deja 4 Llaves de margen). **Decisión: la recompensa queda intacta en $2M**; subirla a los
+~$7,5M que permite el margen es igual de simbólico frente a $11,55T y no vale gastar el margen
+entero del juego en eso. Solo cambia el ícono, a `excavator-singularity` (la última pieza de la
+escalera, no la cuarta). Anotado en DESARROLLO.md §10: **recalibrar la curva de recompensas de
+logros contra el lategame es una ronda de balance propia, pendiente para el usuario**.
+
+### Verificación
+
+- **Unit 864/864** (baseline 841 → +16 de `packages/engine/tests/features-ventas-herramientas.test.js`
+  y +7 de `apps/game/tests/features-copy.test.js`). TDD real: los 23 se escribieron en ROJO
+  (19 fallando en la primera corrida) antes de tocar `stall.js`, `tools.json` y los diccionarios.
+- **e2e 128/128** con `CI=1` (baseline 122 → +6 de `apps/game/e2e/features-ventas-herramientas.spec.js`).
+  Tres corridas completas: las dos primeras con 1 flaky cada una pero **distinto test** cada vez
+  (ronda14 y ronda12, ninguno del diff — flakiness de carga preexistente, verde en el retry), la
+  última **128/128 sin un solo flaky**. Napkin #11 no aplica: no es el mismo test dos veces.
+- **Manual en Chromium a 375px y 1440px**, jugando de verdad contra `npx serve` (skill `verify`):
+  los 5 pedidos verificados con capturas, `document.scrollHeight` dentro del viewport en ambos, la
+  lista de herramientas scrolleando adentro suyo, los 4 artes nuevos renderizando, costos en formato
+  $50.00B/$1.00T/$10.00T (nunca notación científica) y **cero errores de consola**.
+- Sin `console.log`, sin `TODO`/`FIXME` reales (los hits del grep son la palabra española *todo*),
+  sin colores hardcodeados (los 4 CSS nuevos salen de tokens), cero emojis.
+
+### Pendientes del usuario antes de lanzar (sin cambios respecto a la auditoría 2)
+
+1. `STEAM_APP_ID` real en `apps/desktop/steam.js` (hoy 480) y `appId`/`depotId` en los `.vdf`.
+   **Es el único bloqueante duro del release.**
+2. Alta de los 61 logros en Steamworks (`tools/steam/RELEASE.md` §6) + textos en los 5 idiomas.
+   **OJO**: esta ronda cambió el ícono de `a41` y el copy de `shop.rateLine`/`shop.areaRateLine` y
+   `tools.*` en los 5 idiomas — si ya se cargó algo en Steamworks, revisar.
+3. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
+4. NUEVO: decidir si se hace una ronda de balance para la curva de recompensas de logros (ver
+   el arrastre de `a41` arriba).
