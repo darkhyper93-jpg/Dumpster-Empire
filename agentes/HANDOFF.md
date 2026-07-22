@@ -8427,3 +8427,177 @@ la data:
 3. **NUEVO**: subir `version` en los DOS `package.json` (hoy `0.0.0`) antes del build de
    release — RELEASE.md §3 lo explica.
 4. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
+
+---
+
+## Fix "fixbar" — scroll de la lista de Herramientas + barra de scroll del taller (rama `fix/scroll-herramientas`) — 2026-07-22
+
+### Pedido del usuario
+
+"Arreglá la barra de scroll de Herramientas de escarbado y adaptala al color de fondo como todas
+las demás (la de Automatización por ejemplo); ahora si scrolleás hacia arriba y soltás te devuelve
+al principio, así que solo se ven las 4 primeras herramientas." Más: auditoría `Verif&Audit.md`
+del repo. Agente único; ronda anterior (`audit/release-hardening-3`, PR #38) verificada mergeada
+en main antes de ramificar.
+
+### Causa raíz (medida, no deducida)
+
+`ToolsSection.render` reescribía `container.innerHTML` ENTERO en cada render, y el elemento que
+scrollea (`.settings-tools-list`) **nace adentro de ese HTML**: se destruía y se recreaba con
+`scrollTop = 0` en cada pasada. Con automatización o Puesto activos, `tickAutomation` notifica una
+vez por segundo → el reset llegaba solo, sin tocar nada ("vuelve al principio al soltar"). El
+resto de los scrollers del juego (`#tab-content`, `#quick-upgrades`, `#tabbar`) son elementos
+ESTÁTICOS de `index.html` a los que solo se les cambia el contenido, y por eso nunca perdieron su
+posición: ésta era la única excepción. Medido en el e2e ROJO: `scrollTop` 323 → 0 tras 1.5s.
+
+**Gotcha para el futuro (napkin): un scroller no puede vivir dentro del `innerHTML` que su propia
+vista reescribe.** Es una clase de bug, no un caso: la auditoría encontró un segundo caso vivo
+(abajo) barriendo `overflow` contra los `innerHTML =` de `apps/game/src/ui/`.
+
+### Qué se hizo
+
+1. **`ToolsSection.js`**: el esqueleto (`section` + `h3` + caja) se construye UNA vez y después
+   solo se reemplazan las FILAS. El `h3` quedó fuera del subárbol que se reescribe, así que su
+   texto se refresca por `textContent` en cada render (cubre el cambio de idioma — verificado
+   es→en→es en vivo). Restauración de `scrollTop` como red de seguridad, escrita SOLO si cambió
+   (escribirla siempre puede cortar el impulso de un scroll táctil en curso).
+2. **`components.css`**: `.settings-tools-list` entra al grupo de la barra "The Workshop"
+   (`scrollbar-width: thin` + thumb `--bg-surface-highest` sobre track transparente). Se sumaron
+   también las dos tiras horizontales que estaban afuera (`.index-container-tabs`,
+   `.prestige-tree`/`.deeds-tree`) y un `height: 10px` junto al `width: 10px` (tres de estos
+   scrollean en horizontal). Cero colores sueltos: todo sale de tokens.
+3. **`CollectionView.js`** (hallazgo de la auditoría, mismo bug de clase): la tira de pestañas del
+   Índice mide ~4900px con todos los contenedores y también nace dentro del `innerHTML` de la
+   vista → volvía a `scrollLeft = 0` en cada render; **tocar una pestaña de la propia tira te
+   devolvía al principio y dejaba la elegida fuera de pantalla**. Se conserva la posición a través
+   de la reescritura. Medido en vivo antes de tocar nada: `scrollLeft` 300 → 0 tras un click.
+4. **`apps/game/e2e/fix-scroll-listas.spec.js`** (nuevo, 4 tests): scroll con rueda que sobrevive
+   al tick a 375px + última herramienta alcanzable; comprar/equipar a 1280px sin perder posición;
+   la barra computada de la lista IGUAL a la de `#tab-content` (nunca `auto`); y la tira del
+   Índice tras elegir un contenedor.
+
+### Verificación
+
+- TDD real: los 4 tests corrieron en ROJO primero (`scrollTop 0` / `scrollbar-color: auto`). El
+  del Índice se re-verificó en rojo **revirtiendo el fix con `git stash`** (prueba de sabotaje del
+  guardrail, napkin #2) — falla, y con el fix pasa.
+- **Unit 867/867** (sin cambios: el fix es UI pura, no toca engine) · **e2e 132/132 con `CI=1`**
+  (baseline 128 → +4), corrida completa sin un solo flaky, línea `132 passed` vista.
+- **Manual jugando de verdad** contra `npx serve` (skill `verify`), a 375px y 1280px, con
+  capturas ANTES/DESPUÉS en **navegador HEADED** (obligatorio para esto: en headless las barras
+  son overlay de 0px y el bug de estilo es INVISIBLE): la barra blanca del sistema desapareció y
+  quedó el thumb oscuro del taller; el scroll aguanta el tick (3 segundos, 3 renders), el cambio
+  de idioma, y un escarbado en curso (render por cada objeto destapado). Cero errores de consola
+  en ambos anchos. `document.scrollHeight` sin cambios respecto de main en los dos anchos.
+- Sin `console.log`, sin `TODO`, sin emojis, sin colores hardcodeados. `npm audit` 0
+  vulnerabilidades (con y sin dev).
+
+### Auditoría `Verif&Audit.md` — sin 🔴; un 🟡 PREEXISTENTE que hay que decidir
+
+- 🔴 **CRÍTICO/ALTO: ninguno.** El diff no toca engine, economía, save ni validación de input. Los
+  `innerHTML` que se tocaron interpolan solo data estática, `t()` y `formatMoney` (números del
+  engine): no hay sink nuevo ni entrada de usuario en el camino.
+- 🟡 **RIESGO MEDIO (preexistente en main, NO lo introduce esta ronda): a 375px, en un navegador
+  REAL (barras clásicas que ocupan lugar) el shell desborda el viewport ~20px y el tabbar queda
+  aplastado a 12px de alto en la pestaña Escarbar — el jugador tiene que scrollear la página para
+  llegar al nav.** Medido headed: `documentElement.scrollHeight` 687 vs `innerHeight` 667, con
+  `#dig-area` en 598.7px y `flex-shrink: 0`. Idéntico con y sin los cambios de esta rama
+  (verificado stasheando todo el diff), así que es de main. **Por qué ningún e2e lo caza: el
+  Chromium headless usa scrollbars overlay de 0px, así que `dig-regression.spec.js` mide un
+  documento que entra justo.** Es un punto ciego de TODA la suite, no de un test. Arreglarlo toca
+  el layout del área de escarbado (alturas / `flex-shrink`), que merece su propia ronda con
+  verificación del canvas: **queda propuesto al usuario, no aplicado acá** (fuera del pedido).
+- 🔵 **Calidad**: `.prestige-tree`/`.deeds-tree` nunca llegan a desbordar en 375/900/1280
+  (medido) — su barra estilizada es preventiva, sin efecto visible hoy. Y el `::-webkit-scrollbar`
+  del grupo convive con `scrollbar-width: thin`: en Chromium ≥121 el estándar gana, pero el bloque
+  webkit se conserva porque es el que fija el ancho de 10px en la práctica (medido: 10px con el
+  fix, 15px sin él).
+- ✅ **Veredicto: APTO.** El diff es UI pura, con tests que fallan sin él y una verificación
+  manual headed que reproduce lo que ve el jugador. El único 🟡 abierto es anterior a esta rama y
+  está documentado arriba con su medición para decidirlo.
+
+### Pendientes del usuario antes de lanzar (sin cambios respecto de la auditoría 3)
+
+1. `STEAM_APP_ID` real en `apps/desktop/steam.js` (hoy 480) y `appId`/`depotId` en los `.vdf`.
+   **Único bloqueante duro.**
+2. Alta de los 61 logros en Steamworks + textos en 5 idiomas (`tools/steam/RELEASE.md` §6).
+3. Subir `version` en los DOS `package.json` (hoy `0.0.0`) antes del build de release.
+4. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
+5. NUEVO: decidir si se abre una ronda para el 🟡 del layout a 375px con barras clásicas.
+
+---
+
+## Fix "fixbar" (segunda tanda) — evento de contenedor, extrusión de tarjetas y menú aplastado (misma rama `fix/scroll-herramientas`) — 2026-07-22
+
+### Pedido del usuario (sobre el PR ya abierto, todavía sin mergear)
+
+Tres cosas, con la instrucción explícita "si afecta cualquier cosa o se ve feo, arreglalo":
+(a) qué era lo del tabbar de Escarbar que reportó la auditoría anterior (él ve todo bien);
+(b) en Automatización el cuadrado de Guantes queda superpuesto y tapa el borde inferior de
+"Ampliar capacidad"; (c) con un evento (contenedor dorado) el contenedor queda tapado y "se mueve
+para arriba y abajo horrible constantemente".
+
+### Causas raíz (las tres medidas antes de tocar nada)
+
+1. **Evento**: `renderEventBanner` inserta la cinta como PRIMER hijo en flujo de
+   `.dig-picker-card`, pero la imagen del contenedor (ronda 30) sale hacia arriba con márgenes
+   negativos porque asume ser ella la primera (`--has-banner > .container-banner`): le comía 4px
+   y le tapaba el renglón del countdown. Y el salto vertical no era una animación: el texto
+   cambia una vez por segundo y **los dígitos de Plus Jakarta Sans no son de ancho fijo**, así
+   que la cinta cruzaba el límite de wrap y pasaba de 2 a 3 líneas según el dígito (75s y 73s →
+   3 líneas; 74s y 71s → 2). Medido: alto de tarjeta oscilando **223.7 ↔ 210.7** cada segundo,
+   arrastrando toda la fila.
+2. **Extrusión**: `--shadow-tactile: 0 8px 0` no es una sombra difusa, es el borde inferior
+   sólido de la tarjeta. Dos secciones apiladas sin margen dejan que la de abajo lo pise. Hueco
+   medido **0px** en `.automation-status → .automation-grid` (lo que reportó el usuario) y en
+   `.prestige-summary → .prestige-tree` (mismo defecto, nadie lo había visto).
+3. **Tabbar**: con scrollbars CLÁSICAS (navegador real y Electron; el headless usa overlay de
+   0px y por eso ningún e2e lo ve) a 375x667 el shell terminaba 20px fuera del viewport y el
+   flex repartía el recorte entre todos los hijos: el tabbar quedaba en **12px** de alto. En
+   412x915 y en desktop no pasa — por eso el usuario no lo ve.
+
+### Qué se hizo
+
+- `.dig-picker-card-event` pasa a **cinta superpuesta** (`position:absolute` sobre la imagen,
+  esquinas superiores redondeadas, `z-index:2`) + `font-variant-numeric: tabular-nums`. La
+  tarjeta con evento mide ahora **exactamente lo mismo** que sus hermanas: no se mueve nada ni
+  cuando empieza ni cuando termina el evento. `.dig-picker-card` gana `position: relative`.
+- `.automation-status` y `.prestige-summary` entran al `margin-bottom: var(--space-3)` que ya
+  tenía `.settings-block` (16px ≥ los 8px de extrusión, el mismo hueco que dentro de una grilla).
+- 🔵 De paso: `.quick-upgrade-effect` era `<span>` sin `display:block`, así que en el botón
+  "Ampliar capacidad" (un `<button>` común, no el flex `.quick-upgrade-btn`) el efecto quedaba
+  pegado al monto: "$500+1 Capacidad por nivel". Ahora cae a su propia línea.
+- `#tabbar { flex-shrink: 0 }` (el menú es lo último que puede ceder; `#quick-upgrades` ya
+  scrollea por dentro con `overflow-y:auto` + `min-height:0` y absorbe el recorte) + lista de
+  herramientas de 240px→150px SOLO en ventanas de ≤700px de alto (`@media (max-height: 700px)`).
+  A 375x667 headed: documento **667 contra 667** de ventana (antes 687) y tabbar en **68px**
+  (antes 12). En 412x915 y desktop no cambia nada.
+- `apps/game/e2e/fix-evento-y-sombras.spec.js` (nuevo, 2 tests). El del evento fuerza el disparo
+  con `Math.random = () => 0` (sin tocar data de balance), comprueba por hit-test que nada se
+  dibuja encima de la cinta, mide el alto en vivo mientras corre el countdown **y** barre los 75
+  valores del contador escribiendo el texto a mano (cubre en un segundo lo que tardaría 75). El
+  de la extrusión no comprueba un caso sino la INVARIANTE en las 6 pestañas: ninguna tarjeta con
+  extrusión puede tener al hermano de abajo dentro de sus 8px.
+
+### Verificación
+
+- TDD real: los 2 tests en ROJO primero (alto 224/211 y `[{automation-status, hueco:0}]`), y
+  re-verificados en rojo **revirtiendo el CSS con `git stash`** (prueba de sabotaje).
+- **Unit 867/867** (esto es CSS y layout: no toca engine) · **e2e 134/134 con `CI=1`**
+  (baseline 128 → +4 del scroll → +2 de esta tanda), corrida limpia; una corrida intermedia tuvo
+  1 flaky en `auditoria-release2` (el test de long tasks, sensible a la carga de 3 workers) que
+  pasó 3/3 aislado y verde en la corrida siguiente — flakiness conocida, ajena al diff.
+- Manual headed a 375x667, 412x915 y 1280x800 con capturas: cinta del evento entera y quieta
+  sobre la imagen, borde inferior de "Ampliar capacidad" visible con la tarjeta de Guantes
+  respirando 16px, efecto por nivel en su renglón, menú completo sin scroll de página.
+- Sin `console.log`, sin TODO, sin emojis, sin colores hardcodeados (todo `var(--…)`).
+
+### Nota para la próxima ronda
+
+**El evento de contenedor no tenía NI UN test** (ni unit ni e2e) antes de esta tanda: por eso el
+defecto visual shippeó. Lo que hay ahora cubre la geometría de la cinta, no la mecánica del
+evento (multiplicador, expiración, cooldown) — eso sigue sin cobertura de e2e.
+
+Y sigue abierto, con su medición, el punto de que **el Chromium headless usa scrollbars overlay
+de 0px**: ningún test de la suite puede ver un defecto de barras o el lugar que ocupan. Toda
+verificación de layout/scrollbars tiene que hacerse con `chromium.launch({ headless: false })`.

@@ -63,11 +63,31 @@ export const ToolsSection = {
     // pestañas con `flex-shrink: 0` (layout.css), así que el alto de esta lista empujaba el
     // documento entero más allá del viewport y devolvía el scroll de PÁGINA que
     // dig-regression.spec.js vigila desde el rework de escarbado. El título queda fijo afuera.
-    container.innerHTML =
-      `<section class="settings-block settings-tools">` +
-      `<h3>${t('tools.title')}</h3>` +
-      `<div class="settings-tools-list">${rows.join('')}</div>` +
-      `</section>`;
+    //
+    // FIX (2026-07-22, reporte del usuario): el ESQUELETO (section + título + caja) se construye
+    // una sola vez y después solo se reemplazan las FILAS. Antes se reescribía
+    // `container.innerHTML` entero en cada render, así que el elemento que scrollea nacía y moría
+    // en cada pasada con `scrollTop = 0`: con automatización o Puesto activos el store notifica
+    // una vez por segundo (`tickAutomation`) y la lista volvía sola al principio — solo se podían
+    // ver las 4 primeras de las 8 herramientas. El resto de los scrollers del juego
+    // (`#tab-content`, `#quick-upgrades`, `#tabbar`) ya son elementos estáticos de `index.html` a
+    // los que solo se les cambia el contenido; ésta era la excepción.
+    let list = container.querySelector('.settings-tools-list');
+    if (!list) {
+      container.innerHTML =
+        `<section class="settings-block settings-tools">` +
+        `<h3></h3>` +
+        `<div class="settings-tools-list"></div>` +
+        `</section>`;
+      list = container.querySelector('.settings-tools-list');
+    }
+    // Fuera del subárbol que se reemplaza, así que se refresca acá (cubre el cambio de idioma).
+    container.querySelector('.settings-tools h3').textContent = t('tools.title');
+    // Red de seguridad por si el navegador clampea la posición mientras la caja está vacía: se
+    // escribe SOLO si cambió, para no cortar el impulso de un scroll táctil en curso.
+    const scrollTop = list.scrollTop;
+    list.innerHTML = rows.join('');
+    if (list.scrollTop !== scrollTop) list.scrollTop = scrollTop;
   },
 };
 

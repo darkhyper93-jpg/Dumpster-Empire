@@ -232,7 +232,16 @@ button:hover:not(:disabled) {
   box-shadow: var(--shadow-tactile);
 }
 
-.settings-block {
+/* FIX (2026-07-22, reporte del usuario): `--shadow-tactile` es una extrusión SÓLIDA de 8px hacia
+   abajo (el "borde inferior" de la tarjeta, no una sombra difusa), así que dos tarjetas apiladas
+   SIN margen dejan que la de abajo pise ese borde — se veía en Automatización (la primera máquina
+   comiéndose el borde de "Ampliar capacidad") y en Prestigio (el árbol sobre el resumen). El
+   margen tiene que ser >= 8px; se usa `--space-3` (16px), el mismo hueco que ya separa las
+   tarjetas DENTRO de una grilla, para que el apilado y la grilla respiren igual.
+   `fix-evento-y-sombras.spec.js` vigila la invariante en todas las pestañas. */
+.settings-block,
+.automation-status,
+.prestige-summary {
   margin-bottom: var(--space-3);
 }
 
@@ -304,6 +313,20 @@ button:hover:not(:disabled) {
   max-height: 240px;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+/* AJUSTE (2026-07-22, medido en navegador HEADED — en headless las scrollbars son overlay de 0px
+   y esto es INVISIBLE): en una ventana baja (≤700px de alto) las barras clásicas ensanchan el
+   contenido, `#dig-area` (que no encoge) se pasa de largo y el shell terminaba 20px fuera del
+   viewport con el tabbar aplastado a 12px — había que scrollear la página para llegar al menú.
+   Recortando la lista a ~2,5 filas el panel devuelve 90px y todo entra con margen (verificado a
+   375x667: documento 651 contra 667 de ventana, tabbar en sus 66px). Solo aplica ahí: a 412x915
+   y en desktop la lista sigue con sus 240px. Que la lista sea más corta no pierde nada — scrollea
+   y ahora conserva la posición. */
+@media (max-height: 700px) {
+  .settings-tools-list {
+    max-height: 150px;
+  }
 }
 
 .tool-row {
@@ -649,6 +672,8 @@ button:hover:not(:disabled) {
   align-items: center;
   gap: var(--space-1);
   width: 110px;
+  /* Ancla de la cinta de evento (ver `.dig-picker-card-event`). */
+  position: relative;
   padding: var(--space-2);
   background: var(--bg-2);
   border-radius: var(--radius-lg);
@@ -982,6 +1007,11 @@ textarea {
   font-weight: 400;
   color: var(--fg-2);
   text-align: center;
+  /* AJUSTE (2026-07-22): en `.quick-upgrade-btn` (flex) el `<span>` ya caía a su propia línea por
+     ser flex item, pero el botón "Ampliar capacidad" de Automatización es un `<button>` común y
+     el efecto quedaba pegado al monto en la misma línea ("$500+1 Capacidad por nivel"). */
+  display: block;
+  width: 100%;
 }
 
 /* --- Íconos en tarjetas (Shop/Automation/Achievements/Prestige) --- */
@@ -1463,29 +1493,52 @@ textarea {
 
 /* Scrollbar "The Workshop": angosta, con thumb sobre track transparente, coherente con el
    panel. Electron es Chromium: ::-webkit-scrollbar es el camino principal; scrollbar-width/
-   scrollbar-color quedan como fallback estándar (Firefox). */
+   scrollbar-color quedan como fallback estándar (Firefox).
+
+   FIX (2026-07-22, reporte del usuario): la lista de herramientas de escarbado
+   (`.settings-tools-list`) y las dos tiras horizontales (pestañas del INDEX, árboles de
+   prestigio/Escrituras en desktop) eran los únicos scrollers que quedaban afuera y mostraban la
+   barra gris del sistema encima del panel. Se suman al mismo grupo: una sola barra en todo el
+   juego. `height` además de `width` porque tres de estos scrollean en horizontal. */
 #tab-content,
 #quick-upgrades,
-#tabbar {
+#tabbar,
+.settings-tools-list,
+.index-container-tabs,
+.prestige-tree,
+.deeds-tree {
   scrollbar-width: thin;
   scrollbar-color: var(--bg-surface-highest) transparent;
 }
 
 #tab-content::-webkit-scrollbar,
 #quick-upgrades::-webkit-scrollbar,
-#tabbar::-webkit-scrollbar {
+#tabbar::-webkit-scrollbar,
+.settings-tools-list::-webkit-scrollbar,
+.index-container-tabs::-webkit-scrollbar,
+.prestige-tree::-webkit-scrollbar,
+.deeds-tree::-webkit-scrollbar {
   width: 10px;
+  height: 10px;
 }
 
 #tab-content::-webkit-scrollbar-track,
 #quick-upgrades::-webkit-scrollbar-track,
-#tabbar::-webkit-scrollbar-track {
+#tabbar::-webkit-scrollbar-track,
+.settings-tools-list::-webkit-scrollbar-track,
+.index-container-tabs::-webkit-scrollbar-track,
+.prestige-tree::-webkit-scrollbar-track,
+.deeds-tree::-webkit-scrollbar-track {
   background: transparent;
 }
 
 #tab-content::-webkit-scrollbar-thumb,
 #quick-upgrades::-webkit-scrollbar-thumb,
-#tabbar::-webkit-scrollbar-thumb {
+#tabbar::-webkit-scrollbar-thumb,
+.settings-tools-list::-webkit-scrollbar-thumb,
+.index-container-tabs::-webkit-scrollbar-thumb,
+.prestige-tree::-webkit-scrollbar-thumb,
+.deeds-tree::-webkit-scrollbar-thumb {
   background: var(--bg-surface-highest);
   border-radius: var(--radius-md);
 }
@@ -1702,14 +1755,30 @@ textarea {
 }
 
 /* Banner de evento de contenedor (Dorado/En Llamas, PLAN.md §4.32) sobre la tarjeta del picker. */
+/* FIX (2026-07-22, reporte del usuario): la cinta del evento era el PRIMER hijo EN FLUJO de la
+   tarjeta, y la imagen del contenedor (ronda 30) sale hacia arriba con márgenes negativos porque
+   asume ser ella la primera: le comía 4px y le tapaba el renglón del countdown. Y como el texto
+   cambia una vez por segundo y los dígitos de Plus Jakarta Sans NO son de ancho fijo, la cinta
+   saltaba de 2 a 3 líneas y con ella el alto de la tarjeta (13px, medido) y el de toda la fila,
+   una vez por segundo. Ahora es una CINTA SUPERPUESTA sobre la imagen: fuera del flujo, así la
+   tarjeta con evento mide exactamente lo mismo que sin evento (ni al empezar ni al terminar el
+   evento se mueve nada), y `tabular-nums` fija el ancho de los dígitos del countdown. */
 .dig-picker-card-event {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
+  line-height: 1.2;
   font-weight: 700;
-  border-radius: var(--radius-sm);
-  padding: 0 var(--space-1);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-1);
 }
 
 .dig-picker-card-event--golden {

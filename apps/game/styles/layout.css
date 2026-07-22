@@ -453,6 +453,12 @@ body {
      margen resuelve a 0 (la fila 'nav' es `auto`, sin espacio libre) — verificado a 1280px. */
   order: 1;
   margin-top: auto;
+  /* AJUSTE (2026-07-22): el menú es lo último que puede ceder. En una ventana baja el shell se
+     queda corto y el flex reparte el recorte entre TODOS los hijos que encogen: el tabbar caía a
+     12-28px de alto (ilegible) mientras `#quick-upgrades`, que ya scrollea solo por dentro
+     (`overflow-y:auto` + `min-height:0`), tenía de sobra para absorberlo. Medido headed a
+     375x667. En desktop el shell es grilla y `flex-shrink` no interviene. */
+  flex-shrink: 0;
   overflow-x: auto;
   border-top: 4px solid var(--bg-surface-highest);
   background: var(--bg-2);
