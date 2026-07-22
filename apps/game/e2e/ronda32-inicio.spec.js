@@ -59,19 +59,24 @@ test.describe('Dumpster Empire — ronda 32 (pantalla de inicio calcada al arte)
     const playBtn = page.locator('#title-play-btn');
     await expect(playBtn).toBeVisible();
 
-    const style = await playBtn.evaluate((el) => {
-      const cs = getComputedStyle(el);
-      return {
-        backgroundColor: cs.backgroundColor,
-        borderTopWidth: cs.borderTopWidth,
-        boxShadow: cs.boxShadow,
-        textShadow: cs.textShadow,
-      };
-    });
-    expect(style.backgroundColor).toBe('rgba(0, 0, 0, 0)');
-    expect(style.borderTopWidth).toBe('0px');
-    expect(style.boxShadow).toBe('none');
-    expect(style.textShadow).toBe('none');
+    // AJUSTE (auditoría de release 2, napkin #11): esto era un `evaluate` + `toBe` — un assert
+    // SIN auto-retry sobre estilos que el navegador está TRANSICIONANDO. Al pasar a `data-bg
+    // ='ready'` la regla del calco apaga placa/borde/sombras, pero `.title-play-btn` tiene
+    // `transition`, así que `getComputedStyle` devuelve el valor INTERMEDIO de la animación
+    // mientras corre: bajo carga (varios workers) la lectura caía ahí y `boxShadow` no era 'none'
+    // todavía. Reproducido con `--repeat-each=6 --workers=6`. `expect.poll` reintenta hasta que
+    // los cuatro valores asienten, que es lo que el test quiere afirmar (el estado final, no un
+    // frame cualquiera de la transición).
+    await expect
+      .poll(
+        async () =>
+          playBtn.evaluate((el) => {
+            const cs = getComputedStyle(el);
+            return [cs.backgroundColor, cs.borderTopWidth, cs.boxShadow, cs.textShadow].join(' | ');
+          }),
+        { timeout: 5000, message: 'la placa calcada de JUGAR nunca terminó de apagarse' }
+      )
+      .toBe('rgba(0, 0, 0, 0) | 0px | none | none');
 
     await playBtn.click();
     await expect(page.locator('.game-shell')).toBeVisible();

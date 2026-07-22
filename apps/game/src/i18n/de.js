@@ -195,6 +195,12 @@ export default {
   'settings.resetButton': 'Spiel zurücksetzen',
   // Round 19: haptic vibration toggle, same pattern as settings.sound.
   'settings.vibration': 'Vibration: {state}',
+  // AJUSTE (auditoria de release): aviso de guardado ilegible. Antes, un save que no pasaba la
+  // validacion se reemplazaba por una partida nueva en SILENCIO (CLAUDE.md exige un mensaje
+  // claro); ahora se archiva una copia intacta y el jugador se entera de las dos cosas.
+  'save.rejectedToast': 'Dein Spielstand konnte nicht gelesen werden. Eine unveränderte Kopie wurde archiviert und ein neues Spiel gestartet.',
+  'save.rejectedTitle': 'Spielstand nicht lesbar',
+  'save.rejectedDetail': 'Der vorherige Spielstand hat die Prüfung nicht bestanden und ein neues Spiel wurde gestartet. Die Originalkopie liegt unverändert archiviert auf diesem Gerät: sie wurde nicht überschrieben.',
 
   // Round 20 (PLAN.md §4.23): dig tool selector, same pattern as AutomationView.
   'tools.title': 'Grabwerkzeuge',

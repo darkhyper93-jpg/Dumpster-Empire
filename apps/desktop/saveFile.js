@@ -60,7 +60,10 @@ function readSaveFile() {
     writeLocalFile(cloud);
     return cloud;
   }
-  if (localTs > 0) {
+  // AJUSTE (auditoría de release): `>= 0` y no `> 0`. `extractTimestamp` usa -1 como sentinela
+  // de "no hay guardado legible"; un archivo local con `lastSavedAt: 0` es un save REAL y con
+  // `> 0` se descartaba a favor de la nube — que puede ser `null`, devolviendo "sin partida".
+  if (localTs >= 0) {
     writeCloudSave(local);
     return local;
   }

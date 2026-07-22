@@ -107,6 +107,7 @@ export {
   creditDugItem,
   springTrap,
   proceduralContainer,
+  resolveContainerById,
   isProceduralTierUnlocked,
   nextProceduralTier,
 } from './systems/containers.js';
@@ -171,6 +172,7 @@ export {
   rerollDailyMissionsIfNeeded,
   updateMissionsProgress,
   claimMission,
+  ownedCategories,
 } from './systems/missions.js';
 
 export { tryTriggerContainerEvent, isEventExpired } from './systems/events.js';

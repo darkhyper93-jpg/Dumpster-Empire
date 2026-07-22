@@ -8086,3 +8086,139 @@ cero código muerto (los "TODO" de un grep ingenuo son la palabra española *tod
 2. Alta de los 61 logros en Steamworks (`RELEASE.md` §6) + textos en los 5 idiomas.
 3. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
 - `reference/ui/Contenedores/` sigue SIN commitear (heredado de la ronda 32, no pertenece a esta rama).
+
+
+---
+
+## Auditoría de release 2 (post-ronda 33) — working tree de `main`, sin commitear aún — 2026-07-22
+
+### Reporte
+
+Segunda pasada adversarial completa (`Verif&Audit.md`) sobre `main`, con todo ROADMAPv4 hasta la
+ronda 33 + la auditoría anterior ya mergeados. Baseline verde de arranque: **unit 825/825,
+e2e 117/117**. El usuario aprobó aplicar TODO (🔴 + 🟡 + 🔵).
+
+### Los tres 🔴 son la MISMA raíz: `mapa[claveDelSave]` (napkin #7)
+
+El patrón que nació en la migración v6→v7 y ya estaba resuelto en `stall.js`/`dataI18n.js`
+reapareció en dos lugares nuevos. Con una clave que resuelve contra `Object.prototype`
+(`constructor`, `__proto__`, `toString`, `valueOf`, `hasOwnProperty`) el lookup devuelve algo
+**truthy**, así que ni `|| 0` ni `|| []` salvan nada:
+
+- **🔴 `StallView.findItemDef`** — `itemsData.containers[entry.containerId]` con un `containerId`
+  hostil en `inventory` devolvía `Object.prototype` (sin `.find`) → `TypeError` en CADA render:
+  **pestaña Puesto en blanco, permanente**, y la excepción salía por `UIManager.render` →
+  `notify()`, reventando también las acciones despachadas con esa pestaña abierta. PoC en
+  Chromium: `pageerror: pool.find is not a function` ×3 y `#tab-content` vacío.
+- **🔴 `missions.counterValue`** — `state.itemsFoundByCategory[params.categoria]` devolvía la
+  FUNCIÓN `Object`; `Math.max(0, Object - snapshot)` = `NaN` → `progress: NaN` → `JSON.stringify`
+  lo persiste como `null` → el siguiente arranque **rechaza el save entero** → wipe. PoC de dos
+  sesiones en navegador real: sesión 1 con $777.777 → el autoguardado escribe `"progress":null` →
+  sesión 2 abre en **$0, sin un solo mensaje**.
+- **🔴 El wipe silencioso en sí** (`store.loadState`) — era el AMPLIFICADOR: cualquier save
+  rechazado se reemplazaba por `freshState()` sin aviso y el primer `persist()` lo pisaba.
+  Contradice literalmente CLAUDE.md ("rechazar con un mensaje claro y NUNCA corromper la partida").
+
+**Fixes**: `Object.hasOwn` + coerción del valor en los dos lookups; `Number.isFinite` como
+cinturón sobre `mission.progress` (campo persistido); y el save rechazado se **archiva** en
+`dumpsterEmpireSave.rejected` con aviso al jugador (toast + bloque permanente en Ajustes,
+`.settings-save-warning`, con los tokens `--danger` que ya existían).
+
+### 🟡 medios
+
+- **`getRecommendedLuck` memoizada** (`WeakMap` por `itemsData`): 73 ms por render de la Tienda,
+  que se re-renderiza **una vez por segundo** con automatización comprada → 5 long tasks de ~60 ms
+  en 5 s de idle, medidas con `PerformanceObserver` en Chromium. Es una meta FIJA por contenedor
+  desde la ronda 7 (`state` se ignora por diseño), así que el cache es seguro; la invariante que
+  lo habilita quedó fijada por test. `WeakMap` y no `Map` global para que dos balances distintos
+  (tests) no se contaminen.
+- **`averageItemValueForContainer`**: único lookup de pool del engine sin `poolContainerId || id`
+  + `|| []` (un tier procedural lo hacía explotar con `undefined.filter`) y sin guard de pool
+  vacío (`0/0 = NaN`). Alineado con `containers.js`/`offline.js`/`getStallThresholdPresets`.
+- **`npm audit fix`**: 2 high transitivas de dev (`fast-uri`, `brace-expansion`, vía
+  `electron-builder → ajv`). Ahora **0 vulnerabilidades**; el lockfile solo movió esos dos
+  paquetes de patch y **ninguna versión pineada cambió** (electron 43.0.0, electron-builder
+  26.15.3, steamworks.js 0.4.0, vitest 4.1.9, @playwright/test 1.61.1 — verificado explícitamente).
+
+### 🔵 calidad
+
+- **Reflow forzado 60 veces por segundo** (`fx/tween.js`): `Topbar.render` corre en cada frame del
+  rAF; con el dinero subiendo, `tweenNumberText` se reentraba por frame y cada entrada disparaba
+  `triggerRoll` → `void el.offsetWidth` (layout síncrono forzado), permanentemente durante el
+  idle. El roll se dispara ahora SOLO al terminar el conteo, que es cuando se ve.
+- **Colores del canvas a tokens** (`--dig-dirt`/`--dig-substrate`/`--dig-label`/`--dig-ink`): los
+  cuatro hex sueltos de `DigCanvas.js` salen de `tokens.css` y se resuelven una vez por instancia
+  (`palette()`, cacheada — `getComputedStyle` fuerza recálculo de estilo). El smoke de Electron
+  confirma que resuelven a los MISMOS valores de antes (`#2c261a #4a3526 #f4ede1 #161310`): el
+  render queda bit a bit idéntico.
+- **Deduplicación**: `resolveContainerById` (engine) reemplaza las TRES copias de "id →
+  contenedor real o tier procedural" que vivían en `store.js` y `AutomationView.js`; y
+  `ownedCategories` se exporta del engine en vez de estar duplicada literalmente en `store.js`
+  (que además era lógica de negocio del lado UI, contra la frontera de CLAUDE.md).
+- **`formatNumber`**: techo de presentación. `Number.MAX_VALUE` (al que `addMoney` clampea)
+  imprimía un string de ~261 dígitos + sufijo; ahora `999.99QiDc+`. Ningún valor alcanzable
+  jugando llega ahí (el tope real es ~2.5e47, tier procedural 25).
+- **`saveFile.readSaveFile`**: `localTs >= 0` (era `> 0`). `-1` es el sentinela de "no hay
+  guardado"; un archivo local con `lastSavedAt: 0` es un save real y se descartaba a favor de la
+  nube, que puede ser `null`.
+- **Marcas bind-once con nombre de vista** en `DigContainerPicker`/`QuickUpgrades` (napkin #3):
+  no colisionaban hoy, pero `boundClick` pelado es el nombre exacto que ya causó el bug de los
+  tabs del Índice.
+
+### Dos bugs que encontró el propio e2e mientras se escribía
+
+1. **El aviso de guardado ilegible era MUDO**: `layout.css:115-117` oculta `#toast-container`
+   mientras `#title-screen` está visible (para no ensuciar el arte de la landing), así que el
+   toast del primer render nacía invisible y expiraba solo antes de que el jugador entrara. Fix:
+   `UIManager` RETIENE el aviso hasta que el shell es visible, y `main.js:enterGame` hace un
+   `ui.render()` explícito (sin él, en una partida sin automatización el tick no notifica y no
+   había ningún render entre el boot y la primera acción del jugador).
+2. **El test de rendimiento no probaba nada**: con un seed sin contenedores desbloqueados NI
+   automatización comprada, la Tienda renderiza 4 tarjetas y una sola vez — pasaba en verde con el
+   cache desactivado. Se descubrió saboteando el fix (napkin #2). El seed ahora es un jugador
+   avanzado con el robot comprado, que es el estado real donde duele.
+
+### Verificación
+
+- **Unit 841/841** (baseline 825 → +16 de `packages/engine/tests/auditoria-release2.test.js`).
+- **e2e 122/122** con `CI=1` (baseline 117 → +5 de `apps/game/e2e/auditoria-release2.spec.js`).
+  Dos corridas completas limpias consecutivas tras arreglar el flake de abajo.
+- **Sabotaje de los 4 fixes principales confirmado** (napkin #2) y revertido:
+  `counterFromMap` → 3 tests unit en rojo · `findItemDef` → e2e 1 en rojo · backup del save →
+  e2e 3 en rojo · cache de `getRecommendedLuck` → e2e 5 en rojo con
+  `long tasks: 75, 62, 59, 59, 58`.
+- **Smoke de Electron REAL** (napkin #9, `--user-data-dir` a un tmp; sha256 del save real idéntico
+  antes/después): arranca a `ready`, entra al juego, `save:write` escribe atómico sin `.tmp`
+  huérfano, el IPC rechaza un argumento no-string, los 4 tokens del canvas resuelven, cero errores
+  del renderer, cierre limpio en 154 ms.
+- **Hash de la CSP** recalculado contra el import map real: coincide (no se tocó `index.html`).
+
+### Flake arreglado (napkin #11: el mismo test dos corridas seguidas ⇒ se arregla el assert)
+
+`ronda32-inicio.spec.js:54` ("JUGAR no dibuja una segunda placa") flakeó en dos corridas completas
+seguidas. **No era del diff**: era un `evaluate` + `toBe` (assert SIN auto-retry) sobre estilos que
+el navegador está TRANSICIONANDO — al pasar a `data-bg='ready'` la regla del calco apaga
+placa/borde/sombras, pero `.title-play-btn` tiene `transition`, así que `getComputedStyle`
+devolvía el valor intermedio y bajo carga la lectura caía ahí. Reproducido a mano con
+`--repeat-each=6 --workers=6` (`boxShadow` no era `'none'`); reescrito con `expect.poll` sobre los
+cuatro valores juntos, verde 42/42 con la MISMA carga que lo reproducía. La cobertura no se
+pierde: si se dibujara una segunda placa, el valor nunca asienta y el poll falla.
+
+### Verificado limpio (mentalidad adversarial, sin hallazgos nuevos)
+
+- **XSS**: los 51 sinks de `innerHTML` resisten; `Number(x) || 0` y la resolución de ids libres
+  contra la data con fallback seguro están aplicados en todas las vistas. Cero `eval`,
+  `document.write`, `insertAdjacentHTML`, `new Function`.
+- **Secretos: cero** (los hits del grep son `isHiddenSecret`, `<root>-secrets` en un comentario y
+  un fixture de test). `npm audit --omit=dev`: 0 vulnerabilidades.
+- **Electron**: `nodeIntegration:false`, `contextIsolation:true`, `sandbox:true`,
+  `setWindowOpenHandler → deny`, guard de `will-navigate`, CSP con hash de script +
+  `base-uri 'none'` + `object-src 'none'`, `resolveSafePath`, escritura atómica, timeout de cierre.
+- **Sin deuda de debug**: cero `console.log`, cero `TODO`/`FIXME` reales, cero código muerto.
+
+### Pendientes del usuario antes de lanzar (NINGUNO bloquea el merge de esta rama)
+
+1. `STEAM_APP_ID` real en `apps/desktop/steam.js` (hoy 480) y `appId`/`depotId` en los `.vdf`.
+   **Es el único bloqueante duro del release.**
+2. Alta de los 61 logros en Steamworks (`tools/steam/RELEASE.md` §6) + textos en los 5 idiomas.
+3. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.

@@ -190,6 +190,12 @@ export default {
   'settings.resetButton': 'Reiniciar partida',
   // Ronda 19: toggle de vibración táctil, mismo patrón que settings.sound.
   'settings.vibration': 'Vibración: {state}',
+  // AJUSTE (auditoria de release): aviso de guardado ilegible. Antes, un save que no pasaba la
+  // validacion se reemplazaba por una partida nueva en SILENCIO (CLAUDE.md exige un mensaje
+  // claro); ahora se archiva una copia intacta y el jugador se entera de las dos cosas.
+  'save.rejectedToast': 'No se pudo leer tu partida guardada. Se archivó una copia intacta y se empezó una nueva.',
+  'save.rejectedTitle': 'Partida guardada ilegible',
+  'save.rejectedDetail': 'El guardado anterior no pasó la validación y se empezó una partida nueva. La copia original quedó archivada intacta en este dispositivo: no se sobrescribió.',
 
   // Ronda 20 (PLAN.md §4.23): selector de herramienta de escarbado, mismo patrón que AutomationView.
   'tools.title': 'Herramientas de escarbado',

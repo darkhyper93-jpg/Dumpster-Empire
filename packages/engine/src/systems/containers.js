@@ -23,7 +23,7 @@ import {
   resolveMarketFluctuation,
 } from '../economy.js';
 import { rollCategory, rollItem, rollItemVariance, rollIsTrap, rollTrapGrade, rollLegendary } from '../rng.js';
-import { PROCEDURAL_CONTAINER_MAX_N, proceduralContainerId } from '../procedural.js';
+import { PROCEDURAL_CONTAINER_MAX_N, proceduralContainerId, proceduralTierN } from '../procedural.js';
 
 /**
  * @typedef {Object} DigResult
@@ -109,6 +109,29 @@ export function proceduralContainer(n, baseContainer) {
     isProcedural: true,
     proceduralN: n,
   };
+}
+
+/**
+ * Resuelve un id de contenedor a su objeto: uno real de `allContainers`, o un tier procedural
+ * (`bigbangPlus<n>`) reconstruido en runtime. `null` si el id no corresponde a nada — nunca
+ * inventa un contenedor.
+ *
+ * AJUSTE (auditoría de release): esta resolución estaba escrita TRES veces en la UI
+ * (`store.resolveDigContainer`, `AutomationView.resolveTargetContainer` y el bloque de
+ * `DigContainerPicker`), cada una con su propio criterio de fallo. Es exactamente el tipo de
+ * duplicación donde una ronda arregla una copia y deja las otras rotas; vive acá, con
+ * `proceduralContainer`, que es de donde sale la mitad procedural.
+ * @param {string} containerId - id real o procedural; cualquier otro valor devuelve `null`
+ * @param {Array<Object>} allContainers
+ * @returns {Object|null}
+ */
+export function resolveContainerById(containerId, allContainers) {
+  const real = allContainers.find((c) => c.id === containerId);
+  if (real) return real;
+  const n = proceduralTierN(containerId);
+  if (n === null) return null;
+  const base = allContainers.find((c) => c.id === 'vertederoBigBang');
+  return base ? proceduralContainer(n, base) : null;
 }
 
 /**

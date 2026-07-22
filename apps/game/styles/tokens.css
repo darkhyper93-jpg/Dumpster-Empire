@@ -95,6 +95,16 @@
     repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 34px),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 17px);
   --wood-surface: #40301f; /* el banco de trabajo queda CÁLIDO a propósito: isla de madera sobre la noche fría */
+
+  /* --- Paleta del canvas de escarbado (AJUSTE, auditoría de release) ---
+     DigCanvas.js pinta con la API 2D, que no entiende `var(--x)`: tenía estos cuatro colores
+     como literales hex sueltos, contra la regla de tokens centralizados de CLAUDE.md. Viven acá
+     y el canvas los resuelve con `resolveCssColor` (el mismo camino que ya usaba para los
+     colores de rareza), así que un cambio de paleta se hace en un solo lugar. */
+  --dig-dirt: #2c261a;      /* la capa de "suciedad" que se rasca */
+  --dig-substrate: #4a3526; /* la tierra del fondo, debajo de los objetos */
+  --dig-label: #f4ede1;     /* texto de la etiqueta de cada objeto */
+  --dig-ink: #161310;       /* tinta de los íconos sobre la etiqueta clara */
   --scratch-a: #2a3650;
   --scratch-b: #1b2738;
 

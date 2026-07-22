@@ -53,7 +53,12 @@ export function tweenNumberText(el, toValue, formatFn, opts = {}) {
     }
   }
   state.rafId = requestAnimationFrame(step);
-  if (roll) triggerRoll(el);
+  // AJUSTE (auditoría de release): el roll de arranque se sacó de acá. `Topbar.render` corre en
+  // CADA frame del rAF (loop.js) y con el dinero subiendo (automatización) esta función se
+  // reentraba 60 veces por segundo: cada entrada disparaba `triggerRoll`, que hace
+  // `void el.offsetWidth` — un LAYOUT SÍNCRONO FORZADO, 60 por segundo, de forma permanente
+  // durante todo el idle. La animación de rodillo se dispara ahora solo al TERMINAR el conteo
+  // (la rama `else` de arriba), que es cuando el número queda quieto y el rodillo se ve.
 }
 
 /** Retriggerea la animación CSS `counter-roll` (clase preparada para el pulido del Agente 4). */

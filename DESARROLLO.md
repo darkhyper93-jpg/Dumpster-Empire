@@ -684,6 +684,28 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
 
 ---
 
+- **Auditoría de release 2 (post-ronda 33) — `mapa[claveDelSave]` es una clase de bug, no un caso
+  suelto**: el napkin #7 (nacido en la migración v6→v7) volvió a aparecer en DOS lugares nuevos —
+  `StallView.findItemDef` (`itemsData.containers[entry.containerId]`) y `missions.counterValue`
+  (`state.itemsFoundByCategory[params.categoria]`). Con una clave que resuelve contra
+  `Object.prototype` (`constructor`, `__proto__`, `toString`, …) el lookup devuelve algo truthy
+  —el `|| 0`/`|| []` NO salva— y termina en `TypeError` (pestaña en blanco permanente) o en `NaN`
+  sobre un campo persistido (que `JSON.stringify` escribe `null` y el siguiente boot rechaza:
+  wipe). **Regla**: todo lookup cuya CLAVE venga del save pasa por `Object.hasOwn` + coerción del
+  valor; nunca el índice pelado. Se sumó la tercera pata que faltaba: un save rechazado ya no
+  desaparece en silencio — se archiva en `dumpsterEmpireSave.rejected` y la UI avisa (toast al
+  entrar al juego + bloque permanente en Ajustes), como exige CLAUDE.md ("mensaje claro, nunca
+  corromper la partida"). Sin eso, cualquier bug de validación futuro sigue costando la partida.
+- **`getRecommendedLuck` se memoiza por `itemsData` (auditoría de release 2)**: desde la ronda 7 es
+  una meta FIJA por contenedor (se evalúa contra `freshState()`), así que su resultado depende solo
+  de `container` + `itemsData`. Sin cache, `ShopView` la recalculaba para los ~20 contenedores en
+  cada render y `tickAutomation` re-renderiza la pestaña una vez por segundo: 73 ms por render,
+  medidos como 5 long tasks de ~60 ms en 5 s de idle en Chromium (peor en Steam Deck). El cache es
+  un `WeakMap` por `itemsData` y no un `Map` global para que dos balances distintos (tests) no se
+  contaminen. La invariante que lo habilita está fijada por test.
+
+---
+
 ## 11. Qué queda como postre (no tocar en V1)
 
 Todo lo de "posibles adiciones a futuro" de PLAN.md: objetos legendarios, eventos de contenedor,

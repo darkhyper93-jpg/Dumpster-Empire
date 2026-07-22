@@ -30,7 +30,7 @@ import {
   hasProceduralContainersUnlocked,
   isProceduralTierUnlocked,
   proceduralContainer,
-  proceduralTierN,
+  resolveContainerById,
   PROCEDURAL_CONTAINER_MAX_N,
 } from '@dumpster/engine';
 import { iconMarkup } from '../icons/icons.js';
@@ -64,12 +64,10 @@ function robotAt(state, k) {
  * @returns {object|null}
  */
 function resolveTargetContainer(targetId, allContainers) {
+  // AJUSTE (auditoría de release): la resolución id → contenedor (real o tier procedural) vive en
+  // el engine; acá quedaba una tercera copia con su propio criterio de fallo.
   if (!targetId) return null;
-  const fixed = allContainers.find((c) => c.id === targetId);
-  if (fixed) return fixed;
-  const n = proceduralTierN(targetId);
-  const bigBang = allContainers.find((c) => c.id === 'vertederoBigBang');
-  return n && bigBang ? proceduralContainer(n, bigBang) : null;
+  return resolveContainerById(targetId, allContainers);
 }
 
 /** Nombre visible de un contenedor, con el sufijo "+n" de los tiers procedurales. */

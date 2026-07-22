@@ -246,6 +246,27 @@ button:hover:not(:disabled) {
   margin-bottom: 0;
 }
 
+/* AJUSTE (auditoría de release): aviso permanente de "el guardado anterior no se pudo leer".
+   Usa los tokens de error que ya existen (--danger / --danger-container), no un rojo suelto.
+   Solo se renderiza cuando hay una copia archivada de verdad, así que en el uso normal esta
+   regla no matchea nada. */
+.settings-save-warning {
+  border-left: 4px solid var(--danger);
+  background: color-mix(in srgb, var(--danger-container) 22%, var(--bg-2));
+}
+
+.settings-save-warning h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--danger);
+}
+
+.settings-save-warning p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
 .settings-credits h3,
 .settings-stats h3 {
   margin: 0;
