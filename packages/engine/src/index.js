@@ -129,6 +129,7 @@ export {
   setKeepThreshold,
   setMantenerStockPedidos,
   sellInventoryItem,
+  sellAllInventory,
   stallVendorTick,
   applyOfflineStallSales,
   rotateStallOrders,

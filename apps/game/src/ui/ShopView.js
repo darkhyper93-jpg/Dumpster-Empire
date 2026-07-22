@@ -219,10 +219,12 @@ export const ShopView = {
           status: areaReached ? t('shop.reached') : t('shop.haveMult', { cur: curArea.toFixed(2) }),
         })}` +
         `</p>` +
-        `<p class="shop-card-rate ${ritmoAlDia ? 'shop-card-rate--ok' : 'shop-card-rate--low'}">` +
+        // Ronda "features" (2026-07-22): el `title` explica contra QUÉ se compara el % (el
+        // usuario no entendía qué medían "Ritmo"/"Pincel"); las etiquetas ya nombran el efecto.
+        `<p class="shop-card-rate ${ritmoAlDia ? 'shop-card-rate--ok' : 'shop-card-rate--low'}" title="${t('shop.rateLineTitle')}">` +
         `${t('shop.rateLine', { pct: Math.round(ritmo * 100) })}` +
         `</p>` +
-        `<p class="shop-card-rate ${areaRateAlDia ? 'shop-card-rate--ok' : 'shop-card-rate--low'}">` +
+        `<p class="shop-card-rate ${areaRateAlDia ? 'shop-card-rate--ok' : 'shop-card-rate--low'}" title="${t('shop.areaRateLineTitle')}">` +
         `${t('shop.areaRateLine', { pct: Math.round(areaRate * 100) })}` +
         `</p>` +
         `</article>`

@@ -2270,6 +2270,58 @@ const ART = {
     scale: 1.0,
   },
 
+  // --- Herramientas de late-game (ronda "features", 2026-07-22): 500M → 10T ---
+  // DECISIÓN: reusan el vocabulario de BODIES existente (hand/piston/orb/reactor) igual que las
+  // 4 originales; lo que las separa es la paleta, que se va enfriando de acero a violeta a
+  // medida que el juego pasa de chatarrería a cosmos (mismo criterio de color que los
+  // contenedores relics/future).
+  'exo-scrapper': {
+    body: 'hand',
+    material: 'metal',
+    palette: '#6c7b8a',
+    details: [
+      '<path d="M34 40 L34 66 M62 40 L62 66" stroke="#2f3740" stroke-width="3.5" fill="none"/>',
+      '<path d="M34 52 L62 52" stroke="#2f3740" stroke-width="2" fill="none"/>',
+      '<g fill="#2f3740"><circle cx="34" cy="52" r="2.6"/><circle cx="62" cy="52" r="2.6"/></g>',
+      '<circle cx="48" cy="64" r="3.4" fill="#ffb627"/>',
+    ],
+    scale: 1.1,
+  },
+  'drill-core': {
+    body: 'piston',
+    material: 'metal',
+    palette: '#8d5b2c',
+    details: [
+      '<path d="M40 62 L48 84 L56 62" fill="#4a3423"/>',
+      '<path d="M42 68 h12 M44 74 h8" stroke="#d9c08a" stroke-width="1.3" fill="none" stroke-opacity="0.8"/>',
+      '<rect x="36" y="16" width="24" height="4" rx="2" fill="#ffb627" fill-opacity="0.75"/>',
+    ],
+    scale: 1.05,
+  },
+  'sweeper-gravity': {
+    body: 'orb',
+    material: 'glass',
+    palette: '#6d4fb0',
+    details: [
+      '<ellipse cx="48" cy="44" rx="30" ry="9" fill="none" stroke="#c9a7ff" stroke-width="1.6" stroke-opacity="0.75"/>',
+      '<ellipse cx="48" cy="44" rx="30" ry="9" fill="none" stroke="#c9a7ff" stroke-width="1.2" stroke-opacity="0.5" transform="rotate(38 48 44)"/>',
+      '<circle cx="48" cy="44" r="7" fill="#e6d6ff" fill-opacity="0.85"/>',
+    ],
+    scale: 1.0,
+  },
+  'excavator-singularity': {
+    body: 'reactor',
+    material: 'metal',
+    palette: '#3f3a63',
+    details: [
+      '<ellipse cx="48" cy="44" rx="22" ry="6" fill="none" stroke="#ffb627" stroke-width="2" stroke-opacity="0.85"/>',
+      '<circle cx="48" cy="44" r="8" fill="#0e0c18"/>',
+      '<circle cx="48" cy="44" r="10.5" fill="none" stroke="#ffd98a" stroke-width="1.2" stroke-opacity="0.6"/>',
+      '<path d="M30 74 h36" stroke="#8f86c9" stroke-width="1.4" fill="none" stroke-opacity="0.7"/>',
+    ],
+    scale: 1.15,
+  },
+
   // --- convoyFantasma (tanda 2, ronda 29.C): tren fantasma, acento espectral #7fe6cf ---
   'cargo-manifest': {
     body: 'paperSheet',

@@ -288,10 +288,22 @@ button:hover:not(:disabled) {
 }
 
 /* Ronda 20 (PLAN.md §4.23): selector de herramientas, mismo patrón de fila que un
-   automation-card pero sin grilla propia (son pocas, 4 en total). */
+   automation-card pero sin grilla propia. */
 .settings-tools h3 {
   margin: 0;
   font-size: 1rem;
+}
+
+/* Ronda "features" (2026-07-22): la escalera pasó de 4 a 8 herramientas. En desktop (>=1024px)
+   `#dig-area` queda visible en TODAS las pestañas y es `flex-shrink: 0` (layout.css), así que el
+   alto de esta lista empujaba el documento entero fuera del viewport y devolvía el scroll de
+   PÁGINA (regresión que dig-regression.spec.js vigila). La lista scrollea adentro suyo.
+   AJUSTE: 240px ≈ 4 filas de 57px — conserva exactamente la huella que tenía la sección con las
+   4 herramientas originales, medida en Chromium a 1280x800. */
+.settings-tools-list {
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .tool-row {
@@ -1083,10 +1095,25 @@ textarea {
   margin: 0 0 var(--space-1);
 }
 
+/* Ronda "features" (2026-07-22): la Vitrina es global, no del contenedor seleccionado — el
+   subtítulo lo dice y la línea de origen de cada pedestal se tiñe con el color de su rareza. */
+.showcase-global-hint {
+  color: var(--fg-1);
+  font-size: 0.85rem;
+  margin: 0 0 var(--space-2);
+  max-width: 60ch;
+}
+
 .showcase-count {
   font-family: var(--font-mono);
   color: var(--fg-1);
   margin: 0 0 var(--space-2);
+}
+
+.showcase-card-from {
+  font-size: 0.8rem;
+  color: var(--rarity-color, var(--fg-1));
+  margin: 0;
 }
 
 .showcase-grid {
@@ -1553,6 +1580,24 @@ textarea {
   margin: 0;
   font-size: 0.85rem;
   color: var(--fg-1);
+}
+
+/* Ronda "features" (2026-07-22): barra de acciones del inventario del Puesto ("Vender todo").
+   Alineada a la derecha en desktop y a ancho completo en mobile: es el gesto de un dedo. */
+.stall-inventory-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}
+
+.stall-sell-all {
+  min-height: 44px;
+}
+
+@media (max-width: 420px) {
+  .stall-sell-all {
+    width: 100%;
+  }
 }
 
 .stall-inventory-grid .shop-card-icon {

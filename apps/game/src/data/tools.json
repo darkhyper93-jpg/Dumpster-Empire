@@ -2,5 +2,9 @@
   { "id": "manos", "name": "Manos curtidas", "icon": "hands-bare", "costo": 0, "radioMult": 1.0, "ritmoMult": 1.0 },
   { "id": "palaAncha", "name": "Pala Ancha", "icon": "shovel-wide", "costo": 75000, "radioMult": 1.6, "ritmoMult": 0.7 },
   { "id": "pincelFino", "name": "Pincel de Arqueólogo", "icon": "brush-fine", "costo": 250000, "radioMult": 0.6, "ritmoMult": 1.8 },
-  { "id": "guanteHidraulico", "name": "Guante Hidráulico", "icon": "glove-hydraulic", "costo": 5000000, "radioMult": 1.3, "ritmoMult": 1.3 }
+  { "id": "guanteHidraulico", "name": "Guante Hidráulico", "icon": "glove-hydraulic", "costo": 5000000, "radioMult": 1.3, "ritmoMult": 1.3 },
+  { "id": "exoesqueletoChatarrero", "name": "Exoesqueleto de Chatarrero", "icon": "exo-scrapper", "costo": 500000000, "radioMult": 1.8, "ritmoMult": 1.6 },
+  { "id": "taladroNucleo", "name": "Taladro de Núcleo", "icon": "drill-core", "costo": 50000000000, "radioMult": 2.1, "ritmoMult": 2.0 },
+  { "id": "barredoraGravitatoria", "name": "Barredora Gravitatoria", "icon": "sweeper-gravity", "costo": 1000000000000, "radioMult": 2.5, "ritmoMult": 2.4 },
+  { "id": "excavadoraSingular", "name": "Excavadora Singular", "icon": "excavator-singularity", "costo": 10000000000000, "radioMult": 3.0, "ritmoMult": 3.0 }
 ]

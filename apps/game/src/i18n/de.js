@@ -68,7 +68,6 @@ export default {
   'automation.trapDiscarded': 'Der Roboter hat einen Container mit Falle aussortiert.',
   'automation.explainer':
     'Der Roboter kauft mit deinem Geld Container, stellt sie in die Warteschlange und arbeitet sie ab (höheres Fallenrisiko als von Hand). Wähle unten, welchen er kauft, oder lass es auf „Auto“. Die anderen Maschinen vergrößern die Warteschlange oder liefern weitere Roboter.',
-  'automation.hint': 'Grauer Knopf = du kannst es dir noch nicht leisten; im Tooltip steht, wie viel fehlt.',
   // {name} = la máquina con efecto enablesAutoDig, resuelta desde automations.json (AutomationView).
   'automation.calloutInactive': 'Für die Warteschlange brauchst du den <strong>{name}</strong>.',
   'automation.queue': 'Warteschlange: {count} / {max}',
@@ -122,6 +121,9 @@ export default {
   'collection.showcaseCount': 'Vitrine: {count}/{total}',
   'collection.showcaseHiddenName': '???',
   'collection.showcaseNotFound': 'Dieses legendäre Stück hast du noch nicht gefunden.',
+  // Ronda "features" (2026-07-22): die Vitrine ist GLOBAL, nicht an den gewählten Container gebunden.
+  'collection.showcaseGlobalHint': 'Legendäre Stücke gehören zum ganzen Spiel, nicht zu diesem Container: jedes fällt in jedem Container, der seine Seltenheit ausschüttet.',
+  'collection.showcaseFrom': 'Fällt aus: {categoria}',
   // Round 19: completion % (PLAN.md §5.4), derived — never a new persisted counter.
   'collection.completionGlobal': 'Gesamtfortschritt: {pct} %',
 
@@ -211,6 +213,11 @@ export default {
   'tools.palaAncha': 'Breite Schaufel',
   'tools.pincelFino': 'Archäologenpinsel',
   'tools.guanteHidraulico': 'Hydraulikhandschuh',
+  // Ronda "features" (2026-07-22): las 4 herramientas de late-game (500M / 50B / 1T / 10T).
+  'tools.exoesqueletoChatarrero': 'Schrotthändler-Exoskelett',
+  'tools.taladroNucleo': 'Kernbohrer',
+  'tools.barredoraGravitatoria': 'Gravitationskehrer',
+  'tools.excavadoraSingular': 'Singularitätsbagger',
 
   // Statistics (round 19, PLAN.md §5.4) — Settings subview, no new engine logic.
   'stats.title': 'Statistik',
@@ -239,10 +246,14 @@ export default {
   'shop.digPowerLine': 'Empfohlene Grabkraft: ×{rec} {status}',
   'shop.areaLine': 'Empfohlene Suchfläche: ×{rec} {status}',
   // Round 31 (PLAN.md §4.42): CURRENT pace/brush against this container's real resistance/area.
+  // AJUSTE (ronda "features", 2026-07-22): "Pinsel" nombraba la HERRAMIENTA, no el efecto, y
+  // pasa a "Reichweite" (alcance). "Tempo" se conserva: en alemán YA nombra el efecto (rapidez),
+  // no el gesto, y el criterio de brevedad de la ronda 33 sigue vigente (a 375px un compuesto
+  // largo como "Grabgeschwindigkeit" rompe la línea de la tarjeta en tres).
   'shop.rateLine': 'Tempo: {pct} %',
-  // AJUSTE: "Pinsel" y no "Pinselbreite" — en la tarjeta de contenedor a 375px el compuesto
-  // largo rompía la línea en tres (verificación manual de la ronda 33).
-  'shop.areaRateLine': 'Pinsel: {pct} %',
+  'shop.areaRateLine': 'Reichweite: {pct} %',
+  'shop.rateLineTitle': 'Deine Grabkraft gegen den Widerstand dieses Containers: 100 % ist normale Geschwindigkeit, weniger ist langsamer, mehr ist schneller.',
+  'shop.areaRateLineTitle': 'Deine Suchfläche gegen die Fläche, die dieser Container verlangt: wie viel Boden dein Pinsel beim Graben von Hand erfasst.',
   // Ronda 23.C: Junk Stall purchase card (PLAN.md §2.9/§4.27) in the Shop tab.
   'shop.stallCard': 'Schrottstand',
   'shop.stallDesc': 'Heb die guten Stücke auf und verkauf sie an Doña Rita, wenn der Preis hoch steht.',
@@ -265,6 +276,9 @@ export default {
   'stall.inventoryTitle': 'Lager',
   'stall.inventoryEmpty': 'Der Stand ist leer — erhöhe die Grenze oder grab etwas Gutes aus.',
   'stall.sell': 'Verkaufen',
+  // Ronda "features" (2026-07-22): das gesamte Inventar mit einem Klick verkaufen.
+  'stall.sellAll': 'Alles verkaufen',
+  'stall.sellAllDone': '{count} Objekt(e) für {amount} verkauft.',
   'stall.ordersTitle': 'Bestellungen von {name}',
   'stall.orderCategory': 'Bestellung: {categoria}',
   'stall.orderProgress': 'Fortschritt: {progress}/{cantidad}',

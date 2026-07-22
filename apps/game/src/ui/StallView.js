@@ -141,6 +141,23 @@ function renderVendorToggle(state, data) {
   );
 }
 
+/**
+ * Ronda "features" (2026-07-22): barra de acciones del inventario. Hoy solo "Vender todo" —
+ * el atajo de un clic que convive con el botón "Vender" de cada tarjeta (el jugador que quiere
+ * elegir el timing pieza por pieza lo sigue teniendo). Ausente con el inventario vacío: sin
+ * nada que vender el botón sería un deshabilitado permanente sin información (CLAUDE.md).
+ * @param {import('@dumpster/engine').GameState} state
+ * @returns {string}
+ */
+function renderInventoryActions(state) {
+  if (!state.inventory.length) return '';
+  return (
+    `<div class="stall-inventory-actions">` +
+    `<button type="button" class="stall-sell-all" data-action="sell-all">${t('stall.sellAll')}</button>` +
+    `</div>`
+  );
+}
+
 function renderInventory(state, itemsData) {
   if (!state.inventory.length) {
     return `<p class="empty-state">${t('stall.inventoryEmpty')}</p>`;
@@ -200,6 +217,14 @@ export const StallView = {
    * @param {ReturnType<import('../store.js').createStore>} store
    */
   render(container, state, store) {
+    // Ronda "features" (2026-07-22): `lastSaleComment` es estado de PRESENTACIÓN, no del engine,
+    // así que se asigna DESPUÉS de despachar la acción — y la acción ya re-renderizó (notify()).
+    // Sin este redraw el comentario de Rita aparecía un render tarde: en la venta individual pasaba
+    // desapercibido (la tarjeta desaparecía igual), pero en la venta en lote el resumen "vendiste N
+    // por $X" es el ÚNICO acuse de recibo del jugador y podía no verse nunca. Reproducido a mano en
+    // Chromium a 1440px. Mismo patrón de auto-render que usa CollectionView con sus tabs.
+    const redraw = () => this.render(container, store.getState(), store);
+
     // Marca propia (ver CollectionView/AutomationView): #tab-content se reusa entre vistas.
     if (!container.dataset.boundClickStall) {
       container.dataset.boundClickStall = 'true';
@@ -216,6 +241,22 @@ export const StallView = {
           const result = store.actions.sellInventoryItem(index);
           if (result.ok && soldEntry) {
             lastSaleComment = ritaCommentFor(store.ctx.npcs, soldEntry.categoria);
+            redraw();
+          }
+          return;
+        }
+        // Ronda "features" (2026-07-22): venta en lote. El resumen ({count} + {amount}) reemplaza
+        // al comentario de Rita hasta la próxima venta — es el mismo canal de feedback que ya usa
+        // la venta individual, así que el jugador lo lee donde ya está mirando.
+        const sellAllBtn = evt.target.closest('[data-action="sell-all"]');
+        if (sellAllBtn) {
+          const result = store.actions.sellAllInventory();
+          if (result.ok) {
+            lastSaleComment = t('stall.sellAllDone', {
+              count: result.count,
+              amount: formatMoney(result.moneyDelta),
+            });
+            redraw();
           }
           return;
         }
@@ -259,6 +300,7 @@ export const StallView = {
       renderLevel(state, data) +
       renderVendorToggle(state, data) +
       `<h2>${t('stall.inventoryTitle')}</h2>` +
+      renderInventoryActions(state) +
       renderInventory(state, itemsData) +
       renderOrders(state, data, npcs, itemsData) +
       // Ronda 24 (roadmap §24.3): con el Puesto desbloqueado, las misiones de Chispa viven acá

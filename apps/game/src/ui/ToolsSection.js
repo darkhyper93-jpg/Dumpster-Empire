@@ -58,8 +58,16 @@ export const ToolsSection = {
       const iconHtml = art ?? iconMarkup(tool.icon, { size: 20 });
       return `<div class="tool-row"><span class="tool-row-art">${iconHtml}</span><span class="tool-row-name">${toolLabel(tool.id)}</span>${actionHtml}</div>`;
     });
+    // Ronda "features" (2026-07-22): las filas van dentro de su propia caja scrolleable. La
+    // escalera pasó de 4 a 8 herramientas y en desktop `#dig-area` queda visible en TODAS las
+    // pestañas con `flex-shrink: 0` (layout.css), así que el alto de esta lista empujaba el
+    // documento entero más allá del viewport y devolvía el scroll de PÁGINA que
+    // dig-regression.spec.js vigila desde el rework de escarbado. El título queda fijo afuera.
     container.innerHTML =
-      `<section class="settings-block settings-tools">` + `<h3>${t('tools.title')}</h3>` + rows.join('') + `</section>`;
+      `<section class="settings-block settings-tools">` +
+      `<h3>${t('tools.title')}</h3>` +
+      `<div class="settings-tools-list">${rows.join('')}</div>` +
+      `</section>`;
   },
 };
 

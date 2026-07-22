@@ -171,6 +171,13 @@ const SHAPES = {
   shovelWide: '<line x1="12" y1="3" x2="12" y2="14"/><path d="M9.3 4a3 3 0 0 1 5.4 0"/><path d="M7 14h10l-2 6a3 3 0 0 1-6 0z"/>',
   brushFine: '<path d="M16 3l5 5-9 9-5-5z"/><path d="M12 12c-3 1-4 4-5 9 3-2 6-3 9-5z"/>',
   gloveHydraulic: '<path d="M6 22V11a2 2 0 0 1 4 0v3"/><path d="M10 22V8a2 2 0 0 1 4 0v6"/><path d="M14 22V9a2 2 0 0 1 4 0v6c0 4-2 7-6 7z"/><line x1="17" y1="3" x2="17" y2="9"/><rect x="15.5" y="1" width="3" height="3" rx="0.5"/>',
+
+  // Ronda "features" (2026-07-22): las 4 herramientas de late-game. Mismo vocabulario de trazo
+  // (stroke de 24 de viewBox, sin relleno) que las 4 originales — se leen como su continuación.
+  exoScrapper: '<path d="M7 21v-8a2 2 0 0 1 4 0v2"/><path d="M11 21V9a2 2 0 0 1 4 0v5"/><path d="M15 21v-4a2 2 0 0 1 4 0v1c0 2-1 3-3 3z"/><rect x="4" y="4" width="6" height="6" rx="1"/><line x1="10" y1="7" x2="14" y2="7"/><circle cx="7" cy="7" r="1.4"/>',
+  drillCore: '<path d="M9 3h6v5H9z"/><path d="M9 8h6l-3 13z"/><line x1="9.6" y1="12" x2="14.4" y2="12"/><line x1="10.4" y1="16" x2="13.6" y2="16"/><line x1="12" y1="1" x2="12" y2="3"/>',
+  sweeperGravity: '<circle cx="12" cy="12" r="3"/><path d="M12 4a8 8 0 0 1 8 8"/><path d="M12 20a8 8 0 0 1-8-8"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><path d="M17 7l3-3"/><path d="M7 17l-3 3"/>',
+  excavatorSingularity: '<circle cx="12" cy="12" r="2.2"/><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="12" y1="12" x2="21" y2="5"/>',
   waterStain: '<path d="M12 4c3 2 6 6 6 10a6 6 0 0 1-12 0c0-4 3-8 6-10z" stroke-dasharray="2 2"/><path d="M12 10c1.5 1 3 3 3 5a3 3 0 0 1-6 0c0-2 1.5-4 3-5z" stroke-dasharray="1 1.4"/>',
   crackedGround: '<path d="M2 16h4l2-5 2 7 2-4 2 6h4"/><line x1="8" y1="11" x2="6" y2="14"/><line x1="16" y1="18" x2="18" y2="21"/>',
   clawMarks: '<line x1="5" y1="3" x2="10" y2="21"/><line x1="10" y1="2" x2="14" y2="22"/><line x1="15" y1="3" x2="19" y2="21"/>',
@@ -510,6 +517,11 @@ const ICON_MAP = {
   'shovel-wide': 'shovelWide',
   'brush-fine': 'brushFine',
   'glove-hydraulic': 'gloveHydraulic',
+  // Ronda "features" (2026-07-22): las 4 herramientas de late-game (500M → 10T).
+  'exo-scrapper': 'exoScrapper',
+  'drill-core': 'drillCore',
+  'sweeper-gravity': 'sweeperGravity',
+  'excavator-singularity': 'excavatorSingularity',
 
   // Ronda 22: legendarios de la Vitrina (data/legendaries.json). Reusan formas ya existentes
   // (mismo criterio de "reuso con color de rareza distinto" documentado arriba) — el bloom de
