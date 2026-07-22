@@ -128,6 +128,43 @@ export function sellInventoryItem(state, inventoryIndex, data, now = Date.now(),
 }
 
 /**
+ * Venta de TODO el inventario en un lote (pedido del usuario, 2026-07-22). Convive con
+ * `sellInventoryItem`: el jugador sigue pudiendo vender de a uno para elegir el timing de cada
+ * pieza; esto es el atajo para cuando el inventario está lleno de chatarra barata.
+ *
+ * DECISIÓN: la fluctuación se refresca UNA sola vez para todo el lote y todas las ventas cobran
+ * a ese precio. Es lo que el jugador ve en pantalla al apretar (§4.27 pide refrescar "al vender",
+ * no una tirada por ítem), y evita que un lote grande promedie la fluctuación hasta volverla
+ * irrelevante — vender todo junto sigue siendo una apuesta al minuto en que se aprieta.
+ *
+ * Vende siempre desde el índice 0 hacia adelante, exactamente como si el jugador tocara "Vender"
+ * en la primera tarjeta N veces: así los pedidos de Salomón (§4.28) se cumplen y se retiran con
+ * el mismo orden y el mismo multiplicador que en la venta manual, sin lógica nueva.
+ * @param {import('../state.js').GameState} state
+ * @param {import('../economy.js').EngineData} data
+ * @param {number} [now]
+ * @param {() => number} [random]
+ * @returns {{ ok: true, count: number, moneyDelta: number } | { ok: false, error: string }}
+ */
+export function sellAllInventory(state, data, now = Date.now(), random = Math.random) {
+  if (!state.inventory.length) return { ok: false, error: 'No hay nada en el inventario para vender.' };
+  const { marketFluctuation, marketFluctuationAt } = resolveMarketFluctuation(state, data, now, random);
+  state.marketFluctuation = marketFluctuation;
+  state.marketFluctuationAt = marketFluctuationAt;
+  let count = 0;
+  let moneyDelta = 0;
+  // Cota dura: el inventario solo se acorta en cada vuelta (splice dentro de sellInventoryItemAt),
+  // pero el `while` se escribe contra `length` y no contra un contador para no depender de eso.
+  while (state.inventory.length) {
+    const result = sellInventoryItemAt(state, 0, data, state.marketFluctuation);
+    if (!result.ok) break;
+    count += 1;
+    moneyDelta += result.moneyDelta;
+  }
+  return { ok: true, count, moneyDelta };
+}
+
+/**
  * Índice del ítem del inventario que el robot vendedor debería vender: prioridad (1) satisface
  * un pedido activo, (2) mayor `baseValue`. -1 si el inventario está vacío.
  *

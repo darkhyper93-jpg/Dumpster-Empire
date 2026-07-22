@@ -45,7 +45,7 @@ function renderEventBanner(event) {
 }
 
 /**
- * Badge compacto de ritmo/pincel (PLAN.md §4.42, ronda 31) — mismos getters que ShopView, cero
+ * Badge compacto de velocidad/alcance (PLAN.md §4.42, ronda 31) — mismos getters que ShopView, cero
  * fórmulas acá. `--low` en rojo (`--danger`) cuando cualquiera de los dos queda por debajo de 1
  * (el jugador todavía no domina este contenedor).
  * @param {import('@dumpster/engine').GameState} state
@@ -58,7 +58,7 @@ function renderRateBadge(state, container, data) {
   const areaRate = getAreaRate(state, container, data);
   const low = ritmo < 1 || areaRate < 1;
   return (
-    `<span class="dig-picker-card-rate${low ? ' dig-picker-card-rate--low' : ''}">` +
+    `<span class="dig-picker-card-rate${low ? ' dig-picker-card-rate--low' : ''}" title="${t('shop.rateLineTitle')} ${t('shop.areaRateLineTitle')}">` +
     `${t('shop.rateLine', { pct: Math.round(ritmo * 100) })} · ${t('shop.areaRateLine', { pct: Math.round(areaRate * 100) })}` +
     `</span>`
   );

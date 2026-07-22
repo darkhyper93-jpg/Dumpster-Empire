@@ -65,7 +65,6 @@ export default {
   'automation.trapDiscarded': 'Le robot a mis au rebut un conteneur piégé.',
   'automation.explainer':
     'Le robot achète des conteneurs avec votre argent, les met en file et les traite (plus de risque de piège qu’à la main). Choisissez ci-dessous lequel il achète, ou laissez sur « Auto ». Les autres machines agrandissent la file ou ajoutent des robots.',
-  'automation.hint': 'Bouton gris = vous n’avez pas encore de quoi payer ; l’infobulle indique ce qu’il manque.',
   // {name} = la máquina con efecto enablesAutoDig, resuelta desde automations.json (AutomationView).
   'automation.calloutInactive': 'Il vous faut le <strong>{name}</strong> pour utiliser la file.',
   'automation.queue': 'File : {count} / {max}',
@@ -119,6 +118,9 @@ export default {
   'collection.showcaseCount': 'Vitrine : {count}/{total}',
   'collection.showcaseHiddenName': '???',
   'collection.showcaseNotFound': 'Vous n’avez pas encore trouvé ce légendaire.',
+  // Manche « features » (2026-07-22) : la Vitrine est GLOBALE, pas propre au conteneur choisi.
+  'collection.showcaseGlobalHint': 'Les légendaires concernent tout le jeu, pas ce conteneur : chacun tombe dans n’importe quel conteneur qui donne sa rareté.',
+  'collection.showcaseFrom': 'Provient de : {categoria}',
   // Round 19: completion % (PLAN.md §5.4), derived — never a new persisted counter.
   'collection.completionGlobal': 'Progression globale : {pct} %',
 
@@ -208,6 +210,11 @@ export default {
   'tools.palaAncha': 'Pelle Large',
   'tools.pincelFino': 'Pinceau d’Archéologue',
   'tools.guanteHidraulico': 'Gant Hydraulique',
+  // Ronda "features" (2026-07-22): las 4 herramientas de late-game (500M / 50B / 1T / 10T).
+  'tools.exoesqueletoChatarrero': 'Exosquelette de Ferrailleur',
+  'tools.taladroNucleo': 'Foreuse à Noyau',
+  'tools.barredoraGravitatoria': 'Balayeuse Gravitationnelle',
+  'tools.excavadoraSingular': 'Excavatrice Singulière',
 
   // Statistics (round 19, PLAN.md §5.4) — Settings subview, no new engine logic.
   'stats.title': 'Statistiques',
@@ -236,8 +243,11 @@ export default {
   'shop.digPowerLine': 'Puissance de Fouille recommandée : ×{rec} {status}',
   'shop.areaLine': 'Zone de Recherche recommandée : ×{rec} {status}',
   // Round 31 (PLAN.md §4.42): CURRENT pace/brush against this container's real resistance/area.
-  'shop.rateLine': 'Rythme : {pct} %',
-  'shop.areaRateLine': 'Balayage : {pct} %',
+  // Manche « features » (2026-07-22) : « Rythme »/« Balayage » nommaient l’OUTIL, pas l’effet.
+  'shop.rateLine': 'Vitesse : {pct} %',
+  'shop.areaRateLine': 'Portée : {pct} %',
+  'shop.rateLineTitle': 'Votre Force face à la résistance de ce conteneur : 100 % correspond à la vitesse normale, moins c’est plus lent, plus c’est plus rapide.',
+  'shop.areaRateLineTitle': 'Votre Surface face à celle qu’exige ce conteneur : la portée de votre pinceau quand vous fouillez à la main.',
   // Ronda 23.C: Junk Stall purchase card (PLAN.md §2.9/§4.27) in the Shop tab.
   'shop.stallCard': 'Stand de Ferraille',
   'shop.stallDesc': 'Gardez les objets qui en valent la peine et vendez-les à Doña Rita quand le prix est haut.',
@@ -260,6 +270,9 @@ export default {
   'stall.inventoryTitle': 'Stock',
   'stall.inventoryEmpty': 'Le stand est vide — montez le seuil ou déterrez quelque chose de bien.',
   'stall.sell': 'Vendre',
+  // Manche « features » (2026-07-22) : vente de tout l’inventaire en un clic.
+  'stall.sellAll': 'Tout vendre',
+  'stall.sellAllDone': 'Vous avez vendu {count} objet(s) pour {amount}.',
   'stall.ordersTitle': 'Commandes de {name}',
   'stall.orderCategory': 'Commande : {categoria}',
   'stall.orderProgress': 'Progression : {progress}/{cantidad}',

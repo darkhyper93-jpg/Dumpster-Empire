@@ -61,7 +61,6 @@ export default {
   'automation.trapDiscarded': 'The robot discarded a trapped container.',
   'automation.explainer':
     'The robot buys containers with your money, queues them, and processes them (more trap risk than digging by hand). Pick below which one it buys, or leave it on "Auto". The other machines grow the queue or add more robots.',
-  'automation.hint': "Gray button = you can't afford it yet; the tooltip shows how much you need.",
   // {name} = la máquina con efecto enablesAutoDig, resuelta desde automations.json (AutomationView).
   'automation.calloutInactive': 'You need the <strong>{name}</strong> to use the queue.',
   'automation.queue': 'Queue: {count} / {max}',
@@ -115,6 +114,9 @@ export default {
   'collection.showcaseCount': 'Showcase: {count}/{total}',
   'collection.showcaseHiddenName': '???',
   'collection.showcaseNotFound': "You haven't found this legendary yet.",
+  // Features round (2026-07-22): the Showcase is GLOBAL, not per selected container.
+  'collection.showcaseGlobalHint': 'Legendaries span the whole game, not this container: each one drops from any container that yields its rarity.',
+  'collection.showcaseFrom': 'Drops from: {categoria}',
   // Round 19: completion % (PLAN.md §5.4), derived — never a new persisted counter.
   'collection.completionGlobal': 'Global completion: {pct}%',
 
@@ -204,6 +206,11 @@ export default {
   'tools.palaAncha': 'Wide Shovel',
   'tools.pincelFino': "Archaeologist's Brush",
   'tools.guanteHidraulico': 'Hydraulic Glove',
+  // Ronda "features" (2026-07-22): las 4 herramientas de late-game (500M / 50B / 1T / 10T).
+  'tools.exoesqueletoChatarrero': 'Scrapper Exosuit',
+  'tools.taladroNucleo': 'Core Drill',
+  'tools.barredoraGravitatoria': 'Gravity Sweeper',
+  'tools.excavadoraSingular': 'Singularity Excavator',
 
   // Statistics (round 19, PLAN.md §5.4) — Settings subview, no new engine logic.
   'stats.title': 'Statistics',
@@ -234,8 +241,11 @@ export default {
   // Round 31 (PLAN.md §4.42): CURRENT pace/brush against this container's real resistance/area —
   // unlike luckLine/digPowerLine/areaLine (fixed targets, neutral player), this shows the effect
   // already applied with the player's actual stats.
-  'shop.rateLine': 'Pace: {pct}%',
-  'shop.areaRateLine': 'Brush: {pct}%',
+  // Features round (2026-07-22): "Pace"/"Brush" named the TOOL, not the effect (user feedback).
+  'shop.rateLine': 'Speed: {pct}%',
+  'shop.areaRateLine': 'Reach: {pct}%',
+  'shop.rateLineTitle': "Your Strength against this container's toughness: 100% is normal speed, less is slower, more is faster.",
+  'shop.areaRateLineTitle': 'Your Area against the area this container asks for: how much ground your brush sweeps when digging by hand.',
   // Ronda 23.C: Junk Stall purchase card (PLAN.md §2.9/§4.27) in the Shop tab.
   'shop.stallCard': 'Junk Stall',
   'shop.stallDesc': 'Save the objects worth keeping and sell them to Doña Rita when the price is high.',
@@ -258,6 +268,9 @@ export default {
   'stall.inventoryTitle': 'Inventory',
   'stall.inventoryEmpty': 'The stall is empty — raise the threshold or dig up something good.',
   'stall.sell': 'Sell',
+  // Features round (2026-07-22): sell the whole inventory in one click, alongside the per-item sale.
+  'stall.sellAll': 'Sell all',
+  'stall.sellAllDone': 'Sold {count} item(s) for {amount}.',
   'stall.ordersTitle': "{name}'s orders",
   'stall.orderCategory': 'Order: {categoria}',
   'stall.orderProgress': 'Progress: {progress}/{cantidad}',

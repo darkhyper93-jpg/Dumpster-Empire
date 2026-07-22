@@ -703,6 +703,46 @@ Economía, Guardado, UI/UX, Contenido, Código, Cierre). No se declara terminado
   medidos como 5 long tasks de ~60 ms en 5 s de idle en Chromium (peor en Steam Deck). El cache es
   un `WeakMap` por `itemsData` y no un `Map` global para que dos balances distintos (tests) no se
   contaminen. La invariante que lo habilita está fijada por test.
+- **Ronda "features" (2026-07-22) — la escalera de herramientas se extiende a late-game**: las 4
+  herramientas de la ronda 20 topeaban en $5M (`guanteHidraulico`), o sea que desde el primer
+  prestigio en adelante el selector de herramientas era un menú muerto. Se suman 4 escalones a
+  500M / 50B / 1T / 10T (costos pedidos por el usuario) que mejoran radio Y ritmo de forma
+  estricta: a esos precios el jugador ya no está eligiendo un estilo de pincel, está comprando
+  potencia, y las 3 primeras conservan el juego de trade-offs para el early game.
+  **Arrastre sobre el logro `a41`** ("Arsenal Completo", `allToolsOwned`): su hito subió de
+  ~$5,3M a ~$11,55T de gasto total en herramientas. La convención §3.4 ("dinero ≈ 10% del hito")
+  pediría ~$1,15T, pero los DOS guardrails de `fase9-balance.test.js` (PLAN.md §11.6) están
+  saturados: cada logro de dinero topea en el 1% del umbral de Prestigio ($10M) y la SUMA de
+  todos topea en el 5% ($50M), de la que ya se usan $44,46M — quedan ~$5,5M de margen en todo el
+  juego. La vía de las Llaves tampoco alcanza (el guardrail del árbol deja 4 Llaves de margen, y
+  4 Llaves en el logro más caro del juego leen peor que $2M). **Decisión: la recompensa queda
+  intacta en $2M** — subirla a los ~$7,5M que permite el margen es igual de simbólico frente a un
+  hito de $11,55T, y no vale gastar el margen entero del juego en eso. Solo cambia el ícono, a
+  `excavator-singularity` (la última pieza de la escalera, no la cuarta). Recalibrar la curva de
+  recompensas de logros contra el lategame es una ronda de balance propia, fuera del alcance de
+  ésta: queda anotado como pendiente para el usuario.
+- **Ronda "features" (2026-07-22) — la venta del Puesto gana un lote sin ganar una economía**:
+  `sellAllInventory` NO tiene fórmula propia; itera `sellInventoryItemAt` desde el índice 0
+  exactamente como si el jugador tocara "Vender" N veces, así los pedidos de Salomón (§4.28) se
+  cumplen, se retiran y cobran su multiplicador con el mismo orden que la venta manual. La
+  fluctuación de mercado se refresca UNA vez para todo el lote: es el precio que el jugador ve
+  al apretar, y evita que un lote grande promedie la fluctuación hasta volverla irrelevante
+  (vender todo junto sigue siendo una apuesta al minuto en que se aprieta). Test de contrato:
+  el lote paga exactamente lo mismo que vender uno por uno.
+- **Ronda "features" (2026-07-22) — "Ritmo"/"Pincel" nombraban la herramienta, no el efecto**:
+  el usuario reportó no entender qué medían los dos % de cada tarjeta de contenedor. Pasan a
+  **Velocidad** (`getDigRate`: tu Fuerza contra la resistencia de ESE contenedor, afecta manual
+  y automatización) y **Alcance** (`getAreaRate`: tu Área contra `areaRecomendada`, afecta SOLO
+  el pincel manual), en los 5 idiomas, más un `title` que dice contra qué se compara el %. En
+  alemán "Tempo" se conserva porque ya nombra el efecto y el compuesto largo rompe la tarjeta a
+  375px (criterio de la ronda 33). Excepción consciente a la regla §1.11 ("el copy español es
+  intocable"): la pidió el usuario, y los e2e que asertaban las cadenas viejas se actualizaron.
+- **Ronda "features" (2026-07-22) — la Vitrina se declara global**: el usuario la leía como "los
+  legendarios del Tacho de Vereda" porque se dibuja DEBAJO de la grilla del contenedor
+  seleccionado. No se filtra por contenedor (perdería el salón de trofeos y el conteo total):
+  gana un subtítulo que dice que abarca todo el juego y cada pedestal declara su RAREZA, que es
+  lo que de verdad lo ata a unos contenedores y no a otros (el roll de `containers.js` solo
+  dispara si la rareza del ítem hallado coincide).
 
 ---
 

@@ -72,7 +72,7 @@ export const CollectionView = {
       `<div class="index-container-tabs">${tabs}</div>` +
       setBadge +
       `<div class="index-grid" id="index-grid"></div>` +
-      renderShowcase(state, data);
+      renderShowcase(state, data, itemsData);
 
     const grid = container.querySelector('#index-grid');
     const pool = itemsData.containers[selected.id] || [];
@@ -121,24 +121,51 @@ export const CollectionView = {
 };
 
 /**
+ * Nombre de pantalla de una rareza, resuelto SIEMPRE contra la data (mismo criterio defensivo
+ * que renderOrders de StallView: un id que no existe cae al nombre oculto, nunca se interpola
+ * crudo). `legendary.categoria` sale de data, pero la función se usa también sobre ids que
+ * podrían venir de un pool desconocido.
+ * @param {{ rarities: Array<{id:string,name:string}> }} itemsData
+ * @param {string} categoriaId
+ * @returns {string}
+ */
+function rarityName(itemsData, categoriaId) {
+  const rarity = itemsData.rarities.find((r) => r.id === categoriaId);
+  return rarity ? rarity.name : t('collection.hiddenName');
+}
+
+/**
  * Ronda 22 (PLAN.md §4.26): sección Vitrina al final del INDEX — grilla de pedestales, uno por
  * legendario (`data.legendaries.items`). Los no encontrados quedan como silueta "???"; los
  * encontrados se revelan con ícono (bloom de rareza alta vía CSS), nombre y valor.
+ *
+ * Ronda "features" (2026-07-22): la Vitrina es GLOBAL — se dibuja debajo de la grilla del
+ * contenedor seleccionado, así que el jugador la leía como "los legendarios del Tacho de
+ * Vereda" (reporte del usuario). Ahora lo dice explícitamente y cada pedestal declara su
+ * RAREZA, que es lo que realmente lo ata a unos contenedores y no a otros: el roll de
+ * legendario (systems/containers.js) solo dispara si la rareza del ítem hallado coincide.
  * @param {import('@dumpster/engine').GameState} state
  * @param {import('@dumpster/engine').EngineData & { legendaries?: { items: Array<Object> } }} data
+ * @param {{ rarities: Array<{id:string,name:string,colorToken:string}> }} itemsData
  * @returns {string}
  */
-function renderShowcase(state, data) {
+function renderShowcase(state, data, itemsData) {
   const legendaries = data.legendaries?.items || [];
   if (!legendaries.length) return '';
   const found = new Set(state.legendariesFound);
   const cards = legendaries
     .map((legendary) => {
+      const rarity = itemsData.rarities.find((r) => r.id === legendary.categoria);
+      const styleAttr = ` style="--rarity-color:var(${rarity ? rarity.colorToken : '--amber'})"`;
+      const fromLine = `<p class="showcase-card-from">${t('collection.showcaseFrom', {
+        categoria: rarityName(itemsData, legendary.categoria),
+      })}</p>`;
       if (!found.has(legendary.id)) {
         return (
-          `<article class="showcase-card showcase-card--hidden">` +
+          `<article class="showcase-card showcase-card--hidden"${styleAttr}>` +
           `<span class="showcase-card-icon">${iconMarkup('locked', { size: 30 })}</span>` +
           `<h3>${t('collection.showcaseHiddenName')}</h3>` +
+          fromLine +
           `<p>${t('collection.showcaseNotFound')}</p>` +
           `</article>`
         );
@@ -153,9 +180,10 @@ function renderShowcase(state, data) {
         ? `<span class="showcase-card-art">${art}</span>`
         : `<span class="showcase-card-icon">${iconMarkup(legendary.icon, { size: 30 })}</span>`;
       return (
-        `<article class="showcase-card">` +
+        `<article class="showcase-card"${styleAttr}>` +
         figure +
         `<h3>${legendary.name}</h3>` +
+        fromLine +
         `<p>${t('collection.baseValue', { amount: formatMoney(legendary.valorBase) })}</p>` +
         `</article>`
       );
@@ -164,6 +192,7 @@ function renderShowcase(state, data) {
   return (
     `<section class="showcase-section">` +
     `<h2 class="showcase-title">${t('collection.showcaseTitle')}</h2>` +
+    `<p class="showcase-global-hint">${t('collection.showcaseGlobalHint')}</p>` +
     `<p class="showcase-count">${t('collection.showcaseCount', { count: found.size, total: legendaries.length })}</p>` +
     `<div class="showcase-grid">${cards}</div>` +
     `</section>`

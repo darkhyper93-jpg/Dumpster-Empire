@@ -49,6 +49,7 @@ import {
   upgradeStall as engineUpgradeStall,
   setKeepThreshold as engineSetKeepThreshold,
   sellInventoryItem as engineSellInventoryItem,
+  sellAllInventory as engineSellAllInventory,
   rotateStallOrders as engineRotateStallOrders,
   checkStory,
   rerollDailyMissionsIfNeeded,
@@ -577,6 +578,25 @@ export function createStore(ctx) {
      */
     sellInventoryItem(inventoryIndex) {
       const result = engineSellInventoryItem(state, inventoryIndex, data);
+      if (result.ok) {
+        engineRotateStallOrders(state, data, ownedCategories());
+        runAchievements();
+        runStory();
+        runMissions();
+        persist();
+        notify();
+      }
+      return result;
+    },
+
+    /**
+     * Venta de TODO el inventario del Puesto en un clic (ronda "features", 2026-07-22). Corre
+     * exactamente el mismo cierre que la venta individual (rotar pedidos, logros, historia,
+     * misiones, persistir, notificar): es un lote de la misma venta, no una economía aparte.
+     * @returns {{ ok: true, count: number, moneyDelta: number } | { ok: false, error: string }}
+     */
+    sellAllInventory() {
+      const result = engineSellAllInventory(state, data);
       if (result.ok) {
         engineRotateStallOrders(state, data, ownedCategories());
         runAchievements();

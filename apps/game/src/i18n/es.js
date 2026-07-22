@@ -62,7 +62,6 @@ export default {
   'automation.trapDiscarded': 'El robot descartó un contenedor con trampa.',
   'automation.explainer':
     'El robot compra contenedores con tu dinero, los encola y los procesa (más riesgo de trampa que a mano). Elegí abajo cuál compra, o dejá "Auto". Las demás máquinas agrandan la cola o suman robots.',
-  'automation.hint': 'Botón gris = todavía no te alcanza; el tooltip dice cuánto falta.',
   // {name} = la máquina con efecto enablesAutoDig, resuelta desde automations.json (AutomationView).
   'automation.calloutInactive': 'Necesitás el <strong>{name}</strong> para usar la cola.',
   'automation.queue': 'Cola: {count} / {max}',
@@ -118,6 +117,11 @@ export default {
   'collection.showcaseCount': 'Vitrina: {count}/{total}',
   'collection.showcaseHiddenName': '???',
   'collection.showcaseNotFound': 'Todavía no encontraste este legendario.',
+  // Ronda "features" (2026-07-22): la Vitrina es GLOBAL, no del contenedor seleccionado — el
+  // usuario no entendía por qué el Tacho de Vereda "tenía" 8 legendarios. El subtítulo lo dice
+  // y cada pedestal declara de qué rareza sale (que es lo que la ata a un contenedor u otro).
+  'collection.showcaseGlobalHint': 'Los legendarios son de todo el juego, no de este contenedor: cada uno cae en cualquier contenedor que reparta su rareza.',
+  'collection.showcaseFrom': 'Sale de: {categoria}',
 
   // OfflineModal.js
   'offline.title': 'Mientras no estabas...',
@@ -206,6 +210,11 @@ export default {
   'tools.palaAncha': 'Pala Ancha',
   'tools.pincelFino': 'Pincel de Arqueólogo',
   'tools.guanteHidraulico': 'Guante Hidráulico',
+  // Ronda "features" (2026-07-22): las 4 herramientas de late-game (500M / 50B / 1T / 10T).
+  'tools.exoesqueletoChatarrero': 'Exoesqueleto de Chatarrero',
+  'tools.taladroNucleo': 'Taladro de Núcleo',
+  'tools.barredoraGravitatoria': 'Barredora Gravitatoria',
+  'tools.excavadoraSingular': 'Excavadora Singular',
 
   // Estadísticas (ronda 19, PLAN.md §5.4) — subvista de Ajustes, sin engine nuevo.
   'stats.title': 'Estadísticas',
@@ -236,8 +245,14 @@ export default {
   // Ronda 31 (PLAN.md §4.42): ritmo/pincel ACTUALES contra la resistencia/areaRecomendada real
   // de este contenedor — a diferencia de luckLine/digPowerLine/areaLine (metas fijas, jugador
   // neutro), esto muestra el efecto YA aplicado con las stats del jugador.
-  'shop.rateLine': 'Ritmo: {pct}%',
-  'shop.areaRateLine': 'Pincel: {pct}%',
+  // AJUSTE (ronda "features", 2026-07-22): "Ritmo"/"Pincel" nombraban la HERRAMIENTA, no el
+  // efecto, y el jugador no entendía qué medían (pedido del usuario). Ahora nombran lo que hace
+  // el número: Velocidad = qué tan rápido se resuelve ESTE contenedor con tu Fuerza (getDigRate),
+  // Alcance = cuánto barre tu pincel manual contra el área que este contenedor pide (getAreaRate).
+  'shop.rateLine': 'Velocidad: {pct}%',
+  'shop.areaRateLine': 'Alcance: {pct}%',
+  'shop.rateLineTitle': 'Tu Fuerza contra la resistencia de este contenedor: 100% es velocidad normal, menos es más lento y más es más rápido.',
+  'shop.areaRateLineTitle': 'Tu Área contra el área que pide este contenedor: cuánto terreno barre tu pincel al escarbar a mano.',
   // Ronda 23.C: tarjeta de compra del Puesto de Chatarra (PLAN.md §2.9/§4.27) en la Tienda.
   'shop.stallCard': 'Puesto de Chatarra',
   'shop.stallDesc': 'Guardá los objetos que valgan la pena y vendéselos a Doña Rita cuando la cotización esté alta.',
@@ -261,6 +276,9 @@ export default {
   'stall.inventoryTitle': 'Inventario',
   'stall.inventoryEmpty': 'El puesto está vacío — subí el umbral o escarbá algo bueno.',
   'stall.sell': 'Vender',
+  // Ronda "features" (2026-07-22): venta de todo el inventario en un clic, además de la individual.
+  'stall.sellAll': 'Vender todo',
+  'stall.sellAllDone': 'Vendiste {count} objeto(s) por {amount}.',
   'stall.ordersTitle': 'Pedidos de {name}',
   'stall.orderCategory': 'Pedido: {categoria}',
   'stall.orderProgress': 'Progreso: {progress}/{cantidad}',

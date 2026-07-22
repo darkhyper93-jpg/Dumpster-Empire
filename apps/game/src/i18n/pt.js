@@ -66,7 +66,6 @@ export default {
   'automation.trapDiscarded': 'O robô descartou um contêiner com armadilha.',
   'automation.explainer':
     'O robô compra contêineres com o seu dinheiro, coloca na fila e processa (mais risco de armadilha do que escavar na mão). Escolha abaixo qual ele compra, ou deixe em "Automático". As outras máquinas aumentam a fila ou somam mais robôs.',
-  'automation.hint': 'Botão cinza = você ainda não tem dinheiro; a dica mostra quanto falta.',
   // {name} = la máquina con efecto enablesAutoDig, resuelta desde automations.json (AutomationView).
   'automation.calloutInactive': 'Você precisa do <strong>{name}</strong> para usar a fila.',
   'automation.queue': 'Fila: {count} / {max}',
@@ -120,6 +119,9 @@ export default {
   'collection.showcaseCount': 'Vitrine: {count}/{total}',
   'collection.showcaseHiddenName': '???',
   'collection.showcaseNotFound': 'Você ainda não encontrou este lendário.',
+  // Rodada "features" (2026-07-22): a Vitrine é GLOBAL, não do contêiner selecionado.
+  'collection.showcaseGlobalHint': 'Os lendários são do jogo inteiro, não deste contêiner: cada um cai em qualquer contêiner que dê a sua raridade.',
+  'collection.showcaseFrom': 'Vem de: {categoria}',
   // Round 19: completion % (PLAN.md §5.4), derived — never a new persisted counter.
   'collection.completionGlobal': 'Progresso global: {pct}%',
 
@@ -209,6 +211,11 @@ export default {
   'tools.palaAncha': 'Pá Larga',
   'tools.pincelFino': 'Pincel de Arqueólogo',
   'tools.guanteHidraulico': 'Luva Hidráulica',
+  // Ronda "features" (2026-07-22): las 4 herramientas de late-game (500M / 50B / 1T / 10T).
+  'tools.exoesqueletoChatarrero': 'Exoesqueleto de Sucateiro',
+  'tools.taladroNucleo': 'Broca de Núcleo',
+  'tools.barredoraGravitatoria': 'Varredora Gravitacional',
+  'tools.excavadoraSingular': 'Escavadeira Singular',
 
   // Statistics (round 19, PLAN.md §5.4) — Settings subview, no new engine logic.
   'stats.title': 'Estatísticas',
@@ -237,8 +244,11 @@ export default {
   'shop.digPowerLine': 'Força de Escavação recomendada: ×{rec} {status}',
   'shop.areaLine': 'Área de Busca recomendada: ×{rec} {status}',
   // Round 31 (PLAN.md §4.42): CURRENT pace/brush against this container's real resistance/area.
-  'shop.rateLine': 'Ritmo: {pct}%',
-  'shop.areaRateLine': 'Pincelada: {pct}%',
+  // Rodada "features" (2026-07-22): "Ritmo"/"Pincelada" nomeavam a FERRAMENTA, não o efeito.
+  'shop.rateLine': 'Velocidade: {pct}%',
+  'shop.areaRateLine': 'Alcance: {pct}%',
+  'shop.rateLineTitle': 'Sua Força contra a resistência deste contêiner: 100% é a velocidade normal, menos é mais lento e mais é mais rápido.',
+  'shop.areaRateLineTitle': 'Sua Área contra a área que este contêiner pede: quanto terreno o seu pincel varre ao escavar à mão.',
   // Ronda 23.C: Junk Stall purchase card (PLAN.md §2.9/§4.27) in the Shop tab.
   'shop.stallCard': 'Banca de Ferro-Velho',
   'shop.stallDesc': 'Guarde os objetos que valem a pena e venda para a Dona Rita quando o preço estiver alto.',
@@ -261,6 +271,9 @@ export default {
   'stall.inventoryTitle': 'Estoque',
   'stall.inventoryEmpty': 'A banca está vazia — aumente o limite ou escave algo bom.',
   'stall.sell': 'Vender',
+  // Rodada "features" (2026-07-22): venda de todo o inventário em um clique.
+  'stall.sellAll': 'Vender tudo',
+  'stall.sellAllDone': 'Você vendeu {count} objeto(s) por {amount}.',
   'stall.ordersTitle': 'Encomendas do {name}',
   'stall.orderCategory': 'Encomenda: {categoria}',
   'stall.orderProgress': 'Progresso: {progress}/{cantidad}',

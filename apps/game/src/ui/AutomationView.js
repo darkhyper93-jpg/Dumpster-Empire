@@ -359,7 +359,9 @@ export const AutomationView = {
     container.innerHTML =
       `<section class="automation-explainer">` +
       `<p>${t('automation.explainer')}</p>` +
-      `<p class="automation-explainer-hint">${t('automation.hint')}</p>` +
+      // Ronda "features" (2026-07-22): se retiró el cartel "Botón gris = todavía no te alcanza"
+      // por pedido del usuario. El estado deshabilitado ya se explica solo: cada botón lleva su
+      // `title` con "Te faltan {amount}" (common.missingMoney), que es la información concreta.
       `</section>` +
       `<section class="automation-status">` +
       (autoDigActive
