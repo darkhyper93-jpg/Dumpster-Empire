@@ -8427,3 +8427,100 @@ la data:
 3. **NUEVO**: subir `version` en los DOS `package.json` (hoy `0.0.0`) antes del build de
    release — RELEASE.md §3 lo explica.
 4. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
+
+---
+
+## Fix "fixbar" — scroll de la lista de Herramientas + barra de scroll del taller (rama `fix/scroll-herramientas`) — 2026-07-22
+
+### Pedido del usuario
+
+"Arreglá la barra de scroll de Herramientas de escarbado y adaptala al color de fondo como todas
+las demás (la de Automatización por ejemplo); ahora si scrolleás hacia arriba y soltás te devuelve
+al principio, así que solo se ven las 4 primeras herramientas." Más: auditoría `Verif&Audit.md`
+del repo. Agente único; ronda anterior (`audit/release-hardening-3`, PR #38) verificada mergeada
+en main antes de ramificar.
+
+### Causa raíz (medida, no deducida)
+
+`ToolsSection.render` reescribía `container.innerHTML` ENTERO en cada render, y el elemento que
+scrollea (`.settings-tools-list`) **nace adentro de ese HTML**: se destruía y se recreaba con
+`scrollTop = 0` en cada pasada. Con automatización o Puesto activos, `tickAutomation` notifica una
+vez por segundo → el reset llegaba solo, sin tocar nada ("vuelve al principio al soltar"). El
+resto de los scrollers del juego (`#tab-content`, `#quick-upgrades`, `#tabbar`) son elementos
+ESTÁTICOS de `index.html` a los que solo se les cambia el contenido, y por eso nunca perdieron su
+posición: ésta era la única excepción. Medido en el e2e ROJO: `scrollTop` 323 → 0 tras 1.5s.
+
+**Gotcha para el futuro (napkin): un scroller no puede vivir dentro del `innerHTML` que su propia
+vista reescribe.** Es una clase de bug, no un caso: la auditoría encontró un segundo caso vivo
+(abajo) barriendo `overflow` contra los `innerHTML =` de `apps/game/src/ui/`.
+
+### Qué se hizo
+
+1. **`ToolsSection.js`**: el esqueleto (`section` + `h3` + caja) se construye UNA vez y después
+   solo se reemplazan las FILAS. El `h3` quedó fuera del subárbol que se reescribe, así que su
+   texto se refresca por `textContent` en cada render (cubre el cambio de idioma — verificado
+   es→en→es en vivo). Restauración de `scrollTop` como red de seguridad, escrita SOLO si cambió
+   (escribirla siempre puede cortar el impulso de un scroll táctil en curso).
+2. **`components.css`**: `.settings-tools-list` entra al grupo de la barra "The Workshop"
+   (`scrollbar-width: thin` + thumb `--bg-surface-highest` sobre track transparente). Se sumaron
+   también las dos tiras horizontales que estaban afuera (`.index-container-tabs`,
+   `.prestige-tree`/`.deeds-tree`) y un `height: 10px` junto al `width: 10px` (tres de estos
+   scrollean en horizontal). Cero colores sueltos: todo sale de tokens.
+3. **`CollectionView.js`** (hallazgo de la auditoría, mismo bug de clase): la tira de pestañas del
+   Índice mide ~4900px con todos los contenedores y también nace dentro del `innerHTML` de la
+   vista → volvía a `scrollLeft = 0` en cada render; **tocar una pestaña de la propia tira te
+   devolvía al principio y dejaba la elegida fuera de pantalla**. Se conserva la posición a través
+   de la reescritura. Medido en vivo antes de tocar nada: `scrollLeft` 300 → 0 tras un click.
+4. **`apps/game/e2e/fix-scroll-listas.spec.js`** (nuevo, 4 tests): scroll con rueda que sobrevive
+   al tick a 375px + última herramienta alcanzable; comprar/equipar a 1280px sin perder posición;
+   la barra computada de la lista IGUAL a la de `#tab-content` (nunca `auto`); y la tira del
+   Índice tras elegir un contenedor.
+
+### Verificación
+
+- TDD real: los 4 tests corrieron en ROJO primero (`scrollTop 0` / `scrollbar-color: auto`). El
+  del Índice se re-verificó en rojo **revirtiendo el fix con `git stash`** (prueba de sabotaje del
+  guardrail, napkin #2) — falla, y con el fix pasa.
+- **Unit 867/867** (sin cambios: el fix es UI pura, no toca engine) · **e2e 132/132 con `CI=1`**
+  (baseline 128 → +4), corrida completa sin un solo flaky, línea `132 passed` vista.
+- **Manual jugando de verdad** contra `npx serve` (skill `verify`), a 375px y 1280px, con
+  capturas ANTES/DESPUÉS en **navegador HEADED** (obligatorio para esto: en headless las barras
+  son overlay de 0px y el bug de estilo es INVISIBLE): la barra blanca del sistema desapareció y
+  quedó el thumb oscuro del taller; el scroll aguanta el tick (3 segundos, 3 renders), el cambio
+  de idioma, y un escarbado en curso (render por cada objeto destapado). Cero errores de consola
+  en ambos anchos. `document.scrollHeight` sin cambios respecto de main en los dos anchos.
+- Sin `console.log`, sin `TODO`, sin emojis, sin colores hardcodeados. `npm audit` 0
+  vulnerabilidades (con y sin dev).
+
+### Auditoría `Verif&Audit.md` — sin 🔴; un 🟡 PREEXISTENTE que hay que decidir
+
+- 🔴 **CRÍTICO/ALTO: ninguno.** El diff no toca engine, economía, save ni validación de input. Los
+  `innerHTML` que se tocaron interpolan solo data estática, `t()` y `formatMoney` (números del
+  engine): no hay sink nuevo ni entrada de usuario en el camino.
+- 🟡 **RIESGO MEDIO (preexistente en main, NO lo introduce esta ronda): a 375px, en un navegador
+  REAL (barras clásicas que ocupan lugar) el shell desborda el viewport ~20px y el tabbar queda
+  aplastado a 12px de alto en la pestaña Escarbar — el jugador tiene que scrollear la página para
+  llegar al nav.** Medido headed: `documentElement.scrollHeight` 687 vs `innerHeight` 667, con
+  `#dig-area` en 598.7px y `flex-shrink: 0`. Idéntico con y sin los cambios de esta rama
+  (verificado stasheando todo el diff), así que es de main. **Por qué ningún e2e lo caza: el
+  Chromium headless usa scrollbars overlay de 0px, así que `dig-regression.spec.js` mide un
+  documento que entra justo.** Es un punto ciego de TODA la suite, no de un test. Arreglarlo toca
+  el layout del área de escarbado (alturas / `flex-shrink`), que merece su propia ronda con
+  verificación del canvas: **queda propuesto al usuario, no aplicado acá** (fuera del pedido).
+- 🔵 **Calidad**: `.prestige-tree`/`.deeds-tree` nunca llegan a desbordar en 375/900/1280
+  (medido) — su barra estilizada es preventiva, sin efecto visible hoy. Y el `::-webkit-scrollbar`
+  del grupo convive con `scrollbar-width: thin`: en Chromium ≥121 el estándar gana, pero el bloque
+  webkit se conserva porque es el que fija el ancho de 10px en la práctica (medido: 10px con el
+  fix, 15px sin él).
+- ✅ **Veredicto: APTO.** El diff es UI pura, con tests que fallan sin él y una verificación
+  manual headed que reproduce lo que ve el jugador. El único 🟡 abierto es anterior a esta rama y
+  está documentado arriba con su medición para decidirlo.
+
+### Pendientes del usuario antes de lanzar (sin cambios respecto de la auditoría 3)
+
+1. `STEAM_APP_ID` real en `apps/desktop/steam.js` (hoy 480) y `appId`/`depotId` en los `.vdf`.
+   **Único bloqueante duro.**
+2. Alta de los 61 logros en Steamworks + textos en 5 idiomas (`tools/steam/RELEASE.md` §6).
+3. Subir `version` en los DOS `package.json` (hoy `0.0.0`) antes del build de release.
+4. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
+5. NUEVO: decidir si se abre una ronda para el 🟡 del layout a 375px con barras clásicas.
