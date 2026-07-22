@@ -4,7 +4,7 @@
  */
 
 import { categoryWeights, refreshMarketFluctuation } from './rng.js';
-import { freshState } from './state.js';
+import { freshState, ROBOTS_MAX_SAFETY } from './state.js';
 import { getDayNightModifiers } from './dayNight.js';
 
 /**
@@ -110,6 +110,25 @@ export function addMoney(state, amount) {
   const gain = Number.isFinite(amount) ? amount : amount === Infinity ? Number.MAX_VALUE : 0;
   state.money = Math.min(Number.MAX_VALUE, state.money + gain);
   state.totalMoneyEarned = Math.min(Number.MAX_VALUE, state.totalMoneyEarned + gain);
+  return gain;
+}
+
+/**
+ * Gemelo de addMoney para las Llaves de Ciudad (saldo gastable `prestigeKeys`). Única puerta de
+ * ENTRADA de Llaves gastables: logros, misiones y la parte gastable de doPrestige pasan por acá.
+ * AJUSTE (auditoría de release, napkin #8): las tres acumulaciones eran `prestigeKeys += X` pelado.
+ * Con un save hostil-pero-válido (p. ej. `deedsTreeLevels` finito-gigante inflando el bonus de
+ * Llaves) una suma podía desbordar a Infinity; `JSON.stringify(Infinity)` es `null` y el próximo
+ * boot rechaza el save completo (wipe). Clamp a MAX_VALUE y normalización de una ganancia no finita,
+ * idénticos a addMoney. `totalKeysEarned`/`totalKeysEarnedRun` (contadores históricos, no gastables)
+ * se clampean inline en doPrestige, su único punto de acumulación.
+ * @param {GameState} state
+ * @param {number} amount - Llaves a acreditar (>= 0 en todo llamador legítimo)
+ * @returns {number} las Llaves efectivamente acreditadas, ya normalizadas
+ */
+export function addKeys(state, amount) {
+  const gain = Number.isFinite(amount) ? amount : amount === Infinity ? Number.MAX_VALUE : 0;
+  state.prestigeKeys = Math.min(Number.MAX_VALUE, state.prestigeKeys + gain);
   return gain;
 }
 
@@ -491,7 +510,13 @@ export function getFleetSize(state, data) {
   for (const { nodeId, effect } of deedsEffectsOfType(data, 'fleetRobotsFlatPerNivel')) {
     fleet += deedsLevel(state, nodeId) * effect.flatPerNivel;
   }
-  return fleet;
+  // AJUSTE (auditoría de release): `deedsTreeLevels` es input externo y su validación garantiza
+  // "número finito" pero NO rango — misma clase que getContainerLevel (§11.3). Sin el clamp, un
+  // nivel manipulado de `flotaFundadora` infla la flota a millones y `ensureFleet` agota la
+  // memoria en el ARRANQUE (PoC de la auditoría: 1e9 -> OOM). El techo es ROBOTS_MAX_SAFETY: la
+  // MISMA cota que isValidRobots ya exige al array persistido, así el runtime nunca supera lo que
+  // el validador acepta. La flota de diseño real (1..4) queda muy por debajo — cero falsos topes.
+  return Math.min(ROBOTS_MAX_SAFETY, Math.max(1, Math.floor(fleet)));
 }
 
 /**

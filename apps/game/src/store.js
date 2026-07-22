@@ -62,6 +62,13 @@ export const SAVE_KEY = 'dumpsterEmpireSave';
 // AJUSTE: no calculamos offline por debajo de este piso para no mostrar un modal por
 // recargas de página instantáneas (F5) donde no pasó tiempo real relevante.
 const OFFLINE_MIN_SECONDS = 5;
+// AJUSTE (auditoría de release): el guardado a ESCRITORIO (archivo userData + Steam Cloud, vía
+// IPC) se debouncea. `revealDugEntry` persiste por CADA objeto destapado (§4.42): un escarbado de
+// 8 objetos disparaba 8 escrituras de archivo + 8 subidas a Steam Cloud en pocos segundos. El
+// `localStorage` NO se debouncea (es barato y es la red de seguridad: resolveInitialSaveText lo
+// reconcilia contra el archivo al bootear, así que un flush de escritorio demorado nunca pierde
+// progreso real). Se fuerza el flush al cerrar (onBeforeQuit) y en visibilitychange.
+const DESKTOP_SAVE_DEBOUNCE_MS = 2000;
 
 /**
  * @typedef {Object} StoreContext
@@ -217,22 +224,46 @@ export function createStore(ctx) {
     return result.ok ? result.state : freshState();
   }
 
+  // Estado del debounce de escritorio (ver DESKTOP_SAVE_DEBOUNCE_MS). `pendingDesktopText` guarda
+  // el ÚLTIMO texto a escribir; el timer lo publica una sola vez por ventana, colapsando ráfagas.
+  let desktopSaveTimer = null;
+  let pendingDesktopText = null;
+
+  /** Publica ya el guardado de escritorio pendiente (si hay), cancelando el timer del debounce. */
+  function flushDesktopSave() {
+    if (desktopSaveTimer !== null) {
+      clearTimeout(desktopSaveTimer);
+      desktopSaveTimer = null;
+    }
+    if (pendingDesktopText !== null) {
+      // Fire-and-forget: Electron guarda a archivo (userData) para que Steam Cloud lo tome
+      // (PLAN.md §6.3). No bloquea ni puede corromper el estado en curso si falla.
+      desktopBridge?.saveGame(pendingDesktopText);
+      pendingDesktopText = null;
+    }
+  }
+
   function persist() {
     const text = serializeState(state);
     // §27.5.5 (ronda 27): localStorage.setItem puede lanzar (QuotaExceededError, modo privado
     // de Safari, storage deshabilitado). El juego degrada en silencio a "sin autoguardado web"
     // en vez de reventar la acción del jugador que disparó el persist — en Electron el guardado
-    // real sigue siendo el archivo de abajo (Steam Cloud), que no pasa por localStorage.
+    // real sigue siendo el archivo (Steam Cloud), que no pasa por localStorage.
     try {
       localStorage.setItem(SAVE_KEY, text);
     } catch {
       // Silencio deliberado: no hay acción del jugador que pueda arreglarlo desde acá, y
       // spamear un toast por tick de autoguardado sería peor que jugar sin persistencia web.
     }
-    // Fire-and-forget: además de localStorage, Electron guarda a archivo (userData) para que
-    // Steam Cloud lo tome (PLAN.md §6.3, tarea 4 del Agente 10). No bloquea ni puede corromper
-    // el estado en curso si falla (el store nunca espera esta promesa).
-    desktopBridge?.saveGame(text);
+    // AJUSTE (auditoría de release): la escritura de escritorio se debouncea (colapsa ráfagas de
+    // revealDugEntry). En web `desktopBridge` no existe y esto es un no-op; el `localStorage` de
+    // arriba ya persistió inmediato en ambos modos.
+    if (desktopBridge) {
+      pendingDesktopText = text;
+      if (desktopSaveTimer === null) {
+        desktopSaveTimer = setTimeout(flushDesktopSave, DESKTOP_SAVE_DEBOUNCE_MS);
+      }
+    }
   }
 
   function notify() {
@@ -799,6 +830,10 @@ export function createStore(ctx) {
       return () => listeners.delete(fn);
     },
     persist,
+    // AJUSTE (auditoría de release): fuerza la escritura de escritorio pendiente del debounce.
+    // Lo llaman el cierre (onBeforeQuit) y visibilitychange, para que Steam Cloud/archivo queden
+    // frescos al salir aunque el timer del debounce no haya disparado todavía.
+    flushDesktopSave,
     consumeOfflineSummary() {
       const summary = offlineSummary;
       offlineSummary = null;

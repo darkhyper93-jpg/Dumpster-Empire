@@ -16,6 +16,7 @@ export { formatNumber, formatMoney } from './format.js';
 
 export {
   addMoney,
+  addKeys,
   upgradeCost,
   containerCost,
   prestigeKeysEarned,

@@ -7995,3 +7995,94 @@ pie es el mismo defecto en Ajustes, no un caso especial del panel de herramienta
   (`reuseExistingServer: !process.env.CI`), así que un `npx serve` colgado de una sesión de
   capturas hace fallar la corrida entera con "port already used" y **exit code 0** — parece que
   pasó y no corrió nada. Matar el proceso del puerto antes.
+
+
+---
+
+## Auditoría de release (post-ronda 33) — working tree de `main`, sin commitear aún — 2026-07-21
+
+### Reporte
+
+El usuario pidió una evaluación COMPLETA de código/seguridad/calidad para decidir el release, con
+la metodología adversarial de `Verif&Audit.md`, tras mergear todo ROADMAPv4 hasta la ronda 33.
+Baseline verde de arranque: unit 807/807, e2e 117/117.
+
+### Hallazgos y fixes (el usuario aprobó aplicar TODO: 🔴 + 🟡 + 🔵)
+
+**Raíz común de los dos 🔴 (napkin #8, tercera dirección):** los mapas de niveles de árbol
+(`prestigeTreeLevels`/`deedsTreeLevels`) se validaban como "número finito" pero NUNCA como entero
+ACOTADO. Un nivel finito-gigante (1e9, pasa la finitud) causaba **dos bricks de ARRANQUE
+irrecuperables**, ambos con PoC ejecutado:
+
+- **🔴 `migrateTo14` (save.js): cuelgue infinito.** El bucle de backfill de Llaves
+  (`for lvl < level`) se acotaba con un valor del save. Corre ANTES de `validateDeepContent`, así
+  que el save colgaba el boot antes de poder rechazarse. Fix: guard `level > TREE_LEVEL_MAX_SAFETY`
+  (se saltea; el save se rechaza igual, después).
+- **🔴 `getFleetSize` (economy.js): OOM.** `deedsTreeLevels.flotaFundadora` gigante → flota de
+  ~1e9 → `ensureFleet` (push en loop) agota la memoria. Camino de arranque vía
+  `applyOfflineProgress`→`estimateAutomationRatePerSecond`→`ensureFleet`. Fix:
+  `Math.min(ROBOTS_MAX_SAFETY, Math.max(1, Math.floor(fleet)))` — la MISMA cota que `isValidRobots`
+  exige al array persistido, así el runtime nunca supera lo que el validador acepta.
+- **Capa 3 (defensa en profundidad):** `isBoundedIntegerMap` en `validateDeepContent` rechaza
+  `prestigeTreeLevels`/`deedsTreeLevels` con niveles no-enteros, negativos o `> TREE_LEVEL_MAX_SAFETY`
+  (100k; el máximo legítimo en el nodo infinito más barato es ~1750). `containerLevels` queda en
+  finitud (ya se clampea al leerse) y `upgradeLevels` es ilimitado por diseño.
+
+**🟡 medios:**
+- **Escritura atómica del save** (`apps/desktop/atomicWrite.js`, módulo nuevo testeable sin
+  Electron, patrón pathGuard/saveTimestamp): tmp + rename en `writeSaveFile`. Un corte a mitad ya
+  no trunca el save real.
+- **Timeout de cierre en Electron** (`main.js`, `QUIT_FALLBACK_MS = 3000`): si el renderer no
+  confirma `app:quit-ready` (boot fallido antes de registrar onBeforeQuit, o renderer colgado), se
+  fuerza el cierre. Antes había que matar la ventana por el Administrador de tareas.
+- **Clamps de acumulación de Llaves/fragmentos** (napkin #8): helper `addKeys` (gemelo de
+  `addMoney`) en los 3 puntos de ganancia de `prestigeKeys` (achievements/missions/doPrestige);
+  `totalKeysEarned`/`totalKeysEarnedRun`/`categoryFragments` clampeados inline en su único punto de
+  acumulación. Cierra la mitad que la 26.D dejó abierta.
+- **Cotas de arrays** (`ARRAY_MAX_SAFETY = 10000`): `stallOrders` y los `STRING_ARRAY_FIELDS`
+  ahora tienen techo (antes solo inventory/robots/dailyMissions lo tenían).
+- **IPC endurecido** (`main.js`): `save:write`/`achievement:set` validan el TIPO del argumento.
+
+**🔵 calidad:**
+- **Debounce del guardado de escritorio** (`store.js`, `DESKTOP_SAVE_DEBOUNCE_MS = 2000`):
+  `revealDugEntry` persiste por objeto destapado; ahora la rama de escritorio (archivo + Steam
+  Cloud) colapsa ráfagas. `localStorage` sigue INMEDIATO (red de seguridad + reconciliación de
+  boot), y se fuerza `flushDesktopSave()` en onBeforeQuit / visibilitychange / beforeunload.
+- **Deriva de comentario** en `package.json`: `vitest ^2.x` → `^4.x`.
+
+**Decisión sobre comentarios `//`:** el usuario pidió sacar las notas "que molesten". Al medir
+(37,6% ratio, 1.507 `//` + 3.304 JSDoc) casi todas son POR-QUÉ con nº de ronda, exigidas por
+CLAUDE.md ("documentá toda decisión no trivial con comentario inline"). Se decidió **dejarlas
+intactas** — el código ya está limpio en lo que importa: cero `console.log`, cero `TODO`/`FIXME`,
+cero código muerto (los "TODO" de un grep ingenuo son la palabra española *todo*).
+
+### Verificación
+
+- **Unit 825/825** (baseline 807 → +13 `auditoria-release.test.js` + 5 `atomicWrite.test.js`).
+  `ronda27-audit.test.js` actualizado: su "save hostil pero válido" (deedsTreeLevels 1e305) ahora
+  lo rechaza la capa 3 — se reescribió a un vector que SIGUE siendo válido (baseValue gigante en
+  inventory) sin perder la cobertura del clamp de dinero. Napkin #2: sabotaje del clamp de
+  `getFleetSize` confirmado (el test cae en `fleet <= ROBOTS_MAX_SAFETY`), luego revertido.
+- **e2e 117/117** con `CI=1`, sin flakes. El debounce del store es no-op en web (sin
+  `desktopBridge`), así que el flujo web no cambia.
+- **Smoke de Electron REAL** (napkin #9, `--user-data-dir` a un tmp, no tocó el save real): arranca,
+  `save:write` escribe el `save.json` exacto sin `.tmp` huérfano (atómico), rechaza un argumento
+  no-string, y cierra sin colgar en 166ms.
+
+### Verificado limpio (mentalidad adversarial)
+
+- **XSS**: los 51 sinks de `innerHTML` resisten; el patrón `Number(x)||0` y la resolución de ids
+  libres contra la data (con fallback seguro) están aplicados. `Object.create(null)`+`Object.hasOwn`
+  en migrateTo7. Sin fallbacks a id crudo (patrón 23.E).
+- **Secretos: cero.** Todos los hits de `api_key|secret|token|...` son `colorToken`, `isHiddenSecret`
+  o prosa.
+- **Electron**: `nodeIntegration:false`, `contextIsolation:true`, `sandbox:true`, `setWindowOpenHandler
+  → deny`, guard de `will-navigate`, CSP con hash de script + `base-uri 'none'` + `object-src 'none'`.
+  Path traversal cubierto (`resolveSafePath`).
+
+### Pendientes del usuario antes de lanzar (NINGUNO bloquea el merge de esta rama; sin cambios respecto a ronda 33)
+
+1. `STEAM_APP_ID` real en `apps/desktop/steam.js` (hoy 480) y `appId`/`depotId` en los `.vdf`.
+2. Alta de los 61 logros en Steamworks (`RELEASE.md` §6) + textos en los 5 idiomas.
+3. Marcar los 5 idiomas en Store Presence; decidir visibilidad del repo; checklist U1-U9.
+- `reference/ui/Contenedores/` sigue SIN commitear (heredado de la ronda 32, no pertenece a esta rama).

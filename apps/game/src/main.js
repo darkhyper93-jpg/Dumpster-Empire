@@ -155,6 +155,9 @@ async function boot() {
   // apps/desktop/main.js); en modo web `globalThis.dumpsterDesktop` no existe y esto no hace nada.
   globalThis.dumpsterDesktop?.onBeforeQuit(() => {
     store.persist();
+    // Auditoría de release: el guardado de escritorio se debouncea; al cerrar hay que forzar la
+    // escritura pendiente ANTES de confirmar, o se perdería (hasta el debounce) en Steam Cloud.
+    store.flushDesktopSave();
     globalThis.dumpsterDesktop.confirmQuit();
   });
 

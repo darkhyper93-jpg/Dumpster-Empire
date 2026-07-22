@@ -3,7 +3,7 @@
  * desafíos (PLAN.md §4.31/§4.32, ronda 25).
  */
 
-import { prestigeKeysEarned, upgradeCost, getPrestigeStartMoney, getDeedsKeysBonusFlat } from '../economy.js';
+import { addKeys, prestigeKeysEarned, upgradeCost, getPrestigeStartMoney, getDeedsKeysBonusFlat } from '../economy.js';
 import { CONDITION_EVALUATORS } from './achievements.js';
 
 // AJUSTE (auditoría post-ronda 14): exportado para que la UI (PrestigeView) muestre el umbral
@@ -132,11 +132,15 @@ export function doPrestige(state, data, choice = null) {
   const keysEarned = prestigeKeysEarned(state.totalMoneyEarned) + getDeedsKeysBonusFlat(state, data);
   const startMoney = getPrestigeStartMoney(state, data);
 
-  state.prestigeKeys += keysEarned;
-  state.totalKeysEarned += keysEarned;
+  // AJUSTE (auditoría de release, napkin #8): las tres acumulaciones se clampean a MAX_VALUE.
+  // El saldo gastable entra por addKeys (gemelo de addMoney); los dos contadores históricos se
+  // clampean inline (su único punto de acumulación es acá). Sin esto, un `keysEarned` inflado por
+  // un save hostil desbordaba a Infinity y `JSON.stringify` lo serializaba `null` -> wipe al boot.
+  addKeys(state, keysEarned);
+  state.totalKeysEarned = Math.min(Number.MAX_VALUE, state.totalKeysEarned + keysEarned);
   // PLAN.md §4.35 (ronda 26): ventana de Llaves desde la última mudanza (o desde el inicio) —
   // `doGalaxyMove` la consume para pagar Escrituras y la resetea a 0.
-  state.totalKeysEarnedRun += keysEarned;
+  state.totalKeysEarnedRun = Math.min(Number.MAX_VALUE, state.totalKeysEarnedRun + keysEarned);
   state.prestigeCount += 1;
   state.money = startMoney;
   state.totalMoneyEarned = startMoney;

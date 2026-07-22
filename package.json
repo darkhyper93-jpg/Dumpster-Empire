@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "description": "Dumpster Empire — monorepo (engine + juego + escritorio Steam)",
-  "//versionesPineadas": "Ver DESARROLLO.md §3. No subir sin actualizar ese doc: electron ^43.x, steamworks.js ^0.4.x, electron-builder ^26.x, vitest ^2.x, @playwright/test ^1.61.x. Electron/steamworks.js/electron-builder están pineados en apps/desktop/package.json. BUMP 2026-07 (Electron 31->43, builder 24->26): tras reinstalar, re-aprobar scripts (npm approve-scripts electron esbuild) porque allowScripts abajo pinea versión exacta, y re-verificar el código de apps/desktop contra las APIs de Electron 43 (ver agentes/bump-electron-stack-prompt.md).",
+  "//versionesPineadas": "Ver DESARROLLO.md §3. No subir sin actualizar ese doc: electron ^43.x, steamworks.js ^0.4.x, electron-builder ^26.x, vitest ^4.x, @playwright/test ^1.61.x. Electron/steamworks.js/electron-builder están pineados en apps/desktop/package.json. BUMP 2026-07 (Electron 31->43, builder 24->26): tras reinstalar, re-aprobar scripts (npm approve-scripts electron esbuild) porque allowScripts abajo pinea versión exacta, y re-verificar el código de apps/desktop contra las APIs de Electron 43 (ver agentes/bump-electron-stack-prompt.md).",
   "engines": {
     "node": ">=20"
   },

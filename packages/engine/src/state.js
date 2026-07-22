@@ -85,6 +85,23 @@ export const INVENTORY_MAX_SAFETY = 200;
 // array absurdo de un save manipulado.
 export const ROBOTS_MAX_SAFETY = 8;
 
+// AJUSTE (auditoría de release): techo de seguridad para los niveles de un nodo de árbol
+// (prestigeTreeLevels/deedsTreeLevels), mismo criterio que INVENTORY_MAX_SAFETY/ROBOTS_MAX_SAFETY.
+// El save es input externo y su validación garantizaba "número finito" pero NO rango: un nivel
+// finito-gigante colgaba el bucle de migrateTo14 (backfill de Llaves) e inflaba getFleetSize a
+// millones (OOM en ensureFleet) — dos bricks de ARRANQUE. El máximo alcanzable legítimamente en
+// el nodo infinito más barato (costoBase 1, factorCrecimiento 1.5) con MAX_VALUE de Llaves es
+// ~1750 niveles (el costo geométrico lo topa mucho antes); 100k deja 50× de margen y a la vez
+// rechaza cualquier valor manipulado. Es agnóstico de la data (los nivelMaximo reales viven en
+// prestigeTree.json/deedsTree.json), como el resto de las cotas MAX_SAFETY.
+export const TREE_LEVEL_MAX_SAFETY = 100000;
+
+// AJUSTE (auditoría de release): techo de seguridad genérico para arrays del save que no tenían
+// cota propia (stallOrders y los STRING_ARRAY_FIELDS). inventory/robots/dailyMissions ya tenían la
+// suya; sin esta, un save manipulado con cientos de miles de pedidos/ids hacía a la UI renderizar
+// esa cantidad de tarjetas por frame. Generoso muy por encima de cualquier cantidad legítima.
+export const ARRAY_MAX_SAFETY = 10000;
+
 // AJUSTE (auditoría post-ronda 14): rango de diseño de `digSensitivity`, exportado como única
 // fuente de verdad. Antes el 0.5–1.5 estaba repetido como número mágico en save.js (validación),
 // store.js (clamp), DigCanvas.js (clamp defensivo) y SettingsView.js (min/max del slider).

@@ -3,7 +3,7 @@
  * evaluadas genéricamente acá. Ningún logro está hardcodeado en el engine.
  */
 
-import { addMoney, getFleetSize, isSetComplete } from '../economy.js';
+import { addMoney, addKeys, getFleetSize, isSetComplete } from '../economy.js';
 import { hasAutoDig } from './automation.js';
 
 // Exportado (ronda 23.C, roadmap §3.2): "un solo motor de condiciones para logros, historia y
@@ -97,7 +97,9 @@ function applyAchievementReward(state, achievement) {
     // §27.5.1 (Y1, ronda 27): toda ganancia entra por addMoney (clamp anti-Infinity).
     addMoney(state, reward.amount);
   } else if (reward.type === 'keys') {
-    state.prestigeKeys += reward.amount;
+    // AJUSTE (auditoría de release, napkin #8): entra por addKeys (clamp anti-Infinity), igual
+    // que las ganancias de dinero pasan por addMoney.
+    addKeys(state, reward.amount);
   } else {
     throw new Error(`Tipo de recompensa de logro desconocido: ${reward.type}`);
   }

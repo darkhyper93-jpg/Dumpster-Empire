@@ -29,12 +29,18 @@ export function startLoop(store, ui) {
   const autosaveInterval = setInterval(() => store.persist(), AUTOSAVE_INTERVAL_MS);
 
   function onVisibilityChange() {
-    if (document.visibilityState === 'hidden') store.persist();
+    if (document.visibilityState === 'hidden') {
+      store.persist();
+      // Auditoría de release: al ocultar la ventana forzamos la escritura de escritorio del
+      // debounce (Steam Cloud/archivo frescos si el jugador minimiza o cambia de app).
+      store.flushDesktopSave();
+    }
   }
   document.addEventListener('visibilitychange', onVisibilityChange);
 
   function onBeforeUnload() {
     store.persist();
+    store.flushDesktopSave();
   }
   window.addEventListener('beforeunload', onBeforeUnload);
 

@@ -32,6 +32,12 @@ protocol.registerSchemesAsPrivileged([
 
 let mainWindow = null;
 let quitReady = false;
+// AUDITORÍA (release): margen máximo que se espera la confirmación de guardado del renderer antes
+// de forzar el cierre. Sin esto, si `boot()` falla ANTES de registrar `onBeforeQuit` (data
+// corrupta) o el renderer queda colgado, la ventana nunca cerraba — había que matarla por el
+// Administrador de tareas. El autoguardado cada 15s + el de visibilitychange acotan lo que se
+// pierde en el peor caso.
+const QUIT_FALLBACK_MS = 3000;
 
 function registerGameProtocol() {
   protocol.handle('dumpster', (request) => {
@@ -98,6 +104,16 @@ app.on('before-quit', (evt) => {
   if (quitReady || !mainWindow) return;
   evt.preventDefault();
   mainWindow.webContents.send('app:before-quit');
+  // AUDITORÍA (release): red de seguridad. Si el renderer no confirma (`app:quit-ready`) dentro
+  // del margen —boot fallido antes de registrar onBeforeQuit, o renderer colgado— se fuerza el
+  // cierre igual, en vez de dejar la ventana imposible de cerrar. La segunda pasada por acá ve
+  // `quitReady` en true y retorna sin volver a frenar (no hay loop).
+  setTimeout(() => {
+    if (quitReady) return;
+    quitReady = true;
+    shutdownSteam();
+    app.quit();
+  }, QUIT_FALLBACK_MS);
 });
 
 ipcMain.on('app:quit-ready', () => {
@@ -106,6 +122,12 @@ ipcMain.on('app:quit-ready', () => {
   app.quit();
 });
 
-ipcMain.handle('save:write', (_evt, text) => writeSaveFile(text));
+// AUDITORÍA (release): los handlers validan el TIPO del argumento que cruza el IPC. Hoy el único
+// emisor es el propio preload (ventana única, sandbox:true, sin contenido remoto), pero validar el
+// contrato es defensa en profundidad barata: `save:write` solo escribe strings, y un id de logro
+// no-string nunca llega a steamworks.js.
+ipcMain.handle('save:write', (_evt, text) => (typeof text === 'string' ? writeSaveFile(text) : false));
 ipcMain.handle('save:read', () => readSaveFile());
-ipcMain.handle('achievement:set', (_evt, achievementId) => setAchievement(achievementId));
+ipcMain.handle('achievement:set', (_evt, achievementId) =>
+  typeof achievementId === 'string' ? setAchievement(achievementId) : false
+);
