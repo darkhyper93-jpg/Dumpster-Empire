@@ -57,6 +57,7 @@ import {
   claimMission as engineClaimMission,
   tryTriggerContainerEvent,
   isEventExpired,
+  clampedDeltaSeconds,
 } from '@dumpster/engine';
 
 export const SAVE_KEY = 'dumpsterEmpireSave';
@@ -493,7 +494,9 @@ export function createStore(ctx) {
      */
     tickDigTimer(dtSeconds) {
       if (!pendingDig || pendingDig.timeRemaining === null) return;
-      pendingDig.timeRemaining = Math.max(0, pendingDig.timeRemaining - dtSeconds);
+      // AUDITORÍA (2026-07-22): mismo clamp que `tickAutomation` (ver loop.js). Sin él, un reloj
+      // que retrocede REGALA tiempo en la Bóveda a Contrarreloj — el límite deja de ser duro.
+      pendingDig.timeRemaining = Math.max(0, pendingDig.timeRemaining - clampedDeltaSeconds(dtSeconds));
       if (pendingDig.timeRemaining <= 0) {
         registerContainerDig(state, pendingDig.container);
         timedDigExpirations.push({ containerName: pendingDig.container.name });
