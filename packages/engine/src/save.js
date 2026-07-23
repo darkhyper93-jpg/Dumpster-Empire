@@ -106,7 +106,13 @@ function isValidItemsFoundByItem(obj) {
  * @returns {boolean}
  */
 function isValidAutoProcessing(arr) {
-  if (!Array.isArray(arr)) return false;
+  // AJUSTE (auditoría 2026-07-22): cota de longitud — era el ÚNICO array del save sin la suya
+  // (inventory 200, robots 8, stallOrders/STRING_ARRAY_FIELDS ARRAY_MAX_SAFETY, dailyMissions 5).
+  // El diseño real son ROBOTS_MAX_SAFETY × brazos slots; sin cota, un save IMPORTADO con cientos
+  // de miles pasaba la validación y después congelaba el juego por dos vías: `automationTick`
+  // itera todos los slots una vez por segundo y `AutomationView` renderiza una tarjeta por slot.
+  // Es el mismo fallo que ya se cerró en `isValidStallOrders`; a este se le pasó por alto.
+  if (!Array.isArray(arr) || arr.length > ARRAY_MAX_SAFETY) return false;
   // AJUSTE (auditoría post-ronda 14): además de finitud, coherencia del slot. automationTick
   // solo persiste slots con 0 < remaining <= totalTime; un slot manipulado con totalTime 0 (o
   // remaining > totalTime) producía "Contenedor: NaN%" / porcentajes negativos en AutomationView.

@@ -4,6 +4,8 @@
  * cada 15s y en visibilitychange (PLAN.md §6.4, CLAUDE.md).
  */
 
+import { clampedDeltaSeconds } from '@dumpster/engine';
+
 const AUTOSAVE_INTERVAL_MS = 15000;
 const LOGIC_TICK_INTERVAL_MS = 1000;
 
@@ -17,7 +19,13 @@ export function startLoop(store, ui) {
 
   function logicTick() {
     const now = Date.now();
-    const dtSeconds = (now - lastLogicTime) / 1000;
+    // AUDITORÍA (2026-07-22): el delta pasa por el clamp del engine. `Date.now()` puede
+    // RETROCEDER entre dos ticks (corrección NTP, resume de suspensión en el Steam Deck, cambio
+    // manual de hora): el dt negativo hacía crecer `slot.remaining` por encima de `totalTime`,
+    // el autoguardado lo persistía y el siguiente arranque rechazaba el save entero. Sin cota
+    // superior a propósito (PLAN.md §6.4: la economía no depende de que la pestaña esté en foco;
+    // una pestaña de fondo recibe el `setInterval` estrangulado y ese dt grande es legítimo).
+    const dtSeconds = clampedDeltaSeconds((now - lastLogicTime) / 1000);
     lastLogicTime = now;
     store.actions.tickAutomation(dtSeconds);
     // Ronda 20 (PLAN.md §4.24): el timer de la Bóveda corre siempre, sin depender de que el

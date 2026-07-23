@@ -23,6 +23,7 @@ import {
 } from './containers.js';
 import { isProceduralContainerId, proceduralTierN, PROCEDURAL_CONTAINER_MAX_N } from '../procedural.js';
 import { defaultRobotConfig } from '../state.js';
+import { clampedDeltaSeconds } from '../time.js';
 import { stallVendorTick } from './stall.js';
 
 /**
@@ -236,9 +237,16 @@ export function automationTick(state, dtSeconds, allContainers, itemsData, data,
   if (!hasAutoDig(state, data)) return;
   ensureFleet(state, data);
 
+  // AUDITORÍA (2026-07-22): el engine NUNCA retrocede el progreso por el reloj del llamador. Un
+  // dt negativo (reloj del sistema hacia atrás entre dos ticks del loop) hacía crecer `remaining`
+  // por encima de `totalTime` y el save se volvía irrecibible en el próximo arranque. El clamp
+  // vive también en `loop.js` (la fuente del dt); acá es defensa en profundidad, mismo criterio
+  // que los handlers de IPC de apps/desktop validando el tipo de lo que ya emite su propio preload.
+  const dt = clampedDeltaSeconds(dtSeconds);
+
   for (let i = state.autoProcessing.length - 1; i >= 0; i--) {
     const slot = state.autoProcessing[i];
-    slot.remaining -= dtSeconds * getAutoSpeedMult(state, data);
+    slot.remaining -= dt * getAutoSpeedMult(state, data);
     if (slot.remaining <= 0) {
       // DECISIÓN: el containerId viene de un save (input externo). Si referencia un contenedor
       // que ya no existe (save viejo tras rebalanceo, o import manipulado), NO se crashea el tick:

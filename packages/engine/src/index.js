@@ -75,7 +75,7 @@ export {
   hasProceduralContainersUnlocked,
 } from './economy.js';
 
-export { clampedElapsedMs, localDayStamp } from './time.js';
+export { clampedElapsedMs, clampedDeltaSeconds, localDayStamp } from './time.js';
 
 export { isNightHour, getDayNightModifiers, getTimeBand } from './dayNight.js';
 
